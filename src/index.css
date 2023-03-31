@@ -1,0 +1,35 @@
+body {
+  background-color: #d0f0c0;
+  font-family: 'Helvetica';
+}
+
+input[type=number] {
+  width: 50px;
+}
+
+.windsTable {
+  font-weight: lighter;
+}
+
+.windsTable tr:nth-child(odd) {
+  background-color: #b8d8a8;
+}
+
+.windsTable th {
+  font-weight: lighter;
+}
+
+.lighter th {
+  font-weight: lighter;
+}
+
+.App {
+  text-align: left;
+}
+
+
+
+form  { display: table;      }
+p     { display: table-row;  }
+label { display: table-cell; }
+input { display: table-cell; }
