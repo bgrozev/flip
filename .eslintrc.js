@@ -28,7 +28,8 @@ module.exports = {
     "rules": {
         "require-jsdoc": 0,
         "max-params": 0,
-        "react/prop-types": 0
+        "react/prop-types": 0,
+        "object-property-newline": 0
     },
     "settings": {
         "react": {

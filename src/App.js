@@ -7,7 +7,6 @@ import { FilesComponent } from './FilesComponent.js';
 import MapWithPath from './MapWithPath.js';
 import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { WindsComponent } from './WindsComponent.js';
-import { extractPathFromCsv } from './csv.js';
 import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
 import { Path } from './geo.js';
 import { WindsAloft } from './windsaloft.js';
@@ -17,6 +16,7 @@ class App extends React.Component {
         super(props);
         this.state = {
             csv: [],
+            path: new Path(),
             winds: new WindsAloft(),
             toggleRerender: false,
             position: initialPosition(),
@@ -29,12 +29,12 @@ class App extends React.Component {
 
     exportFile() {
         const csv = JSON.parse(JSON.stringify(this.state.csv));
-        const newPath = this.getPaths().path2;
-        const len = newPath.points.length;
+        const path = this.getPaths()[1];
+        const len = path.points.length;
 
         for (let i = 0; i < len; i++) {
-            csv[i + 1].lat = newPath.points[len - i - 1].lat;
-            csv[i + 1].lon = newPath.points[len - i - 1].lng;
+            csv[i + 1].lat = path.points[len - i - 1].lat;
+            csv[i + 1].lon = path.points[len - i - 1].lng;
         }
         const formatted = d3.csvFormat(csv);
 
@@ -42,19 +42,18 @@ class App extends React.Component {
         const file = new Blob([ formatted ], { type: 'text/csv' });
 
         link.href = URL.createObjectURL(file);
-        link.download = 'sample.csv';
+        link.download = 'track.csv';
         link.click();
         URL.revokeObjectURL(link.href);
     }
 
     getPaths() {
-        // TODO: we're re-calculating on every render. Save the paths in state and only update them when necessary?
-        const { csv, winds, position } = this.state;
+        const { path, winds, position } = this.state;
         const { dz, mirror, offsetE, offsetN, rotation } = position;
-        const path = extractPathFromCsv(csv);
+        const newPath = path.copy();
 
         if (mirror) {
-            path.mirror();
+            newPath.mirror();
         }
 
         if (dz !== DZ_NONE) {
@@ -65,9 +64,9 @@ class App extends React.Component {
             }
 
             if (dropzone) {
-                path.translateTo(dropzone);
+                newPath.translateTo(dropzone);
                 if (dropzone.direction) {
-                    path.setFinalHeading(dropzone.direction);
+                    newPath.setFinalHeading(dropzone.direction);
                 }
             } else {
                 console.log(`No dropzone: ${dz}`);
@@ -75,36 +74,31 @@ class App extends React.Component {
         }
 
         if (offsetN) {
-            path.translate(0, offsetN);
+            newPath.translate(0, offsetN);
         }
         if (offsetE) {
-            path.translate(90, offsetE);
+            newPath.translate(90, offsetE);
         }
-        path.rotate(rotation);
+        newPath.rotate(rotation);
 
-        const pathWithWind = path.copy();
+        const pathWithWind = newPath.copy();
 
         pathWithWind.addWind(winds);
 
-        let center = dropzones[4]; // Just somewhere as it's required
-
-        if (path.points.length > 0) {
-            center = path.points[0];
-        }
-
-        return {
-            center,
-            path,
-            path2: pathWithWind
-        };
+        return [ newPath, pathWithWind ];
     }
 
     render() {
         const { showPreWind, showPoms } = this.state.displaySettings;
         const paths = this.getPaths();
+        let center = dropzones[4]; // Just default somewhere
+
+        if (paths[0].points.length > 0) {
+            center = paths[0].points[0];
+        }
 
         if (!showPreWind) {
-            paths.path = new Path();
+            paths[0] = new Path();
         }
 
         const styleLeft = {
@@ -121,11 +115,13 @@ class App extends React.Component {
             <div style={{ height: window.innerHeight }}>
                 <div style={styleLeft}>
                     <hr/>
-                    <FilesComponent onChange={ csv => this.setState({ csv }) } exportCallback={ this.exportFile }/>
+                    <FilesComponent
+                        onChange={ (csv, path) => this.setState({ csv, path }) }
+                        exportCallback={ this.exportFile }/>
                     <hr/>
                     <PositionComponent onChange={ position => this.setState({ position }) } />
                     <hr/>
-                    <WindsComponent center={paths.center} onChange={ winds => this.setState({ winds }) } />
+                    <WindsComponent center={center} onChange={ winds => this.setState({ winds }) } />
                     <hr/>
                     <CustomDropzonesComponent
                         onChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })} />
@@ -135,7 +131,7 @@ class App extends React.Component {
                     <AboutComponent />
                 </div>
                 <div style={styleRight}>
-                    <MapWithPath center={paths.center} pathA={paths.path} pathB={paths.path2} showPoms={showPoms}/>
+                    <MapWithPath center={center} pathA={paths[0]} pathB={paths[1]} showPoms={showPoms}/>
                 </div>
             </div>
         );

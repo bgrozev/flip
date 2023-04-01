@@ -1,7 +1,8 @@
 import * as d3 from 'd3';
 import React from 'react';
 
-import { trim } from './csv.js';
+import { extractPathFromCsv, trim } from './csv.js';
+import { Path } from './geo.js';
 import { SAMPLES, getSample } from './samples.js';
 import { trueOrNull } from './util.js';
 
@@ -12,7 +13,8 @@ export class FilesComponent extends React.Component {
         this.state = {
             autotrim: true,
             csv: [],
-            show: trueOrNull(localStorage.getItem('showFiles'))
+            show: trueOrNull(localStorage.getItem('showFiles')),
+            path: new Path()
         };
 
         this.loadSample = this.loadSample.bind(this);
@@ -32,17 +34,24 @@ export class FilesComponent extends React.Component {
         const self = this;
 
         console.log(`Loading sample ${name}`);
+
         if (!s) {
-            self.setState({ csv: [] });
-            self.props.onChange([]);
+            const path = new Path();
+            const csv = [];
+
+            self.setState({ csv, path });
+            self.props.onChange(csv, path);
 
             return;
         }
 
         d3.csv(s).then(csv => {
             console.log(`Loaded ${csv.length}`);
-            self.setState({ csv });
-            self.props.onChange(csv);
+
+            const path = extractPathFromCsv(csv);
+
+            self.setState({ path, csv });
+            self.props.onChange(csv, path);
         });
     }
 
@@ -56,8 +65,11 @@ export class FilesComponent extends React.Component {
             if (self.state.autotrim) {
                 trim(csv, 2500);
             }
-            self.setState({ csv });
-            this.props.onChange(csv);
+
+            const path = extractPathFromCsv(csv);
+
+            self.setState({ csv, path });
+            this.props.onChange(csv, path);
         });
     }
 
@@ -85,7 +97,8 @@ export class FilesComponent extends React.Component {
                 <br/>
                 Load track from CSV file (
                 <input type="checkbox" checked={this.state.autotrim}
-                    onChange={() => this.setState({ autotrim: !this.state.autotrim }) }/>Use autotrim)
+                    onChange={() => this.setState({ autotrim: !this.state.autotrim }) }/>
+                <small style={{ fontSize: '70%' }}>Use autotrim (experimental)</small>)
                 <input type="file" onChange={e => this.loadFile(e.target.files[0])}/>
                 <br/>
                 <br/>
