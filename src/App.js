@@ -117,7 +117,8 @@ class App extends React.Component {
                     <hr/>
                     <FilesComponent
                         onChange={ (csv, path) => this.setState({ csv, path }) }
-                        exportCallback={ this.exportFile }/>
+                        exportCallback={ this.exportFile }
+                        track={ paths[1] } />
                     <hr/>
                     <PositionComponent onChange={ position => this.setState({ position }) } />
                     <hr/>
