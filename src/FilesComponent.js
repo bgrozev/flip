@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
 import React from 'react';
+import Select from 'react-select';
 
 import { extractPathFromCsv, trim } from './csv.js';
 import { Path } from './geo.js';
@@ -24,6 +25,7 @@ export class FilesComponent extends React.Component {
         this.loadCustomTrack = this.loadCustomTrack.bind(this);
         this.loadFile = this.loadFile.bind(this);
         this.save = this.save.bind(this);
+        this.remove = this.remove.bind(this);
     }
 
     componentDidMount() {
@@ -31,8 +33,9 @@ export class FilesComponent extends React.Component {
 
         if (customTracks.length > 0) {
             this.loadCustomTrack(customTracks[0].name);
+        } else {
+            this.loadSample(SAMPLES[0].name);
         }
-        this.loadSample(SAMPLES[0].name);
     }
 
     componentDidUpdate() {
@@ -127,8 +130,36 @@ export class FilesComponent extends React.Component {
         this.setState({ customTracks });
     }
 
+    remove() {
+        let { customTracks, currentTrackName } = this.state;
+
+        if (currentTrackName) {
+            customTracks = customTracks.filter(t => t.name !== currentTrackName);
+            currentTrackName = '';
+
+            this.setState({ customTracks, currentTrackName });
+        }
+    }
+
     render() {
         const { show, currentTrackName } = this.state;
+        const trackOptions = {
+            label: 'Custom Tracks',
+            options: this.state.customTracks.map(t => {
+                return { value: t.name, label: t.name };
+            })
+        };
+        const sampleOptions = {
+            label: 'Samples',
+            options: SAMPLES.map(t => {
+                return { value: t.name, label: t.name };
+            })
+        };
+        let def = trackOptions.options.find(o => o.value === currentTrackName);
+
+        if (!def) {
+            def = sampleOptions.options.find(o => o.value === currentTrackName);
+        }
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -137,19 +168,9 @@ export class FilesComponent extends React.Component {
             { show && <>
                 <br/>
                 Select track:
-                <select defaultValue={currentTrackName} onChange={ ev => {
-                    this.loadSample(ev.target.value);
-                }}>
-                    <option value="" disabled>Unsaved track</option>
-                    <option disabled>Custom tracks:</option>
-                    {
-                        this.state.customTracks.map(d => <option value={d.name} key={d.name}>{d.name}</option>)
-                    }
-                    <option disabled>Sample tracks:</option>
-                    {
-                        SAMPLES.map(d => <option value={d.name} key={d.name}>{d.name}</option>)
-                    }
-                </select>
+                <Select className="selects" options={[ trackOptions, sampleOptions ]} value={def} onChange={ ev => {
+                    this.loadSample(ev.value);
+                }} />
                 <br/>
                 <br/>
                 Load track from CSV file (
@@ -164,15 +185,13 @@ export class FilesComponent extends React.Component {
                 <br/>
                 <br/>
 
+                Remove selected track:
+                <button onClick={ this.remove }>Remove</button>
+                <br/>
                 Save current track:
-                <form>
-                    <p>
-                        <label>Name:</label>
-                        <input type="text" value={ this.state.name }
-                            onChange={ ev => this.setState({ name: ev.target.value })}/>
-                    </p>
-                    <button onClick={ this.save }>Save</button>
-                </form>
+                <input type="text" value={ this.state.name }
+                    onChange={ ev => this.setState({ name: ev.target.value })}/>
+                <button onClick={ this.save }>Save</button>
             </>
             }
         </div>;

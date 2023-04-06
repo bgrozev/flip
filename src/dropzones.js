@@ -1,4 +1,5 @@
 import React from 'react';
+import Select from 'react-select';
 
 export class Dropzone {
     constructor(name, lat, lng, direction) {
@@ -84,6 +85,12 @@ export class CustomDropzonesComponent extends React.Component {
 
     render() {
         const { show } = this.state;
+        const options = this.state.customDropzones.map(cd => {
+            return { label: cd.name, value: cd.name };
+        });
+        const def = { label: 'Select location to remove', value: 'Remove', isDisabled: true };
+
+        options.unshift(def);
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -91,12 +98,11 @@ export class CustomDropzonesComponent extends React.Component {
             <b>Custom Locations </b>
             { show && <>
                 <br/>
-                <select onChange={ ev => this.setState({ selected: ev.target.value })}>
-                    <option disabled key="select">Select location to remove</option>
-                    {
-                        this.state.customDropzones.map(cd => <option value={cd.name} key={cd.name}>{cd.name}</option>)
-                    }
-                </select>
+                <Select
+                    className="selects"
+                    defaultValue={ def }
+                    onChange={ ev => this.setState({ selected: ev.value })} options={options}
+                />
                 <button onClick={ this.remove }>Remove</button>
                 <br/>
                 <br/>

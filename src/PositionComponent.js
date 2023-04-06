@@ -1,4 +1,5 @@
 import React from 'react';
+import Select from 'react-select';
 
 import { DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
 import { trueOrNull } from './util.js';
@@ -44,6 +45,22 @@ export class PositionComponent extends React.Component {
         const customDropzones = getCustomDropzones();
         const { show } = this.state;
         const { offsetE, offsetN, mirror, rotation } = this.state.position;
+        const unchanged = {
+            value: DZ_NONE,
+            label: 'Leave unchanged'
+        };
+        const customLocationsOptions = {
+            label: 'Custom Locations',
+            options: customDropzones.map(d => {
+                return { value: d.name, label: d.name };
+            })
+        };
+        const locationsOptions = {
+            label: 'Locations',
+            options: dropzones.map(d => {
+                return { value: d.name, label: d.name };
+            })
+        };
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -51,28 +68,22 @@ export class PositionComponent extends React.Component {
             <b>Positioning </b>
             { show && <>
                 <br/>
+                <label>Move to:</label>
+                <Select
+                    defaultValue={ unchanged }
+                    className="selects"
+                    options={[ unchanged, customLocationsOptions, locationsOptions ]}
+                    onChange={ ev => {
+                        const position = this.state.position;
+
+                        // TODO also reset winds to avoid stale windsaloft data?
+                        position.dz = ev.value;
+                        this.setState({ position });
+                        this.props.onChange(position);
+                    }}
+                />
                 <form>
                     <p>
-                        <label>Move to:</label>
-                        <select onChange={ ev => {
-                            const position = this.state.position;
-
-                            // TODO also reset winds to avoid stale windsaloft data?
-                            position.dz = ev.target.value;
-                            this.setState({ position });
-                            this.props.onChange(position);
-
-                        }} >
-                            <option value={DZ_NONE}>Leave unchanged</option>
-                            <option value="Custom:" disabled>Custom:</option>
-                            {
-                                customDropzones.map(d => <option value={d.name} key={d.name}>{d.name}</option>)
-                            }
-                            <option value="Included:" disabled>Included:</option>
-                            {
-                                dropzones.map(d => <option value={d.name} key={d.name}>{d.name}</option>)
-                            }
-                        </select>
                     </p>
                     <p>
                         <label>Offset N/S:</label>
