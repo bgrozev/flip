@@ -30,9 +30,10 @@ export class PositionComponent extends React.Component {
         this.reset = this.reset.bind(this);
     }
 
-    reset() {
+    reset(ev) {
         const position = initialPosition();
 
+        ev.preventDefault(); // the form is submitted and reloads the page by default...
         this.setState({ position });
         this.props.onChange(position);
     }
