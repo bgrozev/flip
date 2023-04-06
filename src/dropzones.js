@@ -64,8 +64,10 @@ export class CustomDropzonesComponent extends React.Component {
         localStorage.setItem('showCustomDropzones', JSON.stringify(this.state.show));
     }
 
-    save() {
+    save(ev) {
         const { customDropzones } = this.state;
+
+        ev.preventDefault();
 
         customDropzones.push(new Dropzone(this.state.name, this.state.lat, this.state.lng, this.state.direction));
         localStorage.setItem('customDropzones', JSON.stringify(customDropzones));

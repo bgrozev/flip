@@ -115,14 +115,14 @@ export class FilesComponent extends React.Component {
     save() {
         const path = this.props.track;
         const { csv, name, customTracks } = this.state;
-        const csvCopy = JSON.parse(JSON.stringify(this.state.csv));
+        const csvCopy = JSON.parse(JSON.stringify(csv));
         const len = path.points.length;
 
         for (let i = 0; i < len; i++) {
             csvCopy[i + 1].lat = path.points[len - i - 1].lat;
             csvCopy[i + 1].lon = path.points[len - i - 1].lng;
         }
-        const formatted = d3.csvFormat(csv);
+        const formatted = d3.csvFormat(csvCopy);
 
         console.log(`Saving custom track as ${name}`);
         customTracks.push({ name, csv: formatted });
