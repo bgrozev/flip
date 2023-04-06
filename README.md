@@ -1,6 +1,8 @@
 # FliP Flight Planner
 FliP is a tool for skydiving, specifically for planning the landing pattern.
 
+You can use it here: https://mustelinae.net/flip
+
 # Disclaimer
 This is just a tool and comes with NO GUARANTEES. If you use it, you MUST CRITICALLY evaluate the information it 
 provides. Please use common sense and DO NOT trust it blindly. Please read the rest of the document and make sure
@@ -28,13 +30,14 @@ FliP is designed to be used in conjunction with FlySight/FlySight Viewer, gSwoop
 any of them. 
 
 # How to use
-To use FliP effectively for your planning you'll need to load your own FlySight track (see the section below for
-details). But there are a few built-in samples that you can play with.
+To use FliP effectively for your planning you'll need to load your own FlySight track (see 
+[Preparing and importing a FlySight file](#preparing-and-importing-a-flysight-file)). But there are a few built-in
+samples that you can play with.
 
 ## Selecting a track
 You can select a track under the `Tracks` menu. There are 4 built-in samples you can play with. You can also import
-a track from a FlySight file (see [#Preparing and importing a FlySight file]). After a track is imported, you can name
-it and save it in the application with the `save` button. 
+a track from a FlySight file (see [Preparing and importing a FlySight file](#preparing-and-importing-a-flysight-file)).
+After a track is imported, you can name it and save it in the application with the `save` button. 
 
 Note that tracks are saved in the browser's `localStorage` and will not be available on other devices. You should 
 organize and save the files on your own, and only save them in FliP for convenience.
@@ -75,7 +78,7 @@ previous point based on:
 * The wind at the given altitude (the altitude of the first of the two points).
 * The time difference between the two points.
 
-This means we assume the wind affects us instantaneously (we have inertia). This is not realistic, but we make that 
+This means we assume the wind affects us instantaneously (we have zero inertia). This is not realistic, but we make that 
 assumption while planning anyway. Presumably if the wind shear is strong enough to make a practical difference we 
 shouldn't be flying canopies :)
 
@@ -161,8 +164,8 @@ on functionality. If building UIs is your thing and you want to help reach out o
 It's my months or years long setup for a joke. When I have the time to build a Flocking Planner you'll be able to
 FliP/FloP between the two.
 
-# License
-FliP is open-source, licensed under the [Apache 2.0 license](./LICENSE.txt).
+# Authors and License
+FliP is open-source, licensed under the [Apache 2.0 license](./LICENSE.txt). It was created by Boris Grozev.
 
 # Development
 See the [BUILD.md](./doc/BUILD.md) file for how to develop or build the application.
