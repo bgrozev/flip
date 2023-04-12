@@ -3,6 +3,8 @@ FliP is a tool for skydiving, specifically for planning the landing pattern.
 
 You can use it here: https://mustelinae.net/flip
 
+Introduction video here: https://youtu.be/G8TQtR7Qd8o
+
 # Disclaimer
 This is just a tool and comes with NO GUARANTEES. If you use it, you MUST CRITICALLY evaluate the information it 
 provides. Please use common sense and DO NOT trust it blindly. Please read the rest of the document and make sure

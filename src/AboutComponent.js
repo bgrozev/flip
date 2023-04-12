@@ -18,7 +18,9 @@ export class AboutComponent extends React.Component {
                 <br/>
                 <br/>
                 <text style={{ fontSize: '70%' }}>
-                    <a href='https://github.com/bgrozev/flip'>FliP Flight Planner</a> by Boris Grozev.
+                    <a href='https://github.com/bgrozev/flip'>FliP Flight Planner</a> by Boris Grozev, for documentation
+                    see the <a href='https://github.com/bgrozev/flip/blob/main/README.md'>README</a> and
+                    this <a href='https://youtu.be/G8TQtR7Qd8o'>introduction video</a>.
                 </text>
                 <br/>
                 <br/>
