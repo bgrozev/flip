@@ -119,13 +119,13 @@ final point. It cuts off at 2500 ft. It's experimental and I recommend trimming 
 exactly what the results mean.
 
 ## Adding POMs
-POMs (for Point Of Manoeuvre) are points that are visualized with a larged circle. They are useful to keep track of
+POMs (for Point Of Manoeuvre) are points that are visualized with a larger circle. They are useful to keep track of
 where the manoeuvre point actually is when wind is applied. They can be hidden with a setting under the `Display` menu.
 
 I like to add POMs for the start of my turn to base, the initiation point of my turn, and my "snap point". 
 
 To add POMs to a file:
-1. Add `,POM` to the end of the first line in the file (this adds a new column, called `POM`).
+1. Add `,pom` to the end of the first line in the file (this adds a new column, called `pom`).
 2. Find the point you want to add in FlySight Viewer and note their timestamp.
 3. Find the corresponding lines in the file an add `,1` to the end.
 
