@@ -2,10 +2,10 @@ import * as d3 from 'd3';
 import React from 'react';
 
 import { AboutComponent } from './AboutComponent.js';
-import { DisplaySettingsComponent, initialDisplaySettings } from './DisplaySettingsComponent.js';
 import { FilesComponent } from './FilesComponent.js';
 import MapWithPath from './MapWithPath.js';
 import { PositionComponent, initialPosition } from './PositionComponent.js';
+import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
 import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
 import { Path } from './geo.js';
@@ -20,7 +20,7 @@ class App extends React.Component {
             winds: new WindsAloft(),
             toggleRerender: false,
             position: initialPosition(),
-            displaySettings: initialDisplaySettings()
+            settings: initialSettings()
         };
 
         this.exportFile = this.exportFile.bind(this);
@@ -89,7 +89,7 @@ class App extends React.Component {
     }
 
     render() {
-        const { showPreWind, showPoms } = this.state.displaySettings;
+        const { showPreWind, showPoms } = this.state.settings;
         const paths = this.getPaths();
         let center = dropzones[4]; // Just default somewhere
 
@@ -127,7 +127,7 @@ class App extends React.Component {
                     <CustomDropzonesComponent
                         onChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })} />
                     <hr/>
-                    <DisplaySettingsComponent onChange={ displaySettings => this.setState({ displaySettings })} />
+                    <SettingsComponent onChange={ settings => this.setState({ settings })} />
                     <hr/>
                     <AboutComponent />
                 </div>
