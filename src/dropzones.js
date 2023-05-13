@@ -1,12 +1,16 @@
 import React from 'react';
 import Select from 'react-select';
 
+import { Point } from './geo.js';
+import { fetchSpacelandGroundWind } from './spaceland.js';
+
 export class Dropzone {
-    constructor(name, lat, lng, direction) {
+    constructor(name, lat, lng, direction, fetchGroundWind) {
         this.name = name;
         this.lat = lat;
         this.lng = lng;
         this.direction = direction;
+        this.fetchGroundWind = fetchGroundWind;
     }
 }
 
@@ -26,15 +30,46 @@ export const dropzones = [
     new Dropzone('Skydive Sebastian: North', 27.81681, -80.49811, 315),
     new Dropzone('Skydive Sebastian: South', 27.81681, -80.49811, 135),
     new Dropzone('Skydive Sofia (Ihtiman)', 42.421089, 23.768024, 315),
-    new Dropzone('Skydive Spaceland Atlanta', 33.97761, -85.168, 253),
-    new Dropzone('Skydive Spaceland Dallas', 33.44727, -96.37722, 2),
-    new Dropzone('Skydive Spaceland Houston', 29.357628, -95.461775, 151),
-    new Dropzone('Skydive Spaceland San Marcos: Distance North', 29.77111, -97.77347, 50),
-    new Dropzone('Skydive Spaceland San Marcos: Distance South', 29.77153, -97.77290, 230),
-    new Dropzone('Skydive Spaceland San Marcos: Speed', 29.771077, -97.773446, 64),
+    new Dropzone('Skydive Spaceland Atlanta', 33.97761, -85.168, 253, () => fetchSpacelandGroundWind('ATL')),
+    new Dropzone('Skydive Spaceland Dallas', 33.44727, -96.37722, 2, () => fetchSpacelandGroundWind('DAL')),
+    new Dropzone('Skydive Spaceland Houston', 29.357628, -95.461775, 151, () => fetchSpacelandGroundWind('HOU')),
+    new Dropzone(
+        'Skydive Spaceland San Marcos: Distance North',
+         29.77111,
+         -97.77347,
+         50,
+         () => fetchSpacelandGroundWind('SSM')),
+    new Dropzone(
+        'Skydive Spaceland San Marcos: Distance South',
+        29.77153,
+        -97.77290,
+        230,
+        () => fetchSpacelandGroundWind('SSM')),
+    new Dropzone(
+        'Skydive Spaceland San Marcos: Speed',
+        29.771077,
+        -97.773446,
+        64,
+        () => fetchSpacelandGroundWind('SSM')),
     new Dropzone('West Tennessee Skydiving: North', 35.22037, -89.18982, 2),
     new Dropzone('West Tennessee Skydiving: South', 35.22037, -89.18982, 182)
 ];
+
+export function findClosestDropzone(center) {
+    let minDistance = Number.MAX_VALUE;
+    let minDz;
+
+    dropzones.forEach(dz => {
+        const distance = center.distanceTo(new Point(dz.lat, dz.lng));
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            minDz = dz;
+        }
+    });
+
+    return minDz;
+}
 
 export function getCustomDropzones() {
     return JSON.parse(localStorage.getItem('customDropzones') ?? '[]');

@@ -11,8 +11,8 @@ export class AboutComponent extends React.Component {
         const { show } = this.state;
 
         return <div>
-            { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
-            { !show && <img src="show.png" alt="Show" width="20" onClick={() => this.setState({ show: !show })}/> }
+            { show && <img src='hide.png' alt='Hide' width='20' onClick={() => this.setState({ show: !show })}/> }
+            { !show && <img src='show.png' alt='Show' width='20' onClick={() => this.setState({ show: !show })}/> }
             <b>About</b>
             { show && <>
                 <br/>
@@ -28,14 +28,17 @@ export class AboutComponent extends React.Component {
                     Powered by <a href = "https://flysight.ca/">FlySight</a>.
                 </text>
                 <br/>
-                <br/>
                 <text style={{ fontSize: '70%' }}>
-                    Winds forecast from <a href = "https://www.markschulze.net/winds/">Winds Aloft by Mark Schulze</a>.
+                    Winds forecast from <a href = 'https://www.markschulze.net/winds/'>Winds Aloft by Mark Schulze</a>.
                 </text>
                 <br/>
+                <text style={{ fontSize: '70%' }}>
+                    Spaceland ground winds from <a href='https://sanmarcosclock.skydivespaceland.com/'>Spaceland Load
+                    Clock</a>.
+                </text>
                 <br/>
                 <text style={{ fontSize: '70%' }}>
-                    See also <a href = "https://mustelinae.net/swc/">Flocking Wind Calculator</a>.
+                    See also <a href = 'https://mustelinae.net/swc/'>Flocking Wind Calculator</a>.
                 </text>
             </>
             }

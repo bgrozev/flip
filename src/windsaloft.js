@@ -1,3 +1,6 @@
+export const SOURCE_MANUAL = 'manual';
+export const SOURCE_WINDS_ALOFT = 'winds-aloft';
+export const SOURCE_DZ = 'dropzone-specific';
 
 export class WindRow {
     constructor(altFt, direction, speedKts) {
@@ -17,13 +20,24 @@ export class WindsAloft {
     constructor(winds = [ new WindRow(0, 0, 0) ], center) {
         this.winds = winds;
         this.center = center;
+        this.groundSource = SOURCE_MANUAL;
+        this.aloftSource = SOURCE_MANUAL;
 
-        this.addRw = this.addRow.bind(this);
+        this.addRow = this.addRow.bind(this);
         this.getWindAt = this.getWindAt.bind(this);
+        this.setGroundWind = this.setGroundWind.bind(this);
     }
 
     addRow(wind) {
         this.winds.push(wind);
+    }
+
+    setGroundWind(windRow) {
+        if (this.winds.length > 0) {
+            this.winds[0] = windRow;
+        } else {
+            this.winds.push(windRow);
+        }
     }
 
     getWindAt(altFt) {
@@ -43,7 +57,7 @@ export class WindsAloft {
 
 export function fetchWindsAloft(point, hourOffset) {
     /* eslint-disable-next-line max-len */
-    return window.fetch(`https://mustelinae.net/winds-aloft?lat=${point.lat}&lon=${point.lng}&hourOffset=${hourOffset}&referrer=https://mustelinae.net/flyp`)
+    return window.fetch(`https://mustelinae.net/winds-aloft?lat=${point.lat}&lon=${point.lng}&hourOffset=${hourOffset}&referrer=https://mustelinae.net/flip`)
         .then(d => d.json())
         .then(j => {
             const wa = new WindsAloft([]);
@@ -58,6 +72,9 @@ export function fetchWindsAloft(point, hourOffset) {
 
                 wa.addRow(row);
             }
+
+            wa.aloftSource = SOURCE_WINDS_ALOFT;
+            wa.groundSource = SOURCE_WINDS_ALOFT;
 
             return wa;
         });
