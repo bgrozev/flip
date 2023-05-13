@@ -49,6 +49,7 @@ class App extends React.Component {
 
     getPaths() {
         const { path, winds, position } = this.state;
+        const { interpolateWind } = this.state.settings;
         const { dz, mirror, offsetE, offsetN, rotation } = position;
         const newPath = path.copy();
 
@@ -83,7 +84,7 @@ class App extends React.Component {
 
         const pathWithWind = newPath.copy();
 
-        pathWithWind.addWind(winds);
+        pathWithWind.addWind(winds, interpolateWind);
 
         return [ newPath, pathWithWind ];
     }

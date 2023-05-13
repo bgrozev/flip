@@ -4,9 +4,9 @@ export const SOURCE_DZ = 'dropzone-specific';
 
 export class WindRow {
     constructor(altFt, direction, speedKts) {
-        this.altFt = altFt;
-        this.direction = direction;
-        this.speedKts = speedKts;
+        this.altFt = Number(altFt);
+        this.direction = Number(direction);
+        this.speedKts = Number(speedKts);
 
         this.copy = this.copy.bind(this);
     }
@@ -40,18 +40,32 @@ export class WindsAloft {
         }
     }
 
-    getWindAt(altFt) {
+    getWindAt(altFt, interpolate) {
         if (!this.winds.length) {
             return new WindRow(0, 0, 0);
         }
 
+        let higher, lower;
+
         for (let i = this.winds.length - 1; i >= 0; i--) {
             if (this.winds[i].altFt <= altFt) {
-                return this.winds[i];
+                lower = this.winds[i];
+                if (this.winds.length > i + 1) {
+                    higher = this.winds[i + 1];
+                }
+                break;
             }
         }
 
-        return this.winds[0];
+        if (interpolate && lower && higher) {
+            const p = (altFt - lower.altFt) / (higher.altFt - lower.altFt);
+            const direction = lower.direction + (p * (higher.direction - lower.direction));
+            const speedKts = lower.speedKts + (p * (higher.speedKts - lower.speedKts));
+
+            return new WindRow(altFt, (direction + 360) % 360, speedKts);
+        }
+
+        return lower || this.winds[0];
     }
 }
 

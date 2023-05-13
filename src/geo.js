@@ -221,7 +221,7 @@ export class Path {
 
 
     /** Add wind to a path. * */
-    addWind(winds) {
+    addWind(winds, interpolate) {
         if (this.points.length <= 1) {
             return;
         }
@@ -238,7 +238,7 @@ export class Path {
             // path is backwards in time...
             ms = this.points[i - 1].time - this.points[i].time;
 
-            const wind = preppedWinds.getWindAt(this.points[i - 1].alt);
+            const wind = preppedWinds.getWindAt(this.points[i - 1].alt, interpolate);
             const dOffsetFt = ms / 1000 * wind.speedKts * ktsToFps;
             const dOffsetB = wind.direction;
             const offsetPoint = start.copy();

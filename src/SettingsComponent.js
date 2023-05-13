@@ -10,7 +10,8 @@ export function initialSettings() {
     return {
         showPreWind: true,
         showPoms: true,
-        useDzGroundWind: true
+        useDzGroundWind: true,
+        interpolateWind: true
     };
 }
 export class SettingsComponent extends React.Component {
@@ -32,7 +33,7 @@ export class SettingsComponent extends React.Component {
 
     render() {
         const { show } = this.state;
-        const { showPreWind, showPoms, useDzGroundWind } = this.state.settings;
+        const { showPreWind, showPoms, useDzGroundWind, interpolateWind } = this.state.settings;
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -69,6 +70,16 @@ export class SettingsComponent extends React.Component {
                     this.props.onChange(settings);
                 }} />
                 Use dropzone-specific ground wind
+                <br/>
+
+                <input type="checkbox" checked={interpolateWind} onChange={ () => {
+                    const settings = this.state.settings;
+
+                    settings.interpolateWind = !settings.interpolateWind;
+                    this.setState({ settings });
+                    this.props.onChange(settings);
+                }} />
+                Interpolate winds between specified altitudes
             </> }
         </div>;
     }
