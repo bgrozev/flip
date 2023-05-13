@@ -89,7 +89,7 @@ class App extends React.Component {
     }
 
     render() {
-        const { showPreWind, showPoms } = this.state.settings;
+        const { settings } = this.state;
         const paths = this.getPaths();
         let center = dropzones[4]; // Just default somewhere
 
@@ -97,7 +97,7 @@ class App extends React.Component {
             center = paths[0].points[0];
         }
 
-        if (!showPreWind) {
+        if (!settings.showPreWind) {
             paths[0] = new Path();
         }
 
@@ -122,17 +122,20 @@ class App extends React.Component {
                     <hr/>
                     <PositionComponent onChange={ position => this.setState({ position }) } />
                     <hr/>
-                    <WindsComponent center={center} onChange={ winds => this.setState({ winds }) } />
+                    <WindsComponent
+                        center={center}
+                        settings={settings}
+                        onChange={ winds => this.setState({ winds }) } />
                     <hr/>
                     <CustomDropzonesComponent
                         onChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })} />
                     <hr/>
-                    <SettingsComponent onChange={ settings => this.setState({ settings })} />
+                    <SettingsComponent onChange={ s => this.setState({ settings: s })} />
                     <hr/>
                     <AboutComponent />
                 </div>
                 <div style={styleRight}>
-                    <MapWithPath center={center} pathA={paths[0]} pathB={paths[1]} showPoms={showPoms}/>
+                    <MapWithPath center={center} pathA={paths[0]} pathB={paths[1]} showPoms={settings.showPoms}/>
                 </div>
             </div>
         );

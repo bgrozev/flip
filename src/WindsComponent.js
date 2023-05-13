@@ -31,7 +31,7 @@ export class WindsComponent extends React.Component {
         this.altChanged = this.altChanged.bind(this);
         this.directionChanged = this.directionChanged.bind(this);
         this.speedChanged = this.speedChanged.bind(this);
-        this.fetchWa = this.fetchWa.bind(this);
+        this.fetch = this.fetch.bind(this);
         this.reset = this.reset.bind(this);
         this.unlock = this.unlock.bind(this);
     }
@@ -104,7 +104,7 @@ export class WindsComponent extends React.Component {
         this.setState({ winds });
     }
 
-    fetchWa() {
+    fetch() {
         const { center } = this.props;
 
         if (!center) {
@@ -114,7 +114,7 @@ export class WindsComponent extends React.Component {
         }
 
         const dz = findClosestDropzone(center);
-        const fetchDzGroundWind = typeof dz.fetchGroundWind === 'function';
+        const fetchDzGroundWind = this.props.settings.useDzGroundWind && typeof dz.fetchGroundWind === 'function';
 
         console.log(
             `Fetching winds for: ${JSON.stringify(center)}, fetchDzGroundWind=${fetchDzGroundWind} (dz=${dz.name})`);
@@ -224,7 +224,7 @@ export class WindsComponent extends React.Component {
                 <i>Upper winds source:</i> { sourceText(winds.aloftSource) }
                 <br/>
                 <br/>
-                <button onClick={this.fetchWa}>Fetch WindsAloft</button>
+                <button onClick={this.fetch}>Fetch WindsAloft</button>
                 <button onClick={this.reset}>Reset</button>
                 {
                     lock && <button onClick={this.unlock}>Unlock</button>

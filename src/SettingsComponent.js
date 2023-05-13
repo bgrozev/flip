@@ -9,7 +9,8 @@ export function initialSettings() {
 
     return {
         showPreWind: true,
-        showPoms: true
+        showPoms: true,
+        useDzGroundWind: true
     };
 }
 export class SettingsComponent extends React.Component {
@@ -31,7 +32,7 @@ export class SettingsComponent extends React.Component {
 
     render() {
         const { show } = this.state;
-        const { showPreWind, showPoms } = this.state.settings;
+        const { showPreWind, showPoms, useDzGroundWind } = this.state.settings;
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -39,6 +40,7 @@ export class SettingsComponent extends React.Component {
             <b>Settings</b>
             { show && <>
                 <br/>
+
                 <input type="checkbox" checked={showPreWind} onChange={ () => {
                     const settings = this.state.settings;
 
@@ -48,6 +50,7 @@ export class SettingsComponent extends React.Component {
                 }} />
                 Display pre-wind adjusted pattern
                 <br/>
+
                 <input type="checkbox" checked={showPoms} onChange={ () => {
                     const settings = this.state.settings;
 
@@ -56,6 +59,16 @@ export class SettingsComponent extends React.Component {
                     this.props.onChange(settings);
                 }} />
                 Display maneuvre points
+                <br/>
+
+                <input type="checkbox" checked={useDzGroundWind} onChange={ () => {
+                    const settings = this.state.settings;
+
+                    settings.useDzGroundWind = !settings.useDzGroundWind;
+                    this.setState({ settings });
+                    this.props.onChange(settings);
+                }} />
+                Use dropzone-specific ground wind
             </> }
         </div>;
     }
