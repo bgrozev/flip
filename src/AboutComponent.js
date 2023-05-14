@@ -33,8 +33,8 @@ export class AboutComponent extends React.Component {
                 </text>
                 <br/>
                 <text style={{ fontSize: '70%' }}>
-                    Spaceland ground winds from <a href='https://sanmarcosclock.skydivespaceland.com/'>Spaceland Load
-                    Clock</a>.
+                    Ground winds from: <a href='https://sanmarcosclock.skydivespaceland.com/'>Spaceland Load
+                    Clock</a>, <a href='https://wx.skydivecsc.com/'>CSC Weather</a>.
                 </text>
                 <br/>
                 <text style={{ fontSize: '70%' }}>
