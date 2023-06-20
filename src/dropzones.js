@@ -3,6 +3,7 @@ import Select from 'react-select';
 
 import { fetchCscGroundWind } from './csc.js';
 import { Point } from './geo.js';
+import { fetchSdazGroundWind } from './sdaz.js';
 import { fetchSpacelandGroundWind } from './spaceland.js';
 
 export class Dropzone {
@@ -20,8 +21,8 @@ export const DZ_NONE = 'NONE';
 export const dropzones = [
     new Dropzone('Chicagoland Skydiving Center', 41.89338, -89.07201, 250, () => fetchCscGroundWind()),
     new Dropzone('Cleveland Skydiving Center', 41.35090, -81.10065, 70),
-    new Dropzone('Skydive Arizona: North', 32.80799, -111.58167, 36),
-    new Dropzone('Skydive Arizona: South', 32.80799, -111.58167, 216),
+    new Dropzone('Skydive Arizona: North', 32.80799, -111.58167, 36, () => fetchSdazGroundWind()),
+    new Dropzone('Skydive Arizona: South', 32.80799, -111.58167, 216, () => fetchSdazGroundWind()),
     new Dropzone('Skydive City (ZHills): Zoneacc', 28.21887, -82.15122, 270),
     new Dropzone('Skydive City (ZHills): Distance', 28.218775, -82.151439, 200),
     new Dropzone('Skydive Elsinore', 33.63104, -117.29811, 125),
