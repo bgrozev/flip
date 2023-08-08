@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import React from 'react';
 import Select from 'react-select';
 
-import { extractPathFromCsv, trim } from './csv.js';
+import { convertFromGnss, extractPathFromCsv, trim } from './csv.js';
 import { Path } from './geo.js';
 import { SAMPLES, getSample } from './samples.js';
 import { parseFromLocalStorage, trueOrNull } from './util.js';
@@ -98,7 +98,8 @@ export class FilesComponent extends React.Component {
         const self = this;
 
         f.text().then(data => {
-            const csv = d3.csvParse(data);
+            const converted = convertFromGnss(data);
+            const csv = d3.csvParse(converted);
 
             if (self.state.autotrim) {
                 console.log('Using autotrim to 2500 ft.');

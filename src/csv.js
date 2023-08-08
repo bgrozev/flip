@@ -63,3 +63,21 @@ export function trim(csv, startAltitude) {
     csv.splice(lastIndex, csv.length - lastIndex);
     csv.splice(1, firstIndex - 1);
 }
+
+/**
+ * Convert from the GNSS file format that FlySight 2 uses to the format the rest of the code expects.
+ */
+export function convertFromGnss(data) {
+    if (!data.startsWith('$FLYS')) {
+        return data;
+    }
+
+    const lines = data.split('\n');
+    const filtered = lines.filter(l => l.startsWith('$COL') || l.startsWith('$UNIT') || l.startsWith('$GNSS'));
+
+    for (let i = 0; i < filtered.length; i++) {
+        filtered[i] = filtered[i].replace(/^\$COL,/, '').replace(/^\$UNIT,/, '');
+    }
+
+    return filtered.join('\n');
+}
