@@ -15,6 +15,12 @@ export class PositionProps {
 }
 
 export function initialPosition() {
+    const pos = localStorage.getItem('position');
+
+    if (pos !== null) {
+        return JSON.parse(pos);
+    }
+
     return new PositionProps(DZ_NONE, 0, 0, 0, false);
 }
 
@@ -40,6 +46,9 @@ export class PositionComponent extends React.Component {
 
     componentDidUpdate() {
         localStorage.setItem('showPosition', JSON.stringify(this.state.show));
+        if (this.state.position !== undefined) {
+            localStorage.setItem('position', JSON.stringify(this.state.position));
+        }
     }
 
     render() {
