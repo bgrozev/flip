@@ -4,11 +4,13 @@ import React from 'react';
 import { AboutComponent } from './AboutComponent.js';
 import { FilesComponent } from './FilesComponent.js';
 import MapWithPath from './MapWithPath.js';
+import { PatternEntryComponent } from './PatternEntryComponent.js';
 import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
+import { extractPathFromCsv } from './csv.js';
 import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
-import { Path } from './geo.js';
+import { Path, makePattern } from './geo.js';
 import { WindsAloft } from './windsaloft.js';
 
 class App extends React.Component {
@@ -130,6 +132,15 @@ class App extends React.Component {
                     <hr/>
                     <CustomDropzonesComponent
                         onChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })} />
+                    <hr/>
+                    <PatternEntryComponent
+                        onChange={ pattern => {
+                            console.log(`Loading pattern: ${JSON.stringify(pattern)}`);
+                            const csv = makePattern(pattern);
+
+                            this.setState({ csv, path: extractPathFromCsv(csv) });
+                        }}
+                    />
                     <hr/>
                     <SettingsComponent onChange={ s => this.setState({ settings: s })} />
                     <hr/>
