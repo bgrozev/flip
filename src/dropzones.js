@@ -25,6 +25,7 @@ export const dropzones = [
     new Dropzone('Skydive Arizona: South', 32.80799, -111.58167, 216, () => fetchSdazGroundWind()),
     new Dropzone('Skydive City (ZHills): Zoneacc', 28.21887, -82.15122, 270),
     new Dropzone('Skydive City (ZHills): Distance', 28.218775, -82.151439, 200),
+    new Dropzone('Skydive DeLand', 29.06402, -81.27847, 125),
     new Dropzone('Skydive Elsinore', 33.63104, -117.29811, 125),
     new Dropzone('Skydive Midwest', 42.70255, -87.95826, 272),
     new Dropzone('Skydive Moab', 38.75782, -109.74471, 0),
