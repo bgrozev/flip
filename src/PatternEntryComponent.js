@@ -3,10 +3,11 @@ import React from 'react';
 import { trueOrNull } from './util.js';
 
 export class PatternEntryProps {
-    constructor(entryFt, baseFt, finalFt, descentRateMph, gr, hSpeedMph) {
+    constructor(entryFt, baseFt, finalFt, finishFt, descentRateMph, gr, hSpeedMph) {
         this.entryFt = entryFt;
         this.baseFt = baseFt;
         this.finalFt = finalFt;
+        this.finishFt = finishFt;
         this.descentRateMph = descentRateMph;
         this.gr = gr;
         if (!gr || gr < 0) {
@@ -26,12 +27,15 @@ export class PatternEntryProps {
                 if (j.zPattern === undefined) {
                     j.zPattern = false;
                 }
+                if (j.finishFt === undefined) {
+                    j.finishFt = 0;
+                }
 
                 return j;
             }
         }
 
-        return new PatternEntryProps(900, 600, 300, 12, 2.6);
+        return new PatternEntryProps(900, 600, 300, 0, 12, 2.6);
     }
 }
 
@@ -96,6 +100,15 @@ export class PatternEntryComponent extends React.Component {
                             const patternEntryProps = this.state.patternEntryProps;
 
                             patternEntryProps.finalFt = Number(ev.target.value);
+                            this.setState({ patternEntryProps });
+                        }} />
+                    </p>
+                    <p>
+                        <label>Finish (ft):</label>
+                        <input type="number" step="100" value={p.finishFt} onChange={ ev => {
+                            const patternEntryProps = this.state.patternEntryProps;
+
+                            patternEntryProps.finishFt = Number(ev.target.value);
                             this.setState({ patternEntryProps });
                         }} />
                     </p>
