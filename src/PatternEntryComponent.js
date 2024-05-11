@@ -12,17 +12,27 @@ export class PatternEntryProps {
         if (!gr || gr < 0) {
             this.gr = hSpeedMph / descentRateMph;
         }
-    }
-}
-
-export function initialPatternEntryProps() {
-    const p = localStorage.getItem('patternEntryProps');
-
-    if (p !== null) {
-        return JSON.parse(p);
+        this.zPattern = false;
     }
 
-    return new PatternEntryProps(900, 600, 300, 12, 2.6);
+    static fromLocalStorage(key) {
+        const p = localStorage.getItem(key);
+
+        if (p !== null) {
+            const j = JSON.parse(p);
+
+            // In case localStorage was set from an older version and some fields are missing.
+            if (j) {
+                if (j.zPattern === undefined) {
+                    j.zPattern = false;
+                }
+
+                return j;
+            }
+        }
+
+        return new PatternEntryProps(900, 600, 300, 12, 2.6);
+    }
 }
 
 export class PatternEntryComponent extends React.Component {
@@ -30,7 +40,7 @@ export class PatternEntryComponent extends React.Component {
         super(props);
 
         this.state = {
-            patternEntryProps: initialPatternEntryProps(),
+            patternEntryProps: PatternEntryProps.fromLocalStorage('patternEntryProps'),
             show: trueOrNull(localStorage.getItem('showPatternEntry'))
         };
 
@@ -104,6 +114,15 @@ export class PatternEntryComponent extends React.Component {
                             const patternEntryProps = this.state.patternEntryProps;
 
                             patternEntryProps.gr = Number(ev.target.value);
+                            this.setState({ patternEntryProps });
+                        }} />
+                    </p>
+                    <p>
+                        <label>Z-pattern:</label>
+                        <input type="checkbox" checked={p.zPattern} onChange={ () => {
+                            const patternEntryProps = this.state.patternEntryProps;
+
+                            patternEntryProps.zPattern = !patternEntryProps.zPattern;
                             this.setState({ patternEntryProps });
                         }} />
                     </p>

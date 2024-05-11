@@ -194,7 +194,7 @@ export class Path {
 
     /** Reflect this around the bearing defined by the first two points */
     mirror() {
-        if (this.length < 2) {
+        if (this.points.length < 2) {
             return;
         }
 
@@ -271,7 +271,7 @@ export function makePattern(pattern) {
     const t1 = 1000 * (pattern.entryFt - pattern.baseFt) / (pattern.descentRateMph * mphToFps);
     const l1 = (pattern.entryFt - pattern.baseFt) * pattern.gr;
 
-    p1.translate(180, l1);
+    p1.translate(pattern.zPattern ? 0 : 180, l1);
     p1.time = p1.time + t1;
     p1.alt = pattern.baseFt;
 
