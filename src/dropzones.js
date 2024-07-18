@@ -34,7 +34,7 @@ export const dropzones = [
     new Dropzone('Skydive Raleigh', 36.08641, -78.37127, 45),
     new Dropzone('Skydive Sebastian: North', 27.81681, -80.49811, 315),
     new Dropzone('Skydive Sebastian: South', 27.81681, -80.49811, 135),
-    new Dropzone('Skydive Sofia (Ihtiman)', 42.421089, 23.768024, 315),
+    new Dropzone('Skydive Sofia (Ihtiman)', 42.42256, 23.76556, 315),
     new Dropzone('Skydive Spaceland Atlanta', 33.97761, -85.168, 253, () => fetchSpacelandGroundWind('ATL')),
     new Dropzone('Skydive Spaceland Dallas', 33.44727, -96.37722, 2, () => fetchSpacelandGroundWind('DAL')),
     new Dropzone('Skydive Spaceland Houston', 29.357628, -95.461775, 151, () => fetchSpacelandGroundWind('HOU')),
