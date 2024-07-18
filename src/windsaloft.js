@@ -82,7 +82,11 @@ export function fetchWindsAloft(point, hourOffset) {
             // TODO: how many do we take? Cap at altitude? Cap at sample altitude?
             for (let i = 0; i < 10; i++) {
                 const elevFt = j.altFtRaw[i];
-                const row = new WindRow(elevFt, j.directionRaw[elevFt.toString()], j.speedRaw[elevFt.toString()]);
+                const row = new WindRow(
+                    elevFt - j.altFtRaw[0], // Assume the first one is at ground level.
+                    j.directionRaw[elevFt.toString()],
+                    j.speedRaw[elevFt.toString()]
+                );
 
                 wa.addRow(row);
             }
