@@ -37,7 +37,8 @@ export function fetchSpacelandGroundWind(location) {
         });
 
         socket.on('connect_error', e => {
-            console.log(`Connect_error: ${e}`);
+            console.log(`connect_error: ${e}`);
+            socket.close();
             reject(new Error(`connect_error: ${e}`));
         });
     });

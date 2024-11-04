@@ -4,7 +4,7 @@ import { findClosestDropzone } from './dropzones.js';
 import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
 import { SOURCE_DZ, SOURCE_MANUAL, SOURCE_WINDS_ALOFT, WindRow, Winds } from './wind.js';
-import { fetchWindsAloft } from './forecast/windsaloft.js';
+import { fetchForecast } from './forecast/forecast.js';
 
 function sourceText(source) {
     if (source === SOURCE_MANUAL) {
@@ -122,19 +122,8 @@ export class WindsComponent extends React.Component {
 
         this.setState({ fetching: true });
 
-        Promise.all([
-            fetchWindsAloft(center, 0),
-            fetchDzGroundWind && dz.fetchGroundWind ? dz.fetchGroundWind() : null
-        ])
-            .then(values => {
-                const winds = values[0];
-                const groundWind = values[1];
-
-                if (groundWind) {
-                    winds.setGroundWind(groundWind);
-                    winds.groundSource = SOURCE_DZ;
-                }
-
+        fetchForecast(center, fetchDzGroundWind && dz.fetchGroundWind)
+            .then(winds => {
                 this.setState({
                     winds,
                     fetching: false
