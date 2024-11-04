@@ -13,7 +13,7 @@ function getGroundWind(data) {
 
 export function fetchSpacelandGroundWind(location) {
     // See e.g. https://sanmarcosclock.skydivespaceland.com/
-    const url = 'wss://spacelandclocks.herokuapp.com';
+    const url = 'wss://houstonclock.skydivespaceland.com/';
     const socket = io(url, { transports: [ 'websocket' ], path: '/socket.io/' });
 
     console.log(`Fetching ground wind for spaceland ${location}`);
