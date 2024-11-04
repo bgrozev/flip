@@ -1,4 +1,4 @@
-import { SOURCE_WINDS_ALOFT, WindRow, Winds } from './wind.js';
+import { SOURCE_WINDS_ALOFT, WindRow, Winds } from '../wind.js';
 
 export function fetchWindsAloft(point, hourOffset) {
     /* eslint-disable-next-line max-len */

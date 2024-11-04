@@ -1,10 +1,10 @@
 import React from 'react';
 import Select from 'react-select';
 
-import { fetchCscGroundWind } from './csc.js';
+import { fetchCscGroundWind } from './forecast/csc.js';
 import { Point } from './geo.js';
-import { fetchSdazGroundWind } from './sdaz.js';
-import { fetchSpacelandGroundWind } from './spaceland.js';
+import { fetchSdazGroundWind } from './forecast/sdaz.js';
+import { fetchSpacelandGroundWind } from './forecast/spaceland.js';
 
 export class Dropzone {
     constructor(name, lat, lng, direction, fetchGroundWind) {
