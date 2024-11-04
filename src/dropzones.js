@@ -20,44 +20,22 @@ export const DZ_NONE = 'NONE';
 
 export const dropzones = [
     new Dropzone('Chicagoland Skydiving Center', 41.89338, -89.07201, 250, () => fetchCscGroundWind()),
-    new Dropzone('Cleveland Skydiving Center', 41.35090, -81.10065, 70),
-    new Dropzone('Skydive Arizona: North', 32.80799, -111.58167, 36, () => fetchSdazGroundWind()),
-    new Dropzone('Skydive Arizona: South', 32.80799, -111.58167, 216, () => fetchSdazGroundWind()),
-    new Dropzone('Skydive City (ZHills): Zoneacc', 28.21887, -82.15122, 270),
-    new Dropzone('Skydive City (ZHills): Distance', 28.218775, -82.151439, 200),
+    new Dropzone('Skydive Arizona', 32.80799, -111.58167, 216, () => fetchSdazGroundWind()),
+    new Dropzone('Skydive City (ZHills)', 28.21887, -82.15122, 270),
     new Dropzone('Skydive DeLand', 29.06402, -81.27847, 125),
     new Dropzone('Skydive Elsinore', 33.63104, -117.29811, 125),
     new Dropzone('Skydive Midwest', 42.70255, -87.95826, 272),
-    new Dropzone('Skydive Moab', 38.75782, -109.74471, 0),
-    new Dropzone('Skydive Paraclete XP: North', 35.01717, -79.19393, 33),
-    new Dropzone('Skydive Paraclete XP: South', 35.01717, -79.19393, 213),
-    new Dropzone('Skydive Raleigh', 36.08641, -78.37127, 45),
-    new Dropzone('Skydive Sebastian: North', 27.81681, -80.49811, 315),
-    new Dropzone('Skydive Sebastian: South', 27.81681, -80.49811, 135),
+    new Dropzone('Skydive Paraclete XP', 35.01717, -79.19393, 33),
     new Dropzone('Skydive Sofia (Ihtiman)', 42.42256, 23.76556, 315),
-    new Dropzone('Skydive Spaceland Atlanta', 33.97761, -85.168, 253, () => fetchSpacelandGroundWind('ATL')),
     new Dropzone('Skydive Spaceland Dallas', 33.44727, -96.37722, 2, () => fetchSpacelandGroundWind('DAL')),
     new Dropzone('Skydive Spaceland Houston', 29.357628, -95.461775, 151, () => fetchSpacelandGroundWind('HOU')),
     new Dropzone(
-        'Skydive Spaceland San Marcos: Distance North',
+        'Skydive Spaceland San Marcos',
          29.77111,
          -97.77347,
          50,
          () => fetchSpacelandGroundWind('SSM')),
-    new Dropzone(
-        'Skydive Spaceland San Marcos: Distance South',
-        29.77153,
-        -97.77290,
-        230,
-        () => fetchSpacelandGroundWind('SSM')),
-    new Dropzone(
-        'Skydive Spaceland San Marcos: Speed',
-        29.771077,
-        -97.773446,
-        64,
-        () => fetchSpacelandGroundWind('SSM')),
-    new Dropzone('West Tennessee Skydiving: North', 35.22037, -89.18982, 2),
-    new Dropzone('West Tennessee Skydiving: South', 35.22037, -89.18982, 182)
+    new Dropzone('West Tennessee Skydiving', 35.22037, -89.18982, 182)
 ];
 
 export function findClosestDropzone(center) {
