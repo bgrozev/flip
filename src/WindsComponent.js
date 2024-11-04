@@ -3,7 +3,8 @@ import React from 'react';
 import { findClosestDropzone } from './dropzones.js';
 import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
-import { SOURCE_DZ, SOURCE_MANUAL, SOURCE_WINDS_ALOFT, WindRow, WindsAloft, fetchWindsAloft } from './windsaloft.js';
+import { SOURCE_DZ, SOURCE_MANUAL, SOURCE_WINDS_ALOFT, WindRow, Winds } from './wind.js';
+import { fetchWindsAloft } from './windsaloft.js';
 
 function sourceText(source) {
     if (source === SOURCE_MANUAL) {
@@ -20,7 +21,7 @@ export class WindsComponent extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            winds: new WindsAloft(),
+            winds: new Winds(),
             show: trueOrNull(localStorage.getItem('showWinds')),
             fetching: false
         };
@@ -37,7 +38,7 @@ export class WindsComponent extends React.Component {
     }
 
     reset() {
-        const winds = new WindsAloft([ new WindRow(0, 0, 0) ]);
+        const winds = new Winds([ new WindRow(0, 0, 0) ]);
 
         this.setState({
             winds,
@@ -126,19 +127,19 @@ export class WindsComponent extends React.Component {
             fetchDzGroundWind && dz.fetchGroundWind ? dz.fetchGroundWind() : null
         ])
             .then(values => {
-                const windsAloft = values[0];
+                const winds = values[0];
                 const groundWind = values[1];
 
                 if (groundWind) {
-                    windsAloft.setGroundWind(groundWind);
-                    windsAloft.groundSource = SOURCE_DZ;
+                    winds.setGroundWind(groundWind);
+                    winds.groundSource = SOURCE_DZ;
                 }
 
                 this.setState({
-                    winds: windsAloft,
+                    winds,
                     fetching: false
                 });
-                this.props.onChange(windsAloft);
+                this.props.onChange(winds);
             })
             .catch(err => {
                 console.log(`Failed to fetch winds: ${err}`);
@@ -224,13 +225,13 @@ export class WindsComponent extends React.Component {
                 <i>Upper winds source:</i> { sourceText(winds.aloftSource) }
                 <br/>
                 <br/>
-                <button onClick={this.fetch}>Fetch WindsAloft</button>
+                <button onClick={this.fetch}>Fetch forecast</button>
                 <button onClick={this.reset}>Reset</button>
                 {
                     lock && <button onClick={this.unlock}>Unlock</button>
                 }
             </> }
-            { fetching && <><br/><i>Fetching WindsAloft...</i></> }
+            { fetching && <><br/><i>Fetching forecast...</i></> }
         </div>;
     }
 }

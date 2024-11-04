@@ -11,7 +11,7 @@ import { WindsComponent } from './WindsComponent.js';
 import { extractPathFromCsv } from './csv.js';
 import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
 import { Path, makePattern } from './geo.js';
-import { WindsAloft } from './windsaloft.js';
+import { Winds } from './wind.js';
 
 class App extends React.Component {
     constructor(props) {
@@ -19,7 +19,7 @@ class App extends React.Component {
         this.state = {
             csv: [],
             path: new Path(),
-            winds: new WindsAloft(),
+            winds: new Winds(),
             toggleRerender: false,
             position: initialPosition(),
             settings: initialSettings()

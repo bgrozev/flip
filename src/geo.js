@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-import { WindsAloft } from './windsaloft.js';
+import { Winds } from './wind.js';
 
 // Utils adapted from http://www.movable-type.co.uk/scripts/latlong.html
 
@@ -132,7 +132,7 @@ function prepWind(winds) {
     });
 
     // Do we want to insert a [0,0,0] in case the first entry's alt is >0?
-    return new WindsAloft(wind);
+    return new Winds(wind);
 }
 
 export class Path {

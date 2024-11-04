@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 
-import { WindRow } from './windsaloft.js';
+import { WindRow } from './wind.js';
 
 const ktsToMph = 1.151;
 const mphToKts = 1 / ktsToMph;
