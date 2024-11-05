@@ -37,10 +37,6 @@ export class AboutComponent extends React.Component {
                     Clock</a>, <a href='https://wx.skydivecsc.com/'>CSC Weather</a>, <a
                         href='https://axis.tools/tool_Cond.php'>AXIS Tools</a>.
                 </text>
-                <br/>
-                <text style={{ fontSize: '70%' }}>
-                    See also <a href = 'https://mustelinae.net/swc/'>Flocking Wind Calculator</a>.
-                </text>
             </>
             }
         </div>;
