@@ -301,7 +301,7 @@ export function makePattern(pattern) {
 
         p4.time = p3.time + 1;
         p4.alt = 0;
-        points.push(p4)
+        points.push(p4);
     }
 
     csv.push({});
