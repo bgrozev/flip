@@ -1,10 +1,10 @@
 import React from 'react';
 
 import { findClosestDropzone } from './dropzones.js';
+import { fetchForecast } from './forecast/forecast.js';
 import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
 import { SOURCE_DZ, SOURCE_MANUAL, SOURCE_WINDS_ALOFT, WindRow, Winds } from './wind.js';
-import { fetchForecast } from './forecast/forecast.js';
 
 function sourceText(source) {
     if (source === SOURCE_MANUAL) {
