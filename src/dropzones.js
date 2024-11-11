@@ -31,9 +31,9 @@ export const dropzones = [
     new Dropzone('Skydive Spaceland Houston', 29.357628, -95.461775, 151, () => fetchSpacelandGroundWind('HOU')),
     new Dropzone(
         'Skydive Spaceland San Marcos',
-         29.77111,
-         -97.77347,
-         50,
+         29.76994,
+         -97.77173,
+         210,
          () => fetchSpacelandGroundWind('SSM')),
     new Dropzone('West Tennessee Skydiving', 35.22037, -89.18982, 182)
 ];
