@@ -293,16 +293,20 @@ export function makePattern(pattern) {
     p3.time = p3.time + t3;
     p3.alt = pattern.finishFt;
 
-    // Ground level.
-    const p4 = p3.copy();
+    const points = [ { }, p0, p1, p2, p3 ];
 
-    p4.time = p3.time + 1;
-    p4.alt = 0;
+    if (pattern.finishFt > 0) {
+        // Ground level.
+        const p4 = p3.copy();
+
+        p4.time = p3.time + 1;
+        p4.alt = 0;
+        points.push(p4)
+    }
 
     csv.push({});
-    const points = [ { }, p0, p1, p2, p3, p4 ];
 
-    for (let i = 1; i < 6; i++) {
+    for (let i = 1; i < points.length; i++) {
         csv.push({ });
         csv[i].lat = points[i].lat;
         csv[i].lon = points[i].lng;
