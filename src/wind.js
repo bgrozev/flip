@@ -1,6 +1,4 @@
-export const SOURCE_MANUAL = 'manual';
-export const SOURCE_WINDS_ALOFT = 'winds-aloft';
-export const SOURCE_DZ = 'dropzone-specific';
+import { SOURCE_MANUAL } from './forecast/forecast.js';
 
 export class WindRow {
     constructor(altFt, direction, speedKts) {

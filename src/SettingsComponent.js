@@ -1,18 +1,28 @@
 import React from 'react';
 
+import { SOURCE_OPEN_METEO, SOURCE_WINDS_ALOFT, forecastSourceLabel } from './forecast/forecast.js';
+
+const _ = require('lodash');
+
+
+const defaultSettings = {
+    showPreWind: true,
+    showPoms: true,
+    useDzGroundWind: true,
+    interpolateWind: true,
+    forecastSource: SOURCE_WINDS_ALOFT
+};
+
 export function initialSettings() {
     const ds = localStorage.getItem('displaySettings');
 
     if (ds !== null) {
-        return JSON.parse(ds);
+        const parsed = JSON.parse(ds);
+
+        return _.defaults(parsed, defaultSettings);
     }
 
-    return {
-        showPreWind: true,
-        showPoms: true,
-        useDzGroundWind: true,
-        interpolateWind: true
-    };
+    return defaultSettings;
 }
 export class SettingsComponent extends React.Component {
     constructor(props) {
@@ -33,7 +43,7 @@ export class SettingsComponent extends React.Component {
 
     render() {
         const { show } = this.state;
-        const { showPreWind, showPoms, useDzGroundWind, interpolateWind } = this.state.settings;
+        const { showPreWind, showPoms, useDzGroundWind, interpolateWind, forecastSource } = this.state.settings;
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -80,6 +90,22 @@ export class SettingsComponent extends React.Component {
                     this.props.onChange(settings);
                 }} />
                 Interpolate winds between specified altitudes
+                <br/>
+
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Forecast source:
+                <select
+                    value={ forecastSource }
+                    onChange={ ev => {
+                        const settings = this.state.settings;
+
+                        settings.forecastSource = ev.target.value;
+                        this.setState({ settings });
+                        this.props.onChange(settings);
+                    }}
+                >
+                    <option value={SOURCE_WINDS_ALOFT}>{forecastSourceLabel(SOURCE_WINDS_ALOFT)}</option>
+                    <option value={SOURCE_OPEN_METEO}>{forecastSourceLabel(SOURCE_OPEN_METEO)}</option>
+                </select>
             </> }
         </div>;
     }

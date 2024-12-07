@@ -29,7 +29,8 @@ export class AboutComponent extends React.Component {
                 </text>
                 <br/>
                 <text style={{ fontSize: '70%' }}>
-                    Winds forecast from <a href = 'https://www.markschulze.net/winds/'>Winds Aloft by Mark Schulze</a>.
+                    Winds forecast from <a href = 'https://www.markschulze.net/winds/'>Winds Aloft by Mark Schulze</a>
+                    &nbsp;and <a href = 'https://open-meteo.com/'>OpenMeteo</a>
                 </text>
                 <br/>
                 <text style={{ fontSize: '70%' }}>

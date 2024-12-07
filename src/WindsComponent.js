@@ -1,22 +1,11 @@
 import React from 'react';
 
 import { findClosestDropzone } from './dropzones.js';
-import { fetchForecast } from './forecast/forecast.js';
+import { SOURCE_MANUAL, fetchForecast, forecastSourceLabel } from './forecast/forecast.js';
 import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
-import { SOURCE_DZ, SOURCE_MANUAL, SOURCE_WINDS_ALOFT, WindRow, Winds } from './wind.js';
+import { WindRow, Winds } from './wind.js';
 
-function sourceText(source) {
-    if (source === SOURCE_MANUAL) {
-        return 'set manually';
-    } else if (source === SOURCE_DZ) {
-        return 'dropzone ground wind';
-    } else if (source === SOURCE_WINDS_ALOFT) {
-        return 'WindsAloft';
-    }
-
-    return 'invalid';
-}
 export class WindsComponent extends React.Component {
     constructor(props) {
         super(props);
@@ -116,13 +105,16 @@ export class WindsComponent extends React.Component {
 
         const dz = findClosestDropzone(center);
         const fetchDzGroundWind = this.props.settings.useDzGroundWind && typeof dz.fetchGroundWind === 'function';
+        const { forecastSource } = this.props.settings;
 
         console.log(
-            `Fetching winds for: ${JSON.stringify(center)}, fetchDzGroundWind=${fetchDzGroundWind} (dz=${dz.name})`);
+            `Fetching winds using ${forecastSource} for: ${JSON.stringify(center)},`
+            + ` fetchDzGroundWind=${fetchDzGroundWind} (dz=${dz.name})`
+        );
 
         this.setState({ fetching: true });
 
-        fetchForecast(center, fetchDzGroundWind && dz.fetchGroundWind)
+        fetchForecast(forecastSource, center, fetchDzGroundWind && dz.fetchGroundWind)
             .then(winds => {
                 this.setState({
                     winds,
@@ -209,9 +201,9 @@ export class WindsComponent extends React.Component {
                 }
 
                 <br/>
-                <i>Ground winds source:</i> { sourceText(winds.groundSource) }
+                <i>Ground winds source:</i> { forecastSourceLabel(winds.groundSource) }
                 <br/>
-                <i>Upper winds source:</i> { sourceText(winds.aloftSource) }
+                <i>Upper winds source:</i> { forecastSourceLabel(winds.aloftSource) }
                 <br/>
                 <br/>
                 <button onClick={this.fetch}>Fetch forecast</button>
