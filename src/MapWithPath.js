@@ -2,6 +2,8 @@
 import { CircleF, GoogleMap, LoadScript, PolylineF } from '@react-google-maps/api';
 import React from 'react';
 
+import { Point } from './geo.js';
+
 const containerStyle = {
     width: '100%',
     height: '100%'
@@ -62,6 +64,9 @@ function MapWithPath(props) {
                 mapContainerStyle={containerStyle}
                 mapTypeId= 'satellite'
                 center={props.center}
+                onClick={ev => {
+                    props.onClick(new Point(ev.latLng.lat(), ev.latLng.lng()));
+                }}
                 zoom={17}
             >
                 <PolylineF

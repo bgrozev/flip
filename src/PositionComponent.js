@@ -1,14 +1,13 @@
 import React from 'react';
 import Select from 'react-select';
 
-import { DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
+import { DZ_NONE, dropzones, findClosestDropzone, findDropzoneByName, getCustomDropzones } from './dropzones.js';
+import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
 
 export class PositionProps {
-    constructor(dz, offsetE, offsetN, rotation, mirror) {
+    constructor(dz, rotation, mirror) {
         this.dz = dz;
-        this.offsetE = offsetE;
-        this.offsetN = offsetN;
         this.rotation = rotation;
         this.mirror = mirror;
     }
@@ -18,10 +17,15 @@ export function initialPosition() {
     const pos = localStorage.getItem('position');
 
     if (pos !== null) {
-        return JSON.parse(pos);
+        const parsed = JSON.parse(pos);
+
+        // Don't barf on older format saved in local storage.
+        if (typeof parsed === 'object' && typeof parsed.dz === 'object') {
+            return parsed;
+        }
     }
 
-    return new PositionProps(DZ_NONE, 0, 0, 0, false);
+    return new PositionProps(findDropzoneByName('Skydive Spaceland San Marcos'), 0, false);
 }
 
 export class PositionComponent extends React.Component {
@@ -30,18 +34,25 @@ export class PositionComponent extends React.Component {
 
         this.state = {
             position: initialPosition(),
+            waitingForClick: false,
             show: trueOrNull(localStorage.getItem('showPosition'))
         };
 
         this.reset = this.reset.bind(this);
+        this.selectFromMap = this.selectFromMap.bind(this);
     }
 
     reset(ev) {
         const position = initialPosition();
 
         ev.preventDefault(); // the form is submitted and reloads the page by default...
-        this.setState({ position });
+        this.setState({ position, waitingForClick: false });
         this.props.onChange(position);
+    }
+
+    selectFromMap(ev) {
+        ev.preventDefault(); // the form is submitted and reloads the page by default...
+        this.setState({ waitingForClick: true });
     }
 
     componentDidUpdate() {
@@ -51,10 +62,34 @@ export class PositionComponent extends React.Component {
         }
     }
 
+    componentDidMount() {
+        this.props.setMapClickListener(point => {
+            if (!this.state.waitingForClick) {
+                return;
+            }
+
+            const position = this.state.position;
+
+            const dropzone = findClosestDropzone(point);
+
+            position.dz = Object.assign({}, dropzone);
+            position.dz.lat = point.lat;
+            position.dz.lng = point.lng;
+            if (point.distanceTo(new Point(dropzone.lat, dropzone.lng)) > 5280) {
+                // Only use ground wind within 1 mi from the dz.
+                position.dz.fetchGroundWind = null;
+            }
+
+            // TODO also reset winds to avoid stale windsaloft data?
+            this.setState({ position, waitingForClick: false });
+            this.props.onChange(position);
+        });
+    }
+
     render() {
         const customDropzones = getCustomDropzones();
         const { show } = this.state;
-        const { offsetE, offsetN, mirror, rotation } = this.state.position;
+        const { mirror, rotation } = this.state.position;
         const unchanged = {
             value: DZ_NONE,
             label: 'Leave unchanged'
@@ -87,34 +122,13 @@ export class PositionComponent extends React.Component {
                         const position = this.state.position;
 
                         // TODO also reset winds to avoid stale windsaloft data?
-                        position.dz = ev.value;
+                        position.dz = findDropzoneByName(ev.value);
                         this.setState({ position });
                         this.props.onChange(position);
                     }}
                 />
                 <form>
-                    <p>
-                    </p>
-                    <p>
-                        <label>Offset N/S:</label>
-                        <input type="number" step="5" value={offsetN} onChange={ ev => {
-                            const position = this.state.position;
-
-                            position.offsetN = Number(ev.target.value);
-                            this.setState({ position });
-                            this.props.onChange(position);
-                        }} />
-                    </p>
-                    <p>
-                        <label>Offset E/W:</label>
-                        <input type="number" step="5" value={offsetE} onChange={ ev => {
-                            const position = this.state.position;
-
-                            position.offsetE = Number(ev.target.value);
-                            this.setState({ position });
-                            this.props.onChange(position);
-                        }} />
-                    </p>
+                    <br/>
                     <p>
                         <label>Rotation:</label>
                         <input type="number" step="5" value={rotation} onChange={ ev => {
@@ -135,9 +149,9 @@ export class PositionComponent extends React.Component {
                             this.props.onChange(position);
                         }} />
                     </p>
-                    <p>
-                        <button onClick={this.reset}>Reset</button>
-                    </p>
+                    <br/>
+                    <button onClick={this.reset}>Reset</button>
+                    <button onClick={this.selectFromMap}>Select on map</button>
                 </form>
             </> }
         </div>;

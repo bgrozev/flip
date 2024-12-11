@@ -9,7 +9,7 @@ import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
 import { extractPathFromCsv } from './csv.js';
-import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
+import { CustomDropzonesComponent, dropzones } from './dropzones.js';
 import { Path, makePattern } from './geo.js';
 import { Winds } from './wind.js';
 
@@ -22,7 +22,8 @@ class App extends React.Component {
             winds: new Winds(),
             toggleRerender: false,
             position: initialPosition(),
-            settings: initialSettings()
+            settings: initialSettings(),
+            mapClickListener: () => {} // eslint-disable-line no-empty-function
         };
 
         this.exportFile = this.exportFile.bind(this);
@@ -52,35 +53,16 @@ class App extends React.Component {
     getPaths() {
         const { path, winds, position } = this.state;
         const { interpolateWind } = this.state.settings;
-        const { dz, mirror, offsetE, offsetN, rotation } = position;
+        const { dz, mirror, rotation } = position;
         const newPath = path.copy();
 
         if (mirror) {
             newPath.mirror();
         }
 
-        if (dz !== DZ_NONE) {
-            let dropzone = getCustomDropzones().find(d => d.name === dz);
-
-            if (!dropzone) {
-                dropzone = dropzones.find(d => d.name === dz);
-            }
-
-            if (dropzone) {
-                newPath.translateTo(dropzone);
-                if (dropzone.direction) {
-                    newPath.setFinalHeading(dropzone.direction);
-                }
-            } else {
-                console.log(`No dropzone: ${dz}`);
-            }
-        }
-
-        if (offsetN) {
-            newPath.translate(0, offsetN);
-        }
-        if (offsetE) {
-            newPath.translate(90, offsetE);
+        newPath.translateTo(dz);
+        if (dz.direction) {
+            newPath.setFinalHeading(dz.direction);
         }
         newPath.rotate(rotation);
 
@@ -123,7 +105,10 @@ class App extends React.Component {
                         exportCallback={ this.exportFile }
                         track={ paths[1] } />
                     <hr/>
-                    <PositionComponent onChange={ position => this.setState({ position }) } />
+                    <PositionComponent
+                        onChange={ position => this.setState({ position }) }
+                        setMapClickListener={ mapClickListener => this.setState({ mapClickListener }) }
+                    />
                     <hr/>
                     <WindsComponent
                         center={center}
@@ -147,7 +132,13 @@ class App extends React.Component {
                     <AboutComponent />
                 </div>
                 <div style={styleRight}>
-                    <MapWithPath center={center} pathA={paths[0]} pathB={paths[1]} showPoms={settings.showPoms}/>
+                    <MapWithPath
+                        center={center}
+                        pathA={paths[0]}
+                        pathB={paths[1]}
+                        showPoms={settings.showPoms}
+                        onClick={ point => this.state.mapClickListener(point) }
+                    />
                 </div>
             </div>
         );

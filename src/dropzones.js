@@ -58,6 +58,10 @@ export function getCustomDropzones() {
     return JSON.parse(localStorage.getItem('customDropzones') ?? '[]');
 }
 
+export function findDropzoneByName(name) {
+    return getCustomDropzones().find(dz => dz.name === name) ?? dropzones.find(dz => dz.name === name);
+}
+
 export class CustomDropzonesComponent extends React.Component {
     constructor(props) {
         super(props);
