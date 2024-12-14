@@ -10,7 +10,7 @@ const defaultSettings = {
     showPoms: true,
     useDzGroundWind: true,
     interpolateWind: true,
-    forecastSource: SOURCE_WINDS_ALOFT
+    forecastSource: SOURCE_OPEN_METEO
 };
 
 export function initialSettings() {
@@ -103,8 +103,8 @@ export class SettingsComponent extends React.Component {
                         this.props.onChange(settings);
                     }}
                 >
-                    <option value={SOURCE_WINDS_ALOFT}>{forecastSourceLabel(SOURCE_WINDS_ALOFT)}</option>
                     <option value={SOURCE_OPEN_METEO}>{forecastSourceLabel(SOURCE_OPEN_METEO)}</option>
+                    <option value={SOURCE_WINDS_ALOFT}>{forecastSourceLabel(SOURCE_WINDS_ALOFT)}</option>
                 </select>
             </> }
         </div>;
