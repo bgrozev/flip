@@ -38,6 +38,7 @@ jobs:
         with:
           cache: 'npm'
       - run: npm install
+      - run: sed -i -e "s/INSERT_GOOGLE_API_KEY/${{ GOOGLE_MAPS_API_KEY }}/ src/MapWithPath.js
       - run: npm run build --if-present
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
