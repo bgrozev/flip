@@ -1,8 +1,9 @@
 import React from 'react';
 import Select from 'react-select';
 
-import { DZ_NONE, dropzones, findClosestDropzone, findDropzoneByName, getCustomDropzones } from './dropzones.js';
-import { CustomDropzonesComponent } from './dropzones.js';
+import {
+    CustomDropzonesComponent, DZ_NONE, dropzones, findClosestDropzone, findDropzoneByName, getCustomDropzones
+} from './dropzones.js';
 import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
 
