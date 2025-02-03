@@ -2,6 +2,7 @@ import React from 'react';
 import Select from 'react-select';
 
 import { DZ_NONE, dropzones, findClosestDropzone, findDropzoneByName, getCustomDropzones } from './dropzones.js';
+import { CustomDropzonesComponent } from './dropzones.js';
 import { Point } from './geo.js';
 import { trueOrNull } from './util.js';
 
@@ -106,6 +107,7 @@ export class PositionComponent extends React.Component {
                 return { value: d.name, label: d.name };
             })
         };
+        const innerStyle = { marginLeft: '20px' };
 
         return <div>
             { show && <img src="hide.png" alt="Hide" width="20" onClick={() => this.setState({ show: !show })}/> }
@@ -153,6 +155,10 @@ export class PositionComponent extends React.Component {
                     <button onClick={this.reset}>Reset</button>
                     <button onClick={this.selectFromMap}>Select on map</button>
                 </form>
+                <hr/>
+                <div style={innerStyle}>
+                    <CustomDropzonesComponent onChange={this.props.onDzChange} />
+                </div>
             </> }
         </div>;
     }

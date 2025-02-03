@@ -8,7 +8,7 @@ import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
 import { extractPathFromCsv } from './csv.js';
-import { CustomDropzonesComponent, dropzones } from './dropzones.js';
+import { dropzones } from './dropzones.js';
 import { Path, makePattern } from './geo.js';
 import { Winds } from './wind.js';
 
@@ -113,15 +113,13 @@ class App extends React.Component {
                     <PositionComponent
                         onChange={ position => this.setState({ position }) }
                         setMapClickListener={ mapClickListener => this.setState({ mapClickListener }) }
+                        onDzChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })}
                     />
                     <hr/>
                     <WindsComponent
                         center={center}
                         settings={settings}
                         onChange={ winds => this.setState({ winds }) } />
-                    <hr/>
-                    <CustomDropzonesComponent
-                        onChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })} />
                     <hr/>
                     <SettingsComponent onChange={ s => this.setState({ settings: s })} />
                     <hr/>
