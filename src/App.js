@@ -2,9 +2,8 @@ import * as d3 from 'd3';
 import React from 'react';
 
 import { AboutComponent } from './AboutComponent.js';
-import { FilesComponent } from './FilesComponent.js';
 import MapWithPath from './MapWithPath.js';
-import { PatternEntryComponent } from './PatternEntryComponent.js';
+import { PatternComponent } from './PatternComponent.js';
 import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
@@ -99,11 +98,17 @@ class App extends React.Component {
         return (
             <div style={{ height: window.innerHeight }}>
                 <div style={styleLeft}>
-                    <hr/>
-                    <FilesComponent
-                        onChange={ (csv, path) => this.setState({ csv, path }) }
+                    <PatternComponent
+                        onPathChange={ (csv, path) => this.setState({ csv, path }) }
                         exportCallback={ this.exportFile }
-                        track={ paths[1] } />
+                        track={ paths[1] }
+                        onPatternChange={ pattern => {
+                            console.log(`Loading pattern: ${JSON.stringify(pattern)}`);
+                            const csv = makePattern(pattern);
+
+                            this.setState({ csv, path: extractPathFromCsv(csv) });
+                        }}
+                    />
                     <hr/>
                     <PositionComponent
                         onChange={ position => this.setState({ position }) }
@@ -117,15 +122,6 @@ class App extends React.Component {
                     <hr/>
                     <CustomDropzonesComponent
                         onChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })} />
-                    <hr/>
-                    <PatternEntryComponent
-                        onChange={ pattern => {
-                            console.log(`Loading pattern: ${JSON.stringify(pattern)}`);
-                            const csv = makePattern(pattern);
-
-                            this.setState({ csv, path: extractPathFromCsv(csv) });
-                        }}
-                    />
                     <hr/>
                     <SettingsComponent onChange={ s => this.setState({ settings: s })} />
                     <hr/>
