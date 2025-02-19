@@ -7,7 +7,7 @@ import { PatternComponent } from './PatternComponent.js';
 import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
-import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
+import { dropzones } from './dropzones.js';
 import { Path } from './util/geo.js';
 import { Winds } from './wind.js';
 
@@ -102,9 +102,9 @@ class App extends React.Component {
                         paths={ paths }
                         inputType={ this.state.inputType }
                         onPatternChange={ pattern => {
-                            console.log("Pattern changed, inputType=" + pattern.inputType);
+                            console.log(`Pattern changed, inputType=${pattern.inputType}`);
 
-                            this.setState({csv: pattern.csv, path: pattern.path, inputType: pattern.inputType})
+                            this.setState({ csv: pattern.csv, path: pattern.path, inputType: pattern.inputType });
                         }}
                     />
                     <hr/>

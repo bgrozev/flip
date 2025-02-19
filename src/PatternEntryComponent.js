@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { extractPathFromCsv } from './util/csv.js';
 import { makePattern } from './patterns/pattern.js';
+import { extractPathFromCsv } from './util/csv.js';
 import { trueOrNull } from './util/util.js';
 
 export class PatternEntryProps {
@@ -61,7 +61,7 @@ export class PatternEntryComponent extends React.Component {
 
         console.log(`Loading pattern: ${JSON.stringify(props)}`);
 
-        this.props.onChange({csv, path: extractPathFromCsv(csv), inputType: "pattern" });
+        this.props.onChange({ csv, path: extractPathFromCsv(csv), inputType: 'pattern' });
     }
 
     componentDidUpdate() {

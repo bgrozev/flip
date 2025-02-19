@@ -2,9 +2,9 @@ import * as d3 from 'd3';
 import React from 'react';
 import Select from 'react-select';
 
+import { SAMPLES, getSample } from './samples/samples.js';
 import { convertFromGnss, extractPathFromCsv, trim } from './util/csv.js';
 import { Path } from './util/geo.js';
-import { SAMPLES, getSample } from './samples/samples.js';
 import { parseFromLocalStorage, trueOrNull } from './util/util.js';
 
 export class FilesComponent extends React.Component {
