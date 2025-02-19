@@ -4,7 +4,7 @@ import Select from 'react-select';
 import { fetchCscGroundWind } from './forecast/csc.js';
 import { fetchSdazGroundWind } from './forecast/sdaz.js';
 import { fetchSpacelandGroundWind } from './forecast/spaceland.js';
-import { Point } from './geo.js';
+import { Point } from './util/geo.js';
 
 export class Dropzone {
     constructor(name, lat, lng, direction, fetchGroundWind) {

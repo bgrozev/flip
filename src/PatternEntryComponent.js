@@ -1,6 +1,8 @@
 import React from 'react';
 
-import { trueOrNull } from './util.js';
+import { makePattern } from './patterns/pattern.js';
+import { extractPathFromCsv } from './util/csv.js';
+import { trueOrNull } from './util/util.js';
 
 export class PatternEntryProps {
     constructor(entryFt, baseFt, finalFt, finishFt, descentRateMph, gr, hSpeedMph) {
@@ -53,7 +55,13 @@ export class PatternEntryComponent extends React.Component {
 
     load(ev) {
         ev.preventDefault(); // the form is submitted and reloads the page by default...
-        this.props.onChange(this.state.patternEntryProps);
+
+        const props = this.state.patternEntryProps;
+        const csv = makePattern(props);
+
+        console.log(`Loading pattern: ${JSON.stringify(props)}`);
+
+        this.props.onChange({ csv, path: extractPathFromCsv(csv), inputType: 'pattern' });
     }
 
     componentDidUpdate() {
@@ -140,7 +148,7 @@ export class PatternEntryComponent extends React.Component {
                         }} />
                     </p>
                     <p>
-                        <button onClick={this.load}>Load as track</button>
+                        <button onClick={this.load}>Load</button>
                     </p>
                 </form>
             </> }

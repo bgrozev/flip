@@ -2,7 +2,7 @@
 import { CircleF, GoogleMap, LoadScript, PolylineF } from '@react-google-maps/api';
 import React from 'react';
 
-import { Point } from './geo.js';
+import { Point } from './util/geo.js';
 
 const containerStyle = {
     width: '100%',

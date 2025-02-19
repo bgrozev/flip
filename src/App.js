@@ -7,9 +7,8 @@ import { PatternComponent } from './PatternComponent.js';
 import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
-import { extractPathFromCsv } from './csv.js';
 import { dropzones } from './dropzones.js';
-import { Path, makePattern } from './geo.js';
+import { Path } from './util/geo.js';
 import { Winds } from './wind.js';
 
 class App extends React.Component {
@@ -99,14 +98,13 @@ class App extends React.Component {
             <div style={{ height: window.innerHeight }}>
                 <div style={styleLeft}>
                     <PatternComponent
-                        onPathChange={ (csv, path) => this.setState({ csv, path }) }
                         exportCallback={ this.exportFile }
-                        track={ paths[1] }
+                        paths={ paths }
+                        inputType={ this.state.inputType }
                         onPatternChange={ pattern => {
-                            console.log(`Loading pattern: ${JSON.stringify(pattern)}`);
-                            const csv = makePattern(pattern);
+                            console.log(`Pattern changed, inputType=${pattern.inputType}`);
 
-                            this.setState({ csv, path: extractPathFromCsv(csv) });
+                            this.setState({ csv: pattern.csv, path: pattern.path, inputType: pattern.inputType });
                         }}
                     />
                     <hr/>
