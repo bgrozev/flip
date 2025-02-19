@@ -2,8 +2,8 @@ import React from 'react';
 
 import { findClosestDropzone } from './dropzones.js';
 import { SOURCE_MANUAL, fetchForecast, forecastSourceLabel } from './forecast/forecast.js';
-import { Point } from './geo.js';
-import { trueOrNull } from './util.js';
+import { Point } from './util/geo.js';
+import { trueOrNull } from './util/util.js';
 import { WindRow, Winds } from './wind.js';
 
 export class WindsComponent extends React.Component {

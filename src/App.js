@@ -8,7 +8,7 @@ import { PositionComponent, initialPosition } from './PositionComponent.js';
 import { SettingsComponent, initialSettings } from './SettingsComponent.js';
 import { WindsComponent } from './WindsComponent.js';
 import { CustomDropzonesComponent, DZ_NONE, dropzones, getCustomDropzones } from './dropzones.js';
-import { Path } from './geo.js';
+import { Path } from './util/geo.js';
 import { Winds } from './wind.js';
 
 class App extends React.Component {

@@ -4,8 +4,8 @@ import Select from 'react-select';
 import {
     CustomDropzonesComponent, DZ_NONE, dropzones, findClosestDropzone, findDropzoneByName, getCustomDropzones
 } from './dropzones.js';
-import { Point } from './geo.js';
-import { trueOrNull } from './util.js';
+import { Point } from './util/geo.js';
+import { trueOrNull } from './util/util.js';
 
 export class PositionProps {
     constructor(dz, rotation, mirror) {

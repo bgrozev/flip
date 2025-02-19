@@ -1,8 +1,8 @@
 import React from 'react';
 
-import { extractPathFromCsv } from './csv.js';
+import { extractPathFromCsv } from './util/csv.js';
 import { makePattern } from './patterns/pattern.js';
-import { trueOrNull } from './util.js';
+import { trueOrNull } from './util/util.js';
 
 export class PatternEntryProps {
     constructor(entryFt, baseFt, finalFt, finishFt, descentRateMph, gr, hSpeedMph) {

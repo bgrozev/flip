@@ -2,7 +2,7 @@ import React from 'react';
 
 import { FilesComponent } from './FilesComponent.js';
 import { PatternEntryComponent } from './PatternEntryComponent.js';
-import { trueOrNull } from './util.js';
+import { trueOrNull } from './util/util.js';
 
 export class PatternComponent extends React.Component {
     constructor(props) {

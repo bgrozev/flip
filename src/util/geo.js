@@ -1,4 +1,4 @@
-import { Winds } from './wind.js';
+import { Winds } from '../wind.js';
 
 // Utils adapted from http://www.movable-type.co.uk/scripts/latlong.html
 

@@ -1,4 +1,4 @@
-import { metersToFeet } from '../geo.js';
+import { metersToFeet } from '../util/geo.js';
 import { WindRow, Winds } from '../wind.js';
 
 import { SOURCE_OPEN_METEO } from './forecast.js';

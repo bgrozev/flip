@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-import { Point, metersToFeet, mphToFps } from '../geo.js';
+import { Point, metersToFeet, mphToFps } from '../util/geo.js';
 
 // Make a standard downwind-base-final pattern
 export function makePattern(pattern) {
