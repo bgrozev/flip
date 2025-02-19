@@ -29,9 +29,9 @@ export class PatternComponent extends React.Component {
                 <hr/>
                 <div style={innerStyle}>
                     <FilesComponent
-                        onChange={this.props.onPathChange}
+                        onChange={ (csv, path) => this.props.onPatternChange({csv, path, inputType: "file" })}
                         exportCallback={this.props.exportCallback}
-                        track={this.props.tracks}
+                        track={this.props.paths[1]}
                     />
                     <hr/>
                     <PatternEntryComponent onChange={this.props.onPatternChange} />
