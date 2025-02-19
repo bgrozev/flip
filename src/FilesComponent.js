@@ -4,7 +4,7 @@ import Select from 'react-select';
 
 import { convertFromGnss, extractPathFromCsv, trim } from './util/csv.js';
 import { Path } from './util/geo.js';
-import { SAMPLES, getSample } from './samples.js';
+import { SAMPLES, getSample } from './samples/samples.js';
 import { parseFromLocalStorage, trueOrNull } from './util/util.js';
 
 export class FilesComponent extends React.Component {
