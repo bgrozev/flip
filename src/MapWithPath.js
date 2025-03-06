@@ -62,7 +62,8 @@ function MapWithPath(props) {
         <LoadScript googleMapsApiKey="INSERT_GOOGLE_API_KEY">
             <GoogleMap
                 mapContainerStyle={containerStyle}
-                mapTypeId= 'satellite'
+                mapTypeId='satellite'
+                mapTypeControl='true'
                 center={props.center}
                 onClick={ev => {
                     props.onClick(new Point(ev.latLng.lat(), ev.latLng.lng()));
