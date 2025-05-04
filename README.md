@@ -1,7 +1,7 @@
 # FliP Flight Planner
 FliP is a tool for skydiving, specifically for planning the landing pattern.
 
-You can use it here: https://mustelinae.net/flip
+You can use it here: https://flip.mustelinae.net/
 
 # Disclaimer
 This is just a tool and comes with NO GUARANTEES. If you use it, you MUST CRITICALLY evaluate the information it 
