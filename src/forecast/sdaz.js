@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 
-import { WindRow } from '../wind.js';
+import { WindRow } from '../util/wind.js';
 
 const ktsToMph = 1.151;
 const mphToKts = 1 / ktsToMph;
@@ -22,8 +22,8 @@ export function fetchSdazGroundWind() {
                     console.log(`Ground wind variable, assuming no grond wind (speed ${xml.Ground.Spd_mi})`);
                     resolve(new WindRow(0, 0, 0));
                 } else {
-                    const speedMph = Number(xml.Ground.Spd_mi.replace('<b>', '').replace('</b> mph', ''));
-                    const direction = Number(xml.Ground.Dir.replace('<b>', '').replace('</b>&deg;', ''));
+                    const speedMph = Number(xml?.Ground?.Spd_mi?.replace('<b>', '')?.replace('</b> mph', ''));
+                    const direction = Number(xml?.Ground?.Dir?.replace('<b>', '')?.replace('</b>&deg;', ''));
 
                     if (!isNaN(speedMph) && !isNaN(direction)) {
                         resolve(new WindRow(0, direction, speedMph * mphToKts));

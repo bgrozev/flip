@@ -41,7 +41,7 @@ jobs:
       - run: node scripts/inject-ga.js
         env:
           GA_ID: ${{ secrets.GA_ID }}
-      - run: sed -i -e "s/INSERT_GOOGLE_API_KEY/${{ secrets.GOOGLE_MAPS_API_KEY }}/" src/MapWithPath.js
+      - run: sed -i -e "s/INSERT_GOOGLE_API_KEY/${{ secrets.GOOGLE_MAPS_API_KEY }}/" src/components/MapComponent.js
       - run: npm run build --if-present
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

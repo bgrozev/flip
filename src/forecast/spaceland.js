@@ -1,6 +1,6 @@
 import io from 'socket.io-client';
 
-import { WindRow } from '../wind.js';
+import { WindRow } from '../util/wind.js';
 
 const ktsToMph = 1.151;
 const mphToKts = 1 / ktsToMph;

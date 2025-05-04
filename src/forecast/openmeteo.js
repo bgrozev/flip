@@ -1,5 +1,5 @@
 import { metersToFeet } from '../util/geo.js';
-import { WindRow, Winds } from '../wind.js';
+import { WindRow, Winds } from '../util/wind.js';
 
 import { SOURCE_OPEN_METEO } from './forecast.js';
 
@@ -12,7 +12,7 @@ export async function fetchOpenMeteo(point) {
 
     console.log(`Elevation is ${elevationFt} ft`);
 
-    const winds = new Winds();
+    const winds = new Winds([]);
 
     winds.aloftSource = SOURCE_OPEN_METEO;
     winds.groundSource = SOURCE_OPEN_METEO;

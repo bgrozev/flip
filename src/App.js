@@ -1,140 +1,458 @@
-import * as d3 from 'd3';
-import React from 'react';
+/* eslint-disable new-cap */
+import {
+    Adjust as AdjustIcon,
+    Air as AirIcon,
+    Crop as CropIcon,
+    FavoriteSharp as FavoriteIcon,
+    Info as InfoIcon,
+    RotateLeft as RotateLeftIcon,
+    Settings as SettingsIcon
+} from '@mui/icons-material';
+import {
+    Box,
+    Divider,
+    Stack,
+    Typography,
+    useMediaQuery
+} from '@mui/material';
+import { createTheme } from '@mui/material/styles';
+import { AppProvider } from '@toolpad/core/AppProvider';
+import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
+import React, { useCallback, useMemo, useState } from 'react';
 
-import { AboutComponent } from './AboutComponent.js';
-import MapWithPath from './MapWithPath.js';
-import { PatternComponent } from './PatternComponent.js';
-import { PositionComponent, initialPosition } from './PositionComponent.js';
-import { SettingsComponent, initialSettings } from './SettingsComponent.js';
-import { WindsComponent } from './WindsComponent.js';
-import { dropzones } from './dropzones.js';
-import { Path } from './util/geo.js';
-import { Winds } from './wind.js';
+import {
+    AboutComponent,
+    FlipIcon,
+    ManoeuvreComponent,
+    MapComponent,
+    PatternComponent,
+    SettingsComponent,
+    TargetComponent,
+    ToolbarActions,
+    WindSummary,
+    WindsComponent,
+    defaultPattern,
+    useSettings
+} from './components';
+import { DashboardLayout } from './components/DashboardLayout.tsx';
+import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast.js';
+import { findClosestDropzone } from './util/dropzones.js';
+import {
+    Point,
+    initialBearing
+} from './util/geo.js';
+import {
+    CODEC_JSON,
+    addWind,
+    averageWind,
+    reposition
+} from './util/util.js';
+import { WindRow, Winds } from './util/wind.js';
 
-class App extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            csv: [],
-            path: new Path(),
-            winds: new Winds(),
-            toggleRerender: false,
-            position: initialPosition(),
-            settings: initialSettings(),
-            mapClickListener: () => {} // eslint-disable-line no-empty-function
+const NAVIGATION = [
+    {
+        segment: 'pattern',
+        title: 'Pattern',
+        icon: <CropIcon/>
+    },
+    {
+        segment: 'manoeuvre',
+        title: 'Manoeuvre',
+        icon: <RotateLeftIcon />
+    },
+    {
+        segment: 'target',
+        title: 'Target',
+        icon: <AdjustIcon />
+    },
+    {
+        segment: 'wind',
+        title: 'Wind',
+        icon: <AirIcon />
+    },
+    {
+        kind: 'divider'
+    },
+    {
+        segment: 'settings',
+        title: 'Settings',
+        icon: <SettingsIcon />
+    },
+    {
+        segment: 'about',
+        title: 'About',
+        icon: <InfoIcon />
+    }
+];
+
+const demoTheme = createTheme({
+    colorSchemes: { light: true, dark: true },
+    cssVariables: {
+        colorSchemeSelector: 'class'
+    },
+    breakpoints: {
+        values: {
+            xs: 0,
+            sm: 600,
+            md: 600,
+            lg: 1200,
+            xl: 1536
+        }
+    }
+});
+
+function useDemoRouter(initialPath) {
+    const [ pathname, setPathname ] = useState(initialPath);
+
+    const navigate = useCallback(
+    path => {
+        const normalizedPath = String(path);
+
+        if (normalizedPath === pathname) {
+            setPathname('/map'); // Route to map instead
+
+            return;
+        }
+
+        setPathname(normalizedPath);
+    },
+    [ pathname ]
+    );
+
+    return useMemo(() => {
+        return {
+            pathname,
+            searchParams: new URLSearchParams(),
+            navigate
         };
-
-        this.exportFile = this.exportFile.bind(this);
-        this.getPaths = this.getPaths.bind(this);
-    }
-
-    exportFile() {
-        const csv = JSON.parse(JSON.stringify(this.state.csv));
-        const path = this.getPaths()[1];
-        const len = path.points.length;
-
-        for (let i = 0; i < len; i++) {
-            csv[i + 1].lat = path.points[len - i - 1].lat;
-            csv[i + 1].lon = path.points[len - i - 1].lng;
-        }
-        const formatted = d3.csvFormat(csv);
-
-        const link = document.createElement('a');
-        const file = new Blob([ formatted ], { type: 'text/csv' });
-
-        link.href = URL.createObjectURL(file);
-        link.download = 'track.csv';
-        link.click();
-        URL.revokeObjectURL(link.href);
-    }
-
-    getPaths() {
-        const { path, winds, position } = this.state;
-        const { interpolateWind } = this.state.settings;
-        const { dz, mirror, rotation } = position;
-        const newPath = path.copy();
-
-        if (mirror) {
-            newPath.mirror();
-        }
-
-        newPath.translateTo(dz);
-        if (dz.direction) {
-            newPath.setFinalHeading(dz.direction);
-        }
-        newPath.rotate(rotation);
-
-        const pathWithWind = newPath.copy();
-
-        pathWithWind.addWind(winds, interpolateWind);
-
-        return [ newPath, pathWithWind ];
-    }
-
-    render() {
-        const { settings } = this.state;
-        const paths = this.getPaths();
-        let center = dropzones[4]; // Just default somewhere
-
-        if (paths[0].points.length > 0) {
-            center = paths[0].points[0];
-        }
-
-        if (!settings.showPreWind) {
-            paths[0] = new Path();
-        }
-
-        const styleLeft = {
-            width: '30%',
-            float: 'left',
-            height: '100%'
-        };
-        const styleRight = {
-            marginLeft: '30%',
-            height: '100%'
-        };
-
-        return (
-            <div style={{ height: window.innerHeight }}>
-                <div style={styleLeft}>
-                    <PatternComponent
-                        exportCallback={ this.exportFile }
-                        paths={ paths }
-                        inputType={ this.state.inputType }
-                        onPatternChange={ pattern => {
-                            console.log(`Pattern changed, inputType=${pattern.inputType}`);
-
-                            this.setState({ csv: pattern.csv, path: pattern.path, inputType: pattern.inputType });
-                        }}
-                    />
-                    <hr/>
-                    <PositionComponent
-                        onChange={ position => this.setState({ position }) }
-                        setMapClickListener={ mapClickListener => this.setState({ mapClickListener }) }
-                        onDzChange={() => this.setState({ toggleRerender: !this.state.toggleRerender })}
-                    />
-                    <hr/>
-                    <WindsComponent
-                        center={center}
-                        settings={settings}
-                        onChange={ winds => this.setState({ winds }) } />
-                    <hr/>
-                    <SettingsComponent onChange={ s => this.setState({ settings: s })} />
-                    <hr/>
-                    <AboutComponent />
-                </div>
-                <div style={styleRight}>
-                    <MapWithPath
-                        center={center}
-                        pathA={paths[0]}
-                        pathB={paths[1]}
-                        showPoms={settings.showPoms}
-                        onClick={ point => this.state.mapClickListener(point) }
-                    />
-                </div>
-            </div>
-        );
-    }
+    }, [ pathname, navigate ]);
 }
 
-export default App;
+function getTitleFromPathname(pathname) {
+    const segment = pathname.replace('/', '');
+    const entry = NAVIGATION.find(item => item.segment === segment);
+
+    return entry?.title ?? 'Unknown';
+}
+
+const defaultTarget = {
+    target: {
+        lat: 28.21887,
+        lng: -82.15122
+    },
+    finalHeading: 270
+};
+
+export default function DashboardLayoutBasic() {
+
+    const [ manoeuvre, setManoeuvre ] = useLocalStorageState('flip.manoeuvre', [], { codec: CODEC_JSON });
+    const [ target, setTarget_ ] = useLocalStorageState('flip.target', defaultTarget, { codec: CODEC_JSON });
+    const [ pattern, setPattern ] = useLocalStorageState('flip.pattern', defaultPattern, { codec: CODEC_JSON });
+    const [ winds, setWinds ] = useState(new Winds());
+    const [ settings, setSettings ] = useSettings();
+    const [ fetching, setFetching ] = useState(false);
+
+    const [ waitingForClick1, setWaitingForClick1 ] = useState(false);
+    const [ waitingForClick2, setWaitingForClick2 ] = useState(false);
+    const [ selectHeading, setSelectHeading ] = useState(false);
+    const [ click1, setClick1 ] = useState(undefined);
+    const [ isNavigationExpanded, setIsNavigationExpanded ] = useState(false);
+
+    const setTarget = useCallback(
+        newTarget => {
+            setTarget_(currentTarget => {
+                const oldPoint = new Point(currentTarget.target.lat, currentTarget.target.lng);
+                const newPoint = new Point(newTarget.target.lat, newTarget.target.lng);
+
+                if (oldPoint.distanceTo(newPoint) > 5000) {
+                    console.log('Moved too far, invalidating winds');
+                    setWinds(new Winds());
+                }
+
+                return newTarget;
+            });
+        },
+        [ setTarget_, target ]
+    );
+
+    const isMobile = useMediaQuery('(max-width:600px)');
+    const router = useDemoRouter('/map');
+
+    function selectFromMap(heading) {
+        setWaitingForClick1(true);
+        setWaitingForClick2(false);
+        setSelectHeading(heading);
+        if (isMobile) {
+            setIsNavigationExpanded(false);
+            router.navigate('/map');
+        }
+    }
+
+    function handleMapClick(point) {
+        if (waitingForClick1) {
+            if (selectHeading) {
+                setClick1(point);
+                setWaitingForClick1(false);
+                setWaitingForClick2(true);
+            } else {
+                const updated = { ...target, target: point };
+
+                setTarget(updated);
+                setWaitingForClick1(false);
+                setWaitingForClick2(false);
+                setClick1(undefined);
+            }
+        } else if (waitingForClick2) {
+            const updated = { ...target, target: click1, finalHeading: Math.round(initialBearing(point, click1)) };
+
+            setTarget(updated);
+            setWaitingForClick1(false);
+            setWaitingForClick2(false);
+            setClick1(undefined);
+        } else if (isMobile) {
+            setIsNavigationExpanded(false);
+            router.navigate('/map');
+        }
+    }
+
+    let c = reposition(manoeuvre, pattern, target, settings.correctPatternHeading);
+    const c2 = addWind(c, winds);
+
+    for (let i = 0; i < c.length; i++) {
+        c2[i].phase = c[i].phase;
+    }
+    const averageWind_ = averageWind(c, c2);
+    let windSummary;
+
+    if (settings.displayWindSummary && (winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL)
+        && typeof averageWind_.speedKts === 'number') {
+
+        windSummary = {};
+        windSummary.average = averageWind_;
+        if (winds.groundSource !== SOURCE_MANUAL && winds.winds && winds.winds.length > 0) {
+            windSummary.ground = winds.winds[0];
+            if (winds.groundSource === SOURCE_DZ) {
+                windSummary.ground.observed = true;
+            }
+        }
+    }
+
+    const fetch = () => {
+        if (!target?.target) {
+            console.log('Not fetching winds, no target');
+
+            return;
+        }
+
+        const dz = findClosestDropzone(new Point(target.target.lat, target.target.lng));
+        const { forecastSource } = settings;
+
+        console.log(
+            `Fetching winds using ${forecastSource} for: ${JSON.stringify(target.target)},`
+            + ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz.name})`
+        );
+
+        setFetching(true);
+
+        fetchForecast(forecastSource, target.target, settings.useDzGroundWind && dz.fetchGroundWind)
+            .then(fetchedWinds => {
+                let limit = settings.limitWind;
+
+                if (c2.length > 0 && c2[c2.length - 1].alt > limit) {
+                    limit = c2[c2.length - 1].alt;
+                }
+                fetchedWinds.winds = fetchedWinds.winds.filter(w => w.altFt <= limit);
+                setWinds(fetchedWinds);
+                setFetching(false);
+            })
+            .catch(err => {
+                console.log(`Failed to fetch winds: ${err}`);
+                setFetching(false);
+                const newWinds = new Winds([ new WindRow(0, 0, 0) ]);
+
+                setWinds(newWinds);
+            });
+    };
+
+    if (!settings.showPreWind) {
+        c = [];
+    }
+
+    function onUpwindClick() {
+        if (winds?.winds && winds.winds.length > 0 && winds.winds[0].speedKts > 0) {
+            const newTarget = {
+                ...target,
+                finalHeading: Math.round(winds.winds[0].direction % 360)
+            };
+
+            setTarget(newTarget);
+        }
+    }
+
+    let p = null;
+
+    if (router.pathname === '/manoeuvre') {
+        p = <ManoeuvreComponent
+            manoeuvre={manoeuvre}
+            setManoeuvre={setManoeuvre}
+            manoeuvreToSave={c2.filter(point => point.phase === 'manoeuvre')}
+        />;
+    } else if (router.pathname === '/pattern') {
+        p = <PatternComponent onChange={setPattern} />;
+    } else if (router.pathname === '/target') {
+        p = <TargetComponent
+            selectFromMap={selectFromMap}
+            target={target}
+            setTarget={setTarget}
+            onUpwindClick={onUpwindClick}
+        />;
+    } else if (router.pathname === '/wind') {
+        p = <WindsComponent
+            center={target.target}
+            winds={ winds }
+            setWinds={ setWinds }
+            fetching= { fetching }
+            setFetching = { setFetching }
+            settings={ settings }
+            fetch= { fetch }
+        />;
+    } else if (router.pathname === '/about') {
+        p = <AboutComponent/>;
+    } else if (router.pathname === '/settings') {
+        p = <SettingsComponent
+            settings={ settings }
+            setSettings={ setSettings } />;
+    }
+
+    let sidebar;
+
+    if (p) {
+        sidebar = <Box
+            sx={{ px: 4, py: 4, display: 'flex', flexDirection: 'column', alignItems: 'left', textAlign: 'center' }}
+        >
+            {p}
+        </Box>;
+    }
+    const map = <MapComponent
+        center={target.target}
+        pathA={c}
+        pathB={c2}
+        showPoms={settings.showPoms}
+        showPomAltitudes={settings.showPomAltitudes}
+        settings={settings}
+        onClick={handleMapClick}
+        windDirection={averageWind_?.direction}
+        windSpeed={averageWind_?.speedKts}
+        waitingForClick={waitingForClick1 || waitingForClick2}
+    />;
+    const dashboard = <DashboardLayout
+        navigation={NAVIGATION}
+        isNavigationExpanded={isNavigationExpanded}
+        setIsNavigationExpanded={setIsNavigationExpanded}
+        defaultSidebarCollapsed={true}
+        slots={{
+            toolbarActions: () => (
+                <ToolbarActions
+                    fetching={fetching}
+                    onMapButtonClick={() => {
+                        setIsNavigationExpanded(false);
+                        router.navigate('/map');
+                    }}
+                    onRefreshWindsClick={fetch}
+                    onSelectTargetClick={() => selectFromMap(false) }
+                    onSelectTargetAndHeadingClick={() => selectFromMap(true) }
+                />
+            ),
+            sidebarFooter: SidebarFooter,
+            appTitle: () => CustomAppTitle({ wind: windSummary })
+        }}
+    >
+        <LayoutWithSidebar title={getTitleFromPathname(router.pathname)} box={sidebar} map={map} />
+    </DashboardLayout>;
+
+    return <AppProvider
+        router={router}
+        theme={demoTheme}
+    >
+        {dashboard}
+    </AppProvider>;
+}
+
+
+function SidebarFooter({ mini }) {
+    return (
+        <Typography
+            variant="caption"
+            sx={{ m: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}
+        >
+            {mini
+                ? '© FliP'
+                : <>
+                © {new Date().getFullYear()} FliP made with <FavoriteIcon sx={{ fontSize: 14 }} />
+                </>
+            }
+        </Typography>
+    );
+}
+
+
+function CustomAppTitle({ wind }) {
+    return (
+        <Stack direction="row" alignItems="center" spacing={2}>
+            <FlipIcon fontSize="large" color="primary" />
+            <Typography
+                variant="h7"
+                sx={{
+                    fontWeight: 'bold',
+                    color: '#14E02B',
+                    textTransform: 'uppercase'
+                }}
+            >
+                FliP
+            </Typography>
+            <Divider/>
+            { wind && WindSummary(wind) }
+        </Stack>
+    );
+}
+
+function LayoutWithSidebar({ box, map, title }) {
+    return (
+        <Stack direction="row" spacing={2} sx={{ width: '100%', height: '100%' }}>
+            {box && (
+                <Box
+                    elevation={2}
+                    sx={{
+                        width: 380,
+                        py: 2,
+                        flexShrink: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: 'background.paper',
+                        borderRadius: 0,
+                        overflow: 'auto'
+                    }}
+                >
+                    <Box sx={{ textAlign: 'center', mb: 2 }}>
+                        <Typography variant="h6" fontWeight="medium" gutterBottom>
+                            {title}
+                        </Typography>
+                        <Divider />
+                    </Box>
+                    {box}
+                </Box>
+            )}
+
+            <Box
+                sx={{
+                    flexGrow: 1,
+                    position: 'relative',
+                    ml: '0 !important',
+                    overflow: 'hidden'
+                }}
+            >
+                {map}
+            </Box>
+        </Stack>
+    );
+}

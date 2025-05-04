@@ -1,4 +1,4 @@
-import { WindRow, Winds } from '../wind.js';
+import { WindRow, Winds } from '../util/wind.js';
 
 import { SOURCE_WINDS_ALOFT } from './forecast.js';
 
@@ -12,7 +12,6 @@ export function fetchWindsAloft(point, hourOffset) {
             console.log('Fetched WindsAloft');
             wa.center = point;
 
-            // TODO: how many do we take? Cap at altitude? Cap at sample altitude?
             for (let i = 0; i < 10; i++) {
                 const elevFt = j.altFtRaw[i];
                 const row = new WindRow(

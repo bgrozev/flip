@@ -1,11 +1,11 @@
-import { Winds } from '../wind.js';
+import { Winds } from './wind.js';
 
 // Utils adapted from http://www.movable-type.co.uk/scripts/latlong.html
 
 export const metersToFeet = 3.28084;
 
 // Knots to feet-per-second
-const ktsToFps = 1.68781;
+export const ktsToFps = 1.68781;
 
 // Miles per hour to feet per second.
 export const mphToFps = 5280 / 3600;
@@ -26,6 +26,11 @@ function rtod(rad) {
 // Normalize to [-180,180].
 function normalizeLng(lng) {
     return ((lng + 540) % 360) - 180;
+}
+
+// Normalize latitude to [-90, 90]
+function normalizeLat(lat) {
+    return ((lat + 270) % 180) - 90;
 }
 
 export class Point {
@@ -72,7 +77,7 @@ export class Point {
                 Math.cos(d) - (Math.sin(lat1) * Math.sin(lat2))
             );
 
-        this.lat = rtod(lat2);
+        this.lat = normalizeLat(rtod(lat2));
         this.lng = normalizeLng(rtod(lng2));
     }
 
@@ -255,4 +260,40 @@ export class Path {
             this.points[i].translate(offsetB, offsetFt);
         }
     }
+}
+
+
+// TODO: avoid this hack
+export function pathFromJson(pointsJson) {
+    const points = [];
+
+    for (let i = 0; i < pointsJson.length; i++) {
+        const p = pointsJson[i];
+
+        points.push(new Point(p.lat, p.lng, p.time, p.pom, p.alt));
+    }
+
+    return new Path(points);
+}
+
+export function translate(points, target) {
+    const path = pathFromJson(points);
+
+    path.translateTo(target);
+
+    return path.points;
+}
+
+export function setFinalHeading(points, finalHeading) {
+    const path = pathFromJson(points);
+
+    path.setFinalHeading(finalHeading);
+
+    return path.points;
+}
+export function initialBearing(p1, p2) {
+    const point1 = new Point(p1.lat, p1.lng);
+    const point2 = new Point(p2.lat, p2.lng);
+
+    return point1.initialBearingTo(point2);
 }

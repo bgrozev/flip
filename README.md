@@ -3,20 +3,22 @@ FliP is a tool for skydiving, specifically for planning the landing pattern.
 
 You can use it here: https://mustelinae.net/flip
 
-Introduction video here: https://youtu.be/G8TQtR7Qd8o
-
 # Disclaimer
 This is just a tool and comes with NO GUARANTEES. If you use it, you MUST CRITICALLY evaluate the information it 
 provides. Please use common sense and DO NOT trust it blindly. Please read the rest of the document and make sure
 you understand how it works and what the limitations are.
 
 # What does FliP do?
-The basic idea is to load a GPS track recorded with [FlySight](https://flysight.ca) and manipulate it to move it
-to a desired location and account for winds.
+FliP models a landing pattern and optionally a manoeuvre (i.e. turn to final), including the effects of wind.
+It is meant to be a versatile tool for planning and exploration, so there are many adjustable parameters.
 
-![Example track with added wind](https://github.com/bgrozev/flip/blob/main/doc/flip.png?raw=true)
+The manouvre can be described by the offset, altitude, and time (as can be extracted by gSwoop for example), or 
+a GPS grack recorded with [FlySight](https://flysight.ca) directly.
+
+![Example pattern and manoeuvre with wind correction](https://github.com/bgrozev/flip/blob/main/doc/flip.png?raw=true)
 
 
+# Why?
 We usually plan our pattern manually based on 2 or 3 points in the pattern, approximate glide ratio, and a rough
 estimation of the winds. The problems with this approach are:
 
@@ -32,33 +34,45 @@ FliP is designed to be used in conjunction with FlySight/FlySight Viewer, gSwoop
 any of them. 
 
 # How to use
-To use FliP effectively for your planning you'll need to load your own FlySight track (see 
-[Preparing and importing a FlySight file](#preparing-and-importing-a-flysight-file)). But there are a few built-in
-samples that you can play with.
+## Setting up the pattern
+Adjust the paraters of your landing pattern under the Pattern tab in the navigation menu on the left. The pattern is shown on
+the map as a green line.
 
-## Selecting a track
-You can select a track under the `Tracks` menu. There are 4 built-in samples you can play with. You can also import
-a track from a FlySight file (see [Preparing and importing a FlySight file](#preparing-and-importing-a-flysight-file)).
-After a track is imported, you can name it and save it in the application with the `save` button. 
+## Setting up the manoeuvre
+Adjust the manoeuvre settings under the Manoeuvre tab in the navigation menu on the left. The manoeuvre is shown on the
+map as a red line.
 
-Note that tracks are saved in the browser's `localStorage` and will not be available on other devices. You should 
-organize and save the files on your own, and only save them in FliP for convenience.
+You can enter the offset, altitude and time manually, use one of the built-in sample GPS tracks, 
+or import your own GPS track. 
 
-## Positioning
-Under the `Positioning` menu you can move the track to a preset location, further adjust the position with an
-offset N/S or E/W, rotate or mirror it. There are a set of built-in locations, but you can save your own under
-the `Custom Locations` menu.
+To use FliP the most effectively for your planning you'll need to load your own FlySight track. Make sure it contains
+only your manoeuvre by selecting the portion that you want in FlySight Viewer and using the "Export Track" feature.
+It's best to trim the file so it stops at the time of plane out, and does not include the level flight over the ground. 
+You can re-position to account for conditions manually. Once a track has been loaded, and optionally adjusted for wind,
+ it can be saved locally under Manoeuvre -> My Tracks.
 
-## Adding wind
-You can adjust the wind settings under the `Wind` menu. You can just add wind at altitude 0, which will apply for
+## Target
+The location and precice position can be selected under the Target tab in the navigation menu on the left.
+
+The "Set Target" and "Set Target And Heading" buttons can be used to select a location by clicking on the map. 
+When setting both the target and direction, the first click will set the taget, and the second click will set
+the direction. Note that the direction is reversed, think of it as building your pattern from the ground up.
+
+To quickly change to a different location on the map, you can either select one of the built-in dropzones from the
+list, of search from the Search tab. Once a target and direction have been selected, you can save them for easy access
+under My Locations.
+
+
+## Wind
+You can adjust the wind settings under the Wind tab in the navigation menu on the left. You can just add wind at altitude 0, which will apply for
 all altitudes, or add more rows to specify different winds at different altitudes.
 
-You can use the `Fetch WindsAloft` button to fetch the current forecast for the current location from 
-[WindsAloft](https://www.markschulze.net/winds/). When winds are loaded this way changing the settings is disabled to
-prevent accidental change; use the `Unlock` button if you need to make adjustments.
+You can use the `Fetch Forecast` button to fetch the current forecast for the current location. When winds are loaded this way changing is disabled to
+prevent accidental change; use the `Unlock` button if you need to make adjustments. The source of the forecast (either WindsAloft or OpenMeteo) can be selected 
+under the Settings tab.
 
-When wind is added the track, the resulting track is shown in green. The original, re-positioned track is shown in red.
-The original track can be hidden with a setting under the `Display` menu.
+When wind is added, the resulting path is shown as a solid line. The original track, prior the wind adjustment, is shown as a dashed line.
+The original track can be hidden with a setting under the Settings tab.
 
 
 # How FliP works
@@ -84,86 +98,20 @@ This means we assume the wind affects us instantaneously (we have zero inertia).
 assumption while planning anyway. Presumably if the wind shear is strong enough to make a practical difference we 
 shouldn't be flying canopies :)
 
-## Exporting a track
-You can export a track under the `Tracks` menu. The track that is exported is the one with both re-positioning and
-wind applied.
-
-Note that when exporting a sample FliP only replaces the latitude and longitude fields in the CSV file. It does not
-change anything else. This means that the altitude, horizontal speed, glide ratio, etc are no longer correct in the 
-exported file, though it can still be opened in FlySight Viewer or other software. The only reason to export a file
-should be to save it for later use in FliP. 
-
 ## Density altitude
 FliP DOES NOT correct for the elevation of the landing zone or density altitude in any way.
-
-# Preparing and importing a FlySight file
-FlySight saves files in a CSV format, which can be edited with a text editor. For best results, tracks should be 
-prepared manually before use in FliP.
-
-## Trimming
-By trimming we mean removing the extra data from the file, only leaving the data points between two desired points (an
-initial and a final point). The easiest way to do it is to use FlySight Viewer to find and note the timestamps of the
-two points, then use a text editor to remove the extra lines from the file.
-### Selecting the initial point
-The initial point is just the pattern entry point. Remove any lines before that point, leaving the first two lines in
-place.
-### Selecting the final point
-How to choose the final point is up to you, and how to indent to use FliP. The point you touch the ground or stop moving
-is a poor choice, because wind will be applied relative to it. I tend to use a point a few feet high just prior to 
-planing out.
-
-Remove all lines from the file after the final point.
-### Auto trim
-The autotrim function selects the first point that is 10 ft or higher relative to the final point in the file as the
-final point. It cuts off at 2500 ft. It's experimental and I recommend trimming the file manually, so you can understand
-exactly what the results mean.
-
-## Adding POMs
-POMs (for Point Of Manoeuvre) are points that are visualized with a larger circle. They are useful to keep track of
-where the manoeuvre point actually is when wind is applied. They can be hidden with a setting under the `Display` menu.
-
-I like to add POMs for the start of my turn to base, the initiation point of my turn, and my "snap point". 
-
-To add POMs to a file:
-1. Add `,pom` to the end of the first line in the file (this adds a new column, called `pom`).
-2. Find the point you want to add in FlySight Viewer and note their timestamp.
-3. Find the corresponding lines in the file an add `,1` to the end.
-
-FlySight Viewer and other software is designed to ignore extra columns so the files continue to be readable.
 
 ## Correcting for wind
 If your track was captured in known, light wind conditions, you can use FliP to cancel out the wind and get a cleaner
 sample. To do this load your track, then apply wind as necessary, then export the track.
 
-## The built-in samples
-There are 4 built-in samples, intended to illustrate different ways to use FliP. Obviously you should not use the 
-samples for your own planning.
-
-### [1] Sample-450 
-This is an unmodified sample (other than trimming) from a 450 degree turn on a high performance canopy in light wind
-conditions. 
-
-### [2] Sample-450, corrected
-This is the first sample manually corrected to remove the wind.
-
-### [3] Sample straight-in
-This is a sample straight-in approach on a typical 9-cell 150 sqft canopy. It has been trimmed to the start of the
-flare, and manually positioned and corrected for wind.
-
-### [4] Sample straight-in, reduced
-This is the previous sample, reduce to just 4 points: entry, turn to base, turn to final, flare entry.
-
 # Questions
 ## Is this just for swooping?
-No. My primary motivation for creating FliP is to use it myself for canopy piloting training, but it can be used
-with straight-in landings too.
-
-## The user interface sucks. What is this, 2003?
-Yep. I have plans to improve things, but working on the UI is zero fun for me, so I've back-burnered them to focus
-on functionality. If building UIs is your thing and you want to help reach out or just open PRs.
+No. My primary motivation for creating FliP is to use it myself for canopy piloting training, but I'm also using it
+with my students to plan straight-in landings.
 
 ## Where does the name FliP come from?
-It's my months or years long setup for a joke. When I have the time to build a Flocking Planner you'll be able to
+It's my years long setup for a joke. When I have the time to build a Flocking Planner you'll be able to
 FliP/FloP between the two.
 
 # Authors and License

@@ -10,11 +10,11 @@ export function forecastSourceLabel(source) {
     if (source === SOURCE_MANUAL) {
         return 'set manually';
     } else if (source === SOURCE_DZ) {
-        return 'dropzone ground wind';
+        return 'observed conditions';
     } else if (source === SOURCE_WINDS_ALOFT) {
         return 'WindsAloft';
     } else if (source === SOURCE_OPEN_METEO) {
-        return 'OpenMeteo';
+        return 'OpenMeteo GFS';
     }
 
     return 'invalid';
