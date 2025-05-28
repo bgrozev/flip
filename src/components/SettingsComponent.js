@@ -11,6 +11,7 @@ import {
     Typography
 } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
+import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
 import React from 'react';
 
 import {
@@ -111,6 +112,17 @@ export default function SettingsComponent({ settings, setSettings }) {
 
     return (
         <Stack direction="column" spacing={1} alignItems="flex-start">
+            <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 0.5,
+                width: '100%',
+                boxSizing: 'border-box'
+            }} >
+                Light/Dark theme
+                <ThemeSwitcher />
+            </Box>
             {checkboxOptions.map(({ key, label, tooltip }) => (
                 <Box
                     key={key}

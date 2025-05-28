@@ -11,7 +11,6 @@ import {
     Stack,
     Tooltip
 } from '@mui/material';
-import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
 import React from 'react';
 
 export default function ToolbarActions({
@@ -28,7 +27,6 @@ export default function ToolbarActions({
         <SelectTargetButton onClick={onSelectTargetClick} />
         <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
         <Divider orientation="vertical" flexItem />
-        <ThemeSwitcher />
     </Stack>;
 }
 
