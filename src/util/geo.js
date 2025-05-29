@@ -38,7 +38,7 @@ export class Point {
 
     /** Initial bearing from this point to another [point].. */
     initialBearingTo(p) {
-        return turf.bearing(toTurfPoint(this), toTurfPoint(p));
+        return normalizeBearing(turf.bearing(toTurfPoint(this), toTurfPoint(p)));
     }
 
     /** Distance in feet between this point and [point]. */
@@ -155,14 +155,14 @@ export class Path {
     }
 
     /** Rotate this around the first point so that the second->first point have an initial bearing of [bearing]. */
-    setFinalHeading(bearing_) {
+    setFinalHeading(bearing) {
         if (this.points.length < 2) {
             return;
         }
 
         const b = this.points[1].initialBearingTo(this.points[0]);
 
-        this.rotate(bearing_ - b);
+        this.rotate(normalizeBearing(bearing + 360 - b));
     }
 
     /** Add wind to a path. * */
@@ -225,6 +225,9 @@ function toFlipPoint(turfPoint) {
 function toFlipPoints(turfPoints) {
     return turfPoints.map(p => toFlipPoint(p));
 }
+function normalizeBearing(bearing) {
+  return (bearing + 360) % 360;
+}
 
 export function translate(points, target) {
     if (points.length < 1) {
@@ -250,7 +253,7 @@ export function setFinalHeading(points, finalHeading) {
     }
 
     const turfPoints = toTurfPoints(points);
-    const currentHeading = turf.bearing(turfPoints[1], turfPoints[0])
+    const currentHeading = turf.bearing(turfPoints[1], turfPoints[0]);
     const rotatedTurfPoints = turf.transformRotate(
         turfPoints,
         finalHeading - currentHeading,
@@ -264,5 +267,5 @@ export function initialBearing(p1, p2) {
     const point1 = toTurfPoint(p1);
     const point2 = toTurfPoint(p2);
 
-    return turf.bearing(point1, point2);
+    return normalizeBearing(turf.bearing(point1, point2));
 }
