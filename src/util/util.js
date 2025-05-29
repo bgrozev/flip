@@ -1,4 +1,4 @@
-import { Point, ktsToFps, pathFromJson } from './geo.js';
+import { Path, Point, ktsToFps } from './geo.js';
 
 export const CODEC_JSON = {
     parse: value => {
@@ -117,4 +117,17 @@ export function setManoeuvreAltitude(points, newAlt) {
     for (let i = 0; i < points.length; i++) {
         points[i].alt *= scale;
     }
+}
+
+// TODO: avoid this hack
+function pathFromJson(pointsJson) {
+    const points = [];
+
+    for (let i = 0; i < pointsJson.length; i++) {
+        const p = pointsJson[i];
+
+        points.push(new Point(p.lat, p.lng, p.time, p.pom, p.alt));
+    }
+
+    return new Path(points);
 }

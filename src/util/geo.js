@@ -79,17 +79,12 @@ export class Path {
     constructor(points = []) {
         this.points = points;
 
-        this.addPoint = this.addPoint.bind(this);
         this.copy = this.copy.bind(this);
         this.translate = this.translate.bind(this);
         this.rotate = this.rotate.bind(this);
         this.translateTo = this.translateTo.bind(this);
         this.mirror = this.mirror.bind(this);
         this.setFinalHeading = this.setFinalHeading.bind(this);
-    }
-
-    addPoint(p) {
-        this.points.push(p);
     }
 
     copy() {
@@ -199,28 +194,26 @@ export class Path {
     }
 }
 
-
-// TODO: avoid this hack
-export function pathFromJson(pointsJson) {
-    const points = [];
-
-    for (let i = 0; i < pointsJson.length; i++) {
-        const p = pointsJson[i];
-
-        points.push(new Point(p.lat, p.lng, p.time, p.pom, p.alt));
+function toTurfPoint(p) {
+    const props = {};
+    for (const key of Object.keys(p)) {
+        if (p.hasOwnProperty(key) && key !== 'lat' && key !== 'lng') {
+            props[key] = p[key];
+        }
     }
 
-    return new Path(points);
-}
-
-function toTurfPoint(p) {
-    return turf.point([ p.lng, p.lat ]);
+    return turf.point([ p.lng, p.lat ], props);
 }
 function toTurfPoints(points) {
     return points.map(p => toTurfPoint(p));
 }
 function toFlipPoint(turfPoint) {
-    return { lng: turfPoint.geometry.coordinates[1], lat: turfPoint.geometry.coordinates[0] };
+    const flipPoint = { lng: turfPoint.geometry.coordinates[1], lat: turfPoint.geometry.coordinates[0] };
+    for (const key of Object.keys(turfPoint.properties)) {
+        if (turfPoint.properties.hasOwnProperty(key)) {
+            flipPoint[key] = turfPoint.properties[key];
+        }
+    }
 }
 function toFlipPoints(turfPoints) {
     return turfPoints.map(p => toFlipPoint(p));
@@ -229,22 +222,34 @@ function normalizeBearing(bearing) {
   return (bearing + 360) % 360;
 }
 
+function translateTurf(turfPoints, turfTarget) {
+    if (turfPoints.length < 1) {
+        return turfPoints;
+    }
+
+    const angle = turf.bearing(turfPoints[0], turfTarget);
+    const dist = turf.distance(turfPoints[0], turfTarget, { units: 'feet' });
+
+    return turfPoints.map((p) => transformTranslate(p, dist, angle, { units: 'feet' }));
+}
+
 export function translate(points, target) {
     if (points.length < 1) {
         return points
     }
 
-    const turfPoints = toTurfPoints(points)
-    const turfTarget = toTurfPoint(target)
+    const translatedTurfPoints = translateTurf(toTurfPoints(points), toTurfPoint(target));
 
-    const currentCenter = centroid(collection);
+    return toFlipPoints(translatedTurfPoints);
+}
 
-    const angle = turf.bearing(turfPoints[0], turfTarget);
-    const dist = turf.distance(turfPoints[0], turfTarget, { units: 'feet' });
+function setFinalHeadingTurf(turfPoints, finalHeading) {
+    if (turfPoints.length < 2) {
+        return turfPoints;
+    }
 
-    const translatedTurfPoints = turfPoints.map((p) => transformTranslate(p, dist, angle, { units: 'feet' }));
-
-   return fromTurfPoints(translatedTurfPoints);
+    const currentHeading = turf.bearing(turfPoints[1], turfPoints[0]);
+    return turf.transformRotate(turfPoints, finalHeading - currentHeading, { pivot: turfPoints[0], mutate: false });
 }
 
 export function setFinalHeading(points, finalHeading) {
@@ -252,15 +257,9 @@ export function setFinalHeading(points, finalHeading) {
         return points;
     }
 
-    const turfPoints = toTurfPoints(points);
-    const currentHeading = turf.bearing(turfPoints[1], turfPoints[0]);
-    const rotatedTurfPoints = turf.transformRotate(
-        turfPoints,
-        finalHeading - currentHeading,
-        { pivot: turfPoints[0], mutate: false }
-    );
+    const rotatedTurfPoints = setFinalHeadingTurf(toTurfPoints(points), finalHeading);
 
-    return fromTurfPoints(rotatedTurfPoints);
+    return toFlipPoints(rotatedTurfPoints);
 }
 
 export function initialBearing(p1, p2) {
