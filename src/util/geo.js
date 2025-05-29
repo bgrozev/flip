@@ -245,11 +245,19 @@ export function translate(points, target) {
 }
 
 export function setFinalHeading(points, finalHeading) {
-    const path = pathFromJson(points);
+    if (points.length < 2) {
+        return points;
+    }
 
-    path.setFinalHeading(finalHeading);
+    const turfPoints = toTurfPoints(points);
+    const currentHeading = turf.bearing(turfPoints[1], turfPoints[0])
+    const rotatedTurfPoints = turf.transformRotate(
+        turfPoints,
+        finalHeading - currentHeading,
+        { pivot: turfPoints[0], mutate: false }
+    );
 
-    return path.points;
+    return fromTurfPoints(rotatedTurfPoints);
 }
 
 export function initialBearing(p1, p2) {
