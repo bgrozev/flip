@@ -216,13 +216,32 @@ export function pathFromJson(pointsJson) {
 function toTurfPoint(p) {
     return turf.point([ p.lng, p.lat ]);
 }
+function toTurfPoints(points) {
+    return points.map(p => toTurfPoint(p));
+}
+function toFlipPoint(turfPoint) {
+    return { lng: turfPoint.geometry.coordinates[1], lat: turfPoint.geometry.coordinates[0] };
+}
+function toFlipPoints(turfPoints) {
+    return turfPoints.map(p => toFlipPoint(p));
+}
 
 export function translate(points, target) {
-    const path = pathFromJson(points);
+    if (points.length < 1) {
+        return points
+    }
 
-    path.translateTo(target);
+    const turfPoints = toTurfPoints(points)
+    const turfTarget = toTurfPoint(target)
 
-    return path.points;
+    const currentCenter = centroid(collection);
+
+    const angle = turf.bearing(turfPoints[0], turfTarget);
+    const dist = turf.distance(turfPoints[0], turfTarget, { units: 'feet' });
+
+    const translatedTurfPoints = turfPoints.map((p) => transformTranslate(p, dist, angle, { units: 'feet' }));
+
+   return fromTurfPoints(translatedTurfPoints);
 }
 
 export function setFinalHeading(points, finalHeading) {
