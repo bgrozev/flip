@@ -1,6 +1,6 @@
-import { Winds } from './wind.js';
+import * as turf from '@turf/turf';
 
-// Utils adapted from http://www.movable-type.co.uk/scripts/latlong.html
+import { Winds } from './wind.js';
 
 export const metersToFeet = 3.28084;
 
@@ -9,29 +9,6 @@ export const ktsToFps = 1.68781;
 
 // Miles per hour to feet per second.
 export const mphToFps = 5280 / 3600;
-
-// Radius of the Earth in feet
-const Rft = 6371008.7714 * metersToFeet;
-
-function dtor(deg) {
-    return deg * (Math.PI / 180);
-}
-
-function rtod(rad) {
-    const deg = rad / (Math.PI / 180);
-
-    return (deg + 360) % 360;
-}
-
-// Normalize to [-180,180].
-function normalizeLng(lng) {
-    return ((lng + 540) % 360) - 180;
-}
-
-// Normalize latitude to [-90, 90]
-function normalizeLat(lat) {
-    return ((lat + 270) % 180) - 90;
-}
 
 export class Point {
     constructor(lat, lng, time, pom, alt) {
@@ -42,8 +19,6 @@ export class Point {
         this.alt = alt;
 
         this.copy = this.copy.bind(this);
-        this.latRad = this.latRad.bind(this);
-        this.lngRad = this.lngRad.bind(this);
         this.translate = this.translate.bind(this);
         this.initialBearingTo = this.initialBearingTo.bind(this);
         this.distanceTo = this.distanceTo.bind(this);
@@ -53,70 +28,32 @@ export class Point {
         return new Point(this.lat, this.lng, this.time, this.pom, this.alt);
     }
 
-    latRad() {
-        return dtor(this.lat);
-    }
-
-    lngRad() {
-        return dtor(this.lng);
-    }
-
     /** Move this point a given distance in feet in a given direction/bearing. */
-    translate(bearing, distanceFt) {
-        const d = distanceFt / Rft;
-        const lat1 = this.latRad();
-        const lng1 = this.lngRad();
-        const b = dtor(bearing);
+    translate(b, distanceFt) {
+        const newPoint = turf.transformTranslate(toTurfPoint(this), distanceFt, b, { units: 'feet' });
 
-        const lat2 = Math.asin(
-            (Math.sin(lat1) * Math.cos(d)) + (Math.cos(lat1) * Math.sin(d) * Math.cos(b))
-        );
-        const lng2 = lng1
-            + Math.atan2(
-                Math.sin(b) * Math.sin(d) * Math.cos(lat1),
-                Math.cos(d) - (Math.sin(lat1) * Math.sin(lat2))
-            );
-
-        this.lat = normalizeLat(rtod(lat2));
-        this.lng = normalizeLng(rtod(lng2));
+        this.lng = newPoint.geometry.coordinates[0];
+        this.lat = newPoint.geometry.coordinates[1];
     }
 
     /** Initial bearing from this point to another [point].. */
-    initialBearingTo(point) {
-        const φ1 = this.latRad();
-        const φ2 = point.latRad();
-        const Δλ = dtor(point.lng - this.lng);
-
-        const x = (Math.cos(φ1) * Math.sin(φ2)) - (Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ));
-        const y = Math.sin(Δλ) * Math.cos(φ2);
-        const θ = Math.atan2(y, x);
-        const bearing = rtod(θ);
-
-        return (bearing + 360) % 360;
+    initialBearingTo(p) {
+        return turf.bearing(toTurfPoint(this), toTurfPoint(p));
     }
 
     /** Distance in feet between this point and [point]. */
-    distanceTo(point) {
-        const λ1 = this.lngRad(), λ2 = point.lngRad(), φ1 = this.latRad(), φ2 = point.latRad();
-        const Δφ = φ2 - φ1;
-        const Δλ = λ2 - λ1;
-
-        const a = (Math.sin(Δφ / 2) * Math.sin(Δφ / 2))
-            + (Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2));
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const d = Rft * c;
-
-        return d;
+    distanceTo(p) {
+        return turf.distance(toTurfPoint(this), toTurfPoint(p), { units: 'feet' });
     }
 
     /** Rotate this point around [center] by [degrees] degrees. */
     rotate(degrees, center) {
         const distanceFt = center.distanceTo(this);
-        const bearing = center.initialBearingTo(this);
+        const b = center.initialBearingTo(this);
 
         this.lat = center.lat;
         this.lng = center.lng;
-        this.translate(bearing + degrees, distanceFt);
+        this.translate(b + degrees, distanceFt);
     }
 }
 
@@ -151,8 +88,8 @@ export class Path {
         this.setFinalHeading = this.setFinalHeading.bind(this);
     }
 
-    addPoint(point) {
-        this.points.push(point);
+    addPoint(p) {
+        this.points.push(p);
     }
 
     copy() {
@@ -160,8 +97,8 @@ export class Path {
     }
 
     /** Translate each point of this path a given distance in feet in a given bearing. */
-    translate(bearing, distanceFt) {
-        this.points.forEach(p => p.translate(bearing, distanceFt));
+    translate(b, distanceFt) {
+        this.points.forEach(p => p.translate(b, distanceFt));
     }
 
     /** Rotate this path by [degrees] around [center] or the first point of the path if [center] is not specified. */
@@ -174,7 +111,7 @@ export class Path {
     }
 
     /** Translate this path so that its first point's coordinates are [point]'s. */
-    translateTo(point) {
+    translateTo(p) {
         if (this.points.length === 0) {
             return;
         }
@@ -182,15 +119,15 @@ export class Path {
         const o = this.points[0].copy();
 
         // Change just lat/lng, maintain timestamp, etc.
-        this.points[0].lat = point.lat;
-        this.points[0].lng = point.lng;
+        this.points[0].lat = p.lat;
+        this.points[0].lng = p.lng;
 
         for (let i = 1; i < this.points.length; i++) {
             const d = o.distanceTo(this.points[i]);
             const b = o.initialBearingTo(this.points[i]);
 
-            this.points[i].lat = point.lat;
-            this.points[i].lng = point.lng;
+            this.points[i].lat = p.lat;
+            this.points[i].lng = p.lng;
             this.points[i].translate(b, d);
         }
     }
@@ -218,14 +155,14 @@ export class Path {
     }
 
     /** Rotate this around the first point so that the second->first point have an initial bearing of [bearing]. */
-    setFinalHeading(bearing) {
+    setFinalHeading(bearing_) {
         if (this.points.length < 2) {
             return;
         }
 
         const b = this.points[1].initialBearingTo(this.points[0]);
 
-        this.rotate(bearing - b);
+        this.rotate(bearing_ - b);
     }
 
     /** Add wind to a path. * */
@@ -276,6 +213,10 @@ export function pathFromJson(pointsJson) {
     return new Path(points);
 }
 
+function toTurfPoint(p) {
+    return turf.point([ p.lng, p.lat ]);
+}
+
 export function translate(points, target) {
     const path = pathFromJson(points);
 
@@ -291,9 +232,10 @@ export function setFinalHeading(points, finalHeading) {
 
     return path.points;
 }
-export function initialBearing(p1, p2) {
-    const point1 = new Point(p1.lat, p1.lng);
-    const point2 = new Point(p2.lat, p2.lng);
 
-    return point1.initialBearingTo(point2);
+export function initialBearing(p1, p2) {
+    const point1 = toTurfPoint(p1);
+    const point2 = toTurfPoint(p2);
+
+    return turf.bearing(point1, point2);
 }

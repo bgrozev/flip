@@ -10,8 +10,8 @@ import {
     Tooltip,
     Typography
 } from '@mui/material';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
+import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
 import {
