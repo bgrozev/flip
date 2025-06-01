@@ -74,13 +74,13 @@ export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
 
 }
 
-export function addWind(points, wind) {
+export function addWind(points, wind, interpolate) {
     if (!wind) {
         return [];
     }
     const path = pathFromJson(points);
 
-    path.addWind(wind, true);
+    path.addWind(wind, interpolate);
 
     return path.points;
 }
