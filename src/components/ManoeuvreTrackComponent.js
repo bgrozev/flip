@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';
+import { mirror as mirrorPath } from '../util/util.js';
 import React, { useState } from 'react';
 
 import { convertFromGnss, extractPathFromCsv } from '../util/csv.js';
@@ -33,14 +34,14 @@ export default function ManoeuvreTrackComponent({ manoeuvreToSave, onChange }) {
         console.log(`Loading ${f}`);
 
         f.text().then(data => {
-            const path = extractPathFromCsv(csvParse(convertFromGnss(data)));
+            let points = extractPathFromCsv(csvParse(convertFromGnss(data)));
 
             if (mirror) {
-                path.mirror();
+                points = mirrorPath(points);
             }
-            path.points[path.points.length - 1].pom = 1;
+            points[points.length - 1].pom = 1;
 
-            onChange(path.points);
+            onChange(points);
         });
     }
 

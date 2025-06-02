@@ -1,10 +1,10 @@
-import { Path, Point, metersToFeet } from './geo.js';
+import { metersToFeet } from './geo.js';
 
 // Note we reverse the path so it's more convenient to work with
 // (e.g. rotations and translations are around the first point, not the last)
 export function extractPathFromCsv(csv) {
     if (!csv || !csv.length) {
-        return new Path();
+        return [];
     }
 
     // Note we assume the final elevation will be 0!
@@ -12,13 +12,13 @@ export function extractPathFromCsv(csv) {
     const finalElevMeters = csv[csv.length - 1].hMSL;
 
     csv.slice(1).forEach(row => {
-        points.push(new Point(
-            Number(row.lat),
-            Number(row.lon),
-            new Date(row.time).getTime(),
-            Boolean(row.pom),
-            (row.hMSL - finalElevMeters) * metersToFeet
-        ));
+        points.push({
+            lat: Number(row.lat),
+            lng: Number(row.lon),
+            time: new Date(row.time).getTime(),
+            pom: Boolean(row.pom),
+            alt: (row.hMSL - finalElevMeters) * metersToFeet
+        });
     });
     points.reverse();
 
@@ -29,7 +29,7 @@ export function extractPathFromCsv(csv) {
     console.log(`POMs at altitudes: ${poms.map(p => Math.round(p.alt)).join(', ')} ft`);
     console.log(`Start altitude ${Math.round(points[points.length - 1].alt)} ft, total time ${time} seconds`);
 
-    return new Path(points);
+    return points;
 }
 
 export function trim(csv, startAltitude) {
