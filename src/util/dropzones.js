@@ -1,7 +1,7 @@
+import * as turf from '@turf/turf';
 import { fetchCscGroundWind } from '../forecast/csc.js';
 import { fetchSdazGroundWind } from '../forecast/sdaz.js';
 import { fetchSpacelandGroundWind } from '../forecast/spaceland.js';
-import { Point } from '../util/geo.js';
 
 export const DROPZONES = [
     {
@@ -93,7 +93,7 @@ export function findClosestDropzone(center) {
     let minDz;
 
     DROPZONES.forEach(dz => {
-        const distance = center.distanceTo(new Point(dz.lat, dz.lng));
+        const distance = turf.distance(center, [ dz.lng, dz.lat ], { units: 'feet' });
 
         if (distance < minDistance) {
             minDistance = distance;

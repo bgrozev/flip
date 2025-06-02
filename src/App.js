@@ -1,4 +1,5 @@
 /* eslint-disable new-cap */
+import * as turf from '@turf/turf';
 import {
     Adjust as AdjustIcon,
     Air as AirIcon,
@@ -38,7 +39,6 @@ import { DashboardLayout } from './components/DashboardLayout.tsx';
 import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast.js';
 import { findClosestDropzone } from './util/dropzones.js';
 import {
-    Point,
     initialBearing
 } from './util/geo.js';
 import {
@@ -161,10 +161,13 @@ export default function DashboardLayoutBasic() {
     const setTarget = useCallback(
         newTarget => {
             setTarget_(currentTarget => {
-                const oldPoint = new Point(currentTarget.target.lat, currentTarget.target.lng);
-                const newPoint = new Point(newTarget.target.lat, newTarget.target.lng);
+                const distance = turf.distance(
+                    [ currentTarget.target.lng, currentTarget.target.lat ],
+                    [ newTarget.target.lng, newTarget.target.lat ],
+                    { units: 'feet' }
+                )
 
-                if (oldPoint.distanceTo(newPoint) > 5000) {
+                if (distance > 5000) {
                     console.log('Moved too far, invalidating winds');
                     setWinds(new Winds());
                 }
@@ -244,7 +247,7 @@ export default function DashboardLayoutBasic() {
             return;
         }
 
-        const dz = findClosestDropzone(new Point(target.target.lat, target.target.lng));
+        const dz = findClosestDropzone([ target.target.lng, target.target.lat ]);
         const { forecastSource } = settings;
 
         console.log(
