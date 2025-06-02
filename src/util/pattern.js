@@ -1,4 +1,5 @@
-import { Point, mphToFps } from '../util/geo.js';
+import * as turf from '@turf/turf';
+import { mphToFps, toFlipPoints } from '../util/geo.js';
 
 export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }) {
     const points = [];
@@ -7,7 +8,10 @@ export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }
         return points;
     }
 
-    const p0 = new Point(29.77, -97.77, 0, 0, 0);
+    const p0 = turf.point([ 1, 1 ]);
+    p0.properties.alt = 0;
+    p0.properties.time = 0;
+    p0.properties.pom = 0;
 
     points.push(p0);
 
@@ -15,13 +19,13 @@ export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }
 
     for (let i = 0; i < legs.length; i++) {
         addLeg(points, descentRateMph, glideRatio, legs[i], heading);
-        points[points.length - 1].pom = 1;
+        points[points.length - 1].properties.pom = 1;
         if (i < legs.length - 1) {
             heading = heading - legs[i + 1].direction;
         }
     }
 
-    return points;
+    return toFlipPoints(points);
 }
 
 function addLeg(points, descentRateMph, glideRatio, leg, heading) {
@@ -32,26 +36,24 @@ function addLeg(points, descentRateMph, glideRatio, leg, heading) {
     let addedVft = 0;
 
     while (addedVft + stepVft <= leg.altitude) {
-        const p = points[points.length - 1].copy();
+        const p = turf.clone(points[points.length - 1]);
 
-        p.pom = false;
-        p.alt += stepVft;
-        p.time -= stepTms;
-        p.translate(heading, stepHft);
+        p.properties.pom = false;
+        p.properties.alt += stepVft;
+        p.properties.time -= stepTms;
         addedVft += stepVft;
 
-        points.push(p);
+        points.push(turf.transformTranslate(p, stepHft, heading, { units: 'feet' }));
     }
     if (addedVft < leg.altitude) {
         const remVft = leg.altitude - addedVft;
         const remHft = remVft * glideRatio;
         const remTms = Math.round(1000 * (remVft / (descentRateMph * mphToFps)));
-        const p = points[points.length - 1].copy();
+        const p = turf.clone(points[points.length - 1]);
 
-        p.alt += remVft;
-        p.time -= remTms;
-        p.translate(heading, remHft);
+        p.properties.alt += remVft;
+        p.properties.time -= remTms;
 
-        points.push(p);
+        points.push(turf.transformTranslate(p, remHft, heading, { units: 'feet' }));
     }
 }

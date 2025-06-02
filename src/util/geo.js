@@ -214,11 +214,13 @@ function toFlipPoint(turfPoint) {
             flipPoint[key] = turfPoint.properties[key];
         }
     }
+
+    return flipPoint;
 }
-function toFlipPoints(turfPoints) {
+export function toFlipPoints(turfPoints) {
     return turfPoints.map(p => toFlipPoint(p));
 }
-function normalizeBearing(bearing) {
+export function normalizeBearing(bearing) {
   return (bearing + 360) % 360;
 }
 
