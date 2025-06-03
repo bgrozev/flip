@@ -223,7 +223,7 @@ export default function DashboardLayoutBasic() {
     }
 
     let c = reposition(manoeuvre, pattern, target, settings.correctPatternHeading);
-    const c2 = addWind(c, winds, settings.interpolateWind);
+    const c2 = winds ? addWind(c, winds, settings.interpolateWind) : [];
 
     for (let i = 0; i < c.length; i++) {
         c2[i].phase = c[i].phase;

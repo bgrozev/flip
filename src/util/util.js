@@ -77,7 +77,7 @@ export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
 
 export function addWind(points, wind, interpolate) {
     if (!wind) {
-        return [];
+        return points;
     }
     const path = pathFromJson(points);
 
