@@ -1,3 +1,4 @@
+import * as turf from '@turf/turf';
 import { Path, Point, ktsToFps } from './geo.js';
 
 export const CODEC_JSON = {
@@ -90,13 +91,14 @@ export function averageWind(c1, c2) {
         return {};
     }
 
-    const p1 = new Point(c1[c1.length - 1].lat, c1[c1.length - 1].lng);
-    const p2 = new Point(c2[c2.length - 1].lat, c2[c2.length - 1].lng);
+    const p1 = [ c1[c1.length -1].lng, c1[c1.length - 1].lat ];
+    const p2 = [ c2[c2.length - 1].lng, c2[c2.length - 1].lat ];
+    const distanceFt = turf.distance(p1, p2, { units: 'feet' });
 
     const seconds = (c1[0].time - c1[c1.length - 1].time) / 1000;
-    const speedKts = (p1.distanceTo(p2) / seconds) / ktsToFps;
+    const speedKts = (distanceFt / seconds) / ktsToFps;
 
-    return { speedKts, direction: p1.initialBearingTo(p2) };
+    return { speedKts, direction: turf.bearing(p1, p2) };
 }
 
 export function mirror(points) {
