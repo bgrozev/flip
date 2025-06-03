@@ -171,7 +171,7 @@ export class Path {
     }
 }
 
-function toTurfPoint(p) {
+export function toTurfPoint(p) {
     const props = {};
     for (const key of Object.keys(p)) {
         if (p.hasOwnProperty(key) && key !== 'lat' && key !== 'lng') {

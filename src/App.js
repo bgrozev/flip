@@ -39,7 +39,7 @@ import { DashboardLayout } from './components/DashboardLayout.tsx';
 import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast.js';
 import { findClosestDropzone } from './util/dropzones.js';
 import {
-    initialBearing
+    toTurfPoint, normalizeBearing
 } from './util/geo.js';
 import {
     CODEC_JSON,
@@ -206,7 +206,11 @@ export default function DashboardLayoutBasic() {
                 setClick1(undefined);
             }
         } else if (waitingForClick2) {
-            const updated = { ...target, target: click1, finalHeading: Math.round(initialBearing(point, click1)) };
+            const updated = {
+                ...target,
+                target: click1,
+                finalHeading: normalizeBearing(Math.round(turf.bearing(toTurfPoint(point), toTurfPoint(click1))))
+            };
 
             setTarget(updated);
             setWaitingForClick1(false);
