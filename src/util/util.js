@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import { Path, Point, ktsToFps, toTurfPoints, toFlipPoints, mirrorTurf, addWindTurf } from './geo.js';
+import { ktsToFps, toTurfPoint, toTurfPoints, toFlipPoints, mirrorTurf, addWindTurf, normalizeBearing, translateTurf, setFinalHeadingTurf } from './geo.js';
 
 export const CODEC_JSON = {
     parse: value => {
@@ -13,28 +13,28 @@ export const CODEC_JSON = {
 };
 
 export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
-    const manoeuvrePath = pathFromJson(manoeuvre);
-    const patternPath = pathFromJson(pattern);
+    let manoeuvrePoints = toTurfPoints(manoeuvre);
+    let patternPoints = toTurfPoints(pattern);
+    const turfTarget = toTurfPoint(target.target);
 
     function norm(x) {
         return Math.abs(((x + 540) % 360) - 180);
     }
 
-    manoeuvrePath.translateTo(target.target);
-    manoeuvrePath.setFinalHeading(target.finalHeading);
+    manoeuvrePoints = translateTurf(manoeuvrePoints, turfTarget);
+    manoeuvrePoints = setFinalHeadingTurf(manoeuvrePoints, target.finalHeading);
 
-    if (manoeuvrePath.points.length > 0) {
-        patternPath.translateTo(manoeuvrePath.points[manoeuvrePath.points.length - 1]);
-    } else {
-        patternPath.translateTo(target.target);
-    }
+    let patternTarget = (manoeuvrePoints.length > 0) ? manoeuvrePoints[manoeuvrePoints.length - 1] : turfTarget;
+    patternPoints = translateTurf(patternPoints, patternTarget);
 
     let patternFinalHeading = target.finalHeading;
 
-    if (manoeuvrePath.points.length > 1) {
+    if (manoeuvrePoints.length > 1) {
         const manoeuvreInitialHeading
-            = manoeuvrePath.points[manoeuvrePath.points.length - 1].initialBearingTo(
-                manoeuvrePath.points[manoeuvrePath.points.length - 2]);
+            = normalizeBearing(turf.bearing(
+                manoeuvrePoints[manoeuvrePoints.length - 1],
+                manoeuvrePoints[manoeuvrePoints.length - 2]
+            ));
 
         if (correctPatternHeading) {
             const h1 = (target.finalHeading + 90) % 360;
@@ -47,32 +47,35 @@ export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
             patternFinalHeading = manoeuvreInitialHeading;
         }
     }
-    patternPath.setFinalHeading(patternFinalHeading);
 
-    if (manoeuvrePath.points.length > 0 && patternPath.points.length > 0) {
+    patternPoints = setFinalHeadingTurf(patternPoints, patternFinalHeading);
+
+    if (manoeuvrePoints.length > 0 && patternPoints.length > 0) {
         // Fix time and alt for pattern
-        const m0 = { ...manoeuvrePath.points[manoeuvrePath.points.length - 1] };
-        const p0 = { ...patternPath.points[0] };
-        const timeOffset = p0.time - m0.time;
-        const altOffset = p0.alt - m0.alt;
+        const m0 = { ...manoeuvrePoints[manoeuvrePoints.length - 1] };
+        const p0 = { ...patternPoints[0] };
+        const timeOffset = p0.properties.time - m0.properties.time;
+        const altOffset = p0.properties.alt - m0.properties.alt;
 
-        for (let i = 0; i < patternPath.points.length; i++) {
-            const p = patternPath.points[i];
+        for (let i = 0; i < patternPoints.length; i++) {
+            const p = patternPoints[i];
 
-            p.time = p.time - timeOffset;
-            p.alt = p.alt - altOffset;
+            p.properties.time = p.properties.time - timeOffset;
+            p.properties.alt = p.properties.alt - altOffset;
         }
     }
 
-    return [
-        ...manoeuvrePath.points.map(point => {
-            return { ...point, phase: 'manoeuvre' };
+    const merged = [
+        ...manoeuvrePoints.map(point => {
+            point.properties.phase = 'manoeuvre';
+            return point;
         }),
-        ...patternPath.points.map(point => {
-            return { ...point, phase: 'pattern' };
+        ...patternPoints.map(point => {
+            point.properties.phase = 'pattern';
+            return point;
         })
     ];
-
+    return toFlipPoints(merged);
 }
 
 export function addWind(points, wind, interpolate) {
@@ -117,17 +120,4 @@ export function setManoeuvreAltitude(points, newAlt) {
     for (let i = 0; i < points.length; i++) {
         points[i].alt *= scale;
     }
-}
-
-// TODO: avoid this hack
-function pathFromJson(pointsJson) {
-    const points = [];
-
-    for (let i = 0; i < pointsJson.length; i++) {
-        const p = pointsJson[i];
-
-        points.push(new Point(p.lat, p.lng, p.time, p.pom, p.alt));
-    }
-
-    return new Path(points);
 }

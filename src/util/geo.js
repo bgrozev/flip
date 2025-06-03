@@ -10,53 +10,6 @@ export const ktsToFps = 1.68781;
 // Miles per hour to feet per second.
 export const mphToFps = 5280 / 3600;
 
-export class Point {
-    constructor(lat, lng, time, pom, alt) {
-        this.lat = lat;
-        this.lng = lng;
-        this.time = time;
-        this.pom = pom;
-        this.alt = alt;
-
-        this.copy = this.copy.bind(this);
-        this.translate = this.translate.bind(this);
-        this.initialBearingTo = this.initialBearingTo.bind(this);
-        this.distanceTo = this.distanceTo.bind(this);
-    }
-
-    copy() {
-        return new Point(this.lat, this.lng, this.time, this.pom, this.alt);
-    }
-
-    /** Move this point a given distance in feet in a given direction/bearing. */
-    translate(b, distanceFt) {
-        const newPoint = turf.transformTranslate(toTurfPoint(this), distanceFt, b, { units: 'feet' });
-
-        this.lng = newPoint.geometry.coordinates[0];
-        this.lat = newPoint.geometry.coordinates[1];
-    }
-
-    /** Initial bearing from this point to another [point].. */
-    initialBearingTo(p) {
-        return normalizeBearing(turf.bearing(toTurfPoint(this), toTurfPoint(p)));
-    }
-
-    /** Distance in feet between this point and [point]. */
-    distanceTo(p) {
-        return turf.distance(toTurfPoint(this), toTurfPoint(p), { units: 'feet' });
-    }
-
-    /** Rotate this point around [center] by [degrees] degrees. */
-    rotate(degrees, center) {
-        const distanceFt = center.distanceTo(this);
-        const b = center.initialBearingTo(this);
-
-        this.lat = center.lat;
-        this.lng = center.lng;
-        this.translate(b + degrees, distanceFt);
-    }
-}
-
 function prepWind(winds) {
     const wind = [];
 
@@ -73,69 +26,6 @@ function prepWind(winds) {
 
     // Do we want to insert a [0,0,0] in case the first entry's alt is >0?
     return new Winds(wind);
-}
-
-export class Path {
-    constructor(points = []) {
-        this.points = points;
-
-        this.copy = this.copy.bind(this);
-        this.translate = this.translate.bind(this);
-        this.rotate = this.rotate.bind(this);
-        this.translateTo = this.translateTo.bind(this);
-        this.setFinalHeading = this.setFinalHeading.bind(this);
-    }
-
-    copy() {
-        return new Path(this.points.map(p => p.copy()));
-    }
-
-    /** Translate each point of this path a given distance in feet in a given bearing. */
-    translate(b, distanceFt) {
-        this.points.forEach(p => p.translate(b, distanceFt));
-    }
-
-    /** Rotate this path by [degrees] around [center] or the first point of the path if [center] is not specified. */
-    rotate(degrees, center) {
-        if (this.points.length === 0 || degrees % 360 === 0) {
-            return;
-        }
-
-        this.points.forEach(p => p.rotate(degrees, center || this.points[0]));
-    }
-
-    /** Translate this path so that its first point's coordinates are [point]'s. */
-    translateTo(p) {
-        if (this.points.length === 0) {
-            return;
-        }
-
-        const o = this.points[0].copy();
-
-        // Change just lat/lng, maintain timestamp, etc.
-        this.points[0].lat = p.lat;
-        this.points[0].lng = p.lng;
-
-        for (let i = 1; i < this.points.length; i++) {
-            const d = o.distanceTo(this.points[i]);
-            const b = o.initialBearingTo(this.points[i]);
-
-            this.points[i].lat = p.lat;
-            this.points[i].lng = p.lng;
-            this.points[i].translate(b, d);
-        }
-    }
-
-    /** Rotate this around the first point so that the second->first point have an initial bearing of [bearing]. */
-    setFinalHeading(bearing) {
-        if (this.points.length < 2) {
-            return;
-        }
-
-        const b = this.points[1].initialBearingTo(this.points[0]);
-
-        this.rotate(normalizeBearing(bearing + 360 - b));
-    }
 }
 
 export function toTurfPoint(p) {
@@ -168,15 +58,29 @@ export function normalizeBearing(bearing) {
   return (bearing + 360) % 360;
 }
 
-function translateTurf(turfPoints, turfTarget) {
-    if (turfPoints.length < 1) {
+export function translateTurf(turfPoints, turfTarget) {
+    if (turfPoints.length === 0) {
         return turfPoints;
     }
 
-    const angle = turf.bearing(turfPoints[0], turfTarget);
-    const dist = turf.distance(turfPoints[0], turfTarget, { units: 'feet' });
+    const o = turf.clone(turfPoints[0]);
 
-    return turfPoints.map((p) => transformTranslate(p, dist, angle, { units: 'feet' }));
+    let ret = []
+    ret.push(turf.clone(turfPoints[0]));
+    ret[0].geometry.coordinates[0] = turfTarget.geometry.coordinates[0]
+    ret[0].geometry.coordinates[1] = turfTarget.geometry.coordinates[1]
+
+    for (let i = 1; i < turfPoints.length; i++) {
+        const d = turf.distance(o, turfPoints[i], { units: 'feet' });
+        const b = turf.bearing(o, turfPoints[i]);
+
+        let c = turf.clone(turfPoints[i]);
+        c.geometry.coordinates[0] = turfTarget.geometry.coordinates[0]
+        c.geometry.coordinates[1] = turfTarget.geometry.coordinates[1]
+        c = turf.transformTranslate(c, d, b, { units: 'feet' })
+        ret.push(c);
+    }
+    return ret;
 }
 
 export function translate(points, target) {
@@ -189,13 +93,14 @@ export function translate(points, target) {
     return toFlipPoints(translatedTurfPoints);
 }
 
-function setFinalHeadingTurf(turfPoints, finalHeading) {
+export function setFinalHeadingTurf(turfPoints, finalHeading) {
     if (turfPoints.length < 2) {
         return turfPoints;
     }
 
     const currentHeading = turf.bearing(turfPoints[1], turfPoints[0]);
-    return turf.transformRotate(turfPoints, finalHeading - currentHeading, { pivot: turfPoints[0], mutate: false });
+    let ret = turf.transformRotate(turf.featureCollection(turfPoints), finalHeading - currentHeading, { pivot: turfPoints[0], mutate: false });
+    return ret.features
 }
 
 export function setFinalHeading(points, finalHeading) {
