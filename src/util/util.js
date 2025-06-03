@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import { Path, Point, ktsToFps, toTurfPoints, toFlipPoints, mirrorTurf } from './geo.js';
+import { Path, Point, ktsToFps, toTurfPoints, toFlipPoints, mirrorTurf, addWindTurf } from './geo.js';
 
 export const CODEC_JSON = {
     parse: value => {
@@ -79,11 +79,10 @@ export function addWind(points, wind, interpolate) {
     if (!wind) {
         return points;
     }
-    const path = pathFromJson(points);
+    const turfPoints = toTurfPoints(points);
+    const withWind = addWindTurf(turfPoints, wind, interpolate);
 
-    path.addWind(wind, interpolate);
-
-    return path.points;
+    return toFlipPoints(withWind);
 }
 
 export function averageWind(c1, c2) {

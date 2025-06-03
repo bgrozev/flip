@@ -136,39 +136,6 @@ export class Path {
 
         this.rotate(normalizeBearing(bearing + 360 - b));
     }
-
-    /** Add wind to a path. * */
-    addWind(winds, interpolate) {
-        if (this.points.length <= 1) {
-            return;
-        }
-
-        const preppedWinds = prepWind(winds);
-
-        const start = this.points[0];
-
-        let ms = 0;
-        let offsetFt = 0;
-        let offsetB = 0;
-
-        for (let i = 1; i < this.points.length; i++) {
-            // path is backwards in time...
-            ms = this.points[i - 1].time - this.points[i].time;
-
-            const wind = preppedWinds.getWindAt(this.points[i - 1].alt, interpolate);
-            const dOffsetFt = ms / 1000 * wind.speedKts * ktsToFps;
-            const dOffsetB = wind.direction;
-            const offsetPoint = start.copy();
-
-            offsetPoint.translate(offsetB, offsetFt);
-            offsetPoint.translate(dOffsetB, dOffsetFt);
-
-            offsetFt = start.distanceTo(offsetPoint);
-            offsetB = start.initialBearingTo(offsetPoint);
-
-            this.points[i].translate(offsetB, offsetFt);
-        }
-    }
 }
 
 export function toTurfPoint(p) {
@@ -271,4 +238,37 @@ export function mirrorTurf(turfPoints) {
     }
 
     return mirrored;
+}
+
+export function addWindTurf(turfPoints, wind, interpolate) {
+    if (turfPoints.length <= 1) {
+        return turfPoints;
+    }
+
+    const preppedWinds = prepWind(wind);
+    const start = turfPoints[0];
+    const ret = [ turf.clone(start) ]
+    let ms = 0;
+    let offsetFt = 0;
+    let offsetB = 0;
+
+    for (let i = 1; i < turfPoints.length; i++) {
+        // path is backwards in time...
+        ms = turfPoints[i - 1].properties.time - turfPoints[i].properties.time;
+
+        const wind = preppedWinds.getWindAt(turfPoints[i - 1].properties.alt, interpolate);
+        const dOffsetFt = ms / 1000 * wind.speedKts * ktsToFps;
+        const dOffsetB = wind.direction;
+
+        let offsetPoint = turf.clone(start);
+        offsetPoint = turf.transformTranslate(offsetPoint, offsetFt, offsetB, { units: 'feet' });
+        offsetPoint = turf.transformTranslate(offsetPoint, dOffsetFt, dOffsetB, { units: 'feet' });
+
+        offsetFt = turf.distance(start, offsetPoint, { units: 'feet' });
+        offsetB = normalizeBearing(turf.bearing(start, offsetPoint));
+
+        ret.push(turf.transformTranslate(turfPoints[i], offsetFt, offsetB, { units: 'feet' }));
+    }
+
+    return ret
 }
