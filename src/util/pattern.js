@@ -8,7 +8,7 @@ export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }
         return points;
     }
 
-    const p0 = turf.point([ 1, 1 ]);
+    const p0 = turf.point([ 0, 0 ]);
     p0.properties.alt = 0;
     p0.properties.time = 0;
     p0.properties.pom = 0;

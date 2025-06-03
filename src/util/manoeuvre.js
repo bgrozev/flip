@@ -1,25 +1,21 @@
-import { Point } from '../util/geo.js';
+import * as turf from '@turf/turf';
+import { toFlipPoints } from '../util/geo.js';
 
 export function createManoeuvrePath({ offsetXFt, offsetYFt, altitudeFt, duration, left }) {
     // TODO handle the case of offsets being 0
-    const t0 = 0;
-    const p0 = new Point(29.77, -97.77, t0, 1, altitudeFt);
-    const p1 = p0.copy();
+    const p0 = turf.point([ 0.1, -0.1 ], { time: 0, alt: altitudeFt, pom: 1 } )
     const durationMs = duration * 1000;
+    const p1 = turf.transformTranslate(p0, offsetYFt, 0, { units: 'feet' });
 
-    p1.translate(0, offsetYFt);
-    p1.time = p1.time + (durationMs / 2);
-    p1.alt = altitudeFt / 2;
-    p1.pom = 0;
+    p1.properties.time = p1.properties.time + (durationMs / 2);
+    p1.properties.alt = altitudeFt / 2;
+    p1.properties.pom = 0;
 
+    // We can't set the final heading if the last 2 points are on top of each other, offset at least 3 ft
+    const p2 = turf.transformTranslate(p1, Math.max(offsetXFt, 3), left ? 90 : 270, { units: 'feet' });
+    p2.properties.time = p2.properties.time + (durationMs / 2);
+    p2.properties.alt = 0;
+    p2.properties.pom = 1;
 
-    const p2 = p1.copy();
-
-
-    // We can't set the final heading if the last 2 points are on top of each other
-    p2.translate(left ? 270 : 90, Math.max(offsetXFt, 3));
-    p2.time = p2.time + (durationMs / 2);
-    p2.alt = 0;
-
-    return [ p2, p1, p0 ];
+    return toFlipPoints([ p2, p1, p0 ]);
 }
