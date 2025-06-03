@@ -83,7 +83,6 @@ export class Path {
         this.translate = this.translate.bind(this);
         this.rotate = this.rotate.bind(this);
         this.translateTo = this.translateTo.bind(this);
-        this.mirror = this.mirror.bind(this);
         this.setFinalHeading = this.setFinalHeading.bind(this);
     }
 
@@ -124,28 +123,6 @@ export class Path {
             this.points[i].lat = p.lat;
             this.points[i].lng = p.lng;
             this.points[i].translate(b, d);
-        }
-    }
-
-    /** Reflect this around the bearing defined by the first two points */
-    mirror() {
-        if (this.points.length < 2) {
-            return;
-        }
-
-        const centerBearing = this.points[0].initialBearingTo(this.points[1]);
-        const start = this.points[0];
-
-        for (let i = 2; i < this.points.length; i++) {
-            const p = this.points[i];
-            const b = start.initialBearingTo(p);
-            const d = start.distanceTo(p);
-
-            const b2 = centerBearing - (b - centerBearing);
-
-            p.lat = start.lat;
-            p.lng = start.lng;
-            p.translate(b2, d);
         }
     }
 
@@ -204,11 +181,11 @@ function toTurfPoint(p) {
 
     return turf.point([ p.lng, p.lat ], props);
 }
-function toTurfPoints(points) {
+export function toTurfPoints(points) {
     return points.map(p => toTurfPoint(p));
 }
 function toFlipPoint(turfPoint) {
-    const flipPoint = { lng: turfPoint.geometry.coordinates[1], lat: turfPoint.geometry.coordinates[0] };
+    const flipPoint = { lat: turfPoint.geometry.coordinates[1], lng: turfPoint.geometry.coordinates[0] };
     for (const key of Object.keys(turfPoint.properties)) {
         if (turfPoint.properties.hasOwnProperty(key)) {
             flipPoint[key] = turfPoint.properties[key];
@@ -269,4 +246,29 @@ export function initialBearing(p1, p2) {
     const point2 = toTurfPoint(p2);
 
     return normalizeBearing(turf.bearing(point1, point2));
+}
+
+export function mirrorTurf(turfPoints) {
+    if (turfPoints.length < 2) {
+        return turfPoints;
+    }
+
+    const mirrored = [ turfPoints[0], turfPoints[1] ];
+
+    const centerBearing = normalizeBearing(turf.bearing(turfPoints[0], turfPoints[1]));
+    const start = turfPoints[0];
+    for (let i = 2; i < turfPoints.length; i++) {
+        const p = turf.clone(turfPoints[i]);
+        const b = turf.bearing(start, p);
+        const d = turf.distance(start, p, { units: 'feet' });
+
+        const b2 = centerBearing - (b - centerBearing);
+
+        p.geometry.coordinates[0] = start.geometry.coordinates[0];
+        p.geometry.coordinates[1] = start.geometry.coordinates[1];
+        const m = turf.transformTranslate(p, d, b2, { units: 'feet' });
+        mirrored.push(m);
+    }
+
+    return mirrored;
 }

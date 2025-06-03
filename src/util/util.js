@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import { Path, Point, ktsToFps } from './geo.js';
+import { Path, Point, ktsToFps, toTurfPoints, toFlipPoints, mirrorTurf } from './geo.js';
 
 export const CODEC_JSON = {
     parse: value => {
@@ -102,11 +102,10 @@ export function averageWind(c1, c2) {
 }
 
 export function mirror(points) {
-    const path = pathFromJson(points);
+    const turfPoints = toTurfPoints(points);
+    const mirrored = mirrorTurf(turfPoints);
 
-    path.mirror();
-
-    return path.points;
+    return toFlipPoints(mirrored);
 }
 
 export function setManoeuvreAltitude(points, newAlt) {

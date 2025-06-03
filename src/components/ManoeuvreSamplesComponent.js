@@ -34,7 +34,6 @@ export default function ManoeuvreSamplesComponent({ onChange }) {
     };
 
     function handleSwitch() {
-        console.log(`left is now ${!left}`);
         setLeft(!left);
         fireChange(selectedIndex, !left);
     }
