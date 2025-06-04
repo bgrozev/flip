@@ -17,5 +17,5 @@ export function createManoeuvrePath({ offsetXFt, offsetYFt, altitudeFt, duration
     p2.properties.alt = 0;
     p2.properties.pom = 1;
 
-    return toFlipPoints([ p2, p1, p0 ]);
+    return [ p2, p1, p0 ];
 }

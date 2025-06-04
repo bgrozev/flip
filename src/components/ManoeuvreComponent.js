@@ -15,6 +15,7 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useEffect } from 'react';
 
 import { CODEC_JSON } from '../util/util.js';
+import { toTurfPoints } from '../util/geo.js';
 
 import ManoeuvreParametersComponent, { defaultPath } from './ManoeuvreParametersComponent.js';
 import ManoeuvreSamplesComponent from './ManoeuvreSamplesComponent.js';
@@ -29,17 +30,17 @@ const NONE = 'none';
 export default function ManoeuvreComponent({ setManoeuvre, manoeuvreToSave }) {
     const [ type, setType ] = useLocalStorageState('flip.manoeuvre.type', NONE);
     const [ parametersPath, setParametersPath ] = useLocalStorageState(
-        'flip.manoeuvre.parameters_path',
+        'flip.manoeuvre.parameters_path_turf',
         defaultPath(),
         { codec: CODEC_JSON }
     );
     const [ trackPath, setTrackPath ] = useLocalStorageState(
-        'flip.manoeuvre.track_path',
+        'flip.manoeuvre.track_path_turf',
         [],
         { codec: CODEC_JSON }
     );
     const [ samplePath, setSamplePath ] = useLocalStorageState(
-        'flip.manoeuvre.sample_path',
+        'flip.manoeuvre.sample_path_turf',
         [],
         { codec: CODEC_JSON }
     );
@@ -109,8 +110,9 @@ export default function ManoeuvreComponent({ setManoeuvre, manoeuvreToSave }) {
                 <ManoeuvreTrackComponent
                     manoeuvreToSave={manoeuvreToSave}
                     onChange={p => {
-                        setTrackPath(p);
-                        setManoeuvre(p);
+                        const t = toTurfPoints(p);
+                        setTrackPath(t);
+                        setManoeuvre(t);
                     }}
                 />
             )}
@@ -118,8 +120,9 @@ export default function ManoeuvreComponent({ setManoeuvre, manoeuvreToSave }) {
             {type === SAMPLES && (
                 <ManoeuvreSamplesComponent
                     onChange={p => {
-                        setSamplePath(p);
-                        setManoeuvre(p);
+                        const t = toTurfPoints(p);
+                        setSamplePath(t);
+                        setManoeuvre(t);
                     }}
                 />
             )}

@@ -13,7 +13,7 @@ export const CODEC_JSON = {
 };
 
 export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
-    let manoeuvrePoints = toTurfPoints(manoeuvre);
+    let manoeuvrePoints = manoeuvre;
     let patternPoints = pattern;
     const turfTarget = toTurfPoint(target.target);
 

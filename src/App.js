@@ -145,7 +145,7 @@ const defaultTarget = {
 
 export default function DashboardLayoutBasic() {
 
-    const [ manoeuvre, setManoeuvre ] = useLocalStorageState('flip.manoeuvre', [], { codec: CODEC_JSON });
+    const [ manoeuvre, setManoeuvre ] = useLocalStorageState('flip.manoeuvre_turf', [], { codec: CODEC_JSON });
     const [ target, setTarget_ ] = useLocalStorageState('flip.target', defaultTarget, { codec: CODEC_JSON });
     const [ pattern, setPattern ] = useLocalStorageState('flip.pattern_turf', defaultPattern, { codec: CODEC_JSON });
     const [ winds, setWinds ] = useState(new Winds());
@@ -300,7 +300,6 @@ export default function DashboardLayoutBasic() {
 
     if (router.pathname === '/manoeuvre') {
         p = <ManoeuvreComponent
-            manoeuvre={manoeuvre}
             setManoeuvre={setManoeuvre}
             manoeuvreToSave={c2.filter(point => point.phase === 'manoeuvre')}
         />;
