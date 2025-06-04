@@ -25,7 +25,7 @@ export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }
         }
     }
 
-    return toFlipPoints(points);
+    return points;
 }
 
 function addLeg(points, descentRateMph, glideRatio, leg, heading) {

@@ -14,7 +14,7 @@ export const CODEC_JSON = {
 
 export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
     let manoeuvrePoints = toTurfPoints(manoeuvre);
-    let patternPoints = toTurfPoints(pattern);
+    let patternPoints = pattern;
     const turfTarget = toTurfPoint(target.target);
 
     function norm(x) {

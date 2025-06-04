@@ -147,7 +147,7 @@ export default function DashboardLayoutBasic() {
 
     const [ manoeuvre, setManoeuvre ] = useLocalStorageState('flip.manoeuvre', [], { codec: CODEC_JSON });
     const [ target, setTarget_ ] = useLocalStorageState('flip.target', defaultTarget, { codec: CODEC_JSON });
-    const [ pattern, setPattern ] = useLocalStorageState('flip.pattern', defaultPattern, { codec: CODEC_JSON });
+    const [ pattern, setPattern ] = useLocalStorageState('flip.pattern_turf', defaultPattern, { codec: CODEC_JSON });
     const [ winds, setWinds ] = useState(new Winds());
     const [ settings, setSettings ] = useSettings();
     const [ fetching, setFetching ] = useState(false);
