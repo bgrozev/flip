@@ -244,17 +244,22 @@ export default function DashboardLayoutBasic() {
             return;
         }
 
-        const dz = findClosestDropzone(new Point(target.target.lat, target.target.lng));
+        const targetPoint = new Point(target.target.lat, target.target.lng);
+        let dz = findClosestDropzone(new Point(target.target.lat, target.target.lng));
+
+        if (targetPoint.distanceTo(new Point(dz.lat, dz.lng)) > 5000) {
+            dz = null;
+        }
         const { forecastSource } = settings;
 
         console.log(
             `Fetching winds using ${forecastSource} for: ${JSON.stringify(target.target)},`
-            + ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz.name})`
+            + ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name})`
         );
 
         setFetching(true);
 
-        fetchForecast(forecastSource, target.target, settings.useDzGroundWind && dz.fetchGroundWind)
+        fetchForecast(forecastSource, target.target, settings.useDzGroundWind && dz?.fetchGroundWind)
             .then(fetchedWinds => {
                 let limit = settings.limitWind;
 
