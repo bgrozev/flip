@@ -91,7 +91,7 @@ function MapComponent({ windSpeed, windDirection, center, onClick, pathA, pathB,
 
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
-        googleMapsApiKey: 'AIzaSyCrb0-7563UDAlMUwLZ14OX6ZlWlwTgCP8',
+        googleMapsApiKey: 'INSERT_GOOGLE_API_KEY',
         libraries
     });
 
