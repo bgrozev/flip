@@ -18,25 +18,22 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
-import { makePattern } from '../util/pattern.js';
+import {
+    PATTERN_NONE,
+    PATTERN_ONE_LEG,
+    PATTERN_THREE_LEG,
+    PATTERN_TWO_LEG,
+    booleanToDirection,
+    isLeftTurn,
+    makePatternByType
+} from '../util/pattern.js';
 import { CODEC_JSON } from '../util/util.js';
 
 import DirectionSwitch from './DirectionSwitch.js';
 import NumberInput from './NumberInput.js';
 
-function isChecked(int) {
-    return int !== 270;
-}
-function direction(b) {
-    return b ? 90 : 270;
-}
-const NONE = 'none';
-const ONE_LEG = 'one-leg';
-const TWO_LEG = 'two-leg';
-const THREE_LEG = 'three-leg';
-
 const defaultParams = {
-    type: THREE_LEG,
+    type: PATTERN_THREE_LEG,
     descentRateMph: 12,
     glideRatio: 2.6,
     legs: [
@@ -46,23 +43,7 @@ const defaultParams = {
     ]
 };
 
-function makePattern_(params) {
-    const legCountMap = {
-        [NONE]: 0,
-        [ONE_LEG]: 1,
-        [TWO_LEG]: 2,
-        [THREE_LEG]: 3
-    };
-
-    const count = legCountMap[params.type] ?? 0;
-
-    return makePattern({
-        ...params,
-        legs: params.legs.slice(0, count)
-    });
-}
-
-export const defaultPattern = makePattern_(defaultParams);
+export const defaultPattern = makePatternByType(defaultParams);
 
 export default function PatternComponent(props) {
     const [ params, setParams ] = useLocalStorageState('flip.pattern.params', defaultParams, { codec: CODEC_JSON });
@@ -74,7 +55,7 @@ export default function PatternComponent(props) {
         };
 
         setParams(newParams);
-        props.onChange(makePattern_(newParams));
+        props.onChange(makePatternByType(newParams));
     };
 
     const handleLegChange = (legIndex, key, value) => {
@@ -84,7 +65,7 @@ export default function PatternComponent(props) {
 
         newParams.legs[legIndex][key] = value;
         setParams(newParams);
-        props.onChange(makePattern_(newParams));
+        props.onChange(makePatternByType(newParams));
     };
 
     return (
@@ -96,16 +77,22 @@ export default function PatternComponent(props) {
                 fullWidth
                 color="primary"
             >
-                <ToggleButton value={NONE}><Tooltip title="No pattern"><BlockIcon /></Tooltip></ToggleButton>
-                <ToggleButton value={ONE_LEG}><Tooltip title="Single leg"><LooksOneIcon /></Tooltip></ToggleButton>
-                <ToggleButton value={TWO_LEG}><Tooltip title="Two-leg pattern"><LooksTwoIcon /></Tooltip></ToggleButton>
-                <ToggleButton value={THREE_LEG}>
+                <ToggleButton value={PATTERN_NONE}>
+                    <Tooltip title="No pattern"><BlockIcon /></Tooltip>
+                </ToggleButton>
+                <ToggleButton value={PATTERN_ONE_LEG}>
+                    <Tooltip title="Single leg"><LooksOneIcon /></Tooltip>
+                </ToggleButton>
+                <ToggleButton value={PATTERN_TWO_LEG}>
+                    <Tooltip title="Two-leg pattern"><LooksTwoIcon /></Tooltip>
+                </ToggleButton>
+                <ToggleButton value={PATTERN_THREE_LEG}>
                     <Tooltip title="Three-leg pattern"><Looks3Icon /></Tooltip>
                 </ToggleButton>
             </ToggleButtonGroup>
 
             <Divider orientation="vertical" flexItem />
-            {params.type !== NONE && (<>
+            {params.type !== PATTERN_NONE && (<>
                 <Stack direction="row" spacing={2}>
                     <NumberInput
                         title="Vertical speed in the pattern."
@@ -141,7 +128,7 @@ export default function PatternComponent(props) {
             </>)}
 
             <Divider orientation="vertical" flexItem />
-            {(params.type === TWO_LEG || params.type === THREE_LEG) && (<>
+            {(params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (<>
                 <Divider/>
                 <Typography variant="caption">Base leg</Typography>
                 <Stack direction="row" spacing={2}>
@@ -154,18 +141,18 @@ export default function PatternComponent(props) {
                     />
                     <DirectionSwitch
                         title="Direction for the turn after this pattern leg."
-                        value={isChecked(params.legs[1].direction)}
+                        value={isLeftTurn(params.legs[1].direction)}
                         onChange={() => {
-                            const wasChecked = isChecked(params.legs[1].direction);
+                            const wasChecked = isLeftTurn(params.legs[1].direction);
 
-                            handleLegChange(1, 'direction', direction(!wasChecked));
+                            handleLegChange(1, 'direction', booleanToDirection(!wasChecked));
                         }}
                     />
                 </Stack>
             </>)}
 
             <Divider orientation="vertical" flexItem />
-            {params.type === THREE_LEG && (<>
+            {params.type === PATTERN_THREE_LEG && (<>
                 <Divider/>
                 <Typography variant="caption">Downwind leg</Typography>
                 <Stack direction="row" spacing={2}>
@@ -178,11 +165,11 @@ export default function PatternComponent(props) {
                     />
                     <DirectionSwitch
                         title="Direction for the turn after this pattern leg."
-                        value={isChecked(params.legs[2].direction)}
+                        value={isLeftTurn(params.legs[2].direction)}
                         onChange={() => {
-                            const wasChecked = isChecked(params.legs[2].direction);
+                            const wasChecked = isLeftTurn(params.legs[2].direction);
 
-                            handleLegChange(2, 'direction', direction(!wasChecked));
+                            handleLegChange(2, 'direction', booleanToDirection(!wasChecked));
                         }}
                     />
                 </Stack>

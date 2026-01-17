@@ -10,6 +10,27 @@ export const ktsToFps = 1.68781;
 // Miles per hour to feet per second.
 export const mphToFps = 5280 / 3600;
 
+// Maximum distance (in feet) a target can move before wind data is invalidated
+export const TARGET_MOVE_THRESHOLD_FT = 5000;
+
+/**
+ * Calculate the distance in feet between two points.
+ * Points can be { lat, lng } objects or [lng, lat] arrays.
+ */
+export function distanceFeet(point1, point2) {
+    const p1 = Array.isArray(point1) ? point1 : [ point1.lng, point1.lat ];
+    const p2 = Array.isArray(point2) ? point2 : [ point2.lng, point2.lat ];
+
+    return turf.distance(p1, p2, { units: 'feet' });
+}
+
+/**
+ * Check if target has moved beyond the threshold distance.
+ */
+export function hasTargetMovedTooFar(oldTarget, newTarget, threshold = TARGET_MOVE_THRESHOLD_FT) {
+    return distanceFeet(oldTarget, newTarget) > threshold;
+}
+
 function prepWind(winds) {
     const wind = [];
 

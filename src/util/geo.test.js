@@ -1,7 +1,10 @@
 import * as turf from '@turf/turf';
 
 import {
+    TARGET_MOVE_THRESHOLD_FT,
     addWindTurf,
+    distanceFeet,
+    hasTargetMovedTooFar,
     initialBearing,
     ktsToFps,
     metersToFeet,
@@ -326,5 +329,83 @@ describe('addWindTurf', () => {
 
         // Points are processed - we just verify it doesn't crash and returns correct length
         expect(result).toHaveLength(3);
+    });
+});
+
+describe('TARGET_MOVE_THRESHOLD_FT', () => {
+    it('is defined as 5000 feet', () => {
+        expect(TARGET_MOVE_THRESHOLD_FT).toBe(5000);
+    });
+});
+
+describe('distanceFeet', () => {
+    it('calculates distance between two object points', () => {
+        const p1 = { lat: 33.5, lng: -112.0 };
+        const p2 = { lat: 33.5, lng: -112.001 };
+
+        const distance = distanceFeet(p1, p2);
+
+        expect(distance).toBeGreaterThan(0);
+        expect(typeof distance).toBe('number');
+    });
+
+    it('calculates distance between two array points', () => {
+        const p1 = [ -112.0, 33.5 ];
+        const p2 = [ -112.001, 33.5 ];
+
+        const distance = distanceFeet(p1, p2);
+
+        expect(distance).toBeGreaterThan(0);
+    });
+
+    it('calculates distance between mixed formats', () => {
+        const p1 = { lat: 33.5, lng: -112.0 };
+        const p2 = [ -112.001, 33.5 ];
+
+        const distance = distanceFeet(p1, p2);
+
+        expect(distance).toBeGreaterThan(0);
+    });
+
+    it('returns 0 for same point', () => {
+        const p1 = { lat: 33.5, lng: -112.0 };
+        const p2 = { lat: 33.5, lng: -112.0 };
+
+        const distance = distanceFeet(p1, p2);
+
+        expect(distance).toBe(0);
+    });
+});
+
+describe('hasTargetMovedTooFar', () => {
+    it('returns false when distance is below threshold', () => {
+        const oldTarget = { lat: 33.5, lng: -112.0 };
+        const newTarget = { lat: 33.5001, lng: -112.0 }; // Very close
+
+        expect(hasTargetMovedTooFar(oldTarget, newTarget)).toBe(false);
+    });
+
+    it('returns true when distance exceeds default threshold', () => {
+        const oldTarget = { lat: 33.5, lng: -112.0 };
+        const newTarget = { lat: 33.6, lng: -112.0 }; // Far away (> 5000 ft)
+
+        expect(hasTargetMovedTooFar(oldTarget, newTarget)).toBe(true);
+    });
+
+    it('respects custom threshold', () => {
+        const oldTarget = { lat: 33.5, lng: -112.0 };
+        const newTarget = { lat: 33.5001, lng: -112.0 };
+
+        // With very small threshold, even small moves are "too far"
+        expect(hasTargetMovedTooFar(oldTarget, newTarget, 1)).toBe(true);
+
+        // With large threshold, moves are not "too far"
+        expect(hasTargetMovedTooFar(oldTarget, newTarget, 100000)).toBe(false);
+    });
+
+    it('returns false for same point', () => {
+        const point = { lat: 33.5, lng: -112.0 };
+
+        expect(hasTargetMovedTooFar(point, point)).toBe(false);
     });
 });

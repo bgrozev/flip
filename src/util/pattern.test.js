@@ -1,4 +1,112 @@
-import { makePattern } from './pattern.js';
+import {
+    PATTERN_NONE,
+    PATTERN_ONE_LEG,
+    PATTERN_THREE_LEG,
+    PATTERN_TWO_LEG,
+    booleanToDirection,
+    getPatternLegCount,
+    isLeftTurn,
+    makePattern,
+    makePatternByType
+} from './pattern.js';
+
+describe('Pattern type constants', () => {
+    it('defines all pattern types', () => {
+        expect(PATTERN_NONE).toBe('none');
+        expect(PATTERN_ONE_LEG).toBe('one-leg');
+        expect(PATTERN_TWO_LEG).toBe('two-leg');
+        expect(PATTERN_THREE_LEG).toBe('three-leg');
+    });
+});
+
+describe('getPatternLegCount', () => {
+    it('returns 0 for PATTERN_NONE', () => {
+        expect(getPatternLegCount(PATTERN_NONE)).toBe(0);
+    });
+
+    it('returns 1 for PATTERN_ONE_LEG', () => {
+        expect(getPatternLegCount(PATTERN_ONE_LEG)).toBe(1);
+    });
+
+    it('returns 2 for PATTERN_TWO_LEG', () => {
+        expect(getPatternLegCount(PATTERN_TWO_LEG)).toBe(2);
+    });
+
+    it('returns 3 for PATTERN_THREE_LEG', () => {
+        expect(getPatternLegCount(PATTERN_THREE_LEG)).toBe(3);
+    });
+
+    it('returns 0 for unknown type', () => {
+        expect(getPatternLegCount('unknown')).toBe(0);
+        expect(getPatternLegCount(null)).toBe(0);
+        expect(getPatternLegCount(undefined)).toBe(0);
+    });
+});
+
+describe('makePatternByType', () => {
+    const baseParams = {
+        descentRateMph: 12,
+        glideRatio: 2.6,
+        legs: [
+            { altitude: 300, direction: 0 },
+            { altitude: 300, direction: 270 },
+            { altitude: 300, direction: 270 }
+        ]
+    };
+
+    it('returns empty pattern for PATTERN_NONE', () => {
+        const result = makePatternByType({ ...baseParams, type: PATTERN_NONE });
+
+        expect(result).toEqual([]);
+    });
+
+    it('uses only first leg for PATTERN_ONE_LEG', () => {
+        const result = makePatternByType({ ...baseParams, type: PATTERN_ONE_LEG });
+        const lastPoint = result[result.length - 1];
+
+        expect(lastPoint.properties.alt).toBeCloseTo(300, 0);
+    });
+
+    it('uses first two legs for PATTERN_TWO_LEG', () => {
+        const result = makePatternByType({ ...baseParams, type: PATTERN_TWO_LEG });
+        const lastPoint = result[result.length - 1];
+
+        expect(lastPoint.properties.alt).toBeCloseTo(600, 0);
+    });
+
+    it('uses all three legs for PATTERN_THREE_LEG', () => {
+        const result = makePatternByType({ ...baseParams, type: PATTERN_THREE_LEG });
+        const lastPoint = result[result.length - 1];
+
+        expect(lastPoint.properties.alt).toBeCloseTo(900, 0);
+    });
+});
+
+describe('isLeftTurn', () => {
+    it('returns true for direction 90 (left turn)', () => {
+        expect(isLeftTurn(90)).toBe(true);
+    });
+
+    it('returns false for direction 270 (right turn / default)', () => {
+        expect(isLeftTurn(270)).toBe(false);
+    });
+
+    it('returns true for any non-270 value', () => {
+        expect(isLeftTurn(0)).toBe(true);
+        expect(isLeftTurn(180)).toBe(true);
+        expect(isLeftTurn(-90)).toBe(true);
+    });
+});
+
+describe('booleanToDirection', () => {
+    it('returns 90 for true (left turn)', () => {
+        expect(booleanToDirection(true)).toBe(90);
+    });
+
+    it('returns 270 for false (right turn)', () => {
+        expect(booleanToDirection(false)).toBe(270);
+    });
+});
 
 describe('makePattern', () => {
     it('returns empty array when legs is empty', () => {

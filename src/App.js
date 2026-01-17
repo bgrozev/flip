@@ -39,7 +39,9 @@ import { DashboardLayout } from './components/DashboardLayout.tsx';
 import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast.js';
 import { findClosestDropzone } from './util/dropzones.js';
 import {
-    toTurfPoint, normalizeBearing
+    hasTargetMovedTooFar,
+    normalizeBearing,
+    toTurfPoint
 } from './util/geo.js';
 import {
     CODEC_JSON,
@@ -161,13 +163,7 @@ export default function DashboardLayoutBasic() {
     const setTarget = useCallback(
         newTarget => {
             setTarget_(currentTarget => {
-                const distance = turf.distance(
-                    [ currentTarget.target.lng, currentTarget.target.lat ],
-                    [ newTarget.target.lng, newTarget.target.lat ],
-                    { units: 'feet' }
-                )
-
-                if (distance > 5000) {
+                if (hasTargetMovedTooFar(currentTarget.target, newTarget.target)) {
                     console.log('Moved too far, invalidating winds');
                     setWinds(new Winds());
                 }

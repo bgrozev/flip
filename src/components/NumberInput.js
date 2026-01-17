@@ -7,10 +7,11 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
+import { getRangeErrorText, isNumberInRange } from '../util/validation.js';
+
 export default function NumberInput({ title, label, initialValue, step, unit, onChange, min, max }) {
     const [ value, setValue ] = useState(initialValue);
-    const isValid = num => (typeof min === 'undefined' || num >= min) && (typeof max === 'undefined' || num <= max);
-    const [ valid, setValid ] = useState(isValid(initialValue));
+    const [ valid, setValid ] = useState(isNumberInRange(initialValue, min, max));
 
     const handleChange = event => {
         const str = event.target.value;
@@ -20,7 +21,7 @@ export default function NumberInput({ title, label, initialValue, step, unit, on
             setValue('');
         } else if (!isNaN(num)) {
             setValue(num);
-            if (isValid(num)) {
+            if (isNumberInRange(num, min, max)) {
                 setValid(true);
                 onChange(num);
             } else {
@@ -31,7 +32,7 @@ export default function NumberInput({ title, label, initialValue, step, unit, on
 
     return (
         <Tooltip
-            title={valid ? title : `${title} ${getLimitText(min, max)}`}
+            title={valid ? title : `${title} ${getRangeErrorText(min, max)}`}
             componentsProps={{
                 tooltip: {
                     sx: valid ? {} : { color: 'red' }
@@ -53,16 +54,4 @@ export default function NumberInput({ title, label, initialValue, step, unit, on
             </FormControl>
         </Tooltip>
     );
-}
-
-function getLimitText(min, max) {
-    if (typeof min === 'number' && typeof max === 'number') {
-        return `It must be between ${min} and ${max}.`;
-    } else if (typeof min === 'number') {
-        return `It must be at least ${min}.`;
-    } else if (typeof max === 'number') {
-        return `It must be at most ${max}.`;
-    }
-
-    return 'Invalid value.';
 }

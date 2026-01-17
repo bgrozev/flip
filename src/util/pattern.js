@@ -2,6 +2,53 @@ import * as turf from '@turf/turf';
 
 import { mphToFps } from '../util/geo.js';
 
+// Pattern type constants
+export const PATTERN_NONE = 'none';
+export const PATTERN_ONE_LEG = 'one-leg';
+export const PATTERN_TWO_LEG = 'two-leg';
+export const PATTERN_THREE_LEG = 'three-leg';
+
+// Map pattern type to leg count
+const PATTERN_LEG_COUNT = {
+    [PATTERN_NONE]: 0,
+    [PATTERN_ONE_LEG]: 1,
+    [PATTERN_TWO_LEG]: 2,
+    [PATTERN_THREE_LEG]: 3
+};
+
+/**
+ * Get the number of legs for a pattern type.
+ */
+export function getPatternLegCount(patternType) {
+    return PATTERN_LEG_COUNT[patternType] ?? 0;
+}
+
+/**
+ * Create a pattern by type, automatically slicing legs array to the appropriate count.
+ */
+export function makePatternByType(params) {
+    const count = getPatternLegCount(params.type);
+
+    return makePattern({
+        ...params,
+        legs: params.legs.slice(0, count)
+    });
+}
+
+/**
+ * Check if a leg direction represents a left turn (not default 270).
+ */
+export function isLeftTurn(direction) {
+    return direction !== 270;
+}
+
+/**
+ * Convert a boolean to leg direction (90 for left/true, 270 for right/false).
+ */
+export function booleanToDirection(isLeft) {
+    return isLeft ? 90 : 270;
+}
+
 export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }) {
     const points = [];
 
