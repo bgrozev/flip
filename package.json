@@ -3,22 +3,22 @@
   "version": "2.0.0",
   "private": true,
   "dependencies": {
-    "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^7.0.2",
-    "@mui/material": "^7.0.2",
-    "@react-google-maps/api": "^2.20.6",
-    "@toolpad/core": "^0.13.0",
-    "@turf/turf": "^7.2.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
+    "@react-google-maps/api": "^2.20.8",
+    "@toolpad/core": "^0.16.0",
+    "@turf/turf": "^7.3.2",
     "d3": "^7.9.0",
-    "fast-xml-parser": "^5.2.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "fast-xml-parser": "^5.3.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-scripts": "^5.0.1",
     "socket.io-client": "2.5.0"
   },
   "scripts": {
-    "start": "DISABLE_ESLINT_PLUGIN=true react-scripts start",
-    "build": "DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "start": "DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false react-scripts start",
+    "build": "DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false react-scripts build",
     "build-lint": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
@@ -48,7 +48,7 @@
   },
   "jest": {
     "transformIgnorePatterns": [
-      "node_modules/(?!(@turf|polyclip-ts|splaytree-ts|bignumber.js|d3|d3-.*|internmap|delaunator|robust-predicates)/)"
+      "node_modules/(?!(@turf|polyclip-ts|splaytree-ts|bignumber.js|d3|d3-.*|internmap|delaunator|robust-predicates|geokdbush|tinyqueue)/)"
     ]
   }
 }

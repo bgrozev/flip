@@ -35,7 +35,7 @@ import {
     defaultPattern,
     useSettings
 } from './components';
-import { DashboardLayout } from './components/DashboardLayout.tsx';
+import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast.js';
 import { findClosestDropzone } from './util/dropzones.js';
 import {
@@ -158,7 +158,6 @@ export default function DashboardLayoutBasic() {
     const [ waitingForClick2, setWaitingForClick2 ] = useState(false);
     const [ selectHeading, setSelectHeading ] = useState(false);
     const [ click1, setClick1 ] = useState(undefined);
-    const [ isNavigationExpanded, setIsNavigationExpanded ] = useState(false);
 
     const setTarget = useCallback(
         newTarget => {
@@ -182,7 +181,6 @@ export default function DashboardLayoutBasic() {
         setWaitingForClick2(false);
         setSelectHeading(heading);
         if (isMobile) {
-            setIsNavigationExpanded(false);
             router.navigate('/map');
         }
     }
@@ -213,7 +211,6 @@ export default function DashboardLayoutBasic() {
             setWaitingForClick2(false);
             setClick1(undefined);
         } else if (isMobile) {
-            setIsNavigationExpanded(false);
             router.navigate('/map');
         }
     }
@@ -355,18 +352,12 @@ export default function DashboardLayoutBasic() {
         waitingForClick={waitingForClick1 || waitingForClick2}
     />;
     const dashboard = <DashboardLayout
-        navigation={NAVIGATION}
-        isNavigationExpanded={isNavigationExpanded}
-        setIsNavigationExpanded={setIsNavigationExpanded}
         defaultSidebarCollapsed={true}
         slots={{
             toolbarActions: () => (
                 <ToolbarActions
                     fetching={fetching}
-                    onMapButtonClick={() => {
-                        setIsNavigationExpanded(false);
-                        router.navigate('/map');
-                    }}
+                    onMapButtonClick={() => router.navigate('/map')}
                     onRefreshWindsClick={fetch}
                     onSelectTargetClick={() => selectFromMap(false) }
                     onSelectTargetAndHeadingClick={() => selectFromMap(true) }
@@ -382,6 +373,7 @@ export default function DashboardLayoutBasic() {
     return <AppProvider
         router={router}
         theme={demoTheme}
+        navigation={NAVIGATION}
     >
         {dashboard}
     </AppProvider>;
