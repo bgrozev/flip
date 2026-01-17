@@ -1,5 +1,16 @@
 import * as turf from '@turf/turf';
-import { ktsToFps, toTurfPoint, toTurfPoints, toFlipPoints, mirrorTurf, addWindTurf, normalizeBearing, translateTurf, setFinalHeadingTurf } from './geo.js';
+
+import {
+    addWindTurf,
+    ktsToFps,
+    mirrorTurf,
+    normalizeBearing,
+    setFinalHeadingTurf,
+    toFlipPoints,
+    toTurfPoint,
+    toTurfPoints,
+    translateTurf
+} from './geo.js';
 
 export const CODEC_JSON = {
     parse: value => {
@@ -24,7 +35,8 @@ export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
     manoeuvrePoints = translateTurf(manoeuvrePoints, turfTarget);
     manoeuvrePoints = setFinalHeadingTurf(manoeuvrePoints, target.finalHeading);
 
-    let patternTarget = (manoeuvrePoints.length > 0) ? manoeuvrePoints[manoeuvrePoints.length - 1] : turfTarget;
+    const patternTarget = manoeuvrePoints.length > 0 ? manoeuvrePoints[manoeuvrePoints.length - 1] : turfTarget;
+
     patternPoints = translateTurf(patternPoints, patternTarget);
 
     let patternFinalHeading = target.finalHeading;
@@ -68,13 +80,16 @@ export function reposition(manoeuvre, pattern, target, correctPatternHeading) {
     const merged = [
         ...manoeuvrePoints.map(point => {
             point.properties.phase = 'manoeuvre';
+
             return point;
         }),
         ...patternPoints.map(point => {
             point.properties.phase = 'pattern';
+
             return point;
         })
     ];
+
     return toFlipPoints(merged);
 }
 
@@ -93,7 +108,7 @@ export function averageWind(c1, c2) {
         return {};
     }
 
-    const p1 = [ c1[c1.length -1].lng, c1[c1.length - 1].lat ];
+    const p1 = [ c1[c1.length - 1].lng, c1[c1.length - 1].lat ];
     const p2 = [ c2[c2.length - 1].lng, c2[c2.length - 1].lat ];
     const distanceFt = turf.distance(p1, p2, { units: 'feet' });
 

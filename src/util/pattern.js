@@ -1,5 +1,6 @@
 import * as turf from '@turf/turf';
-import { mphToFps, toFlipPoints } from '../util/geo.js';
+
+import { mphToFps } from '../util/geo.js';
 
 export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }) {
     const points = [];
@@ -9,6 +10,7 @@ export function makePattern({ descentRateMph = 12, glideRatio = 2.6, legs = [] }
     }
 
     const p0 = turf.point([ 0, 0 ]);
+
     p0.properties.alt = 0;
     p0.properties.time = 0;
     p0.properties.pom = 0;

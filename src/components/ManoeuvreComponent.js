@@ -14,8 +14,8 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useEffect } from 'react';
 
-import { CODEC_JSON } from '../util/util.js';
 import { toTurfPoints } from '../util/geo.js';
+import { CODEC_JSON } from '../util/util.js';
 
 import ManoeuvreParametersComponent, { defaultPath } from './ManoeuvreParametersComponent.js';
 import ManoeuvreSamplesComponent from './ManoeuvreSamplesComponent.js';
@@ -111,6 +111,7 @@ export default function ManoeuvreComponent({ setManoeuvre, manoeuvreToSave }) {
                     manoeuvreToSave={manoeuvreToSave}
                     onChange={p => {
                         const t = toTurfPoints(p);
+
                         setTrackPath(t);
                         setManoeuvre(t);
                     }}
@@ -121,6 +122,7 @@ export default function ManoeuvreComponent({ setManoeuvre, manoeuvreToSave }) {
                 <ManoeuvreSamplesComponent
                     onChange={p => {
                         const t = toTurfPoints(p);
+
                         setSamplePath(t);
                         setManoeuvre(t);
                     }}

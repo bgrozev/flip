@@ -17,11 +17,10 @@ import {
 } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';
-import { mirror as mirrorPath } from '../util/util.js';
 import React, { useState } from 'react';
 
 import { convertFromGnss, extractPathFromCsv } from '../util/csv.js';
-import { CODEC_JSON } from '../util/util.js';
+import { CODEC_JSON, mirror as mirrorPath } from '../util/util.js';
 
 export default function ManoeuvreTrackComponent({ manoeuvreToSave, onChange }) {
     const [ tracks, setTracks ] = useLocalStorageState('flip.manoeuvre.track.tracks', [], { codec: CODEC_JSON });
