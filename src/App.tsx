@@ -31,10 +31,10 @@ import {
   useSettings
 } from './components';
 import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast';
-import { FlightPath, LatLng, Target, Settings } from './types';
-import { latLngToPoint } from './util/coords';
+import { useMapClickHandler } from './hooks';
+import { FlightPath, Target } from './types';
 import { findClosestDropzone } from './util/dropzones';
-import { hasTargetMovedTooFar, normalizeBearing } from './util/geo';
+import { hasTargetMovedTooFar } from './util/geo';
 import { CODEC_JSON, addWind, averageWind, reposition } from './util/util';
 import { WindRow, Winds } from './util/wind';
 
@@ -165,11 +165,6 @@ export default function DashboardLayoutBasic() {
   const [settings, setSettings] = useSettings();
   const [fetching, setFetching] = useState(false);
 
-  const [waitingForClick1, setWaitingForClick1] = useState(false);
-  const [waitingForClick2, setWaitingForClick2] = useState(false);
-  const [selectHeading, setSelectHeading] = useState(false);
-  const [click1, setClick1] = useState<LatLng | undefined>(undefined);
-
   const setTarget = useCallback(
     (newTarget: Target) => {
       setStoredTarget(currentTarget => {
@@ -187,45 +182,11 @@ export default function DashboardLayoutBasic() {
   const isMobile = useMediaQuery('(max-width:600px)');
   const router = useDemoRouter('/map');
 
-  function selectFromMap(heading: boolean) {
-    setWaitingForClick1(true);
-    setWaitingForClick2(false);
-    setSelectHeading(heading);
-    if (isMobile) {
-      router.navigate('/map');
-    }
-  }
-
-  function handleMapClick(point: LatLng) {
-    if (waitingForClick1) {
-      if (selectHeading) {
-        setClick1(point);
-        setWaitingForClick1(false);
-        setWaitingForClick2(true);
-      } else {
-        const updated: Target = { target: point, finalHeading: target?.finalHeading ?? 270 };
-
-        setTarget(updated);
-        setWaitingForClick1(false);
-        setWaitingForClick2(false);
-        setClick1(undefined);
-      }
-    } else if (waitingForClick2 && click1) {
-      const pointTurf = latLngToPoint(point);
-      const click1Turf = latLngToPoint(click1);
-      const updated: Target = {
-        target: click1,
-        finalHeading: normalizeBearing(Math.round(turf.bearing(pointTurf, click1Turf)))
-      };
-
-      setTarget(updated);
-      setWaitingForClick1(false);
-      setWaitingForClick2(false);
-      setClick1(undefined);
-    } else if (isMobile) {
-      router.navigate('/map');
-    }
-  }
+  const { handleMapClick, selectFromMap, isWaitingForClick } = useMapClickHandler({
+    currentTarget: target,
+    onTargetSelected: setTarget,
+    onNavigateToMap: isMobile ? () => router.navigate('/map') : undefined
+  });
 
   let c = reposition(manoeuvre ?? [], pattern ?? [], target ?? defaultTarget, settings.correctPatternHeading);
   const c2 = winds ? addWind(c, winds, settings.interpolateWind) : [];
@@ -379,7 +340,7 @@ export default function DashboardLayoutBasic() {
       onClick={handleMapClick}
       windDirection={averageWind_?.direction ?? 0}
       windSpeed={averageWind_?.speedKts ?? 0}
-      waitingForClick={waitingForClick1 || waitingForClick2}
+      waitingForClick={isWaitingForClick}
     />
   );
   const dashboard = (
