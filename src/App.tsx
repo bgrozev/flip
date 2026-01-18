@@ -30,7 +30,7 @@ import {
   defaultPattern,
   useSettings
 } from './components';
-import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast, ForecastSource } from './forecast/forecast';
+import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast';
 import { FlightPath, LatLng, Target, Settings } from './types';
 import { latLngToPoint } from './util/coords';
 import { findClosestDropzone } from './util/dropzones';
@@ -272,17 +272,14 @@ export default function DashboardLayoutBasic() {
       dz = undefined as any;
     }
 
-    const { forecastSource } = settings;
-
     console.log(
-      `Fetching winds using ${forecastSource} for: ${JSON.stringify(target.target)},` +
+      `Fetching winds for: ${JSON.stringify(target.target)},` +
         ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name})`
     );
 
     setFetching(true);
 
     fetchForecast(
-      forecastSource as ForecastSource,
       target.target,
       settings.useDzGroundWind ? dz?.fetchGroundWind : undefined
     )

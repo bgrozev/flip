@@ -66,7 +66,6 @@ export interface Settings {
   correctPatternHeading: boolean;
   useDzGroundWind: boolean;
   limitWind: number;
-  forecastSource: string;
 }
 
 // Dropzone type (fetchGroundWind returns WindRow which implements IWindRow)

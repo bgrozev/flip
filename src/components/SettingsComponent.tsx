@@ -1,11 +1,6 @@
 import {
   Box,
   Divider,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
   Stack,
   Switch,
   Tooltip,
@@ -16,12 +11,6 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
 import { Settings } from '../types';
-import {
-  ForecastSource,
-  SOURCE_OPEN_METEO,
-  SOURCE_WINDS_ALOFT,
-  forecastSourceLabel
-} from '../forecast/forecast';
 import { CODEC_JSON } from '../util/util';
 
 import NumberInput from './NumberInput';
@@ -32,7 +21,6 @@ const DEFAULT_SETTINGS: Settings = {
   showPomAltitudes: true,
   useDzGroundWind: true,
   interpolateWind: true,
-  forecastSource: SOURCE_OPEN_METEO,
   displayWindArrow: false,
   displayWindSummary: true,
   correctPatternHeading: true,
@@ -123,15 +111,6 @@ export default function SettingsComponent({
     setSettings(newSettings);
   };
 
-  const handleSelectChange = (event: SelectChangeEvent) => {
-    const newSettings = {
-      ...settings,
-      forecastSource: event.target.value as ForecastSource
-    };
-
-    setSettings(newSettings);
-  };
-
   return (
     <Stack direction="column" spacing={1} alignItems="flex-start">
       <Box
@@ -179,24 +158,6 @@ export default function SettingsComponent({
         unit="ft"
         onChange={handleNumberChange('limitWind')}
       />
-
-      <Divider />
-      <FormControl fullWidth sx={{ boxSizing: 'border-box' }}>
-        <InputLabel id="forecast-source-label">Forecast source</InputLabel>
-        <Select
-          labelId="forecast-source-label"
-          value={settings.forecastSource}
-          label="Forecast source"
-          onChange={handleSelectChange}
-        >
-          <MenuItem value={SOURCE_OPEN_METEO}>
-            {forecastSourceLabel(SOURCE_OPEN_METEO)}
-          </MenuItem>
-          <MenuItem value={SOURCE_WINDS_ALOFT}>
-            {forecastSourceLabel(SOURCE_WINDS_ALOFT)}
-          </MenuItem>
-        </Select>
-      </FormControl>
     </Stack>
   );
 }

@@ -63,10 +63,6 @@ export default function AboutComponent() {
 
           <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.8 }}>
             Winds forecast from{' '}
-            <Link href="https://www.markschulze.net/winds/" target="_blank" rel="noopener">
-              Winds Aloft by Mark Schulze
-            </Link>{' '}
-            and{' '}
             <Link href="https://open-meteo.com/" target="_blank" rel="noopener">
               OpenMeteo
             </Link>

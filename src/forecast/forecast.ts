@@ -6,32 +6,24 @@ import {
   SOURCE_DZ,
   SOURCE_MANUAL,
   SOURCE_OPEN_METEO,
-  SOURCE_WINDS_ALOFT,
   forecastSourceLabel
 } from './sources';
-import { fetchWindsAloft } from './windsaloft';
 
 // Re-export from sources for backwards compatibility
 export {
   SOURCE_DZ,
   SOURCE_MANUAL,
   SOURCE_OPEN_METEO,
-  SOURCE_WINDS_ALOFT,
   forecastSourceLabel
 };
 export type { ForecastSource };
 
 export function fetchForecast(
-  forecastSource: ForecastSource,
   center: LatLng,
   fetchDzGroundWind?: () => Promise<IWindRow>
 ): Promise<Winds> {
   return Promise.all([
-    forecastSource === SOURCE_OPEN_METEO
-      ? fetchOpenMeteo(center)
-      : forecastSource === SOURCE_WINDS_ALOFT
-        ? fetchWindsAloft(center, 0)
-        : null,
+    fetchOpenMeteo(center),
     fetchDzGroundWind
       ? new Promise<IWindRow | null>(resolve => {
           fetchDzGroundWind()
