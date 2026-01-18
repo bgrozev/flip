@@ -1,15 +1,11 @@
 import { Box, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack } from '@mui/material';
 import React, { useState } from 'react';
 
-import { Target } from '../types';
+import { useTarget } from '../hooks';
 import { DROPZONES } from '../util/dropzones';
 
-interface DropzonesComponentProps {
-  target: Target;
-  setTarget: (target: Target) => void;
-}
-
-export default function DropzonesComponent({ target, setTarget }: DropzonesComponentProps) {
+export default function DropzonesComponent() {
+  const { selectLocation } = useTarget();
   const [selected, setSelected] = useState('');
 
   const handleSelected = (selectedName: string) => {
@@ -17,13 +13,10 @@ export default function DropzonesComponent({ target, setTarget }: DropzonesCompo
     const dropzone = DROPZONES.find(dz => dz.name === selectedName);
 
     if (dropzone) {
-      setTarget({
-        target: {
-          lat: dropzone.lat,
-          lng: dropzone.lng
-        },
-        finalHeading: dropzone.direction ?? target.finalHeading
-      });
+      selectLocation(
+        { lat: dropzone.lat, lng: dropzone.lng },
+        dropzone.direction
+      );
     }
   };
 

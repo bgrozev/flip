@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import React from 'react';
 
+import { TargetProvider } from '../hooks';
 import { Target } from '../types';
 
 import { LocationComponent } from './';
@@ -106,7 +107,9 @@ export default function TargetComponent({
         </Tooltip>
       </Stack>
       <Divider />
-      <LocationComponent target={target} setTarget={setTarget} />
+      <TargetProvider target={target} setTarget={setTarget}>
+        <LocationComponent />
+      </TargetProvider>
     </Stack>
   );
 }

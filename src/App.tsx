@@ -1,5 +1,4 @@
 /* eslint-disable new-cap */
-import * as turf from '@turf/turf';
 import {
   Adjust as AdjustIcon,
   Air as AirIcon,
@@ -30,12 +29,12 @@ import {
   defaultPattern,
   useSettings
 } from './components';
-import { SOURCE_DZ, SOURCE_MANUAL, fetchForecast } from './forecast/forecast';
-import { useMapClickHandler } from './hooks';
+import { SOURCE_DZ, SOURCE_MANUAL } from './forecast/forecast';
+import { useFetchForecast, useMapClickHandler } from './hooks';
 import { FlightPath, Target } from './types';
-import { findClosestDropzone } from './util/dropzones';
 import { hasTargetMovedTooFar } from './util/geo';
-import { CODEC_JSON, addWind, averageWind, reposition } from './util/util';
+import { addWind } from './util/geo';
+import { CODEC_JSON, averageWind, reposition } from './util/util';
 import { WindRow, Winds } from './util/wind';
 
 interface NavigationItem {
@@ -161,22 +160,25 @@ export default function DashboardLayoutBasic() {
     defaultPattern,
     { codec: CODEC_JSON }
   );
-  const [winds, setWinds] = useState<Winds>(new Winds());
   const [settings, setSettings] = useSettings();
-  const [fetching, setFetching] = useState(false);
+
+  const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
+    target: target.target,
+    settings
+  });
 
   const setTarget = useCallback(
     (newTarget: Target) => {
       setStoredTarget(currentTarget => {
         if (currentTarget && hasTargetMovedTooFar(currentTarget.target, newTarget.target)) {
           console.log('Moved too far, invalidating winds');
-          setWinds(new Winds());
+          resetWinds();
         }
 
         return newTarget;
       });
     },
-    [setStoredTarget]
+    [setStoredTarget, resetWinds]
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -218,49 +220,9 @@ export default function DashboardLayoutBasic() {
     }
   }
 
-  const fetch = () => {
-    if (!target?.target) {
-      console.log('Not fetching winds, no target');
-
-      return;
-    }
-
-    const targetPoint: [number, number] = [target.target.lng, target.target.lat];
-    let dz = findClosestDropzone(targetPoint);
-    const distanceToDz = turf.distance(targetPoint, [dz.lng, dz.lat], { units: 'feet' });
-
-    if (distanceToDz > 5000) {
-      dz = undefined as any;
-    }
-
-    console.log(
-      `Fetching winds for: ${JSON.stringify(target.target)},` +
-        ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name})`
-    );
-
-    setFetching(true);
-
-    fetchForecast(
-      target.target,
-      settings.useDzGroundWind ? dz?.fetchGroundWind : undefined
-    )
-      .then(fetchedWinds => {
-        let limit = settings.limitWind;
-
-        if (c2.length > 0 && c2[c2.length - 1].properties.alt > limit) {
-          limit = c2[c2.length - 1].properties.alt;
-        }
-        fetchedWinds.winds = fetchedWinds.winds.filter(w => w.altFt <= limit);
-        setWinds(fetchedWinds);
-        setFetching(false);
-      })
-      .catch(err => {
-        console.log(`Failed to fetch winds: ${err}`);
-        setFetching(false);
-        const newWinds = new Winds([new WindRow(0, 0, 0)]);
-
-        setWinds(newWinds);
-      });
+  const handleFetchWinds = () => {
+    const maxAlt = c2.length > 0 ? c2[c2.length - 1].properties.alt : undefined;
+    fetchWinds(maxAlt);
   };
 
   if (!settings.showPreWind) {
@@ -304,7 +266,7 @@ export default function DashboardLayoutBasic() {
         winds={winds}
         setWinds={setWinds}
         fetching={fetching}
-        fetch={fetch}
+        fetch={handleFetchWinds}
       />
     );
   } else if (router.pathname === '/about') {
@@ -351,7 +313,7 @@ export default function DashboardLayoutBasic() {
           <ToolbarActions
             fetching={fetching}
             onMapButtonClick={() => router.navigate('/map')}
-            onRefreshWindsClick={fetch}
+            onRefreshWindsClick={handleFetchWinds}
             onSelectTargetClick={() => selectFromMap(false)}
             onSelectTargetAndHeadingClick={() => selectFromMap(true)}
           />

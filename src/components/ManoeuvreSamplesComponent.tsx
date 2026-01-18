@@ -12,7 +12,7 @@ import React from 'react';
 
 import { FlightPath } from '../types';
 import { samples } from '../samples';
-import { mirror } from '../util/util';
+import { mirror } from '../util/geo';
 
 import DirectionSwitch from './DirectionSwitch';
 

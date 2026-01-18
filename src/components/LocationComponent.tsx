@@ -10,7 +10,7 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useEffect, useRef } from 'react';
 
-import { Target } from '../types';
+import { useTarget } from '../hooks';
 
 import { CustomLocationsComponent, DropzonesComponent } from './';
 
@@ -38,12 +38,8 @@ declare global {
   }
 }
 
-interface LocationComponentProps {
-  target: Target;
-  setTarget: (target: Target) => void;
-}
-
-export default function LocationComponent({ target, setTarget }: LocationComponentProps) {
+export default function LocationComponent() {
+  const { selectLocation } = useTarget();
   const [selectedTab, setSelectedTab] = useLocalStorageState<string>(
     'flip.location.tab',
     'dropzones'
@@ -85,13 +81,13 @@ export default function LocationComponent({ target, setTarget }: LocationCompone
 
       {selectedTab === 'dropzones' && (
         <Box>
-          <DropzonesComponent target={target} setTarget={setTarget} />
+          <DropzonesComponent />
         </Box>
       )}
 
       {selectedTab === 'custom' && (
         <Box>
-          <CustomLocationsComponent target={target} setTarget={setTarget} />
+          <CustomLocationsComponent />
         </Box>
       )}
 
@@ -100,12 +96,9 @@ export default function LocationComponent({ target, setTarget }: LocationCompone
           <MapSearchBox
             onPlaceSelected={place => {
               if (place.geometry) {
-                setTarget({
-                  ...target,
-                  target: {
-                    lat: place.geometry.location.lat(),
-                    lng: place.geometry.location.lng()
-                  }
+                selectLocation({
+                  lat: place.geometry.location.lat(),
+                  lng: place.geometry.location.lng()
                 });
               }
             }}

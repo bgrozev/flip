@@ -15,7 +15,7 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useState } from 'react';
 
-import { Target } from '../types';
+import { useTarget } from '../hooks';
 import { CODEC_JSON } from '../util/util';
 
 interface CustomLocation {
@@ -25,15 +25,8 @@ interface CustomLocation {
   direction: number;
 }
 
-interface CustomLocationsComponentProps {
-  target: Target;
-  setTarget: (target: Target) => void;
-}
-
-export default function CustomLocationsComponent({
-  target,
-  setTarget
-}: CustomLocationsComponentProps) {
+export default function CustomLocationsComponent() {
+  const { target, selectLocation } = useTarget();
   const [name, setName] = useState('');
   const [selected, setSelected] = useState('');
 
@@ -74,13 +67,10 @@ export default function CustomLocationsComponent({
     const location = locations.find(dz => dz.name === selectedName);
 
     if (location) {
-      setTarget({
-        target: {
-          lat: location.lat,
-          lng: location.lng
-        },
-        finalHeading: location.direction ?? target.finalHeading
-      });
+      selectLocation(
+        { lat: location.lat, lng: location.lng },
+        location.direction
+      );
     }
   };
 

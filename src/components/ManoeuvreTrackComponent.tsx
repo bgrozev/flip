@@ -22,7 +22,8 @@ import React, { useState } from 'react';
 
 import { FlightPath } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
-import { CODEC_JSON, mirror as mirrorPath } from '../util/util';
+import { mirror as mirrorPath } from '../util/geo';
+import { CODEC_JSON } from '../util/util';
 
 interface Track {
   name: string;

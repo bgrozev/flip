@@ -1,14 +1,6 @@
 import * as turf from '@turf/turf';
-import { FlightPath, FlightPoint, LatLng, Target } from '../types';
-import {
-  addWind as addWindGeo,
-  ktsToFps,
-  mirror as mirrorGeo,
-  normalizeBearing,
-  setFinalHeading,
-  translate
-} from './geo';
-import { Winds } from './wind';
+import { FlightPath, Target } from '../types';
+import { ktsToFps, normalizeBearing, setFinalHeading, translate } from './geo';
 import { latLngToPoint } from './coords';
 
 export const CODEC_JSON = {
@@ -103,20 +95,6 @@ export function reposition(
 }
 
 /**
- * Apply wind correction to a path.
- */
-export function addWind(
-  points: FlightPath,
-  wind: Winds | undefined | null,
-  interpolate?: boolean
-): FlightPath {
-  if (!wind) {
-    return points;
-  }
-  return addWindGeo(points, wind, interpolate);
-}
-
-/**
  * Calculate average wind effect by comparing two paths.
  */
 export function averageWind(
@@ -142,13 +120,6 @@ export function averageWind(
   const speedKts = distanceFt / seconds / ktsToFps;
 
   return { speedKts, direction: turf.bearing(p1, p2) };
-}
-
-/**
- * Mirror a path around its initial axis.
- */
-export function mirror(points: FlightPath): FlightPath {
-  return mirrorGeo(points);
 }
 
 /**
