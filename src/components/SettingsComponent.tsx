@@ -7,41 +7,11 @@ import {
   Typography
 } from '@mui/material';
 import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
 import { Settings } from '../types';
-import { CODEC_JSON } from '../util/util';
 
 import NumberInput from './NumberInput';
-
-const DEFAULT_SETTINGS: Settings = {
-  showPreWind: true,
-  showPoms: true,
-  showPomAltitudes: true,
-  useDzGroundWind: true,
-  interpolateWind: true,
-  displayWindArrow: false,
-  displayWindSummary: true,
-  correctPatternHeading: true,
-  limitWind: 3000
-};
-
-export function useSettings(): [Settings, (settings: Settings) => void] {
-  const [stored, setStored] = useLocalStorageState<Settings>(
-    'flip.settings',
-    DEFAULT_SETTINGS,
-    { codec: CODEC_JSON }
-  );
-
-  const mergedSettings = { ...DEFAULT_SETTINGS, ...stored };
-
-  const setSettings = (newSettings: Settings) => {
-    setStored({ ...DEFAULT_SETTINGS, ...newSettings });
-  };
-
-  return [mergedSettings, setSettings];
-}
 
 interface CheckboxOption {
   key: keyof Settings;

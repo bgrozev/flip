@@ -12,7 +12,6 @@ import { Box, Divider, Stack, Typography, useMediaQuery } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import {
@@ -25,17 +24,20 @@ import {
   TargetComponent,
   ToolbarActions,
   WindSummary,
-  WindsComponent,
-  defaultPattern,
-  useSettings
+  WindsComponent
 } from './components';
 import { SOURCE_DZ, SOURCE_MANUAL } from './forecast/forecast';
-import { useFetchForecast, useMapClickHandler } from './hooks';
-import { FlightPath, Target } from './types';
-import { hasTargetMovedTooFar } from './util/geo';
-import { addWind } from './util/geo';
-import { CODEC_JSON, averageWind, reposition } from './util/util';
-import { WindRow, Winds } from './util/wind';
+import {
+  AppStateProvider,
+  DEFAULT_TARGET,
+  useAppState,
+  useFetchForecast,
+  useMapClickHandler
+} from './hooks';
+import { Target } from './types';
+import { addWind, hasTargetMovedTooFar } from './util/geo';
+import { averageWind, reposition } from './util/util';
+import { WindRow } from './util/wind';
 
 interface NavigationItem {
   segment?: string;
@@ -136,49 +138,41 @@ function getTitleFromPathname(pathname: string): string {
   return entry?.title ?? 'Unknown';
 }
 
-const defaultTarget: Target = {
-  target: {
-    lat: 28.21887,
-    lng: -82.15122
-  },
-  finalHeading: 270
-};
-
 export default function DashboardLayoutBasic() {
-  const [manoeuvre, setManoeuvre] = useLocalStorageState<FlightPath>(
-    'flip.manoeuvre_turf',
-    [],
-    { codec: CODEC_JSON }
+  return (
+    <AppStateProvider>
+      <DashboardContent />
+    </AppStateProvider>
   );
-  const [storedTarget, setStoredTarget] = useLocalStorageState<Target>('flip.target', defaultTarget, {
-    codec: CODEC_JSON
-  });
-  // Ensure target is never null
-  const target: Target = storedTarget ?? defaultTarget;
-  const [pattern, setPattern] = useLocalStorageState<FlightPath>(
-    'flip.pattern_turf',
-    defaultPattern,
-    { codec: CODEC_JSON }
-  );
-  const [settings, setSettings] = useSettings();
+}
+
+function DashboardContent() {
+  const {
+    manoeuvre,
+    setManoeuvre,
+    target,
+    setTarget: setTargetBase,
+    pattern,
+    setPattern,
+    settings,
+    setSettings
+  } = useAppState();
 
   const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
     target: target.target,
     settings
   });
 
+  // Wrap setTarget to invalidate winds when target moves too far
   const setTarget = useCallback(
     (newTarget: Target) => {
-      setStoredTarget(currentTarget => {
-        if (currentTarget && hasTargetMovedTooFar(currentTarget.target, newTarget.target)) {
-          console.log('Moved too far, invalidating winds');
-          resetWinds();
-        }
-
-        return newTarget;
-      });
+      if (hasTargetMovedTooFar(target.target, newTarget.target)) {
+        console.log('Moved too far, invalidating winds');
+        resetWinds();
+      }
+      setTargetBase(newTarget);
     },
-    [setStoredTarget, resetWinds]
+    [target.target, setTargetBase, resetWinds]
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -190,7 +184,7 @@ export default function DashboardLayoutBasic() {
     onNavigateToMap: isMobile ? () => router.navigate('/map') : undefined
   });
 
-  let c = reposition(manoeuvre ?? [], pattern ?? [], target ?? defaultTarget, settings.correctPatternHeading);
+  let c = reposition(manoeuvre ?? [], pattern ?? [], target ?? DEFAULT_TARGET, settings.correctPatternHeading);
   const c2 = winds ? addWind(c, winds, settings.interpolateWind) : [];
 
   for (let i = 0; i < c.length; i++) {
