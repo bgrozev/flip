@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material';
 import { Box, Divider, Stack, Typography, useMediaQuery } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import { AppProvider } from '@toolpad/core/AppProvider';
+import { AppProvider, Navigation } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import React, { useCallback, useMemo, useState } from 'react';
 
@@ -34,19 +34,12 @@ import {
   useFetchForecast,
   useMapClickHandler
 } from './hooks';
-import { Target } from './types';
+import { Target, WindSummaryData } from './types';
 import { addWind, hasTargetMovedTooFar } from './util/geo';
 import { averageWind, reposition } from './util/util';
 import { WindRow } from './util/wind';
 
-interface NavigationItem {
-  segment?: string;
-  title?: string;
-  icon?: React.ReactNode;
-  kind?: 'divider';
-}
-
-const NAVIGATION: NavigationItem[] = [
+const NAVIGATION: Navigation = [
   {
     segment: 'pattern',
     title: 'Pattern',
@@ -133,9 +126,9 @@ function useDemoRouter(initialPath: string): Router {
 
 function getTitleFromPathname(pathname: string): string {
   const segment = pathname.replace('/', '');
-  const entry = NAVIGATION.find(item => item.segment === segment);
+  const entry = NAVIGATION.find(item => 'segment' in item && item.segment === segment);
 
-  return entry?.title ?? 'Unknown';
+  return entry && 'title' in entry ? entry.title ?? 'Unknown' : 'Unknown';
 }
 
 export default function DashboardLayoutBasic() {
@@ -191,11 +184,6 @@ function DashboardContent() {
     c2[i].properties.phase = c[i].properties.phase;
   }
   const averageWind_ = averageWind(c, c2);
-
-  interface WindSummaryData {
-    average: { speedKts?: number; direction?: number };
-    ground?: WindRow & { observed?: boolean };
-  }
 
   let windSummary: WindSummaryData | undefined;
 
@@ -325,7 +313,7 @@ function DashboardContent() {
   );
 
   return (
-    <AppProvider router={router} theme={demoTheme} navigation={NAVIGATION as any}>
+    <AppProvider router={router} theme={demoTheme} navigation={NAVIGATION}>
       {dashboard}
     </AppProvider>
   );
@@ -347,11 +335,6 @@ function SidebarFooter({ mini }: { mini?: boolean }) {
       )}
     </Typography>
   );
-}
-
-interface WindSummaryData {
-  average: { speedKts?: number; direction?: number };
-  ground?: { direction: number; speedKts: number; observed?: boolean };
 }
 
 function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {

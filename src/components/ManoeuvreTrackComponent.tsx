@@ -20,7 +20,7 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';
 import React, { useState } from 'react';
 
-import { FlightPath } from '../types';
+import { CsvRow, FlightPath } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
 import { mirror as mirrorPath } from '../util/geo';
 import { CODEC_JSON } from '../util/util';
@@ -59,7 +59,7 @@ export default function ManoeuvreTrackComponent({
     console.log(`Loading ${f}`);
 
     f.text().then(data => {
-      let points = extractPathFromCsv(csvParse(convertFromGnss(data)) as any);
+      let points = extractPathFromCsv(csvParse(convertFromGnss(data)) as unknown as CsvRow[]);
 
       if (mirror) {
         points = mirrorPath(points);

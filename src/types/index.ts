@@ -68,6 +68,21 @@ export interface Settings {
   limitWind: number;
 }
 
+// Wind summary for display
+export interface WindSummaryData {
+  average: { speedKts?: number; direction?: number };
+  ground?: { direction: number; speedKts: number; observed?: boolean };
+}
+
+// CSV parsing types (note: d3 csvParse returns strings, but JS coerces to number in arithmetic)
+export interface CsvRow {
+  lat: string;
+  lon: string;
+  time: string;
+  pom?: string | boolean;
+  hMSL: string | number;
+}
+
 // Dropzone type (fetchGroundWind returns WindRow which implements IWindRow)
 export interface Dropzone {
   name: string;

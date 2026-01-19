@@ -2,9 +2,9 @@ import * as turf from '@turf/turf';
 import { useCallback, useState } from 'react';
 
 import { fetchForecast } from '../forecast/forecast';
-import { LatLng, Settings } from '../types';
+import { Dropzone, LatLng, Settings } from '../types';
 import { findClosestDropzone } from '../util/dropzones';
-import { WindRow, Winds } from '../util/wind';
+import { Winds } from '../util/wind';
 
 interface UseFetchForecastOptions {
   /** Current target location */
@@ -53,13 +53,11 @@ export function useFetchForecast({
     }
 
     const targetPoint: [number, number] = [target.lng, target.lat];
-    let dz = findClosestDropzone(targetPoint);
-    const distanceToDz = turf.distance(targetPoint, [dz.lng, dz.lat], { units: 'feet' });
+    const closestDz = findClosestDropzone(targetPoint);
+    const distanceToDz = turf.distance(targetPoint, [closestDz.lng, closestDz.lat], { units: 'feet' });
 
     // Only use dropzone ground wind if within 5000 feet
-    if (distanceToDz > 5000) {
-      dz = undefined as any;
-    }
+    const dz: Dropzone | undefined = distanceToDz <= 5000 ? closestDz : undefined;
 
     console.log(
       `Fetching winds for: ${JSON.stringify(target)},` +
@@ -88,8 +86,7 @@ export function useFetchForecast({
         console.log(`Failed to fetch winds: ${err}`);
         setFetching(false);
         // Set empty winds on error
-        const newWinds = new Winds([new WindRow(0, 0, 0)]);
-        setWinds(newWinds);
+        setWinds(Winds.createDefault());
       });
   }, [target, settings.useDzGroundWind, settings.limitWind]);
 

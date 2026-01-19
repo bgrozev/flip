@@ -35,9 +35,7 @@ export default function WindsComponent({
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
 
   const reset = useCallback(() => {
-    const newWinds = new Winds([new WindRow(0, 0, 0)]);
-
-    setWinds(newWinds);
+    setWinds(Winds.createDefault());
   }, [setWinds]);
 
   const addRow = () => {
@@ -50,10 +48,15 @@ export default function WindsComponent({
     setWinds(new Winds([...winds.winds]));
   };
 
-  const updateRow = (index: number, field: keyof WindRow, value: number) => {
-    const updated = [...winds.winds];
-
-    (updated[index] as any)[field] = value;
+  const updateRow = (index: number, field: 'altFt' | 'direction' | 'speedKts', value: number) => {
+    const updated = winds.winds.map((row, i) => {
+      if (i !== index) return row;
+      return new WindRow(
+        field === 'altFt' ? value : row.altFt,
+        field === 'direction' ? value : row.direction,
+        field === 'speedKts' ? value : row.speedKts
+      );
+    });
     setWinds(new Winds(updated));
   };
 

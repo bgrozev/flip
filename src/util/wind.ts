@@ -46,6 +46,19 @@ export class Winds implements IWinds {
     this.setGroundWind = this.setGroundWind.bind(this);
   }
 
+  /** Create a new Winds instance with default empty wind row */
+  static createDefault(): Winds {
+    return new Winds([new WindRow(0, 0, 0)]);
+  }
+
+  /** Create a copy of an existing Winds instance */
+  static copy(other: Winds): Winds {
+    const winds = new Winds(other.winds.map(w => w.copy()), other.center);
+    winds.groundSource = other.groundSource;
+    winds.aloftSource = other.aloftSource;
+    return winds;
+  }
+
   addRow(wind: WindRow): void {
     this.winds.push(wind);
   }

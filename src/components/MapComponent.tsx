@@ -5,7 +5,7 @@ import {
   PolylineF,
   useJsApiLoader
 } from '@react-google-maps/api';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import {
   ALTITUDE_LABEL_STYLE,
@@ -65,9 +65,9 @@ function MapComponent({
     libraries: GOOGLE_MAPS_LIBRARIES
   });
 
-  // Convert FlightPath to LatLng[] for Google Maps
-  const pathALatLngs = pathToLatLngs(pathA);
-  const pathBLatLngs = pathToLatLngs(pathB);
+  // Convert FlightPath to LatLng[] for Google Maps (memoized to avoid recalculation)
+  const pathALatLngs = useMemo(() => pathToLatLngs(pathA), [pathA]);
+  const pathBLatLngs = useMemo(() => pathToLatLngs(pathB), [pathB]);
 
   return isLoaded ? (
     <>
