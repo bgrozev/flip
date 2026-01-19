@@ -7,70 +7,21 @@ import {
 } from '@react-google-maps/api';
 import React from 'react';
 
+import {
+  ALTITUDE_LABEL_STYLE,
+  DEFAULT_MAP_OPTIONS,
+  GOOGLE_MAPS_LIBRARIES,
+  MAP_CONTAINER_STYLE,
+  PATH_COLORS,
+  PATH_OPTIONS,
+  PATH_OPTIONS_DOTTED,
+  POM_OPTIONS
+} from '../constants';
 import { LatLng, Settings } from '../types';
 import { pathToLatLngs } from '../util/coords';
 import { FlightPath } from '../types';
 
 import WindDirectionArrow from './WindDirectionArrow';
-
-const containerStyle = {
-  width: '100%',
-  height: '100%'
-};
-
-const colorA = '#ff0000';
-const colorB = '#00ff00';
-
-const options = {
-  clickable: false,
-  draggable: false,
-  editable: false,
-  visible: true,
-  zIndex: 1
-};
-
-const pomOptions = {
-  ...options,
-  strokeOpacity: 1,
-  strokeWeight: 1,
-  fillOpacity: 1,
-  radius: 2
-};
-
-const pomOptionsA = {
-  ...pomOptions,
-  fillColor: colorA,
-  strokeColor: '#000000'
-};
-
-const pomOptionsB = {
-  ...pomOptions,
-  fillColor: colorB,
-  strokeColor: '#000000'
-};
-
-const pathOptions = {
-  ...options,
-  strokeOpacity: 0.8,
-  strokeWeight: 2,
-  fillOpacity: 0.35
-};
-
-const pathOptionsDotted = {
-  ...pathOptions,
-  icons: [
-    {
-      icon: {
-        path: 'M 0,-1 0,1', // Short line segment
-        strokeOpacity: 0.7,
-        scale: 2
-      },
-      offset: '0',
-      repeat: '12px' // Space between dashes (adjust for density)
-    }
-  ],
-  strokeOpacity: 0 // Hide the normal stroke so only dashes show
-};
 
 interface CustomTextOverlayProps {
   position: LatLng;
@@ -79,26 +30,11 @@ interface CustomTextOverlayProps {
 
 const CustomTextOverlay = ({ position, text }: CustomTextOverlayProps) => (
   <OverlayView position={position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-    <div
-      style={{
-        background: 'black',
-        border: '1px solid black',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        fontSize: '14px',
-        color: 'white',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-        display: 'inline-block', // Make the container fit to the text width
-        whiteSpace: 'nowrap', // Prevent text wrapping
-        wordBreak: 'break-word' // Break long words to avoid overflow
-      }}
-    >
+    <div style={ALTITUDE_LABEL_STYLE}>
       {text}
     </div>
   </OverlayView>
 );
-
-const libraries: ('places')[] = ['places'];
 
 interface MapComponentProps {
   windSpeed: number;
@@ -126,7 +62,7 @@ function MapComponent({
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: 'INSERT_GOOGLE_API_KEY',
-    libraries
+    libraries: GOOGLE_MAPS_LIBRARIES
   });
 
   // Convert FlightPath to LatLng[] for Google Maps
@@ -136,39 +72,35 @@ function MapComponent({
   return isLoaded ? (
     <>
       <GoogleMap
-        mapContainerStyle={containerStyle}
+        mapContainerStyle={MAP_CONTAINER_STYLE}
         center={center}
         onClick={ev => {
           if (ev.latLng) {
             onClick({ lat: ev.latLng.lat(), lng: ev.latLng.lng() });
           }
         }}
-        zoom={17}
+        zoom={DEFAULT_MAP_OPTIONS.zoom}
         options={{
-          draggableCursor: waitingForClick ? 'crosshair' : 'grab',
-          mapTypeControl: false,
-          streetViewControl: false,
-          tilt: 0,
-          rotateControl: false,
-          mapTypeId: 'satellite'
+          ...DEFAULT_MAP_OPTIONS,
+          draggableCursor: waitingForClick ? 'crosshair' : 'grab'
         }}
         onLoad={() => console.log('Map loaded.')}
       >
         <PolylineF
           path={pathALatLngs.filter(p => p.phase === 'manoeuvre')}
-          options={{ ...pathOptionsDotted, strokeColor: colorA }}
+          options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.manoeuvre }}
         />
         <PolylineF
           path={pathALatLngs.filter(p => p.phase === 'pattern')}
-          options={{ ...pathOptionsDotted, strokeColor: colorB }}
+          options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.pattern }}
         />
         <PolylineF
           path={pathBLatLngs.filter(p => p.phase === 'manoeuvre')}
-          options={{ ...pathOptions, strokeColor: colorA }}
+          options={{ ...PATH_OPTIONS, strokeColor: PATH_COLORS.manoeuvre }}
         />
         <PolylineF
           path={pathBLatLngs.filter(p => p.phase === 'pattern')}
-          options={{ ...pathOptions, strokeColor: colorB }}
+          options={{ ...PATH_OPTIONS, strokeColor: PATH_COLORS.pattern }}
         />
 
         {pathALatLngs
@@ -176,7 +108,7 @@ function MapComponent({
           .map((pom, i) => (
             <CircleF
               center={pom}
-              options={pom.phase === 'manoeuvre' ? pomOptionsA : pomOptionsB}
+              options={pom.phase === 'manoeuvre' ? POM_OPTIONS.manoeuvre : POM_OPTIONS.pattern}
               key={i}
             />
           ))}
@@ -185,7 +117,7 @@ function MapComponent({
           .map((pom, i) => (
             <CircleF
               center={pom}
-              options={pom.phase === 'manoeuvre' ? pomOptionsA : pomOptionsB}
+              options={pom.phase === 'manoeuvre' ? POM_OPTIONS.manoeuvre : POM_OPTIONS.pattern}
               key={i}
             />
           ))}
