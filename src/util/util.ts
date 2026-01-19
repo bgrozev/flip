@@ -119,7 +119,8 @@ export function averageWind(
     (c1[0].properties.time - c1[c1.length - 1].properties.time) / 1000;
   const speedKts = distanceFt / seconds / ktsToFps;
 
-  return { speedKts, direction: turf.bearing(p1, p2) };
+  const bearing = turf.bearing(p1, p2);
+  return { speedKts, direction: (bearing + 360) % 360 };
 }
 
 /**
