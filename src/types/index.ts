@@ -66,6 +66,7 @@ export interface Settings {
   correctPatternHeading: boolean;
   useDzGroundWind: boolean;
   limitWind: number;
+  showPresets: boolean;
 }
 
 // Wind summary for display

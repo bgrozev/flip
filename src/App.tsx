@@ -327,6 +327,7 @@ function DashboardContent() {
             onRefreshWindsClick={handleFetchWinds}
             onSelectTargetClick={() => selectFromMap(false)}
             onSelectTargetAndHeadingClick={() => selectFromMap(true)}
+            showPresets={settings.showPresets}
             presets={presets}
             activePresetId={activePresetId}
             onPresetSelect={loadPreset}

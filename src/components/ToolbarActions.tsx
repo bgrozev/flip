@@ -17,6 +17,7 @@ interface ToolbarActionsProps {
   onSelectTargetClick: () => void;
   onSelectTargetAndHeadingClick: () => void;
   fetching: boolean;
+  showPresets: boolean;
   presets: Preset[];
   activePresetId: string | null;
   onPresetSelect: (id: string | null) => void;
@@ -30,6 +31,7 @@ export default function ToolbarActions({
   onSelectTargetClick,
   onSelectTargetAndHeadingClick,
   fetching,
+  showPresets,
   presets,
   activePresetId,
   onPresetSelect,
@@ -44,13 +46,15 @@ export default function ToolbarActions({
       <SelectTargetButton onClick={onSelectTargetClick} />
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <Divider orientation="vertical" flexItem />
-      <PresetSelector
-        presets={presets}
-        activePresetId={activePresetId}
-        onSelect={onPresetSelect}
-        onSave={onPresetSave}
-        onDelete={onPresetDelete}
-      />
+      {showPresets && (
+        <PresetSelector
+          presets={presets}
+          activePresetId={activePresetId}
+          onSelect={onPresetSelect}
+          onSave={onPresetSave}
+          onDelete={onPresetDelete}
+        />
+      )}
     </Stack>
   );
 }

@@ -57,6 +57,11 @@ const checkboxOptions: CheckboxOption[] = [
     label: 'Correct pattern heading for a 90/270/450/etc turn',
     tooltip:
       'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.'
+  },
+  {
+    key: 'showPresets',
+    label: 'Show presets',
+    tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
   }
 ];
 

@@ -23,7 +23,8 @@ const DEFAULT_SETTINGS: Settings = {
   displayWindArrow: false,
   displayWindSummary: true,
   correctPatternHeading: true,
-  limitWind: 3000
+  limitWind: 3000,
+  showPresets: true
 };
 
 // Storage keys
