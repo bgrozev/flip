@@ -91,3 +91,27 @@ export interface Dropzone {
   direction: number;
   fetchGroundWind?: () => Promise<IWindRow>;
 }
+
+// Preset types
+export type ManoeuvreType = 'none' | 'parameters' | 'track' | 'samples';
+
+export interface ManoeuvreConfig {
+  type: ManoeuvreType;
+  // For 'parameters' mode
+  params?: ManoeuvreParams;
+  // For 'track' mode - save track name AND data for self-containment
+  trackName?: string;
+  trackData?: FlightPath;
+  // For 'samples' mode
+  sampleIndex?: number;
+  sampleLeft?: boolean;
+}
+
+export interface Preset {
+  id: string;
+  name: string;
+  target: Target;
+  patternParams: PatternParams;
+  manoeuvre: ManoeuvreConfig;
+  createdAt: number;
+}

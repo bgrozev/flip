@@ -11,6 +11,7 @@ export { default as ManoeuvreTrackComponent } from './ManoeuvreTrackComponent';
 export { default as MapComponent } from './MapComponent';
 export { default as NumberInput } from './NumberInput';
 export { default as PatternComponent, defaultPattern } from './PatternComponent';
+export { default as PresetSelector } from './PresetSelector';
 export { default as SettingsComponent } from './SettingsComponent';
 export { default as TargetComponent } from './TargetComponent';
 export { default as ToolbarActions } from './ToolbarActions';

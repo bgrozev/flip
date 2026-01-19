@@ -7,12 +7,21 @@ import {
 import { CircularProgress, Divider, IconButton, Stack, Tooltip } from '@mui/material';
 import React from 'react';
 
+import { Preset } from '../types';
+
+import PresetSelector from './PresetSelector';
+
 interface ToolbarActionsProps {
   onMapButtonClick: () => void;
   onRefreshWindsClick: () => void;
   onSelectTargetClick: () => void;
   onSelectTargetAndHeadingClick: () => void;
   fetching: boolean;
+  presets: Preset[];
+  activePresetId: string | null;
+  onPresetSelect: (id: string | null) => void;
+  onPresetSave: (name?: string) => void;
+  onPresetDelete: () => void;
 }
 
 export default function ToolbarActions({
@@ -20,7 +29,12 @@ export default function ToolbarActions({
   onRefreshWindsClick,
   onSelectTargetClick,
   onSelectTargetAndHeadingClick,
-  fetching
+  fetching,
+  presets,
+  activePresetId,
+  onPresetSelect,
+  onPresetSave,
+  onPresetDelete
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
@@ -30,6 +44,13 @@ export default function ToolbarActions({
       <SelectTargetButton onClick={onSelectTargetClick} />
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <Divider orientation="vertical" flexItem />
+      <PresetSelector
+        presets={presets}
+        activePresetId={activePresetId}
+        onSelect={onPresetSelect}
+        onSave={onPresetSave}
+        onDelete={onPresetDelete}
+      />
     </Stack>
   );
 }

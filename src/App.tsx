@@ -32,7 +32,8 @@ import {
   DEFAULT_TARGET,
   useAppState,
   useFetchForecast,
-  useMapClickHandler
+  useMapClickHandler,
+  usePresets
 } from './hooks';
 import { Target, WindSummaryData } from './types';
 import { addWind, hasTargetMovedTooFar } from './util/geo';
@@ -177,6 +178,34 @@ function DashboardContent() {
     onNavigateToMap: isMobile ? () => router.navigate('/map') : undefined
   });
 
+  const {
+    presets,
+    activePresetId,
+    createPreset,
+    loadPreset,
+    updatePreset,
+    deletePreset
+  } = usePresets({
+    target,
+    setTarget,
+    setPattern,
+    setManoeuvre
+  });
+
+  const handlePresetSave = (name?: string) => {
+    if (name) {
+      createPreset(name);
+    } else if (activePresetId) {
+      updatePreset(activePresetId);
+    }
+  };
+
+  const handlePresetDelete = () => {
+    if (activePresetId) {
+      deletePreset(activePresetId);
+    }
+  };
+
   let c = reposition(manoeuvre ?? [], pattern ?? [], target ?? DEFAULT_TARGET, settings.correctPatternHeading);
   const c2 = winds ? addWind(c, winds, settings.interpolateWind) : [];
 
@@ -298,6 +327,11 @@ function DashboardContent() {
             onRefreshWindsClick={handleFetchWinds}
             onSelectTargetClick={() => selectFromMap(false)}
             onSelectTargetAndHeadingClick={() => selectFromMap(true)}
+            presets={presets}
+            activePresetId={activePresetId}
+            onPresetSelect={loadPreset}
+            onPresetSave={handlePresetSave}
+            onPresetDelete={handlePresetDelete}
           />
         ),
         sidebarFooter: SidebarFooter,
