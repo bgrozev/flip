@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: Settings = {
   showPreWind: true,
   showPoms: true,
   showPomAltitudes: true,
+  showPomTooltips: true,
   useDzGroundWind: true,
   interpolateWind: true,
   displayWindArrow: false,

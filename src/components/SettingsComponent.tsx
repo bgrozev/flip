@@ -46,6 +46,11 @@ const checkboxOptions: CheckboxOption[] = [
     tooltip: 'Display the altitude of pattern points on the map.'
   },
   {
+    key: 'showPomTooltips',
+    label: 'Show tooltips on pattern points',
+    tooltip: 'Show detailed information when hovering over pattern points on the map.'
+  },
+  {
     key: 'useDzGroundWind',
     label: 'Use observed ground wind when available',
     tooltip:

@@ -61,6 +61,7 @@ export interface ManoeuvreParams {
 export interface Settings {
   showPoms: boolean;
   showPomAltitudes: boolean;
+  showPomTooltips: boolean;
   showPreWind: boolean;
   displayWindArrow: boolean;
   displayWindSummary: boolean;
