@@ -18,6 +18,7 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
+import { useUnits } from '../hooks';
 import { FlightPath, PatternType } from '../types';
 import {
   PATTERN_NONE,
@@ -59,6 +60,15 @@ interface PatternComponentProps {
 }
 
 export default function PatternComponent({ onChange }: PatternComponentProps) {
+  const {
+    formatDescentRate,
+    parseDescentRate,
+    descentRateLabel,
+    formatAltitude,
+    parseAltitude,
+    altitudeLabel
+  } = useUnits();
+
   const [storedParams, setParams] = useLocalStorageState<PatternParams>(
     'flip.pattern.params',
     defaultParams,
@@ -130,11 +140,11 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
             <NumberInput
               title="Vertical speed in the pattern."
               label="Descent Rate"
-              initialValue={params.descentRateMph}
+              initialValue={formatDescentRate(params.descentRateMph).value}
               step={1}
               min={1}
-              unit="mph"
-              onChange={value => handleChange('descentRateMph', value)}
+              unit={descentRateLabel}
+              onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
             />
             <NumberInput
               title="Glide ratio in the pattern with no wind."
@@ -153,9 +163,11 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
             <LegAltitudeSelector
               title="Altitude for the final leg of the pattern."
               label="Final leg altitude"
-              localStorageKey="flip.pattern.altitude_selector_0"
               value={params.legs[0].altitude}
               onChange={v => handleLegChange(0, 'altitude', v)}
+              formatAltitude={formatAltitude}
+              parseAltitude={parseAltitude}
+              altitudeLabel={altitudeLabel}
             />
           </Stack>
         </>
@@ -169,10 +181,12 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
           <Stack direction="row" spacing={2}>
             <LegAltitudeSelector
               title="Altitude for the base leg of the pattern. This determines how long the leg is."
-              label="Final leg altitude"
-              localStorageKey="flip.pattern.altitude_selector_1"
+              label="Base leg altitude"
               value={params.legs[1].altitude}
               onChange={v => handleLegChange(1, 'altitude', v)}
+              formatAltitude={formatAltitude}
+              parseAltitude={parseAltitude}
+              altitudeLabel={altitudeLabel}
             />
             <DirectionSwitch
               title="Direction for the turn after this pattern leg."
@@ -196,9 +210,11 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
             <LegAltitudeSelector
               title="Altitude for the downwind leg of the pattern. This determines how long the leg is."
               label="Downwind leg altitude"
-              localStorageKey="flip.pattern.altitude_selector_2"
               value={params.legs[2].altitude}
               onChange={v => handleLegChange(2, 'altitude', v)}
+              formatAltitude={formatAltitude}
+              parseAltitude={parseAltitude}
+              altitudeLabel={altitudeLabel}
             />
             <DirectionSwitch
               title="Direction for the turn after this pattern leg."
@@ -217,42 +233,54 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
 }
 
 interface LegAltitudeSelectorProps {
-  localStorageKey: string;
   value: number;
   onChange: (value: number) => void;
   label: string;
   title: string;
+  formatAltitude: (feet: number, decimals?: number) => { value: number; label: string };
+  parseAltitude: (displayValue: number) => number;
+  altitudeLabel: string;
 }
 
+// Preset options: display value -> internal feet value
+const PRESETS_FT = [
+  { display: 300, internal: 300 },
+  { display: 400, internal: 400 },
+  { display: 500, internal: 500 }
+];
+const PRESETS_M = [
+  { display: 100, internal: 328 },  // 100m ≈ 328 ft
+  { display: 150, internal: 492 },  // 150m ≈ 492 ft
+  { display: 200, internal: 656 }   // 200m ≈ 656 ft
+];
+
 function LegAltitudeSelector({
-  localStorageKey,
   value,
   onChange,
   label,
-  title
+  title,
+  formatAltitude,
+  parseAltitude,
+  altitudeLabel
 }: LegAltitudeSelectorProps) {
-  const presetOptions = [300, 400, 500];
-  const isPreset = presetOptions.includes(value);
-  const [mode, setMode] = useLocalStorageState<string>(
-    localStorageKey,
-    isPreset ? String(value) : 'custom'
-  );
+  const presets = altitudeLabel === 'ft' ? PRESETS_FT : PRESETS_M;
+
+  // Determine mode based on whether current value matches a preset
+  const matchingPreset = presets.find(p => p.internal === value);
+  const mode = matchingPreset ? String(matchingPreset.internal) : 'custom';
 
   const handleToggleChange = (_: React.MouseEvent<HTMLElement>, newMode: string | null) => {
-    if (!newMode) {
+    if (!newMode || newMode === 'custom') {
       return;
     }
-
-    setMode(newMode);
-
-    if (newMode !== 'custom') {
-      onChange(Number(newMode));
-    }
+    // newMode is the internal feet value as string
+    onChange(Number(newMode));
   };
 
-  const handleCustomChange = (v: number) => {
-    if (!isNaN(v)) {
-      onChange(v);
+  const handleCustomChange = (displayValue: number) => {
+    if (!isNaN(displayValue)) {
+      // Convert from display units to internal feet
+      onChange(parseAltitude(displayValue));
     }
   };
 
@@ -266,9 +294,9 @@ function LegAltitudeSelector({
           fullWidth
           size="small"
         >
-          {presetOptions.map(opt => (
-            <ToggleButton key={opt} value={String(opt)}>
-              {opt}
+          {presets.map(preset => (
+            <ToggleButton key={preset.internal} value={String(preset.internal)}>
+              {preset.display}
             </ToggleButton>
           ))}
           <ToggleButton value="custom">Custom</ToggleButton>
@@ -279,15 +307,15 @@ function LegAltitudeSelector({
         <NumberInput
           title={title}
           label={label}
-          initialValue={value}
-          step={100}
-          min={100}
-          unit="ft"
+          initialValue={Math.round(formatAltitude(value).value)}
+          step={altitudeLabel === 'ft' ? 100 : 10}
+          min={altitudeLabel === 'ft' ? 100 : 30}
+          unit={altitudeLabel}
           onChange={handleCustomChange}
         />
       )}
 
-      <FormHelperText>Altitude</FormHelperText>
+      <FormHelperText>Altitude ({altitudeLabel})</FormHelperText>
     </FormControl>
   );
 }

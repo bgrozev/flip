@@ -16,6 +16,7 @@ import {
 import React, { useCallback } from 'react';
 
 import { SOURCE_MANUAL, forecastSourceLabel } from '../forecast/forecast';
+import { useUnits } from '../hooks';
 import { WindRow, Winds } from '../util/wind';
 
 interface WindsComponentProps {
@@ -31,6 +32,15 @@ export default function WindsComponent({
   fetching,
   fetch
 }: WindsComponentProps) {
+  const {
+    formatAltitude,
+    parseAltitude,
+    altitudeLabel,
+    formatWindSpeed,
+    parseWindSpeed,
+    windSpeedLabel
+  } = useUnits();
+
   const lock =
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
 
@@ -111,9 +121,9 @@ export default function WindsComponent({
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Altitude (ft)</TableCell>
+                  <TableCell>Altitude ({altitudeLabel})</TableCell>
                   <TableCell>Direction</TableCell>
-                  <TableCell>Speed (kts)</TableCell>
+                  <TableCell>Speed ({windSpeedLabel})</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -123,10 +133,10 @@ export default function WindsComponent({
                       <TextField
                         type="number"
                         disabled={lock}
-                        inputProps={{ step: 100, min: 0 }}
-                        value={Math.round(row.altFt)}
-                        onChange={e => updateRow(i, 'altFt', Number(e.target.value))}
-                        sx={{ width: '100%' }} // Set width explicitly
+                        inputProps={{ step: altitudeLabel === 'ft' ? 100 : 30, min: 0 }}
+                        value={Math.round(formatAltitude(row.altFt).value)}
+                        onChange={e => updateRow(i, 'altFt', parseAltitude(Number(e.target.value)))}
+                        sx={{ width: '100%' }}
                       />
                     </TableCell>
                     <TableCell sx={{ width: '30%' }}>
@@ -138,16 +148,16 @@ export default function WindsComponent({
                         onChange={e => {
                           updateRow(i, 'direction', (360 + Number(e.target.value)) % 360);
                         }}
-                        sx={{ width: '100%' }} // Set width explicitly
+                        sx={{ width: '100%' }}
                       />
                     </TableCell>
                     <TableCell sx={{ width: '30%' }}>
                       <TextField
                         type="number"
                         disabled={lock}
-                        value={row.speedKts.toFixed(1)}
-                        onChange={e => updateRow(i, 'speedKts', Number(e.target.value))}
-                        sx={{ width: '100%' }} // Set width explicitly
+                        value={formatWindSpeed(row.speedKts).value.toFixed(1)}
+                        onChange={e => updateRow(i, 'speedKts', parseWindSpeed(Number(e.target.value)))}
+                        sx={{ width: '100%' }}
                       />
                     </TableCell>
                   </TableRow>

@@ -17,6 +17,7 @@ import {
   PATH_OPTIONS_DOTTED,
   POM_OPTIONS
 } from '../constants';
+import { useUnits } from '../hooks';
 import { LatLng, Settings } from '../types';
 import { pathToLatLngs } from '../util/coords';
 import { FlightPath } from '../types';
@@ -58,6 +59,7 @@ function MapComponent({
   waitingForClick
 }: MapComponentProps) {
   const { showPoms, showPomAltitudes, displayWindArrow } = settings;
+  const { formatAltitude, altitudeLabel } = useUnits();
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -126,7 +128,7 @@ function MapComponent({
           .map((pom, i) => (
             <CustomTextOverlay
               position={pom}
-              text={`${Math.round(pom.alt ?? 0)} ft`}
+              text={`${Math.round(formatAltitude(pom.alt ?? 0).value)} ${altitudeLabel}`}
               key={i}
             />
           ))}

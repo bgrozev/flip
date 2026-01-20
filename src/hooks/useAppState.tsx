@@ -2,6 +2,7 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { createContext, useContext, useCallback, ReactNode, useMemo } from 'react';
 
 import { FlightPath, Settings, Target } from '../types';
+import { DEFAULT_UNIT_PREFERENCES } from '../util/units';
 import { CODEC_JSON } from '../util/util';
 import { defaultPattern } from '../components/PatternComponent';
 
@@ -24,7 +25,8 @@ const DEFAULT_SETTINGS: Settings = {
   displayWindSummary: true,
   correctPatternHeading: true,
   limitWind: 3000,
-  showPresets: true
+  showPresets: true,
+  units: DEFAULT_UNIT_PREFERENCES
 };
 
 // Storage keys

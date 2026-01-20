@@ -1,5 +1,7 @@
 import { Feature, Point } from 'geojson';
 
+import { UnitPreferences } from '../util/units';
+
 // Flight point properties
 export interface FlightPointProperties {
   alt: number;
@@ -67,6 +69,7 @@ export interface Settings {
   useDzGroundWind: boolean;
   limitWind: number;
   showPresets: boolean;
+  units: UnitPreferences;
 }
 
 // Wind summary for display

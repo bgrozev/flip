@@ -1,6 +1,11 @@
 import {
   Box,
   Divider,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
   Stack,
   Switch,
   Tooltip,
@@ -10,6 +15,15 @@ import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
 import React from 'react';
 
 import { Settings } from '../types';
+import {
+  ALTITUDE_UNIT_OPTIONS,
+  AltitudeUnit,
+  DESCENT_RATE_UNIT_OPTIONS,
+  DescentRateUnit,
+  UnitPreferences,
+  WIND_SPEED_UNIT_OPTIONS,
+  WindSpeedUnit
+} from '../util/units';
 
 import NumberInput from './NumberInput';
 
@@ -86,6 +100,17 @@ export default function SettingsComponent({
     setSettings(newSettings);
   };
 
+  const handleUnitChange = <K extends keyof UnitPreferences>(
+    unitKey: K,
+    value: UnitPreferences[K]
+  ) => {
+    const newSettings = {
+      ...settings,
+      units: { ...settings.units, [unitKey]: value }
+    };
+    setSettings(newSettings);
+  };
+
   return (
     <Stack direction="column" spacing={1} alignItems="flex-start">
       <Box
@@ -133,6 +158,65 @@ export default function SettingsComponent({
         unit="ft"
         onChange={handleNumberChange('limitWind')}
       />
+
+      <Divider sx={{ width: '100%', my: 2 }} />
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        Display Units
+      </Typography>
+
+      <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+        <InputLabel id="altitude-unit-label">Altitude</InputLabel>
+        <Select
+          labelId="altitude-unit-label"
+          value={settings.units.altitude}
+          label="Altitude"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('altitude', e.target.value as AltitudeUnit)
+          }
+        >
+          {ALTITUDE_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+        <InputLabel id="wind-speed-unit-label">Wind Speed</InputLabel>
+        <Select
+          labelId="wind-speed-unit-label"
+          value={settings.units.windSpeed}
+          label="Wind Speed"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('windSpeed', e.target.value as WindSpeedUnit)
+          }
+        >
+          {WIND_SPEED_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small">
+        <InputLabel id="descent-rate-unit-label">Descent Rate</InputLabel>
+        <Select
+          labelId="descent-rate-unit-label"
+          value={settings.units.descentRate}
+          label="Descent Rate"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('descentRate', e.target.value as DescentRateUnit)
+          }
+        >
+          {DESCENT_RATE_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
     </Stack>
   );
 }

@@ -2,6 +2,7 @@ import { Stack } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
+import { useUnits } from '../hooks';
 import { FlightPath, ManoeuvreParams } from '../types';
 import { createManoeuvrePath } from '../util/manoeuvre';
 import { CODEC_JSON } from '../util/util';
@@ -32,6 +33,8 @@ interface ManoeuvreParametersComponentProps {
 export default function ManoeuvreParametersComponent({
   onChange
 }: ManoeuvreParametersComponentProps) {
+  const { formatAltitude, parseAltitude, altitudeLabel } = useUnits();
+
   const [storedParams, setParams] = useLocalStorageState<ManoeuvreParams>(
     'flip.manoeuvre.params',
     defaultParams(),
@@ -65,29 +68,29 @@ export default function ManoeuvreParametersComponent({
       <NumberInput
         title="Distance in the depth direction."
         label="Back"
-        initialValue={params.offsetXFt}
-        step={50}
-        min={50}
-        unit="ft"
-        onChange={handleChange('offsetXFt')}
+        initialValue={formatAltitude(params.offsetXFt).value}
+        step={altitudeLabel === 'ft' ? 50 : 15}
+        min={altitudeLabel === 'ft' ? 50 : 15}
+        unit={altitudeLabel}
+        onChange={v => handleChange('offsetXFt')(parseAltitude(v))}
       />
       <NumberInput
         title="Distance in the offset direction."
         label="Offset"
-        initialValue={params.offsetYFt}
-        step={50}
-        min={50}
-        unit="ft"
-        onChange={handleChange('offsetYFt')}
+        initialValue={formatAltitude(params.offsetYFt).value}
+        step={altitudeLabel === 'ft' ? 50 : 15}
+        min={altitudeLabel === 'ft' ? 50 : 15}
+        unit={altitudeLabel}
+        onChange={v => handleChange('offsetYFt')(parseAltitude(v))}
       />
       <NumberInput
         title="The altitude the manoeuvre starts at."
         label="Altitude"
-        initialValue={params.altitudeFt}
-        step={50}
-        min={300}
-        unit="ft"
-        onChange={handleChange('altitudeFt')}
+        initialValue={formatAltitude(params.altitudeFt).value}
+        step={altitudeLabel === 'ft' ? 50 : 15}
+        min={altitudeLabel === 'ft' ? 300 : 90}
+        unit={altitudeLabel}
+        onChange={v => handleChange('altitudeFt')(parseAltitude(v))}
       />
       <NumberInput
         title="The duration from the start of manoeuvre to flying level."

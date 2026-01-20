@@ -1,6 +1,8 @@
 import { Navigation } from '@mui/icons-material';
 import React from 'react';
 
+import { useUnits } from '../hooks';
+
 // Beaufort wind scale color mapping
 const getWindColor = (speed: number): string => {
   if (speed <= 1) {
@@ -28,7 +30,9 @@ interface WindDirectionArrowProps {
 }
 
 export default function WindDirectionArrow({ direction, speed }: WindDirectionArrowProps) {
+  const { formatWindSpeed, windSpeedLabel } = useUnits();
   const arrowColor = getWindColor(speed);
+  const displaySpeed = formatWindSpeed(speed);
 
   return (
     <div
@@ -71,8 +75,7 @@ export default function WindDirectionArrow({ direction, speed }: WindDirectionAr
           width: 'max-content' // Ensure the box wraps the text tightly
         }}
       >
-        {`${Math.round(direction)}° @ ${Math.round(speed)} kts`}{' '}
-        {/* Display direction and speed */}
+        {`${Math.round(direction)}° @ ${Math.round(displaySpeed.value)} ${windSpeedLabel}`}
       </div>
     </div>
   );
