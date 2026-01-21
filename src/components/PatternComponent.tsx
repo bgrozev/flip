@@ -30,7 +30,7 @@ import {
   makePatternByType,
   PatternLeg
 } from '../util/pattern';
-import { CODEC_JSON } from '../util/util';
+import { createSafeCodec } from '../util/storage';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
@@ -72,7 +72,7 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
   const [storedParams, setParams] = useLocalStorageState<PatternParams>(
     'flip.pattern.params',
     defaultParams,
-    { codec: CODEC_JSON }
+    { codec: createSafeCodec(defaultParams) }
   );
   const params = storedParams ?? defaultParams;
 

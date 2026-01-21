@@ -16,7 +16,7 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useState } from 'react';
 
 import { useTarget } from '../hooks';
-import { CODEC_JSON } from '../util/util';
+import { createSimpleCodec } from '../util/storage';
 
 interface CustomLocation {
   name: string;
@@ -33,7 +33,7 @@ export default function CustomLocationsComponent() {
   const [customLocations, setCustomLocations] = useLocalStorageState<CustomLocation[]>(
     'flip.custom_locations',
     [],
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec<CustomLocation[]>([]) }
   );
 
   const save = (ev: React.FormEvent) => {

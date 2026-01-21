@@ -23,7 +23,7 @@ import React, { useState } from 'react';
 import { CsvRow, FlightPath } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
 import { mirror as mirrorPath } from '../util/geo';
-import { CODEC_JSON } from '../util/util';
+import { createSimpleCodec } from '../util/storage';
 
 interface Track {
   name: string;
@@ -43,7 +43,7 @@ export default function ManoeuvreTrackComponent({
   const [storedTracks, setTracks] = useLocalStorageState<Track[]>(
     'flip.manoeuvre.track.tracks',
     [],
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec<Track[]>([]) }
   );
   const tracks = storedTracks ?? [];
   const [name, setName] = useState('');

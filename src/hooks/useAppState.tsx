@@ -2,8 +2,8 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { createContext, useContext, useCallback, ReactNode, useMemo } from 'react';
 
 import { FlightPath, Settings, Target } from '../types';
+import { createSafeCodec, createSimpleCodec } from '../util/storage';
 import { DEFAULT_UNIT_PREFERENCES } from '../util/units';
-import { CODEC_JSON } from '../util/util';
 import { defaultPattern } from '../components/PatternComponent';
 
 // Default values
@@ -65,42 +65,41 @@ interface AppStateProviderProps {
 /**
  * Provider for centralized app state management.
  * Handles persistence to localStorage for core app state.
+ * Uses safe codecs that handle parse errors and merge with defaults.
  */
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  // Manoeuvre state
+  // Manoeuvre state - array, use simple codec
   const [storedManoeuvre, setStoredManoeuvre] = useLocalStorageState<FlightPath>(
     STORAGE_KEYS.manoeuvre,
     [],
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec<FlightPath>([]) }
   );
   const manoeuvre = storedManoeuvre ?? [];
 
-  // Target state
+  // Target state - object with simple structure
   const [storedTarget, setStoredTarget] = useLocalStorageState<Target>(
     STORAGE_KEYS.target,
     DEFAULT_TARGET,
-    { codec: CODEC_JSON }
+    { codec: createSafeCodec(DEFAULT_TARGET) }
   );
   const target = storedTarget ?? DEFAULT_TARGET;
 
-  // Pattern state
+  // Pattern state - array, use simple codec
   const [storedPattern, setStoredPattern] = useLocalStorageState<FlightPath>(
     STORAGE_KEYS.pattern,
     defaultPattern,
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec(defaultPattern) }
   );
   const pattern = storedPattern ?? defaultPattern;
 
-  // Settings state
+  // Settings state - object with nested structure, use safe codec for deep merge
   const [storedSettings, setStoredSettings] = useLocalStorageState<Settings>(
     STORAGE_KEYS.settings,
     DEFAULT_SETTINGS,
-    { codec: CODEC_JSON }
+    { codec: createSafeCodec(DEFAULT_SETTINGS) }
   );
-  const settings = useMemo(
-    () => ({ ...DEFAULT_SETTINGS, ...storedSettings }),
-    [storedSettings]
-  );
+  // Safe codec already merges with defaults, but ensure non-null
+  const settings = storedSettings ?? DEFAULT_SETTINGS;
 
   // Wrapped setters with null handling
   const setManoeuvre = useCallback((value: FlightPath) => {
@@ -116,7 +115,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   }, [setStoredPattern]);
 
   const setSettings = useCallback((value: Settings) => {
-    setStoredSettings({ ...DEFAULT_SETTINGS, ...value });
+    setStoredSettings(value);
   }, [setStoredSettings]);
 
   // Reset all state to defaults

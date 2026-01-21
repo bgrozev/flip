@@ -14,7 +14,7 @@ import { makePatternByType } from '../util/pattern';
 import { createManoeuvrePath } from '../util/manoeuvre';
 import { mirror } from '../util/geo';
 import { samples } from '../samples';
-import { CODEC_JSON } from '../util/util';
+import { createSimpleCodec } from '../util/storage';
 
 // Storage keys for reading current configuration
 const STORAGE_KEYS = {
@@ -60,7 +60,7 @@ export function usePresets({
   const [storedPresets, setStoredPresets] = useLocalStorageState<Preset[]>(
     STORAGE_KEYS.presets,
     [],
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec<Preset[]>([]) }
   );
   const presets = storedPresets ?? [];
 
@@ -69,25 +69,36 @@ export function usePresets({
     null
   );
 
+  // Helper to safely parse JSON from localStorage
+  const safeJsonParse = <T,>(str: string | null, fallback: T): T => {
+    if (!str) return fallback;
+    try {
+      return JSON.parse(str) as T;
+    } catch {
+      console.warn('Failed to parse localStorage value, using fallback');
+      return fallback;
+    }
+  };
+
   // Helper to read current configuration from localStorage
   const readCurrentConfig = useCallback((): {
     patternParams: PatternParams;
     manoeuvre: ManoeuvreConfig;
   } => {
+    const defaultPatternParams: PatternParams = {
+      type: 'three-leg',
+      descentRateMph: 12,
+      glideRatio: 2.6,
+      legs: [
+        { altitude: 300, direction: 0 },
+        { altitude: 300, direction: 270 },
+        { altitude: 300, direction: 270 }
+      ]
+    };
+
     // Read pattern params
     const patternParamsStr = localStorage.getItem(STORAGE_KEYS.patternParams);
-    const patternParams: PatternParams = patternParamsStr
-      ? JSON.parse(patternParamsStr)
-      : {
-          type: 'three-leg',
-          descentRateMph: 12,
-          glideRatio: 2.6,
-          legs: [
-            { altitude: 300, direction: 0 },
-            { altitude: 300, direction: 270 },
-            { altitude: 300, direction: 270 }
-          ]
-        };
+    const patternParams = safeJsonParse(patternParamsStr, defaultPatternParams);
 
     // Read manoeuvre type (stored as plain string, not JSON)
     const manoeuvreTypeStr = localStorage.getItem(STORAGE_KEYS.manoeuvreType);
@@ -97,8 +108,9 @@ export function usePresets({
 
     if (manoeuvreType === 'parameters') {
       const paramsStr = localStorage.getItem(STORAGE_KEYS.manoeuvreParams);
-      if (paramsStr) {
-        manoeuvre.params = JSON.parse(paramsStr) as ManoeuvreParams;
+      const params = safeJsonParse<ManoeuvreParams | null>(paramsStr, null);
+      if (params) {
+        manoeuvre.params = params;
       }
     } else if (manoeuvreType === 'track') {
       // track.selected is stored as plain string, tracks is JSON
@@ -106,7 +118,7 @@ export function usePresets({
       const tracksStr = localStorage.getItem(STORAGE_KEYS.manoeuvreTrackTracks);
 
       if (trackName && tracksStr) {
-        const tracks = JSON.parse(tracksStr) as Track[];
+        const tracks = safeJsonParse<Track[]>(tracksStr, []);
         const track = tracks.find(t => t.name === trackName);
 
         if (track) {

@@ -9,7 +9,7 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useEffect } from 'react';
 
 import { FlightPath } from '../types';
-import { CODEC_JSON } from '../util/util';
+import { createSimpleCodec } from '../util/storage';
 
 import ManoeuvreParametersComponent, { defaultPath } from './ManoeuvreParametersComponent';
 import ManoeuvreSamplesComponent from './ManoeuvreSamplesComponent';
@@ -38,17 +38,17 @@ export default function ManoeuvreComponent({
   const [parametersPath, setParametersPath] = useLocalStorageState<FlightPath>(
     'flip.manoeuvre.parameters_path_turf',
     defaultPath(),
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec(defaultPath()) }
   );
   const [trackPath, setTrackPath] = useLocalStorageState<FlightPath>(
     'flip.manoeuvre.track_path_turf',
     [],
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec<FlightPath>([]) }
   );
   const [samplePath, setSamplePath] = useLocalStorageState<FlightPath>(
     'flip.manoeuvre.sample_path_turf',
     [],
-    { codec: CODEC_JSON }
+    { codec: createSimpleCodec<FlightPath>([]) }
   );
 
   const handleTypeChange = (

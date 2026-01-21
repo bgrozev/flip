@@ -5,7 +5,7 @@ import React from 'react';
 import { useUnits } from '../hooks';
 import { FlightPath, ManoeuvreParams } from '../types';
 import { createManoeuvrePath } from '../util/manoeuvre';
-import { CODEC_JSON } from '../util/util';
+import { createSafeCodec } from '../util/storage';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
@@ -37,8 +37,8 @@ export default function ManoeuvreParametersComponent({
 
   const [storedParams, setParams] = useLocalStorageState<ManoeuvreParams>(
     'flip.manoeuvre.params',
-    defaultParams(),
-    { codec: CODEC_JSON }
+    DEFAULT_PARAMS,
+    { codec: createSafeCodec(DEFAULT_PARAMS) }
   );
   const params = storedParams ?? DEFAULT_PARAMS;
 
