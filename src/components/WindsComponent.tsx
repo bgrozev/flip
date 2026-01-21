@@ -77,6 +77,13 @@ export default function WindsComponent({
     setWinds(newWinds);
   };
 
+  const invertWind = () => {
+    const inverted = winds.winds.map(
+      row => new WindRow(row.altFt, (row.direction + 180) % 360, row.speedKts)
+    );
+    setWinds(new Winds(inverted));
+  };
+
   return (
     <Box
       sx={{
@@ -168,12 +175,15 @@ export default function WindsComponent({
 
           {/* Row Buttons */}
           {!lock && (
-            <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
+            <Stack direction="row" spacing={2} sx={{ marginTop: 2, flexWrap: 'wrap', gap: 1 }}>
               <Button variant="outlined" onClick={addRow}>
                 Add row
               </Button>
               <Button variant="outlined" onClick={removeRow}>
                 Remove row
+              </Button>
+              <Button variant="outlined" onClick={invertWind}>
+                Invert
               </Button>
             </Stack>
           )}
