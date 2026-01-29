@@ -5,7 +5,7 @@ import {
   PolylineF,
   useJsApiLoader
 } from '@react-google-maps/api';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
 import {
   ALTITUDE_LABEL_STYLE,
@@ -334,6 +334,29 @@ function MapComponent({
   const { formatAltitude, altitudeLabel } = useUnits();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [hoveredPreWindIndex, setHoveredPreWindIndex] = useState<number | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    map.setCenter(center);
+    map.setZoom(DEFAULT_MAP_OPTIONS.zoom);
+    console.log('Map loaded.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update map center when target changes (but not on every render)
+  const prevCenterRef = useRef(center);
+  useEffect(() => {
+    if (mapRef.current && (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng)) {
+      mapRef.current.panTo(center);
+      prevCenterRef.current = center;
+    }
+  }, [center]);
+
+  // Update cursor without causing map re-render
+  if (mapRef.current) {
+    mapRef.current.setOptions({ draggableCursor: waitingForClick ? 'crosshair' : 'grab' });
+  }
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -368,18 +391,13 @@ function MapComponent({
     <>
       <GoogleMap
         mapContainerStyle={MAP_CONTAINER_STYLE}
-        center={center}
         onClick={ev => {
           if (ev.latLng) {
             onClick({ lat: ev.latLng.lat(), lng: ev.latLng.lng() });
           }
         }}
-        zoom={DEFAULT_MAP_OPTIONS.zoom}
-        options={{
-          ...DEFAULT_MAP_OPTIONS,
-          draggableCursor: waitingForClick ? 'crosshair' : 'grab'
-        }}
-        onLoad={() => console.log('Map loaded.')}
+        options={DEFAULT_MAP_OPTIONS}
+        onLoad={onMapLoad}
       >
         <PolylineF
           path={pathALatLngs.filter(p => p.phase === 'manoeuvre')}

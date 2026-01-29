@@ -55,7 +55,9 @@ function calcDistance(from: PointData, to: PointData): number {
 }
 
 /**
- * Calculate wind drift by comparing pre-wind and post-wind positions
+ * Calculate wind drift for a leg by comparing pre-wind and post-wind positions.
+ * The per-leg drift is: (shift at start of leg) - (shift at end of leg)
+ * where shift = postWind position - preWind position
  */
 function calcWindDrift(
   preWindStart: PointData,
@@ -63,20 +65,18 @@ function calcWindDrift(
   postWindStart: PointData,
   postWindEnd: PointData
 ): { distance: number; direction: number } {
-  // The drift is the difference in the end positions relative to start positions
-  // Pre-wind vector
-  const preVec = {
-    x: preWindEnd.lng - preWindStart.lng,
-    y: preWindEnd.lat - preWindStart.lat
-  };
-  // Post-wind vector
-  const postVec = {
-    x: postWindEnd.lng - postWindStart.lng,
-    y: postWindEnd.lat - postWindStart.lat
-  };
-  // Drift vector (how much wind moved the end point)
-  const driftLng = postVec.x - preVec.x;
-  const driftLat = postVec.y - preVec.y;
+  // Shift at start of leg (how much the start point moved due to wind correction)
+  const shiftStartLng = postWindStart.lng - preWindStart.lng;
+  const shiftStartLat = postWindStart.lat - preWindStart.lat;
+
+  // Shift at end of leg
+  const shiftEndLng = postWindEnd.lng - preWindEnd.lng;
+  const shiftEndLat = postWindEnd.lat - preWindEnd.lat;
+
+  // Per-leg drift = shift at start - shift at end
+  // This gives the additional wind correction applied for just this leg
+  const driftLng = shiftStartLng - shiftEndLng;
+  const driftLat = shiftStartLat - shiftEndLat;
 
   if (Math.abs(driftLng) < 1e-10 && Math.abs(driftLat) < 1e-10) {
     return { distance: 0, direction: 0 };
@@ -84,11 +84,11 @@ function calcWindDrift(
 
   // Calculate drift distance and direction
   const driftEndPoint = {
-    lat: preWindEnd.lat + driftLat,
-    lng: preWindEnd.lng + driftLng
+    lat: preWindStart.lat + driftLat,
+    lng: preWindStart.lng + driftLng
   };
-  const distance = calcDistance(preWindEnd, driftEndPoint);
-  const direction = calcBearing(preWindEnd, driftEndPoint);
+  const distance = calcDistance(preWindStart, driftEndPoint);
+  const direction = calcBearing(preWindStart, driftEndPoint);
 
   return { distance, direction };
 }
