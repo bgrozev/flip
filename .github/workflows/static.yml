@@ -38,11 +38,13 @@ jobs:
         with:
           cache: 'npm'
       - run: npm install
+      - run: npm test -- --watchAll=false
       - run: node scripts/inject-ga.js
         env:
           GA_ID: ${{ secrets.GA_ID }}
-      - run: sed -i -e "s/INSERT_GOOGLE_API_KEY/${{ secrets.GOOGLE_MAPS_API_KEY }}/" src/components/MapComponent.tsx
       - run: npm run build --if-present
+        env:
+          REACT_APP_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
