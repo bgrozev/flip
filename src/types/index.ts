@@ -70,6 +70,7 @@ export interface Settings {
   useDzGroundWind: boolean;
   limitWind: number;
   showPresets: boolean;
+  highlightCorrespondingPoints: boolean;
   units: UnitPreferences;
 }
 

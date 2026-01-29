@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS: Settings = {
   correctPatternHeading: true,
   limitWind: 3000,
   showPresets: true,
+  highlightCorrespondingPoints: true,
   units: DEFAULT_UNIT_PREFERENCES
 };
 

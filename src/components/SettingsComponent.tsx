@@ -51,6 +51,11 @@ const checkboxOptions: CheckboxOption[] = [
     tooltip: 'Show detailed information when hovering over pattern points on the map.'
   },
   {
+    key: 'highlightCorrespondingPoints',
+    label: 'Highlight corresponding pre-wind point',
+    tooltip: 'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.'
+  },
+  {
     key: 'useDzGroundWind',
     label: 'Use observed ground wind when available',
     tooltip:

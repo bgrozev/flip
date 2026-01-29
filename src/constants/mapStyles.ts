@@ -33,7 +33,7 @@ const pomBaseOptions = {
   strokeOpacity: 1,
   strokeWeight: 1,
   fillOpacity: 1,
-  radius: 2
+  radius: 5
 } as const;
 
 export const POM_OPTIONS = {
