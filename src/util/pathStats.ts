@@ -73,10 +73,10 @@ function calcWindDrift(
   const shiftEndLng = postWindEnd.lng - preWindEnd.lng;
   const shiftEndLat = postWindEnd.lat - preWindEnd.lat;
 
-  // Per-leg drift = shift at start - shift at end
-  // This gives the additional wind correction applied for just this leg
-  const driftLng = shiftStartLng - shiftEndLng;
-  const driftLat = shiftStartLat - shiftEndLat;
+  // Per-leg drift = shift at end - shift at start
+  // This gives the direction the wind pushes the canopy during this leg
+  const driftLng = shiftEndLng - shiftStartLng;
+  const driftLat = shiftEndLat - shiftStartLat;
 
   if (Math.abs(driftLng) < 1e-10 && Math.abs(driftLat) < 1e-10) {
     return { distance: 0, direction: 0 };
