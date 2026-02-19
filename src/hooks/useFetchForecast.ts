@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { fetchForecast } from '../forecast/forecast';
 import { Dropzone, LatLng, Settings } from '../types';
@@ -41,6 +41,7 @@ export function useFetchForecast({
 }: UseFetchForecastOptions): UseFetchForecastResult {
   const [winds, setWinds] = useState<Winds>(new Winds());
   const [fetching, setFetching] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const resetWinds = useCallback(() => {
     setWinds(new Winds());
@@ -68,12 +69,18 @@ export function useFetchForecast({
         ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name}), hourOffset=${hourOffset}`
     );
 
+    // Abort any in-flight request before starting a new one
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setFetching(true);
 
     fetchForecast(
       target,
       settings.useDzGroundWind ? dz?.fetchGroundWind : undefined,
-      hourOffset
+      hourOffset,
+      controller.signal
     )
       .then(fetchedWinds => {
         // Determine altitude limit
@@ -88,9 +95,12 @@ export function useFetchForecast({
         setFetching(false);
       })
       .catch(err => {
+        if (err.name === 'AbortError') {
+          // A newer fetch superseded this one — leave fetching=true and winds unchanged
+          return;
+        }
         console.log(`Failed to fetch winds: ${err}`);
         setFetching(false);
-        // Set empty winds on error
         setWinds(Winds.createDefault());
       });
   }, [target, settings.useDzGroundWind, settings.limitWind]);

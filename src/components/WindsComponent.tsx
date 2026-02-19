@@ -6,7 +6,6 @@ import {
 import {
   Box,
   Button,
-  Chip,
   CircularProgress,
   IconButton,
   Paper,
@@ -23,7 +22,7 @@ import {
 } from '@mui/material';
 import React, { useCallback } from 'react';
 
-import { SOURCE_MANUAL, forecastSourceLabel } from '../forecast/forecast';
+import { SOURCE_MANUAL } from '../forecast/forecast';
 import { useUnits } from '../hooks';
 import { WindRow, Winds } from '../util/wind';
 
@@ -80,7 +79,7 @@ export default function WindsComponent({
     setWinds(Winds.createDefault());
   }, [setWinds]);
 
-  // Forecast time picker state
+  // Forecast time picker
   const now = new Date();
   const minDate = roundUpToHour(now);
   const maxDate = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
@@ -141,171 +140,175 @@ export default function WindsComponent({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', paddingLeft: 0 }}>
-      {!fetching && (
-        <>
-          {/* Source chips */}
-          <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-            <Chip
-              size="small"
-              label={`Ground: ${forecastSourceLabel(winds.groundSource)}`}
-              color={winds.groundSource === SOURCE_MANUAL ? 'default' : 'info'}
-              variant={winds.groundSource === SOURCE_MANUAL ? 'outlined' : 'filled'}
-            />
-            <Chip
-              size="small"
-              label={`Upper: ${forecastSourceLabel(winds.aloftSource)}`}
-              color={winds.aloftSource === SOURCE_MANUAL ? 'default' : 'info'}
-              variant={winds.aloftSource === SOURCE_MANUAL ? 'outlined' : 'filled'}
-            />
-          </Stack>
-
+      <>
           {/* Forecast time picker */}
-          <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
-            <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
-              Forecast time:
+          <Box sx={{ mb: 1.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+              Forecast time
             </Typography>
-            <Tooltip title="One hour earlier">
-              <IconButton size="small" onClick={() => adjustForecastHour(-1)}>
-                <RemoveIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <TextField
-              type="datetime-local"
-              size="small"
-              value={forecastInputValue}
-              inputProps={{
-                min: toDateTimeLocalString(minDate),
-                max: toDateTimeLocalString(maxDate)
-              }}
-              onChange={e => {
-                if (!e.target.value) {
-                  onForecastTimeChange(null);
-                } else {
-                  onForecastTimeChange(new Date(e.target.value));
-                }
-              }}
-              sx={{ minWidth: 200 }}
-            />
-            <Tooltip title="One hour later">
-              <IconButton size="small" onClick={() => adjustForecastHour(1)}>
-                <AddIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            {forecastTime && (
-              <Button
-                variant="text"
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Tooltip title="One hour earlier">
+                <IconButton size="small" onClick={() => adjustForecastHour(-1)}>
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <TextField
+                type="datetime-local"
                 size="small"
-                onClick={() => onForecastTimeChange(null)}
-                sx={{ fontSize: '0.7rem', minWidth: 0, px: 0.5 }}
-              >
-                reset
-              </Button>
-            )}
-          </Stack>
+                value={forecastInputValue}
+                inputProps={{
+                  min: toDateTimeLocalString(minDate),
+                  max: toDateTimeLocalString(maxDate)
+                }}
+                onChange={e => {
+                  if (!e.target.value) {
+                    onForecastTimeChange(null);
+                  } else {
+                    onForecastTimeChange(new Date(e.target.value));
+                  }
+                }}
+                onBlur={e => {
+                  const newTime = e.target.value ? new Date(e.target.value) : null;
+                  fetch(newTime);
+                }}
+                sx={{ flex: 1 }}
+              />
+              <Tooltip title="One hour later">
+                <IconButton size="small" onClick={() => adjustForecastHour(1)}>
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {forecastTime && (
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => onForecastTimeChange(null)}
+                  sx={{ minWidth: 0, px: 0.5 }}
+                >
+                  Now
+                </Button>
+              )}
+            </Stack>
+          </Box>
 
-          <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
-            <Button variant="outlined" onClick={() => fetch()}>
+          {/* Action buttons */}
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Button variant="outlined" size="small" onClick={() => fetch()}>
               Fetch forecast
             </Button>
-            <Button variant="outlined" onClick={reset}>
+            <Button variant="outlined" size="small" onClick={reset}>
               Reset
             </Button>
           </Stack>
 
-          <TableContainer
-            component={Paper}
-            sx={{ flexGrow: 1, padding: 0, overflow: 'hidden' }}
-          >
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Altitude ({altitudeLabel})</TableCell>
-                  <TableCell>Direction</TableCell>
-                  <TableCell>Speed ({windSpeedLabel})</TableCell>
-                  {!lock && <TableCell padding="none" />}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {winds.winds.map((row, i) => (
-                  <TableRow
-                    key={`tr-${i}`}
-                    sx={i === 0 ? { bgcolor: 'action.selected' } : undefined}
-                  >
-                    <TableCell sx={{ width: '30%' }}>
-                      <TextField
-                        type="number"
-                        disabled={lock}
-                        inputProps={{ step: altitudeLabel === 'ft' ? 100 : 30, min: 0 }}
-                        value={Math.round(formatAltitude(row.altFt).value)}
-                        onChange={e => updateRow(i, 'altFt', parseAltitude(Number(e.target.value)))}
-                        sx={{ width: '100%' }}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell sx={{ width: '30%' }}>
-                      <TextField
-                        type="number"
-                        disabled={lock}
-                        inputProps={{ step: 5 }}
-                        value={row.direction}
-                        onChange={e => {
-                          updateRow(i, 'direction', (360 + Number(e.target.value)) % 360);
-                        }}
-                        sx={{ width: '100%' }}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell sx={{ width: '30%' }}>
-                      <TextField
-                        type="number"
-                        disabled={lock}
-                        value={formatWindSpeed(row.speedKts).value.toFixed(1)}
-                        onChange={e => updateRow(i, 'speedKts', parseWindSpeed(Number(e.target.value)))}
-                        sx={{ width: '100%' }}
-                        size="small"
-                      />
-                    </TableCell>
-                    {!lock && (
-                      <TableCell padding="none">
-                        <Tooltip title="Remove row">
-                          <IconButton size="small" onClick={() => removeRowAt(i)}>
-                            <CloseIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {fetching ? (
+            <Box sx={{ mt: 2 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <TableContainer
+                component={Paper}
+                sx={{ flexGrow: 1, padding: 0, overflow: 'hidden' }}
+              >
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: '38%' }}>Altitude ({altitudeLabel})</TableCell>
+                      <TableCell sx={{ width: '31%' }}>Direction</TableCell>
+                      <TableCell sx={{ width: '31%' }}>Speed ({windSpeedLabel})</TableCell>
+                      {!lock && <TableCell padding="none" />}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {winds.winds.map((row, i) => (
+                      <TableRow
+                        key={`tr-${i}`}
+                        sx={i === 0 ? { bgcolor: 'action.selected' } : undefined}
+                      >
+                        <TableCell>
+                          {lock ? (
+                            <Typography variant="body2">
+                              {Math.round(formatAltitude(row.altFt).value)}
+                            </Typography>
+                          ) : (
+                            <TextField
+                              type="number"
+                              inputProps={{ step: altitudeLabel === 'ft' ? 100 : 30, min: 0 }}
+                              value={Math.round(formatAltitude(row.altFt).value)}
+                              onChange={e => updateRow(i, 'altFt', parseAltitude(Number(e.target.value)))}
+                              sx={{ width: '100%' }}
+                              size="small"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {lock ? (
+                            <Typography variant="body2">{row.direction}</Typography>
+                          ) : (
+                            <TextField
+                              type="number"
+                              inputProps={{ step: 5 }}
+                              value={row.direction}
+                              onChange={e => {
+                                updateRow(i, 'direction', (360 + Number(e.target.value)) % 360);
+                              }}
+                              sx={{ width: '100%' }}
+                              size="small"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {lock ? (
+                            <Typography variant="body2">
+                              {formatWindSpeed(row.speedKts).value.toFixed(1)}
+                            </Typography>
+                          ) : (
+                            <TextField
+                              type="number"
+                              value={formatWindSpeed(row.speedKts).value.toFixed(1)}
+                              onChange={e => updateRow(i, 'speedKts', parseWindSpeed(Number(e.target.value)))}
+                              sx={{ width: '100%' }}
+                              size="small"
+                            />
+                          )}
+                        </TableCell>
+                        {!lock && (
+                          <TableCell padding="none">
+                            <Tooltip title="Remove row">
+                              <IconButton size="small" onClick={() => removeRowAt(i)}>
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-          {!lock && (
-            <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
-              <Tooltip title="Add row">
-                <IconButton size="small" onClick={addRow} color="primary">
-                  <AddIcon />
-                </IconButton>
-              </Tooltip>
-              <Button variant="outlined" size="small" onClick={invertWind}>
-                Invert
-              </Button>
-            </Stack>
+              {!lock && (
+                <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
+                  <Tooltip title="Add row">
+                    <IconButton size="small" onClick={addRow} color="primary">
+                      <AddIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Button variant="outlined" size="small" onClick={invertWind}>
+                    Invert
+                  </Button>
+                </Stack>
+              )}
+
+              {lock && (
+                <Button sx={{ mt: 2 }} variant="outlined" size="small" onClick={unlock}>
+                  Unlock
+                </Button>
+              )}
+            </>
           )}
-
-          {lock && (
-            <Button sx={{ mt: 2 }} variant="outlined" onClick={unlock}>
-              Unlock
-            </Button>
-          )}
-        </>
-      )}
-
-      {fetching && (
-        <Box sx={{ mt: 2 }}>
-          <CircularProgress />
-        </Box>
-      )}
+      </>
     </Box>
   );
 }

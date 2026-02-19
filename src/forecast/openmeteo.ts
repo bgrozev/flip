@@ -24,9 +24,9 @@ interface ElevationResponse {
   elevation: number[];
 }
 
-export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0): Promise<Winds> {
-  const elevationFt = await fetchElevation(point);
-  const gfs = await fetchGfs(point, hourOffset);
+export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): Promise<Winds> {
+  const elevationFt = await fetchElevation(point, signal);
+  const gfs = await fetchGfs(point, hourOffset, signal);
 
   console.log(`Elevation is ${elevationFt} ft`);
 
@@ -59,16 +59,17 @@ export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0): Pro
   return winds;
 }
 
-function fetchElevation(point: LatLng): Promise<number> {
+function fetchElevation(point: LatLng, signal?: AbortSignal): Promise<number> {
   return window
     .fetch(
-      `https://api.open-meteo.com/v1/elevation?latitude=${point.lat}&longitude=${point.lng}`
+      `https://api.open-meteo.com/v1/elevation?latitude=${point.lat}&longitude=${point.lng}`,
+      { signal }
     )
     .then(d => d.json())
     .then((json: ElevationResponse) => json.elevation[0] * metersToFeet);
 }
 
-function fetchGfs(point: LatLng, hourOffset: number = 0): Promise<GfsResponse> {
+function fetchGfs(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): Promise<GfsResponse> {
   let url = `https://api.open-meteo.com/v1/gfs?latitude=${point.lat}&longitude=${point.lng}`;
 
   hPas.forEach(hPa => {
@@ -83,5 +84,5 @@ function fetchGfs(point: LatLng, hourOffset: number = 0): Promise<GfsResponse> {
 
   console.log(`Fetching open-meteo from ${url}`);
 
-  return window.fetch(url).then(d => d.json());
+  return window.fetch(url, { signal }).then(d => d.json());
 }

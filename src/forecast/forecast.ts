@@ -21,10 +21,11 @@ export type { ForecastSource };
 export function fetchForecast(
   center: LatLng,
   fetchDzGroundWind?: () => Promise<IWindRow>,
-  hourOffset: number = 0
+  hourOffset: number = 0,
+  signal?: AbortSignal
 ): Promise<Winds> {
   return Promise.all([
-    fetchOpenMeteo(center, hourOffset),
+    fetchOpenMeteo(center, hourOffset, signal),
     fetchDzGroundWind
       ? new Promise<IWindRow | null>(resolve => {
           fetchDzGroundWind()

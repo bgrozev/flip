@@ -56,7 +56,7 @@ describe('fetchForecast', () => {
 
     const result = await fetchForecast(mockCenter, undefined);
 
-    expect(fetchOpenMeteo).toHaveBeenCalledWith(mockCenter);
+    expect(fetchOpenMeteo).toHaveBeenCalledWith(mockCenter, 0, undefined);
     expect(result).toBe(mockWinds);
   });
 
