@@ -8,7 +8,16 @@ import {
   RotateLeft as RotateLeftIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
-import { Box, Divider, Stack, Typography, useMediaQuery } from '@mui/material';
+import {
+  BottomNavigation,
+  BottomNavigationAction,
+  Box,
+  Divider,
+  Paper,
+  Stack,
+  Typography,
+  useMediaQuery
+} from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { AppProvider, Navigation } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
@@ -350,9 +359,29 @@ function DashboardContent() {
     </DashboardLayout>
   );
 
+  const BOTTOM_NAV_PATHS = ['/pattern', '/manoeuvre', '/target', '/wind'];
+  const bottomNavValue = BOTTOM_NAV_PATHS.indexOf(router.pathname);
+
   return (
     <AppProvider router={router} theme={demoTheme} navigation={NAVIGATION}>
       {dashboard}
+      {isMobile && (
+        <Paper
+          sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200 }}
+          elevation={3}
+        >
+          <BottomNavigation
+            value={bottomNavValue === -1 ? false : bottomNavValue}
+            onChange={(_e, newValue) => router.navigate(BOTTOM_NAV_PATHS[newValue])}
+            showLabels
+          >
+            <BottomNavigationAction label="Pattern" icon={<CropIcon />} />
+            <BottomNavigationAction label="Manoeuvre" icon={<RotateLeftIcon />} />
+            <BottomNavigationAction label="Target" icon={<AdjustIcon />} />
+            <BottomNavigationAction label="Wind" icon={<AirIcon />} />
+          </BottomNavigation>
+        </Paper>
+      )}
     </AppProvider>
   );
 }
@@ -414,6 +443,27 @@ interface LayoutWithSidebarProps {
 }
 
 function LayoutWithSidebar({ box, map, title }: LayoutWithSidebarProps) {
+  const isMobile = useMediaQuery('(max-width:600px)');
+
+  // On mobile: show either the panel (full-width) or the map — not both
+  if (isMobile) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', overflow: 'auto', pb: '56px' }}>
+        {box ? (
+          <Box sx={{ px: 2, pt: 2 }}>
+            <Typography variant="h6" fontWeight="medium" gutterBottom>
+              {title}
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            {box}
+          </Box>
+        ) : (
+          map
+        )}
+      </Box>
+    );
+  }
+
   return (
     <Stack direction="row" spacing={2} sx={{ width: '100%', height: '100%' }}>
       {box && (
