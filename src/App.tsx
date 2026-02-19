@@ -241,10 +241,6 @@ function DashboardContent() {
     fetchWinds(maxAlt);
   };
 
-  if (!settings.showPreWind) {
-    c = [];
-  }
-
   function onUpwindClick() {
     if (winds?.winds && winds.winds.length > 0 && winds.winds[0].speedKts > 0 && target) {
       const newTarget: Target = {

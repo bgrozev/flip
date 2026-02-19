@@ -330,7 +330,7 @@ function MapComponent({
   settings,
   waitingForClick
 }: MapComponentProps) {
-  const { showPoms, showPomAltitudes, showPomTooltips, displayWindArrow, highlightCorrespondingPoints } = settings;
+  const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints } = settings;
   const { formatAltitude, altitudeLabel } = useUnits();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [hoveredPreWindIndex, setHoveredPreWindIndex] = useState<number | null>(null);
@@ -399,14 +399,18 @@ function MapComponent({
         options={DEFAULT_MAP_OPTIONS}
         onLoad={onMapLoad}
       >
-        <PolylineF
-          path={pathALatLngs.filter(p => p.phase === 'manoeuvre')}
-          options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.manoeuvre }}
-        />
-        <PolylineF
-          path={pathALatLngs.filter(p => p.phase === 'pattern')}
-          options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.pattern }}
-        />
+        {showPreWind && (
+          <PolylineF
+            path={pathALatLngs.filter(p => p.phase === 'manoeuvre')}
+            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.manoeuvre }}
+          />
+        )}
+        {showPreWind && (
+          <PolylineF
+            path={pathALatLngs.filter(p => p.phase === 'pattern')}
+            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.pattern }}
+          />
+        )}
         <PolylineF
           path={pathBLatLngs.filter(p => p.phase === 'manoeuvre')}
           options={{ ...PATH_OPTIONS, strokeColor: PATH_COLORS.manoeuvre }}
@@ -417,7 +421,7 @@ function MapComponent({
         />
 
         {/* Pre-wind path - all points are interactive */}
-        {pathALatLngs.map((point, i) => (
+        {showPreWind && pathALatLngs.map((point, i) => (
           <InteractivePoint
             key={`prewind-${i}`}
             point={point}
