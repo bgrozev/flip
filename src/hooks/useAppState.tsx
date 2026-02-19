@@ -20,8 +20,8 @@ const DEFAULT_TARGET: Target = {
 
 export const DEFAULT_PATTERN_PARAMS: PatternParams = {
   type: 'three-leg',
-  descentRateMph: 12,
-  glideRatio: 2.6,
+  descentRateMph: 9,
+  glideRatio: 3.0,
   legs: [
     { altitude: 300, direction: 0 },
     { altitude: 300, direction: 270 },
