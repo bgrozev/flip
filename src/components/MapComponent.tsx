@@ -153,8 +153,8 @@ function ManoeuvreStatsDisplay({ stats, altitudeLabel, showDrift = true }: {
       <div><strong>Manoeuvre</strong></div>
       <div>Time: {stats.timeSec.toFixed(1)}s</div>
       {/* <div>Bearing: {formatDegrees(stats.initialBearing)}→{formatDegrees(stats.finalBearing)}</div> */}
-      <div>Back: {formatDistance(stats.distanceX, altitudeLabel)}</div>
-      <div>Offset: {formatDistance(stats.distanceY, altitudeLabel)}</div>
+      <div>Offset: {formatDistance(stats.distanceX, altitudeLabel)}</div>
+      <div>Back: {formatDistance(stats.distanceY, altitudeLabel)}</div>
       {showDrift && stats.windDriftDist > 1 && (
         <div>
           Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees(stats.windDriftDir)}
