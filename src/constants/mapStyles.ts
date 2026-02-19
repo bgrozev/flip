@@ -8,8 +8,8 @@ export const PATH_COLORS = {
   manoeuvre: '#ff4444',
   /** Pattern path color (green) */
   pattern: '#00e676',
-  /** Pre-wind (ghost) path color — muted grey */
-  preWind: '#aaaaaa',
+  /** Pre-wind (ghost) path color — white for visibility on satellite */
+  preWind: '#ffffff',
   /** Marker stroke color */
   markerStroke: '#000000'
 } as const;
@@ -71,7 +71,7 @@ export const PATH_OPTIONS_DOTTED = {
     {
       icon: {
         path: 'M 0,-1 0,1',
-        strokeOpacity: 0.7,
+        strokeOpacity: 1.0,
         scale: 2
       },
       offset: '0',
