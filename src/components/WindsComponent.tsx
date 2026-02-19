@@ -1,7 +1,13 @@
 import {
+  Add as AddIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+import {
   Box,
   Button,
+  Chip,
   CircularProgress,
+  IconButton,
   Paper,
   Stack,
   Table,
@@ -11,7 +17,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Tooltip
 } from '@mui/material';
 import React, { useCallback } from 'react';
 
@@ -53,9 +59,9 @@ export default function WindsComponent({
     setWinds(new Winds([...winds.winds]));
   };
 
-  const removeRow = () => {
-    winds.winds.pop();
-    setWinds(new Winds([...winds.winds]));
+  const removeRowAt = (index: number) => {
+    const updated = winds.winds.filter((_, i) => i !== index);
+    setWinds(new Winds(updated));
   };
 
   const updateRow = (index: number, field: 'altFt' | 'direction' | 'speedKts', value: number) => {
@@ -85,30 +91,26 @@ export default function WindsComponent({
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        paddingLeft: 0
-      }}
-    >
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', paddingLeft: 0 }}>
       {!fetching && (
         <>
-          <Box sx={{ marginBottom: 2 }}>
-            <Typography>
-              Ground winds source: {forecastSourceLabel(winds.groundSource)}
-            </Typography>
-            <Typography>
-              Upper winds source: {forecastSourceLabel(winds.aloftSource)}
-            </Typography>
-          </Box>
+          {/* Source chips */}
+          <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+            <Chip
+              size="small"
+              label={`Ground: ${forecastSourceLabel(winds.groundSource)}`}
+              color={winds.groundSource === SOURCE_MANUAL ? 'default' : 'info'}
+              variant={winds.groundSource === SOURCE_MANUAL ? 'outlined' : 'filled'}
+            />
+            <Chip
+              size="small"
+              label={`Upper: ${forecastSourceLabel(winds.aloftSource)}`}
+              color={winds.aloftSource === SOURCE_MANUAL ? 'default' : 'info'}
+              variant={winds.aloftSource === SOURCE_MANUAL ? 'outlined' : 'filled'}
+            />
+          </Stack>
 
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ marginTop: 2, marginBottom: 2, alignItems: 'center' }}
-          >
+          <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
             <Button variant="outlined" onClick={fetch}>
               Fetch forecast
             </Button>
@@ -119,23 +121,23 @@ export default function WindsComponent({
 
           <TableContainer
             component={Paper}
-            sx={{
-              flexGrow: 1, // Makes the table container take available space
-              padding: 0,
-              overflow: 'hidden' // Disables scrolling
-            }}
+            sx={{ flexGrow: 1, padding: 0, overflow: 'hidden' }}
           >
-            <Table>
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Altitude ({altitudeLabel})</TableCell>
                   <TableCell>Direction</TableCell>
                   <TableCell>Speed ({windSpeedLabel})</TableCell>
+                  {!lock && <TableCell padding="none" />}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {winds.winds.map((row, i) => (
-                  <TableRow key={`tr-${i}`}>
+                  <TableRow
+                    key={`tr-${i}`}
+                    sx={i === 0 ? { bgcolor: 'action.selected' } : undefined}
+                  >
                     <TableCell sx={{ width: '30%' }}>
                       <TextField
                         type="number"
@@ -144,6 +146,7 @@ export default function WindsComponent({
                         value={Math.round(formatAltitude(row.altFt).value)}
                         onChange={e => updateRow(i, 'altFt', parseAltitude(Number(e.target.value)))}
                         sx={{ width: '100%' }}
+                        size="small"
                       />
                     </TableCell>
                     <TableCell sx={{ width: '30%' }}>
@@ -156,6 +159,7 @@ export default function WindsComponent({
                           updateRow(i, 'direction', (360 + Number(e.target.value)) % 360);
                         }}
                         sx={{ width: '100%' }}
+                        size="small"
                       />
                     </TableCell>
                     <TableCell sx={{ width: '30%' }}>
@@ -165,31 +169,39 @@ export default function WindsComponent({
                         value={formatWindSpeed(row.speedKts).value.toFixed(1)}
                         onChange={e => updateRow(i, 'speedKts', parseWindSpeed(Number(e.target.value)))}
                         sx={{ width: '100%' }}
+                        size="small"
                       />
                     </TableCell>
+                    {!lock && (
+                      <TableCell padding="none">
+                        <Tooltip title="Remove row">
+                          <IconButton size="small" onClick={() => removeRowAt(i)}>
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
 
-          {/* Row Buttons */}
           {!lock && (
-            <Stack direction="row" spacing={2} sx={{ marginTop: 2, flexWrap: 'wrap', gap: 1 }}>
-              <Button variant="outlined" onClick={addRow}>
-                Add row
-              </Button>
-              <Button variant="outlined" onClick={removeRow}>
-                Remove row
-              </Button>
-              <Button variant="outlined" onClick={invertWind}>
+            <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
+              <Tooltip title="Add row">
+                <IconButton size="small" onClick={addRow} color="primary">
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+              <Button variant="outlined" size="small" onClick={invertWind}>
                 Invert
               </Button>
             </Stack>
           )}
 
           {lock && (
-            <Button sx={{ marginTop: 2 }} variant="outlined" onClick={unlock}>
+            <Button sx={{ mt: 2 }} variant="outlined" onClick={unlock}>
               Unlock
             </Button>
           )}
@@ -197,8 +209,7 @@ export default function WindsComponent({
       )}
 
       {fetching && (
-        <Box sx={{ marginTop: 2 }}>
-          <Typography variant="body2">Fetching forecast...</Typography>
+        <Box sx={{ mt: 2 }}>
           <CircularProgress />
         </Box>
       )}
