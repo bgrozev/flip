@@ -4,6 +4,7 @@ import React from 'react';
 import { FlightPath, ManoeuvreConfig, ManoeuvreType } from '../types';
 
 import { DEFAULT_MANOEUVRE_PARAMS } from './ManoeuvreParametersComponent';
+import ManoeuvreAltitudeControl from './ManoeuvreAltitudeControl';
 import ManoeuvreParametersComponent from './ManoeuvreParametersComponent';
 import ManoeuvreSamplesComponent from './ManoeuvreSamplesComponent';
 import ManoeuvreTrackComponent from './ManoeuvreTrackComponent';
@@ -84,6 +85,13 @@ export default function ManoeuvreComponent({
           onChange={(index, left) =>
             onConfigChange({ ...manoeuvreConfig, sampleIndex: index, sampleLeft: left })
           }
+        />
+      )}
+
+      {(manoeuvreConfig.type === 'track' || manoeuvreConfig.type === 'samples') && (
+        <ManoeuvreAltitudeControl
+          config={manoeuvreConfig}
+          onChange={offset => onConfigChange({ ...manoeuvreConfig, initiationAltitudeOffset: offset })}
         />
       )}
     </Box>

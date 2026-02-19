@@ -49,20 +49,43 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
+  let path: FlightPath;
+
   switch (config.type) {
     case 'parameters':
       return config.params ? createManoeuvrePath(config.params) : [];
     case 'track':
-      return config.trackData ?? [];
+      path = config.trackData ?? [];
+      break;
     case 'samples': {
       if (typeof config.sampleIndex !== 'number') return [];
-      let path = samples[config.sampleIndex]?.getPath() ?? [];
+      path = samples[config.sampleIndex]?.getPath() ?? [];
       if (config.sampleLeft === false) path = mirror(path);
-      return path;
+      break;
     }
     default:
       return [];
   }
+
+  const offset = config.initiationAltitudeOffset;
+
+  if (offset && offset !== 0 && path.length > 0) {
+    const originalInitAlt = path[path.length - 1].properties.alt;
+    const maxDelta = originalInitAlt * 0.15;
+    const clampedNewAlt = Math.min(
+      Math.max(originalInitAlt + offset, originalInitAlt - maxDelta),
+      originalInitAlt + maxDelta
+    );
+    const scale = clampedNewAlt / originalInitAlt;
+
+    path = path.map(p => ({
+      ...p,
+      geometry: { ...p.geometry },
+      properties: { ...p.properties, alt: p.properties.alt * scale }
+    }));
+  }
+
+  return path;
 }
 
 // Context value type

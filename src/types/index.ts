@@ -112,6 +112,8 @@ export interface ManoeuvreConfig {
   // For 'samples' mode
   sampleIndex?: number;
   sampleLeft?: boolean;
+  // Offset in feet applied to the initiation altitude (track/samples only)
+  initiationAltitudeOffset?: number;
 }
 
 export interface Preset {
