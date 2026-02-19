@@ -33,59 +33,83 @@ interface CheckboxOption {
   tooltip: string;
 }
 
-const checkboxOptions: CheckboxOption[] = [
+interface SettingsGroup {
+  title: string;
+  options: CheckboxOption[];
+}
+
+const settingsGroups: SettingsGroup[] = [
   {
-    key: 'showPreWind',
-    label: 'Display pre-wind adjusted pattern',
-    tooltip:
-      'Plot the pattern before it is adjusted for wind. You will see two lines plotted.'
+    title: 'Appearance',
+    options: [
+      {
+        key: 'showPresets',
+        label: 'Show presets',
+        tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
+      }
+    ]
   },
   {
-    key: 'showPomAltitudes',
-    label: 'Show pattern point altitudes',
-    tooltip: 'Display the altitude of pattern points on the map.'
+    title: 'Map',
+    options: [
+      {
+        key: 'showPreWind',
+        label: 'Show pre-wind pattern',
+        tooltip: 'Plot the pattern before it is adjusted for wind. You will see two lines plotted.'
+      },
+      {
+        key: 'showPomAltitudes',
+        label: 'Show pattern point altitudes',
+        tooltip: 'Display the altitude of pattern points on the map.'
+      },
+      {
+        key: 'showPomTooltips',
+        label: 'Show tooltips on pattern points',
+        tooltip: 'Show detailed information when hovering over pattern points on the map.'
+      },
+      {
+        key: 'highlightCorrespondingPoints',
+        label: 'Highlight corresponding pre-wind point',
+        tooltip:
+          'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.'
+      },
+      {
+        key: 'displayWindArrow',
+        label: 'Show average wind on the map',
+        tooltip: 'Shows an arrow with the average wind on top of the map.'
+      }
+    ]
   },
   {
-    key: 'showPomTooltips',
-    label: 'Show tooltips on pattern points',
-    tooltip: 'Show detailed information when hovering over pattern points on the map.'
+    title: 'Wind',
+    options: [
+      {
+        key: 'useDzGroundWind',
+        label: 'Use observed ground wind',
+        tooltip: 'Use real-time ground wind observations. Only available for certain locations.'
+      },
+      {
+        key: 'interpolateWind',
+        label: 'Interpolate winds',
+        tooltip: 'Smooth out wind changes across altitudes by interpolating.'
+      },
+      {
+        key: 'displayWindSummary',
+        label: 'Show wind summary in title bar',
+        tooltip: 'Shows the average and ground wind in the top bar of the app.'
+      }
+    ]
   },
   {
-    key: 'highlightCorrespondingPoints',
-    label: 'Highlight corresponding pre-wind point',
-    tooltip: 'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.'
-  },
-  {
-    key: 'useDzGroundWind',
-    label: 'Use observed ground wind when available',
-    tooltip:
-      'Use real-time ground wind observations. Only available for certain locations.'
-  },
-  {
-    key: 'interpolateWind',
-    label: 'Interpolate winds between specified altitudes',
-    tooltip: 'Smooth out wind changes across altitudes by interpolating.'
-  },
-  {
-    key: 'displayWindArrow',
-    label: 'Show average wind on the map',
-    tooltip: 'Shows an arrow with the average wind on top of the map.'
-  },
-  {
-    key: 'displayWindSummary',
-    label: 'Show wind summary in the title bar',
-    tooltip: 'Shows the average and ground wind in the top bar of the app.'
-  },
-  {
-    key: 'correctPatternHeading',
-    label: 'Correct pattern heading for a 90/270/450/etc turn',
-    tooltip:
-      'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.'
-  },
-  {
-    key: 'showPresets',
-    label: 'Show presets',
-    tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
+    title: 'Pattern',
+    options: [
+      {
+        key: 'correctPatternHeading',
+        label: 'Correct heading for rectangular turn',
+        tooltip:
+          'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.'
+      }
+    ]
   }
 ];
 
@@ -94,87 +118,117 @@ interface SettingsComponentProps {
   setSettings: (settings: Settings) => void;
 }
 
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography
+      variant="caption"
+      sx={{
+        textAlign: 'left',
+        color: 'text.secondary',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+        pt: 0.5
+      }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+function SettingRow({
+  label,
+  tooltip,
+  children
+}: {
+  label?: string;
+  tooltip?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        py: 0.25,
+        width: '100%',
+        boxSizing: 'border-box'
+      }}
+    >
+      {label !== undefined && (
+        <Tooltip title={tooltip ?? ''} placement="right">
+          <Typography sx={{ flexGrow: 1, textAlign: 'left' }}>{label}</Typography>
+        </Tooltip>
+      )}
+      {children}
+    </Box>
+  );
+}
+
 export default function SettingsComponent({
   settings,
   setSettings
 }: SettingsComponentProps) {
   const handleCheckboxChange = (key: keyof Settings) => {
-    const newSettings = { ...settings, [key]: !settings[key] };
-
-    setSettings(newSettings);
+    setSettings({ ...settings, [key]: !settings[key] });
   };
 
   const handleNumberChange = (key: keyof Settings) => (value: number) => {
-    const newSettings = { ...settings, [key]: Number(value) };
-
-    setSettings(newSettings);
+    setSettings({ ...settings, [key]: Number(value) });
   };
 
   const handleUnitChange = <K extends keyof UnitPreferences>(
     unitKey: K,
     value: UnitPreferences[K]
   ) => {
-    const newSettings = {
-      ...settings,
-      units: { ...settings.units, [unitKey]: value }
-    };
-    setSettings(newSettings);
+    setSettings({ ...settings, units: { ...settings.units, [unitKey]: value } });
   };
 
   return (
-    <Stack direction="column" spacing={1} alignItems="flex-start">
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: 0.5,
-          width: '100%',
-          boxSizing: 'border-box'
-        }}
-      >
-        Light/Dark theme
+    <Stack direction="column" spacing={0.5} alignItems="flex-start" sx={{ width: '100%', textAlign: 'left' }}>
+      <SectionHeader>Appearance</SectionHeader>
+      <SettingRow label="Light / Dark theme">
         <ThemeSwitcher />
-      </Box>
-      {checkboxOptions.map(({ key, label, tooltip }) => (
-        <Box
-          key={key}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 0.5,
-            width: '100%',
-            boxSizing: 'border-box'
-          }}
-        >
-          <Tooltip title={tooltip} placement="right">
-            <Typography sx={{ flexGrow: 1 }}>{label}</Typography>
-          </Tooltip>
-          <Switch
-            checked={Boolean(settings[key])}
-            onChange={() => handleCheckboxChange(key)}
-          />
-        </Box>
+      </SettingRow>
+      {settingsGroups[0].options.map(({ key, label, tooltip }) => (
+        <SettingRow key={key} label={label} tooltip={tooltip}>
+          <Switch checked={Boolean(settings[key])} onChange={() => handleCheckboxChange(key)} />
+        </SettingRow>
       ))}
 
-      <Divider />
-      <NumberInput
-        title="Show upper winds in the table up to this altitude. "
-        label="Wind altitude limit"
-        initialValue={settings.limitWind}
-        step={1000}
-        min={1000}
-        unit="ft"
-        onChange={handleNumberChange('limitWind')}
-      />
+      {settingsGroups.slice(1).map(group => (
+        <React.Fragment key={group.title}>
+          <Divider sx={{ width: '100%', mt: 1 }} />
+          <SectionHeader>{group.title}</SectionHeader>
+          {group.options.map(({ key, label, tooltip }) => (
+            <SettingRow key={key} label={label} tooltip={tooltip}>
+              <Switch
+                checked={Boolean(settings[key])}
+                onChange={() => handleCheckboxChange(key)}
+              />
+            </SettingRow>
+          ))}
+          {group.title === 'Wind' && (
+            <Box sx={{ pt: 0.5, width: '100%' }}>
+              <NumberInput
+                title="Show upper winds in the table up to this altitude."
+                label="Wind altitude limit"
+                initialValue={settings.limitWind}
+                step={1000}
+                min={1000}
+                unit="ft"
+                onChange={handleNumberChange('limitWind')}
+              />
+            </Box>
+          )}
+        </React.Fragment>
+      ))}
 
-      <Divider sx={{ width: '100%', my: 2 }} />
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        Display Units
-      </Typography>
+      <Divider sx={{ width: '100%', mt: 1 }} />
+      <SectionHeader>Units</SectionHeader>
 
-      <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+      <FormControl fullWidth size="small" sx={{ mt: 0.5 }}>
         <InputLabel id="altitude-unit-label">Altitude</InputLabel>
         <Select
           labelId="altitude-unit-label"
@@ -192,7 +246,7 @@ export default function SettingsComponent({
         </Select>
       </FormControl>
 
-      <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+      <FormControl fullWidth size="small">
         <InputLabel id="wind-speed-unit-label">Wind Speed</InputLabel>
         <Select
           labelId="wind-speed-unit-label"
