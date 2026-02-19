@@ -157,6 +157,8 @@ function DashboardContent() {
     setSettings
   } = useAppState();
 
+  const [forecastTime, setForecastTime] = useState<Date | null>(null);
+
   const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
     target: target.target,
     settings
@@ -238,11 +240,15 @@ function DashboardContent() {
         windSummary.ground.observed = true;
       }
     }
+    if (winds.validTime) {
+      windSummary.forecastTime = winds.validTime;
+    }
   }
 
-  const handleFetchWinds = () => {
+  const handleFetchWinds = (overrideForecastTime?: Date | null) => {
     const maxAlt = c2.length > 0 ? c2[c2.length - 1].properties.alt : undefined;
-    fetchWinds(maxAlt);
+    const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
+    fetchWinds(maxAlt, ft);
   };
 
   function onUpwindClick() {
@@ -284,6 +290,8 @@ function DashboardContent() {
         setWinds={setWinds}
         fetching={fetching}
         fetch={handleFetchWinds}
+        forecastTime={forecastTime}
+        onForecastTimeChange={setForecastTime}
       />
     );
   } else if (router.pathname === '/about') {
@@ -343,7 +351,7 @@ function DashboardContent() {
           />
         ),
         sidebarFooter: SidebarFooter,
-        appTitle: () => CustomAppTitle({ wind: windSummary })
+        appTitle: () => CustomAppTitle({ wind: windSummary, forecastTime: windSummary?.forecastTime })
       }}
     >
       <LayoutWithSidebar box={sidebar} map={map} />
@@ -395,7 +403,7 @@ function SidebarFooter({ mini }: { mini?: boolean }) {
   );
 }
 
-function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
+function CustomAppTitle({ wind, forecastTime }: { wind?: WindSummaryData; forecastTime?: Date }) {
   return (
     <Stack direction="row" alignItems="center" spacing={2}>
       <FlipIcon />
@@ -421,6 +429,7 @@ function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
             speedKts: wind.ground.speedKts,
             observed: wind.ground.observed
           }}
+          forecastTime={forecastTime}
         />
       )}
     </Stack>

@@ -1,6 +1,7 @@
 import {
   Add as AddIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Remove as RemoveIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -17,7 +18,8 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip
+  Tooltip,
+  Typography
 } from '@mui/material';
 import React, { useCallback } from 'react';
 
@@ -29,14 +31,38 @@ interface WindsComponentProps {
   winds: Winds;
   setWinds: (winds: Winds) => void;
   fetching: boolean;
-  fetch: () => void;
+  fetch: (ft?: Date | null) => void;
+  forecastTime: Date | null;
+  onForecastTimeChange: (t: Date | null) => void;
+}
+
+/** Format a Date to the value string required by datetime-local inputs (YYYY-MM-DDTHH:mm) */
+function toDateTimeLocalString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+/** Round a Date up to the nearest hour */
+function roundUpToHour(date: Date): Date {
+  const result = new Date(date);
+  if (result.getMinutes() > 0 || result.getSeconds() > 0 || result.getMilliseconds() > 0) {
+    result.setHours(result.getHours() + 1, 0, 0, 0);
+  } else {
+    result.setMinutes(0, 0, 0);
+  }
+  return result;
 }
 
 export default function WindsComponent({
   winds,
   setWinds,
   fetching,
-  fetch
+  fetch,
+  forecastTime,
+  onForecastTimeChange
 }: WindsComponentProps) {
   const {
     formatAltitude,
@@ -53,6 +79,29 @@ export default function WindsComponent({
   const reset = useCallback(() => {
     setWinds(Winds.createDefault());
   }, [setWinds]);
+
+  // Forecast time picker state
+  const now = new Date();
+  const minDate = roundUpToHour(now);
+  const maxDate = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+  const forecastInputValue = forecastTime
+    ? toDateTimeLocalString(forecastTime)
+    : toDateTimeLocalString(minDate);
+
+  const adjustForecastHour = (delta: number) => {
+    const base = forecastTime ?? minDate;
+    const next = new Date(base.getTime() + delta * 3600 * 1000);
+    let newTime: Date | null;
+    if (next < minDate) {
+      newTime = null;
+    } else if (next > maxDate) {
+      newTime = maxDate;
+    } else {
+      newTime = next;
+    }
+    onForecastTimeChange(newTime);
+    fetch(newTime);
+  };
 
   const addRow = () => {
     winds.addRow(new WindRow(0, 0, 0));
@@ -110,8 +159,52 @@ export default function WindsComponent({
             />
           </Stack>
 
+          {/* Forecast time picker */}
+          <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
+              Forecast time:
+            </Typography>
+            <Tooltip title="One hour earlier">
+              <IconButton size="small" onClick={() => adjustForecastHour(-1)}>
+                <RemoveIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <TextField
+              type="datetime-local"
+              size="small"
+              value={forecastInputValue}
+              inputProps={{
+                min: toDateTimeLocalString(minDate),
+                max: toDateTimeLocalString(maxDate)
+              }}
+              onChange={e => {
+                if (!e.target.value) {
+                  onForecastTimeChange(null);
+                } else {
+                  onForecastTimeChange(new Date(e.target.value));
+                }
+              }}
+              sx={{ minWidth: 200 }}
+            />
+            <Tooltip title="One hour later">
+              <IconButton size="small" onClick={() => adjustForecastHour(1)}>
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {forecastTime && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => onForecastTimeChange(null)}
+                sx={{ fontSize: '0.7rem', minWidth: 0, px: 0.5 }}
+              >
+                reset
+              </Button>
+            )}
+          </Stack>
+
           <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
-            <Button variant="outlined" onClick={fetch}>
+            <Button variant="outlined" onClick={() => fetch()}>
               Fetch forecast
             </Button>
             <Button variant="outlined" onClick={reset}>

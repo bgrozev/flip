@@ -1,8 +1,9 @@
 import {
   Navigation as NavigationIcon,
+  Schedule as ScheduleIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
-import { Stack, Tooltip, Typography } from '@mui/material';
+import { Chip, Stack, Tooltip, Typography } from '@mui/material';
 import React from 'react';
 
 import { useUnits } from '../hooks';
@@ -16,15 +17,24 @@ interface WindData {
 interface WindSummaryProps {
   average: WindData;
   ground: WindData;
+  forecastTime?: Date;
 }
 
-export default function WindSummary({ average, ground }: WindSummaryProps) {
+export default function WindSummary({ average, ground, forecastTime }: WindSummaryProps) {
   const { formatWindSpeed, windSpeedLabel } = useUnits();
   const rotAverage = average.direction + 180;
   const rotGround = ground.direction + 180;
 
   const avgSpeed = formatWindSpeed(average.speedKts);
   const gndSpeed = formatWindSpeed(ground.speedKts);
+
+  const isFutureTime = forecastTime && forecastTime.getTime() - Date.now() > 60 * 60 * 1000;
+  const forecastLabel = forecastTime
+    ? forecastTime.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+    : '';
+  const forecastTooltip = forecastTime
+    ? `Forecast is for ${forecastTime.toLocaleString()} — verify conditions before jumping.`
+    : '';
 
   return (
     <Stack direction="row" spacing={3}>
@@ -49,6 +59,16 @@ export default function WindSummary({ average, ground }: WindSummaryProps) {
       {ground.observed && (
         <Tooltip sx={{ fontSize: 16, mx: 0.5 }} title="Observed conditions">
           <VisibilityIcon />
+        </Tooltip>
+      )}
+      {isFutureTime && (
+        <Tooltip title={forecastTooltip}>
+          <Chip
+            size="small"
+            color="warning"
+            icon={<ScheduleIcon />}
+            label={forecastLabel}
+          />
         </Tooltip>
       )}
     </Stack>

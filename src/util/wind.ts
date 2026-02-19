@@ -24,6 +24,7 @@ export interface IWinds {
   center?: LatLng;
   groundSource: ForecastSource;
   aloftSource: ForecastSource;
+  validTime?: Date;
   addRow(wind: WindRow): void;
   setGroundWind(windRow: WindRow): void;
   getWindAt(altFt: number, interpolate?: boolean): WindRow;
@@ -34,6 +35,7 @@ export class Winds implements IWinds {
   center?: LatLng;
   groundSource: ForecastSource;
   aloftSource: ForecastSource;
+  validTime?: Date;
 
   constructor(winds: WindRow[] = [new WindRow(0, 0, 0)], center?: LatLng) {
     this.winds = winds;
@@ -56,6 +58,7 @@ export class Winds implements IWinds {
     const winds = new Winds(other.winds.map(w => w.copy()), other.center);
     winds.groundSource = other.groundSource;
     winds.aloftSource = other.aloftSource;
+    winds.validTime = other.validTime;
     return winds;
   }
 

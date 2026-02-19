@@ -80,6 +80,7 @@ export interface Settings {
 export interface WindSummaryData {
   average: { speedKts?: number; direction?: number };
   ground?: { direction: number; speedKts: number; observed?: boolean };
+  forecastTime?: Date;
 }
 
 // CSV parsing types (note: d3 csvParse returns strings, but JS coerces to number in arithmetic)

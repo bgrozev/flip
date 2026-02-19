@@ -8,11 +8,12 @@ const hPas = [
 ];
 
 interface GfsHourlyData {
-  wind_direction_10m: number;
-  wind_speed_10m: number;
-  wind_direction_80m: number;
-  wind_speed_80m: number;
-  [key: string]: number;
+  time: string[];
+  wind_direction_10m: number[];
+  wind_speed_10m: number[];
+  wind_direction_80m: number[];
+  wind_speed_80m: number[];
+  [key: string]: number[] | string[];
 }
 
 interface GfsResponse {
@@ -23,9 +24,9 @@ interface ElevationResponse {
   elevation: number[];
 }
 
-export async function fetchOpenMeteo(point: LatLng): Promise<Winds> {
+export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0): Promise<Winds> {
   const elevationFt = await fetchElevation(point);
-  const gfs = await fetchGfs(point);
+  const gfs = await fetchGfs(point, hourOffset);
 
   console.log(`Elevation is ${elevationFt} ft`);
 
@@ -33,22 +34,23 @@ export async function fetchOpenMeteo(point: LatLng): Promise<Winds> {
 
   winds.aloftSource = SOURCE_OPEN_METEO;
   winds.groundSource = SOURCE_OPEN_METEO;
+  winds.validTime = new Date((gfs.hourly.time[hourOffset] as string) + 'Z');
 
   winds.addRow(
-    new WindRow(10 * metersToFeet, gfs.hourly.wind_direction_10m, gfs.hourly.wind_speed_10m)
+    new WindRow(10 * metersToFeet, (gfs.hourly.wind_direction_10m as number[])[hourOffset], (gfs.hourly.wind_speed_10m as number[])[hourOffset])
   );
   winds.addRow(
-    new WindRow(80 * metersToFeet, gfs.hourly.wind_direction_80m, gfs.hourly.wind_speed_80m)
+    new WindRow(80 * metersToFeet, (gfs.hourly.wind_direction_80m as number[])[hourOffset], (gfs.hourly.wind_speed_80m as number[])[hourOffset])
   );
   hPas.forEach(hPa => {
-    const e = gfs.hourly[`geopotential_height_${hPa}hPa`] * metersToFeet - elevationFt;
+    const e = (gfs.hourly[`geopotential_height_${hPa}hPa`] as number[])[hourOffset] * metersToFeet - elevationFt;
 
     if (e > 80) {
       winds.addRow(
         new WindRow(
           e,
-          gfs.hourly[`wind_direction_${hPa}hPa`],
-          gfs.hourly[`wind_speed_${hPa}hPa`]
+          (gfs.hourly[`wind_direction_${hPa}hPa`] as number[])[hourOffset],
+          (gfs.hourly[`wind_speed_${hPa}hPa`] as number[])[hourOffset]
         )
       );
     }
@@ -66,7 +68,7 @@ function fetchElevation(point: LatLng): Promise<number> {
     .then((json: ElevationResponse) => json.elevation[0] * metersToFeet);
 }
 
-function fetchGfs(point: LatLng): Promise<GfsResponse> {
+function fetchGfs(point: LatLng, hourOffset: number = 0): Promise<GfsResponse> {
   let url = `https://api.open-meteo.com/v1/gfs?latitude=${point.lat}&longitude=${point.lng}`;
 
   hPas.forEach(hPa => {
@@ -77,7 +79,7 @@ function fetchGfs(point: LatLng): Promise<GfsResponse> {
   url += '&hourly=wind_speed_10m&hourly=wind_direction_10m';
   url += '&hourly=wind_speed_80m&hourly=wind_direction_80m';
   url += '&wind_speed_unit=kn';
-  url += '&forecast_hours=1';
+  url += `&forecast_hours=${Math.max(1, hourOffset + 1)}`;
 
   console.log(`Fetching open-meteo from ${url}`);
 

@@ -19,7 +19,7 @@ interface UseFetchForecastResult {
   /** Whether a fetch is in progress */
   fetching: boolean;
   /** Fetch winds for the current target. Pass maxPathAltitude to extend limit if path goes higher. */
-  fetchWinds: (maxPathAltitude?: number) => void;
+  fetchWinds: (maxPathAltitude?: number, forecastTime?: Date | null) => void;
   /** Manually set winds (for manual entry) */
   setWinds: (winds: Winds) => void;
   /** Reset winds to empty state */
@@ -46,7 +46,7 @@ export function useFetchForecast({
     setWinds(new Winds());
   }, []);
 
-  const fetchWinds = useCallback((maxPathAltitude?: number) => {
+  const fetchWinds = useCallback((maxPathAltitude?: number, forecastTime?: Date | null) => {
     if (!target) {
       console.log('Not fetching winds, no target');
       return;
@@ -59,16 +59,21 @@ export function useFetchForecast({
     // Only use dropzone ground wind if within 5000 feet
     const dz: Dropzone | undefined = distanceToDz <= 5000 ? closestDz : undefined;
 
+    const hourOffset = forecastTime
+      ? Math.max(0, Math.round((forecastTime.getTime() - Date.now()) / 3600000))
+      : 0;
+
     console.log(
       `Fetching winds for: ${JSON.stringify(target)},` +
-        ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name})`
+        ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name}), hourOffset=${hourOffset}`
     );
 
     setFetching(true);
 
     fetchForecast(
       target,
-      settings.useDzGroundWind ? dz?.fetchGroundWind : undefined
+      settings.useDzGroundWind ? dz?.fetchGroundWind : undefined,
+      hourOffset
     )
       .then(fetchedWinds => {
         // Determine altitude limit
