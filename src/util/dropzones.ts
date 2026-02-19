@@ -38,6 +38,12 @@ export const DROPZONES: Dropzone[] = [
     direction: 125
   },
   {
+    name: 'Skydive Elsinore',
+    lat: 33.63177,
+    lng: -117.29978,
+    direction: 308
+  },
+  {
     name: 'Skydive Paraclete XP',
     lat: 35.01717,
     lng: -79.19393,
