@@ -39,32 +39,31 @@ export default function ManoeuvreAltitudeControl({
   const { formatAltitude, parseAltitude, altitudeLabel } = useUnits();
 
   const originalPath = getOriginalPath(config);
-  if (originalPath.length === 0) return null;
-
-  const originalInitAlt = originalPath[originalPath.length - 1].properties.alt;
+  const originalInitAlt = originalPath.length > 0
+    ? originalPath[originalPath.length - 1].properties.alt
+    : 0;
   const offset = config.initiationAltitudeOffset ?? 0;
   const currentInitAlt = originalInitAlt + offset;
+
+  // All hooks must be called before any early return
+  const [inputVal, setInputVal] = React.useState<string>(
+    () => String(Math.round(formatAltitude(currentInitAlt).value))
+  );
+
+  // Sync the displayed value when offset or units change externally
+  React.useEffect(() => {
+    const expected = String(Math.round(formatAltitude(originalInitAlt + offset).value));
+    setInputVal(expected);
+  }, [offset, originalInitAlt, altitudeLabel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Nothing to show until a path is loaded
+  if (originalPath.length === 0) return null;
 
   const maxDelta = originalInitAlt * 0.15;
   const minFt = originalInitAlt - maxDelta;
   const maxFt = originalInitAlt + maxDelta;
-
-  const { value: displayCurrent } = formatAltitude(currentInitAlt);
   const { value: displayMin } = formatAltitude(minFt);
   const { value: displayMax } = formatAltitude(maxFt);
-
-  // Local input state so partial typing isn't disrupted by re-renders
-  const [inputVal, setInputVal] = React.useState<string>(
-    () => String(Math.round(displayCurrent))
-  );
-
-  // Sync display when offset is changed externally (preset load, reset)
-  const prevOffsetRef = React.useRef(offset);
-  if (prevOffsetRef.current !== offset) {
-    prevOffsetRef.current = offset;
-    const expected = String(Math.round(formatAltitude(originalInitAlt + offset).value));
-    if (inputVal !== expected) setInputVal(expected);
-  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -78,12 +77,8 @@ export default function ManoeuvreAltitudeControl({
     }
   };
 
-  const handleReset = () => {
-    onChange(0);
-    setInputVal(String(Math.round(formatAltitude(originalInitAlt).value)));
-  };
+  const handleReset = () => onChange(0); // effect will sync inputVal
 
-  // Offset indicator
   const displayOffsetAbs = Math.round(formatAltitude(Math.abs(offset)).value);
   const offsetText = offset !== 0
     ? `${offset > 0 ? '+' : '-'}${displayOffsetAbs} ${altitudeLabel}`

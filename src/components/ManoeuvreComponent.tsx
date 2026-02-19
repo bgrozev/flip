@@ -72,7 +72,8 @@ export default function ManoeuvreComponent({
             onConfigChange({
               ...manoeuvreConfig,
               trackName: trackName ?? undefined,
-              trackData
+              trackData,
+              initiationAltitudeOffset: 0
             })
           }
         />
@@ -83,7 +84,7 @@ export default function ManoeuvreComponent({
           sampleIndex={manoeuvreConfig.sampleIndex ?? 0}
           sampleLeft={manoeuvreConfig.sampleLeft ?? true}
           onChange={(index, left) =>
-            onConfigChange({ ...manoeuvreConfig, sampleIndex: index, sampleLeft: left })
+            onConfigChange({ ...manoeuvreConfig, sampleIndex: index, sampleLeft: left, initiationAltitudeOffset: 0 })
           }
         />
       )}
