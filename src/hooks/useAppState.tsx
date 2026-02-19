@@ -1,10 +1,13 @@
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { createContext, useContext, useCallback, ReactNode, useMemo } from 'react';
 
-import { FlightPath, Settings, Target } from '../types';
+import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
 import { createSafeCodec, createSimpleCodec } from '../util/storage';
 import { DEFAULT_UNIT_PREFERENCES } from '../util/units';
-import { defaultPattern } from '../components/PatternComponent';
+import { makePatternByType } from '../util/pattern';
+import { createManoeuvrePath } from '../util/manoeuvre';
+import { mirror } from '../util/geo';
+import { samples } from '../samples';
 
 // Default values
 const DEFAULT_TARGET: Target = {
@@ -15,42 +18,68 @@ const DEFAULT_TARGET: Target = {
   finalHeading: 270
 };
 
+export const DEFAULT_PATTERN_PARAMS: PatternParams = {
+  type: 'three-leg',
+  descentRateMph: 12,
+  glideRatio: 2.6,
+  legs: [
+    { altitude: 300, direction: 0 },
+    { altitude: 300, direction: 270 },
+    { altitude: 300, direction: 270 }
+  ]
+};
+
+export const DEFAULT_MANOEUVRE_CONFIG: ManoeuvreConfig = { type: 'none' };
+
 const DEFAULT_SETTINGS: Settings = {
-  showPreWind: true,
   showPoms: true,
   showPomAltitudes: true,
   showPomTooltips: true,
-  useDzGroundWind: true,
-  interpolateWind: true,
+  showPreWind: true,
   displayWindArrow: false,
   displayWindSummary: true,
+  interpolateWind: true,
   correctPatternHeading: true,
+  useDzGroundWind: true,
   limitWind: 3000,
   showPresets: true,
   highlightCorrespondingPoints: true,
   units: DEFAULT_UNIT_PREFERENCES
 };
 
-// Storage keys
-const STORAGE_KEYS = {
-  manoeuvre: 'flip.manoeuvre_turf',
-  target: 'flip.target',
-  pattern: 'flip.pattern_turf',
-  settings: 'flip.settings'
-} as const;
+function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
+  switch (config.type) {
+    case 'parameters':
+      return config.params ? createManoeuvrePath(config.params) : [];
+    case 'track':
+      return config.trackData ?? [];
+    case 'samples': {
+      if (typeof config.sampleIndex !== 'number') return [];
+      let path = samples[config.sampleIndex]?.getPath() ?? [];
+      if (config.sampleLeft === false) path = mirror(path);
+      return path;
+    }
+    default:
+      return [];
+  }
+}
 
 // Context value type
 interface AppStateContextValue {
-  // State
+  // Derived paths (for rendering)
   manoeuvre: FlightPath;
-  target: Target;
   pattern: FlightPath;
+
+  // Config state (source of truth for presets)
+  manoeuvreConfig: ManoeuvreConfig;
+  patternParams: PatternParams;
+  target: Target;
   settings: Settings;
 
   // Setters
-  setManoeuvre: (manoeuvre: FlightPath) => void;
+  setManoeuvreConfig: (config: ManoeuvreConfig) => void;
+  setPatternParams: (params: PatternParams) => void;
   setTarget: (target: Target) => void;
-  setPattern: (pattern: FlightPath) => void;
   setSettings: (settings: Settings) => void;
 
   // Actions
@@ -65,88 +94,99 @@ interface AppStateProviderProps {
 
 /**
  * Provider for centralized app state management.
- * Handles persistence to localStorage for core app state.
- * Uses safe codecs that handle parse errors and merge with defaults.
+ * Stores configs (patternParams, manoeuvreConfig) as the source of truth.
+ * Derives FlightPaths (pattern, manoeuvre) via useMemo — no redundant path storage.
  */
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  // Manoeuvre state - array, use simple codec
-  const [storedManoeuvre, setStoredManoeuvre] = useLocalStorageState<FlightPath>(
-    STORAGE_KEYS.manoeuvre,
-    [],
-    { codec: createSimpleCodec<FlightPath>([]) }
-  );
-  const manoeuvre = storedManoeuvre ?? [];
+  // Manoeuvre config — source of truth; path is derived
+  const [storedManoeuvreConfig, setStoredManoeuvreConfig] =
+    useLocalStorageState<ManoeuvreConfig>(
+      'flip.manoeuvre.config',
+      DEFAULT_MANOEUVRE_CONFIG,
+      { codec: createSimpleCodec<ManoeuvreConfig>(DEFAULT_MANOEUVRE_CONFIG) }
+    );
+  const manoeuvreConfig = storedManoeuvreConfig ?? DEFAULT_MANOEUVRE_CONFIG;
 
-  // Target state - object with simple structure
+  // Target state
   const [storedTarget, setStoredTarget] = useLocalStorageState<Target>(
-    STORAGE_KEYS.target,
+    'flip.target',
     DEFAULT_TARGET,
     { codec: createSafeCodec(DEFAULT_TARGET) }
   );
   const target = storedTarget ?? DEFAULT_TARGET;
 
-  // Pattern state - array, use simple codec
-  const [storedPattern, setStoredPattern] = useLocalStorageState<FlightPath>(
-    STORAGE_KEYS.pattern,
-    defaultPattern,
-    { codec: createSimpleCodec(defaultPattern) }
+  // Pattern params — source of truth; path is derived.
+  // Uses the same key as the old PatternComponent so existing user data is preserved.
+  const [storedPatternParams, setStoredPatternParams] = useLocalStorageState<PatternParams>(
+    'flip.pattern.params',
+    DEFAULT_PATTERN_PARAMS,
+    { codec: createSafeCodec(DEFAULT_PATTERN_PARAMS) }
   );
-  const pattern = storedPattern ?? defaultPattern;
+  const patternParams = storedPatternParams ?? DEFAULT_PATTERN_PARAMS;
 
-  // Settings state - object with nested structure, use safe codec for deep merge
+  // Settings
   const [storedSettings, setStoredSettings] = useLocalStorageState<Settings>(
-    STORAGE_KEYS.settings,
+    'flip.settings',
     DEFAULT_SETTINGS,
     { codec: createSafeCodec(DEFAULT_SETTINGS) }
   );
-  // Safe codec already merges with defaults, but ensure non-null
   const settings = storedSettings ?? DEFAULT_SETTINGS;
 
-  // Wrapped setters with null handling
-  const setManoeuvre = useCallback((value: FlightPath) => {
-    setStoredManoeuvre(value);
-  }, [setStoredManoeuvre]);
+  // Derived paths — computed from configs, not stored
+  const manoeuvre = useMemo(() => computeManoeuvre(manoeuvreConfig), [manoeuvreConfig]);
+  const pattern = useMemo(() => makePatternByType(patternParams), [patternParams]);
 
-  const setTarget = useCallback((value: Target) => {
-    setStoredTarget(value);
-  }, [setStoredTarget]);
+  const setManoeuvreConfig = useCallback(
+    (value: ManoeuvreConfig) => setStoredManoeuvreConfig(value),
+    [setStoredManoeuvreConfig]
+  );
 
-  const setPattern = useCallback((value: FlightPath) => {
-    setStoredPattern(value);
-  }, [setStoredPattern]);
+  const setPatternParams = useCallback(
+    (value: PatternParams) => setStoredPatternParams(value),
+    [setStoredPatternParams]
+  );
 
-  const setSettings = useCallback((value: Settings) => {
-    setStoredSettings(value);
-  }, [setStoredSettings]);
+  const setTarget = useCallback(
+    (value: Target) => setStoredTarget(value),
+    [setStoredTarget]
+  );
 
-  // Reset all state to defaults
+  const setSettings = useCallback(
+    (value: Settings) => setStoredSettings(value),
+    [setStoredSettings]
+  );
+
   const resetAll = useCallback(() => {
-    setStoredManoeuvre([]);
+    setStoredManoeuvreConfig(DEFAULT_MANOEUVRE_CONFIG);
     setStoredTarget(DEFAULT_TARGET);
-    setStoredPattern(defaultPattern);
+    setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
-  }, [setStoredManoeuvre, setStoredTarget, setStoredPattern, setStoredSettings]);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredSettings]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
       manoeuvre,
-      target,
       pattern,
+      manoeuvreConfig,
+      patternParams,
+      target,
       settings,
-      setManoeuvre,
+      setManoeuvreConfig,
+      setPatternParams,
       setTarget,
-      setPattern,
       setSettings,
       resetAll
     }),
     [
       manoeuvre,
-      target,
       pattern,
+      manoeuvreConfig,
+      patternParams,
+      target,
       settings,
-      setManoeuvre,
+      setManoeuvreConfig,
+      setPatternParams,
       setTarget,
-      setPattern,
       setSettings,
       resetAll
     ]

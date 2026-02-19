@@ -7,49 +7,30 @@ import {
   Stack,
   Typography
 } from '@mui/material';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
-import { FlightPath } from '../types';
 import { samples } from '../samples';
-import { mirror } from '../util/geo';
 
 import DirectionSwitch from './DirectionSwitch';
 
 interface ManoeuvreSamplesComponentProps {
-  onChange?: (path: FlightPath) => void;
+  sampleIndex: number;
+  sampleLeft: boolean;
+  onChange: (index: number, left: boolean) => void;
 }
 
 export default function ManoeuvreSamplesComponent({
+  sampleIndex,
+  sampleLeft,
   onChange
 }: ManoeuvreSamplesComponentProps) {
-  const [storedIndex, setSelectedIndex] = useLocalStorageState<number>(
-    'flip.manoeuvre.samples.selectedIndex',
-    0
-  );
-  const selectedIndex = storedIndex ?? 0;
-  const [left, setLeft] = React.useState(true);
-
-  function fireChange(index: number, l: boolean) {
-    let path = samples[index].getPath();
-
-    if (!l) {
-      path = mirror(path);
-    }
-    onChange?.(path);
-  }
-
-  const handleChange = (event: SelectChangeEvent<number>) => {
-    const index = event.target.value as number;
-
-    setSelectedIndex(index);
-    fireChange(index, left);
+  const handleSampleChange = (event: SelectChangeEvent<number>) => {
+    onChange(event.target.value as number, sampleLeft);
   };
 
-  function handleSwitch() {
-    setLeft(!left);
-    fireChange(selectedIndex, !left);
-  }
+  const handleSwitch = () => {
+    onChange(sampleIndex, !sampleLeft);
+  };
 
   return (
     <Stack alignItems="center" spacing={2}>
@@ -57,9 +38,9 @@ export default function ManoeuvreSamplesComponent({
         <InputLabel id="sample-select-label">Select Sample</InputLabel>
         <Select
           labelId="sample-select-label"
-          value={selectedIndex}
+          value={sampleIndex}
           label="Select Sample"
-          onChange={handleChange}
+          onChange={handleSampleChange}
         >
           {samples.map((sample, index) => (
             <MenuItem key={index} value={index}>
@@ -68,11 +49,11 @@ export default function ManoeuvreSamplesComponent({
           ))}
         </Select>
       </FormControl>
-      <Typography> {samples[selectedIndex].description}</Typography>
+      <Typography>{samples[sampleIndex].description}</Typography>
 
       <DirectionSwitch
         title="Left or right hand turn"
-        value={!left}
+        value={!sampleLeft}
         onChange={handleSwitch}
       />
     </Stack>

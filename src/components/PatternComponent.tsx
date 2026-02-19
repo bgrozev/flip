@@ -15,11 +15,10 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
 import { useUnits } from '../hooks';
-import { FlightPath, PatternType } from '../types';
+import { PatternParams, PatternType } from '../types';
 import {
   PATTERN_NONE,
   PATTERN_ONE_LEG,
@@ -27,39 +26,18 @@ import {
   PATTERN_TWO_LEG,
   booleanToDirection,
   isLeftTurn,
-  makePatternByType,
   PatternLeg
 } from '../util/pattern';
-import { createSafeCodec } from '../util/storage';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
 
-interface PatternParams {
-  type: PatternType;
-  descentRateMph: number;
-  glideRatio: number;
-  legs: PatternLeg[];
-}
-
-const defaultParams: PatternParams = {
-  type: PATTERN_THREE_LEG,
-  descentRateMph: 12,
-  glideRatio: 2.6,
-  legs: [
-    { altitude: 300, direction: 0 },
-    { altitude: 300, direction: 270 },
-    { altitude: 300, direction: 270 }
-  ]
-};
-
-export const defaultPattern: FlightPath = makePatternByType(defaultParams);
-
 interface PatternComponentProps {
-  onChange: (pattern: FlightPath) => void;
+  params: PatternParams;
+  onParamsChange: (params: PatternParams) => void;
 }
 
-export default function PatternComponent({ onChange }: PatternComponentProps) {
+export default function PatternComponent({ params, onParamsChange }: PatternComponentProps) {
   const {
     formatDescentRate,
     parseDescentRate,
@@ -69,37 +47,15 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
     altitudeLabel
   } = useUnits();
 
-  const [storedParams, setParams] = useLocalStorageState<PatternParams>(
-    'flip.pattern.params',
-    defaultParams,
-    { codec: createSafeCodec(defaultParams) }
-  );
-  const params = storedParams ?? defaultParams;
-
   const handleChange = (key: keyof PatternParams, value: PatternType | number) => {
-    const newParams: PatternParams = {
-      ...params,
-      [key]: value
-    };
-
-    setParams(newParams);
-    onChange(makePatternByType(newParams));
+    onParamsChange({ ...params, [key]: value });
   };
 
-  const handleLegChange = (
-    legIndex: number,
-    key: keyof PatternLeg,
-    value: number
-  ) => {
-    const newParams: PatternParams = {
+  const handleLegChange = (legIndex: number, key: keyof PatternLeg, value: number) => {
+    onParamsChange({
       ...params,
-      legs: params.legs.map((leg, i) =>
-        i === legIndex ? { ...leg, [key]: value } : leg
-      )
-    };
-
-    setParams(newParams);
-    onChange(makePatternByType(newParams));
+      legs: params.legs.map((leg, i) => (i === legIndex ? { ...leg, [key]: value } : leg))
+    });
   };
 
   return (
@@ -193,7 +149,6 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
               value={isLeftTurn(params.legs[1].direction)}
               onChange={() => {
                 const wasChecked = isLeftTurn(params.legs[1].direction);
-
                 handleLegChange(1, 'direction', booleanToDirection(!wasChecked));
               }}
             />
@@ -221,7 +176,6 @@ export default function PatternComponent({ onChange }: PatternComponentProps) {
               value={isLeftTurn(params.legs[2].direction)}
               onChange={() => {
                 const wasChecked = isLeftTurn(params.legs[2].direction);
-
                 handleLegChange(2, 'direction', booleanToDirection(!wasChecked));
               }}
             />
@@ -265,7 +219,6 @@ function LegAltitudeSelector({
 }: LegAltitudeSelectorProps) {
   const presets = altitudeLabel === 'ft' ? PRESETS_FT : PRESETS_M;
 
-  // Determine mode based on whether current value matches a preset
   const matchingPreset = presets.find(p => p.internal === value);
   const mode = matchingPreset ? String(matchingPreset.internal) : 'custom';
 
@@ -273,13 +226,11 @@ function LegAltitudeSelector({
     if (!newMode || newMode === 'custom') {
       return;
     }
-    // newMode is the internal feet value as string
     onChange(Number(newMode));
   };
 
   const handleCustomChange = (displayValue: number) => {
     if (!isNaN(displayValue)) {
-      // Convert from display units to internal feet
       onChange(parseAltitude(displayValue));
     }
   };

@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { CsvRow, FlightPath } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
@@ -33,12 +33,16 @@ interface Track {
 
 interface ManoeuvreTrackComponentProps {
   manoeuvreToSave: FlightPath;
-  onChange: (path: FlightPath) => void;
+  selectedTrackName?: string;
+  selectedTrackData?: FlightPath;
+  onTrackChange: (trackName: string | null, trackData: FlightPath) => void;
 }
 
 export default function ManoeuvreTrackComponent({
   manoeuvreToSave,
-  onChange
+  selectedTrackName,
+  selectedTrackData,
+  onTrackChange
 }: ManoeuvreTrackComponentProps) {
   const [storedTracks, setTracks] = useLocalStorageState<Track[]>(
     'flip.manoeuvre.track.tracks',
@@ -49,15 +53,21 @@ export default function ManoeuvreTrackComponent({
   const [name, setName] = useState('');
   const [mirror, setMirror] = useState(false);
   const [description, setDescription] = useState('');
-  const [storedSelected, setSelected] = useLocalStorageState<string>(
-    'flip.manoeuvre.track.selected',
-    ''
-  );
-  const selected = storedSelected ?? '';
+
+  // When a preset is loaded with a track that isn't in the library, add it.
+  useEffect(() => {
+    if (selectedTrackName && selectedTrackData && selectedTrackData.length > 0) {
+      const exists = (storedTracks ?? []).some(t => t.name === selectedTrackName);
+      if (!exists) {
+        setTracks(prev => [
+          ...(prev ?? []),
+          { name: selectedTrackName, description: 'Restored from preset', track: selectedTrackData }
+        ]);
+      }
+    }
+  }, [selectedTrackName, selectedTrackData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function loadFile(f: File) {
-    console.log(`Loading ${f}`);
-
     f.text().then(data => {
       let points = extractPathFromCsv(csvParse(convertFromGnss(data)) as unknown as CsvRow[]);
 
@@ -68,7 +78,7 @@ export default function ManoeuvreTrackComponent({
         points[points.length - 1].properties.pom = 1;
       }
 
-      onChange(points);
+      onTrackChange(null, points);
     });
   }
 
@@ -76,24 +86,21 @@ export default function ManoeuvreTrackComponent({
     ev.preventDefault();
 
     const newTrack: Track = { name, description, track: manoeuvreToSave };
-
     setTracks([...tracks.filter(t => t.name !== name), newTrack]);
   };
 
   const remove = (n: string) => {
     setTracks(tracks.filter(t => t.name !== n));
 
-    if (selected === n) {
-      setSelected('');
+    if (selectedTrackName === n) {
+      onTrackChange(null, []);
     }
   };
 
   const handleSelected = (selectedName: string) => {
-    setSelected(selectedName);
     const track = tracks.find(t => t.name === selectedName);
-
     if (track) {
-      onChange(track.track);
+      onTrackChange(selectedName, track.track);
     }
   };
 
@@ -103,16 +110,14 @@ export default function ManoeuvreTrackComponent({
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>Select track</InputLabel>
         <Select
-          value={selected}
+          value={selectedTrackName ?? ''}
           label="Select track"
           onChange={(e: SelectChangeEvent) => handleSelected(e.target.value)}
           renderValue={value => value || ''}
         >
           {tracks.map(opt => (
             <MenuItem key={opt.name} value={opt.name}>
-              <Box
-                sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}
-              >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                 <Tooltip title={opt.description || ''} arrow>
                   <span>{opt.name}</span>
                 </Tooltip>
@@ -172,9 +177,7 @@ export default function ManoeuvreTrackComponent({
         placement="right"
       >
         <FormControlLabel
-          control={
-            <Checkbox checked={mirror} onChange={() => setMirror(!mirror)} />
-          }
+          control={<Checkbox checked={mirror} onChange={() => setMirror(!mirror)} />}
           label="Mirror"
         />
       </Tooltip>

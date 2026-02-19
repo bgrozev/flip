@@ -143,11 +143,13 @@ export default function DashboardLayoutBasic() {
 function DashboardContent() {
   const {
     manoeuvre,
-    setManoeuvre,
+    manoeuvreConfig,
+    setManoeuvreConfig,
     target,
     setTarget: setTargetBase,
     pattern,
-    setPattern,
+    patternParams,
+    setPatternParams,
     settings,
     setSettings
   } = useAppState();
@@ -187,9 +189,11 @@ function DashboardContent() {
     deletePreset
   } = usePresets({
     target,
+    patternParams,
+    manoeuvreConfig,
     setTarget,
-    setPattern,
-    setManoeuvre
+    setPatternParams,
+    setManoeuvreConfig
   });
 
   const handlePresetSave = (name?: string) => {
@@ -256,12 +260,13 @@ function DashboardContent() {
   if (router.pathname === '/manoeuvre') {
     p = (
       <ManoeuvreComponent
-        setManoeuvre={setManoeuvre}
+        manoeuvreConfig={manoeuvreConfig}
+        onConfigChange={setManoeuvreConfig}
         manoeuvreToSave={c2.filter(point => point.properties.phase === 'manoeuvre')}
       />
     );
   } else if (router.pathname === '/pattern') {
-    p = <PatternComponent onChange={setPattern} />;
+    p = <PatternComponent params={patternParams} onParamsChange={setPatternParams} />;
   } else if (router.pathname === '/target') {
     p = (
       <TargetComponent

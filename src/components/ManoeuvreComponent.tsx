@@ -5,99 +5,71 @@ import {
   Menu as MenuIcon
 } from '@mui/icons-material';
 import { Box, Divider, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
-import React, { useEffect } from 'react';
+import React from 'react';
 
-import { FlightPath } from '../types';
-import { createSimpleCodec } from '../util/storage';
+import { FlightPath, ManoeuvreConfig, ManoeuvreType } from '../types';
 
-import ManoeuvreParametersComponent, { defaultPath } from './ManoeuvreParametersComponent';
+import { DEFAULT_MANOEUVRE_PARAMS } from './ManoeuvreParametersComponent';
+import ManoeuvreParametersComponent from './ManoeuvreParametersComponent';
 import ManoeuvreSamplesComponent from './ManoeuvreSamplesComponent';
 import ManoeuvreTrackComponent from './ManoeuvreTrackComponent';
 
-const PARAMETERS = 'parameters';
-const SAMPLES = 'samples';
-const TRACK = 'track';
-const NONE = 'none';
-
-type ManoeuvreType = typeof PARAMETERS | typeof SAMPLES | typeof TRACK | typeof NONE;
-
 interface ManoeuvreComponentProps {
-  setManoeuvre: (path: FlightPath) => void;
+  manoeuvreConfig: ManoeuvreConfig;
+  onConfigChange: (config: ManoeuvreConfig) => void;
   manoeuvreToSave: FlightPath;
 }
 
 export default function ManoeuvreComponent({
-  setManoeuvre,
+  manoeuvreConfig,
+  onConfigChange,
   manoeuvreToSave
 }: ManoeuvreComponentProps) {
-  const [type, setType] = useLocalStorageState<ManoeuvreType>(
-    'flip.manoeuvre.type',
-    NONE
-  );
-  const [parametersPath, setParametersPath] = useLocalStorageState<FlightPath>(
-    'flip.manoeuvre.parameters_path_turf',
-    defaultPath(),
-    { codec: createSimpleCodec(defaultPath()) }
-  );
-  const [trackPath, setTrackPath] = useLocalStorageState<FlightPath>(
-    'flip.manoeuvre.track_path_turf',
-    [],
-    { codec: createSimpleCodec<FlightPath>([]) }
-  );
-  const [samplePath, setSamplePath] = useLocalStorageState<FlightPath>(
-    'flip.manoeuvre.sample_path_turf',
-    [],
-    { codec: createSimpleCodec<FlightPath>([]) }
-  );
-
   const handleTypeChange = (
     _event: React.MouseEvent<HTMLElement>,
     newType: ManoeuvreType | null
   ) => {
-    if (newType !== null) {
-      setType(newType);
-    }
-  };
+    if (newType === null) return;
 
-  useEffect(() => {
-    if (type === NONE) {
-      setManoeuvre([]);
-    } else if (type === PARAMETERS) {
-      setManoeuvre(parametersPath ?? []);
-    } else if (type === TRACK) {
-      setManoeuvre(trackPath ?? []);
-    } else if (type === SAMPLES) {
-      setManoeuvre(samplePath ?? []);
+    // Preserve existing sub-config when switching type; initialize defaults if first time
+    let newConfig: ManoeuvreConfig = { ...manoeuvreConfig, type: newType };
+
+    if (newType === 'parameters' && !newConfig.params) {
+      newConfig = { ...newConfig, params: DEFAULT_MANOEUVRE_PARAMS };
     }
-  }, [type, parametersPath, trackPath, samplePath, setManoeuvre]);
+    if (newType === 'samples' && typeof newConfig.sampleIndex !== 'number') {
+      newConfig = { ...newConfig, sampleIndex: 0, sampleLeft: true };
+    }
+
+    onConfigChange(newConfig);
+  };
 
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <ToggleButtonGroup
-        value={type}
+        value={manoeuvreConfig.type}
         exclusive
         onChange={handleTypeChange}
         fullWidth
         color="primary"
       >
         <Tooltip title="No manoeuvre">
-          <ToggleButton value={NONE} aria-label="None">
+          <ToggleButton value="none" aria-label="None">
             <BlockIcon />
           </ToggleButton>
         </Tooltip>
         <Tooltip title="Enter parameters">
-          <ToggleButton value={PARAMETERS} aria-label="Parameters">
+          <ToggleButton value="parameters" aria-label="Parameters">
             <BuildIcon />
           </ToggleButton>
         </Tooltip>
         <Tooltip title="My tracks">
-          <ToggleButton value={TRACK} aria-label="Files">
+          <ToggleButton value="track" aria-label="Files">
             <FolderIcon />
           </ToggleButton>
         </Tooltip>
         <Tooltip title="Samples">
-          <ToggleButton value={SAMPLES} aria-label="Samples">
+          <ToggleButton value="samples" aria-label="Samples">
             <MenuIcon />
           </ToggleButton>
         </Tooltip>
@@ -105,31 +77,35 @@ export default function ManoeuvreComponent({
 
       <Divider />
 
-      {type === PARAMETERS && (
+      {manoeuvreConfig.type === 'parameters' && (
         <ManoeuvreParametersComponent
-          onChange={p => {
-            setParametersPath(p);
-            setManoeuvre(p);
-          }}
+          params={manoeuvreConfig.params ?? DEFAULT_MANOEUVRE_PARAMS}
+          onParamsChange={params => onConfigChange({ ...manoeuvreConfig, params })}
         />
       )}
 
-      {type === TRACK && (
+      {manoeuvreConfig.type === 'track' && (
         <ManoeuvreTrackComponent
           manoeuvreToSave={manoeuvreToSave}
-          onChange={p => {
-            setTrackPath(p);
-            setManoeuvre(p);
-          }}
+          selectedTrackName={manoeuvreConfig.trackName}
+          selectedTrackData={manoeuvreConfig.trackData}
+          onTrackChange={(trackName, trackData) =>
+            onConfigChange({
+              ...manoeuvreConfig,
+              trackName: trackName ?? undefined,
+              trackData
+            })
+          }
         />
       )}
 
-      {type === SAMPLES && (
+      {manoeuvreConfig.type === 'samples' && (
         <ManoeuvreSamplesComponent
-          onChange={p => {
-            setSamplePath(p);
-            setManoeuvre(p);
-          }}
+          sampleIndex={manoeuvreConfig.sampleIndex ?? 0}
+          sampleLeft={manoeuvreConfig.sampleLeft ?? true}
+          onChange={(index, left) =>
+            onConfigChange({ ...manoeuvreConfig, sampleIndex: index, sampleLeft: left })
+          }
         />
       )}
     </Box>

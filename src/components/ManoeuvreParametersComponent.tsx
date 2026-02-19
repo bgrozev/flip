@@ -1,66 +1,37 @@
 import { Stack } from '@mui/material';
-import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React from 'react';
 
 import { useUnits } from '../hooks';
-import { FlightPath, ManoeuvreParams } from '../types';
-import { createManoeuvrePath } from '../util/manoeuvre';
-import { createSafeCodec } from '../util/storage';
+import { ManoeuvreParams } from '../types';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
 
-const DEFAULT_PARAMS: ManoeuvreParams = {
+export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
   offsetXFt: 300,
   offsetYFt: 150,
   altitudeFt: 900,
   duration: 8,
   left: true
 };
-const DEFAULT_PATH = createManoeuvrePath(DEFAULT_PARAMS);
-
-function defaultParams(): ManoeuvreParams {
-  return { ...DEFAULT_PARAMS };
-}
-export function defaultPath(): FlightPath {
-  return [...DEFAULT_PATH];
-}
 
 interface ManoeuvreParametersComponentProps {
-  onChange: (path: FlightPath) => void;
+  params: ManoeuvreParams;
+  onParamsChange: (params: ManoeuvreParams) => void;
 }
 
 export default function ManoeuvreParametersComponent({
-  onChange
+  params,
+  onParamsChange
 }: ManoeuvreParametersComponentProps) {
   const { formatAltitude, parseAltitude, altitudeLabel } = useUnits();
 
-  const [storedParams, setParams] = useLocalStorageState<ManoeuvreParams>(
-    'flip.manoeuvre.params',
-    DEFAULT_PARAMS,
-    { codec: createSafeCodec(DEFAULT_PARAMS) }
-  );
-  const params = storedParams ?? DEFAULT_PARAMS;
-
-  const handleChange =
-    (key: keyof ManoeuvreParams) => (value: number | boolean) => {
-      const newParams = {
-        ...params,
-        [key]: value
-      } as ManoeuvreParams;
-
-      setParams(newParams);
-      onChange(createManoeuvrePath(newParams));
-    };
+  const handleChange = (key: keyof ManoeuvreParams) => (value: number | boolean) => {
+    onParamsChange({ ...params, [key]: value } as ManoeuvreParams);
+  };
 
   const handleSwitch = () => {
-    const newParams = {
-      ...params,
-      left: !params.left
-    };
-
-    setParams(newParams);
-    onChange(createManoeuvrePath(newParams));
+    onParamsChange({ ...params, left: !params.left });
   };
 
   return (
