@@ -41,45 +41,30 @@ export default function TargetComponent({
 
   return (
     <Stack spacing={3}>
-      <Tooltip title="Select target by clicking on the map." arrow>
-        <Button
-          variant="outlined"
-          startIcon={<ModeStandbyIcon />}
-          onClick={() => selectFromMap(false)}
-          fullWidth
-          sx={{
-            textTransform: 'none',
-            px: 2,
-            justifyContent: 'center',
-            '& .MuiButton-startIcon': {
-              position: 'absolute',
-              left: 16
-            }
-          }}
-        >
-          Set Target
-        </Button>
-      </Tooltip>
-
-      <Tooltip title="Select target and direction by clicking on the map twice." arrow>
-        <Button
-          variant="outlined"
-          startIcon={<ExploreIcon />}
-          onClick={() => selectFromMap(true)}
-          fullWidth
-          sx={{
-            textTransform: 'none',
-            px: 2,
-            justifyContent: 'center',
-            '& .MuiButton-startIcon': {
-              position: 'absolute',
-              left: 16
-            }
-          }}
-        >
-          Set Target and Direction
-        </Button>
-      </Tooltip>
+      <Stack direction="row" spacing={1}>
+        <Tooltip title="Select target by clicking on the map." arrow>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<ModeStandbyIcon />}
+            onClick={() => selectFromMap(false)}
+            sx={{ textTransform: 'none' }}
+          >
+            Set Target
+          </Button>
+        </Tooltip>
+        <Tooltip title="Select target and direction by clicking on the map twice." arrow>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<ExploreIcon />}
+            onClick={() => selectFromMap(true)}
+            sx={{ textTransform: 'none' }}
+          >
+            Set Target & Direction
+          </Button>
+        </Tooltip>
+      </Stack>
 
       <Stack direction="row">
         <ControlledNumberInput

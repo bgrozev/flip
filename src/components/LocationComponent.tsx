@@ -1,9 +1,9 @@
 import {
   Box,
   Stack,
+  Tab,
+  Tabs,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography
 } from '@mui/material';
@@ -45,39 +45,27 @@ export default function LocationComponent() {
     'dropzones'
   );
 
-  const handleTabChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newTab: string | null
-  ) => {
-    if (newTab !== null) {
-      setSelectedTab(newTab);
-    }
+  const handleTabChange = (_event: React.SyntheticEvent, newTab: string) => {
+    setSelectedTab(newTab);
   };
 
   return (
     <Stack spacing={4}>
       <Typography variant="h6">Locations</Typography>
-      <ToggleButtonGroup
+      <Tabs
         value={selectedTab}
-        exclusive
         onChange={handleTabChange}
         aria-label="Location tabs"
-        sx={{ mb: 2 }}
+        sx={{ '& .MuiTab-root': { fontSize: '0.75rem', minWidth: 0, px: 1.5 } }}
       >
         <Tooltip title="Default dropzones.">
-          <ToggleButton value="dropzones" aria-label="Dropzones">
-            Dropzones
-          </ToggleButton>
+          <Tab label="Dropzones" value="dropzones" />
         </Tooltip>
         <Tooltip title="Custom locations.">
-          <ToggleButton value="custom" aria-label="My Locations">
-            My Locations
-          </ToggleButton>
+          <Tab label="My Locations" value="custom" />
         </Tooltip>
-        <ToggleButton value="search" aria-label="Search">
-          Search
-        </ToggleButton>
-      </ToggleButtonGroup>
+        <Tab label="Search" value="search" />
+      </Tabs>
 
       {selectedTab === 'dropzones' && (
         <Box>
