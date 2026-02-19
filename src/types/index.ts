@@ -67,6 +67,7 @@ export interface Settings {
   displayWindSummary: boolean;
   interpolateWind: boolean;
   correctPatternHeading: boolean;
+  straightenLegs: boolean;
   useDzGroundWind: boolean;
   limitWind: number;
   showPresets: boolean;

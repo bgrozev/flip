@@ -108,6 +108,12 @@ const settingsGroups: SettingsGroup[] = [
         label: 'Correct heading for rectangular turn',
         tooltip:
           'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.'
+      },
+      {
+        key: 'straightenLegs',
+        label: 'Straighten legs',
+        tooltip:
+          'Redistribute intermediate points on each leg so they lie on a straight line between the leg endpoints. Removes visual curves caused by wind shear without changing the wind drift calculation.'
       }
     ]
   }

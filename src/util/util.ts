@@ -124,6 +124,78 @@ export function averageWind(
 }
 
 /**
+ * Straighten curved legs in a wind-corrected path.
+ *
+ * Wind shear can cause what should be straight pattern legs to appear curved,
+ * because each point is offset by a different wind vector. This function
+ * redistributes non-POM points within each pattern leg so they lie evenly
+ * spaced on the straight line between the leg's two endpoint POMs.
+ *
+ * Only the pattern phase is affected; the manoeuvre turn is left unchanged.
+ * The wind drift calculation is not altered — only the visual positions of
+ * intermediate points change.
+ */
+export function straightenLegs(path: FlightPath): FlightPath {
+  if (path.length === 0) return path;
+
+  // Build the list of segment boundary indices for the pattern phase.
+  // A boundary is either the first pattern point or a POM within the pattern.
+  const boundaries: number[] = [];
+  let firstPatternIdx = -1;
+
+  for (let i = 0; i < path.length; i++) {
+    const point = path[i];
+
+    if (point.properties.phase !== 'pattern') continue;
+
+    if (firstPatternIdx === -1) {
+      firstPatternIdx = i;
+      boundaries.push(i);
+    }
+
+    if (point.properties.pom && i !== firstPatternIdx) {
+      boundaries.push(i);
+    }
+  }
+
+  if (boundaries.length < 2) return path;
+
+  // Deep-copy geometry so we don't mutate the original path
+  const result: FlightPath = path.map(p => ({
+    ...p,
+    geometry: { ...p.geometry, coordinates: [...p.geometry.coordinates] }
+  }));
+
+  for (let b = 0; b < boundaries.length - 1; b++) {
+    const startIdx = boundaries[b];
+    const endIdx = boundaries[b + 1];
+    const intermediateCount = endIdx - startIdx - 1;
+
+    if (intermediateCount === 0) continue;
+
+    const [startLng, startLat] = path[startIdx].geometry.coordinates;
+    const [endLng, endLat] = path[endIdx].geometry.coordinates;
+
+    for (let k = 1; k <= intermediateCount; k++) {
+      const t = k / (intermediateCount + 1);
+
+      result[startIdx + k] = {
+        ...path[startIdx + k],
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            startLng + t * (endLng - startLng),
+            startLat + t * (endLat - startLat)
+          ]
+        }
+      };
+    }
+  }
+
+  return result;
+}
+
+/**
  * Scale the altitude of all points in a manoeuvre.
  */
 export function setManoeuvreAltitude(points: FlightPath, newAlt: number): void {

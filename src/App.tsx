@@ -46,7 +46,7 @@ import {
 } from './hooks';
 import { Target, WindSummaryData } from './types';
 import { addWind, hasTargetMovedTooFar } from './util/geo';
-import { averageWind, reposition } from './util/util';
+import { averageWind, reposition, straightenLegs } from './util/util';
 import { WindRow } from './util/wind';
 
 const NAVIGATION: Navigation = [
@@ -220,6 +220,7 @@ function DashboardContent() {
   for (let i = 0; i < c.length; i++) {
     c2[i].properties.phase = c[i].properties.phase;
   }
+  const c2Display = settings.straightenLegs ? straightenLegs(c2) : c2;
   const averageWind_ = averageWind(c, c2);
 
   let windSummary: WindSummaryData | undefined;
@@ -313,7 +314,7 @@ function DashboardContent() {
     <MapComponent
       center={target.target}
       pathA={c}
-      pathB={c2}
+      pathB={c2Display}
       settings={settings}
       onClick={handleMapClick}
       windDirection={averageWind_?.direction ?? 0}

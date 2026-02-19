@@ -40,6 +40,7 @@ const DEFAULT_SETTINGS: Settings = {
   displayWindSummary: true,
   interpolateWind: true,
   correctPatternHeading: true,
+  straightenLegs: true,
   useDzGroundWind: true,
   limitWind: 3000,
   showPresets: true,
