@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS: Settings = {
   useDzGroundWind: true,
   limitWind: 3000,
   showPresets: true,
+  showMeasureTool: false,
   highlightCorrespondingPoints: true,
   units: DEFAULT_UNIT_PREFERENCES
 };

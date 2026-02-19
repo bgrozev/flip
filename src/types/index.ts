@@ -71,6 +71,7 @@ export interface Settings {
   useDzGroundWind: boolean;
   limitWind: number;
   showPresets: boolean;
+  showMeasureTool: boolean;
   highlightCorrespondingPoints: boolean;
   units: UnitPreferences;
 }

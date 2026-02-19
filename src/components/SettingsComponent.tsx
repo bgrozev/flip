@@ -46,6 +46,11 @@ const settingsGroups: SettingsGroup[] = [
         key: 'showPresets',
         label: 'Show presets',
         tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
+      },
+      {
+        key: 'showMeasureTool',
+        label: 'Show measure distance tool',
+        tooltip: 'Show the ruler button on the map to measure distances by clicking points.'
       }
     ]
   },

@@ -111,6 +111,42 @@ function formatDistance(feet: number, altitudeLabel: string): string {
   return `${Math.round(feet)} ft`;
 }
 
+function haversineDistanceFt(a: LatLng, b: LatLng): number {
+  const R = 20902231; // Earth radius in feet
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(x));
+}
+
+const RULER_BUTTON_STYLE: React.CSSProperties = {
+  width: 32,
+  height: 32,
+  border: 'none',
+  borderRadius: 4,
+  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
+  fontSize: 16
+};
+
+const MEASURE_LABEL_STYLE: React.CSSProperties = {
+  backgroundColor: 'rgba(33, 150, 243, 0.9)',
+  color: 'white',
+  padding: '2px 6px',
+  borderRadius: 4,
+  fontSize: '11px',
+  whiteSpace: 'nowrap',
+  transform: 'translate(-50%, -130%)',
+  pointerEvents: 'none',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+};
+
 const LEG_NAMES = ['Final Leg', 'Base Leg', 'Downwind Leg'];
 
 function LegStatsDisplay({ stats, formatAltitude, altitudeLabel, showDrift = true, showBearing = true }: {
@@ -330,11 +366,29 @@ function MapComponent({
   settings,
   waitingForClick
 }: MapComponentProps) {
-  const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints } = settings;
+  const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
   const { formatAltitude, altitudeLabel } = useUnits();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [hoveredPreWindIndex, setHoveredPreWindIndex] = useState<number | null>(null);
+  const [measuring, setMeasuring] = useState(false);
+  const [measurePoints, setMeasurePoints] = useState<LatLng[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
+
+  const toggleMeasuring = useCallback(() => {
+    setMeasuring(m => {
+      if (m) setMeasurePoints([]);
+      return !m;
+    });
+  }, []);
+
+  // Cumulative distances from the first measure point (in feet)
+  const measureCumulatives = useMemo(() => {
+    const result: number[] = [0];
+    for (let i = 1; i < measurePoints.length; i++) {
+      result.push(result[i - 1] + haversineDistanceFt(measurePoints[i - 1], measurePoints[i]));
+    }
+    return result;
+  }, [measurePoints]);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -355,7 +409,8 @@ function MapComponent({
 
   // Update cursor without causing map re-render
   if (mapRef.current) {
-    mapRef.current.setOptions({ draggableCursor: waitingForClick ? 'crosshair' : 'grab' });
+    const cursor = (showMeasureTool && measuring) || waitingForClick ? 'crosshair' : 'grab';
+    mapRef.current.setOptions({ draggableCursor: cursor });
   }
 
   const { isLoaded } = useJsApiLoader({
@@ -388,12 +443,16 @@ function MapComponent({
   );
 
   return isLoaded ? (
-    <>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <GoogleMap
         mapContainerStyle={MAP_CONTAINER_STYLE}
         onClick={ev => {
-          if (ev.latLng) {
-            onClick({ lat: ev.latLng.lat(), lng: ev.latLng.lng() });
+          if (!ev.latLng) return;
+          const latlng = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
+          if (showMeasureTool && measuring) {
+            setMeasurePoints(pts => [...pts, latlng]);
+          } else {
+            onClick(latlng);
           }
         }}
         options={DEFAULT_MAP_OPTIONS}
@@ -491,12 +550,77 @@ function MapComponent({
               key={i}
             />
           ))}
+
+        {/* Measure tool — polyline */}
+        {showMeasureTool && measuring && measurePoints.length > 1 && (
+          <PolylineF
+            path={measurePoints}
+            options={{
+              strokeColor: '#2196F3',
+              strokeOpacity: 1,
+              strokeWeight: 2,
+              zIndex: 20,
+              clickable: false
+            }}
+          />
+        )}
+
+        {/* Measure tool — point markers and cumulative distance labels */}
+        {showMeasureTool && measuring && measurePoints.map((point, i) => (
+          <React.Fragment key={`measure-${i}`}>
+            <CircleF
+              center={point}
+              options={{
+                radius: i === 0 ? 7 : 5,
+                fillColor: '#2196F3',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+                strokeOpacity: 1,
+                clickable: true,
+                zIndex: 21
+              }}
+              onClick={() => setMeasurePoints(pts => pts.filter((_, idx) => idx !== i))}
+            />
+            {i > 0 && (
+              <OverlayView position={point} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                <div style={MEASURE_LABEL_STYLE}>
+                  {formatDistance(measureCumulatives[i], altitudeLabel)}
+                </div>
+              </OverlayView>
+            )}
+          </React.Fragment>
+        ))}
       </GoogleMap>
+
+      {/* Measure tool — ruler toggle button */}
+      {showMeasureTool && <div style={{ position: 'absolute', top: 130, right: 10, zIndex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <button
+          onClick={toggleMeasuring}
+          title={measuring ? 'Exit measure mode (click points to remove)' : 'Measure distance'}
+          style={{
+            ...RULER_BUTTON_STYLE,
+            backgroundColor: measuring ? '#2196F3' : 'white',
+            color: measuring ? 'white' : '#333'
+          }}
+        >
+          📐
+        </button>
+        {measuring && measurePoints.length > 0 && (
+          <button
+            onClick={() => setMeasurePoints([])}
+            title="Clear measurements"
+            style={{ ...RULER_BUTTON_STYLE, backgroundColor: 'white', color: '#333' }}
+          >
+            ✕
+          </button>
+        )}
+      </div>}
 
       {displayWindArrow && (
         <WindDirectionArrow direction={windDirection} speed={windSpeed} />
       )}
-    </>
+    </div>
   ) : (
     <>Loading</>
   );
