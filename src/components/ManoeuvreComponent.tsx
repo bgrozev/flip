@@ -1,10 +1,4 @@
-import {
-  Block as BlockIcon,
-  Build as BuildIcon,
-  Folder as FolderIcon,
-  Menu as MenuIcon
-} from '@mui/icons-material';
-import { Box, Divider, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
+import { Box, Divider, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import React from 'react';
 
 import { FlightPath, ManoeuvreConfig, ManoeuvreType } from '../types';
@@ -53,29 +47,13 @@ export default function ManoeuvreComponent({
         fullWidth
         color="primary"
       >
-        <Tooltip title="No manoeuvre">
-          <ToggleButton value="none" aria-label="None">
-            <BlockIcon />
-          </ToggleButton>
-        </Tooltip>
-        <Tooltip title="Enter parameters">
-          <ToggleButton value="parameters" aria-label="Parameters">
-            <BuildIcon />
-          </ToggleButton>
-        </Tooltip>
-        <Tooltip title="My tracks">
-          <ToggleButton value="track" aria-label="Files">
-            <FolderIcon />
-          </ToggleButton>
-        </Tooltip>
-        <Tooltip title="Samples">
-          <ToggleButton value="samples" aria-label="Samples">
-            <MenuIcon />
-          </ToggleButton>
-        </Tooltip>
+        <ToggleButton value="none">None</ToggleButton>
+        <ToggleButton value="parameters">Parameters</ToggleButton>
+        <ToggleButton value="track">Track</ToggleButton>
+        <ToggleButton value="samples">Samples</ToggleButton>
       </ToggleButtonGroup>
 
-      <Divider />
+      {manoeuvreConfig.type !== 'none' && <Divider />}
 
       {manoeuvreConfig.type === 'parameters' && (
         <ManoeuvreParametersComponent

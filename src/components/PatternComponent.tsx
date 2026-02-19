@@ -1,5 +1,4 @@
 import {
-  Block as BlockIcon,
   Looks3 as Looks3Icon,
   LooksOne as LooksOneIcon,
   LooksTwo as LooksTwoIcon
@@ -67,11 +66,7 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
         fullWidth
         color="primary"
       >
-        <ToggleButton value={PATTERN_NONE}>
-          <Tooltip title="No pattern">
-            <BlockIcon />
-          </Tooltip>
-        </ToggleButton>
+        <ToggleButton value={PATTERN_NONE}>None</ToggleButton>
         <ToggleButton value={PATTERN_ONE_LEG}>
           <Tooltip title="Single leg">
             <LooksOneIcon />
@@ -114,7 +109,7 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
           </Stack>
 
           <Divider />
-          <Typography variant="caption">Final leg</Typography>
+          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Final leg</Typography>
           <Stack direction="row" spacing={2}>
             <LegAltitudeSelector
               title="Altitude for the final leg of the pattern."
@@ -133,8 +128,8 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
       {(params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (
         <>
           <Divider />
-          <Typography variant="caption">Base leg</Typography>
-          <Stack direction="row" spacing={2}>
+          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Base leg</Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
             <LegAltitudeSelector
               title="Altitude for the base leg of the pattern. This determines how long the leg is."
               label="Base leg altitude"
@@ -160,8 +155,8 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
       {params.type === PATTERN_THREE_LEG && (
         <>
           <Divider />
-          <Typography variant="caption">Downwind leg</Typography>
-          <Stack direction="row" spacing={2}>
+          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Downwind leg</Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
             <LegAltitudeSelector
               title="Altitude for the downwind leg of the pattern. This determines how long the leg is."
               label="Downwind leg altitude"
@@ -220,12 +215,23 @@ function LegAltitudeSelector({
   const presets = altitudeLabel === 'ft' ? PRESETS_FT : PRESETS_M;
 
   const matchingPreset = presets.find(p => p.internal === value);
-  const mode = matchingPreset ? String(matchingPreset.internal) : 'custom';
+  const [userSelectedCustom, setUserSelectedCustom] = React.useState(() => !matchingPreset);
+
+  // If an external value change lands on a preset, exit custom mode
+  React.useEffect(() => {
+    if (matchingPreset) setUserSelectedCustom(false);
+  }, [value]);
+
+  const isCustom = userSelectedCustom || !matchingPreset;
+  const mode = isCustom ? 'custom' : String(matchingPreset!.internal);
 
   const handleToggleChange = (_: React.MouseEvent<HTMLElement>, newMode: string | null) => {
-    if (!newMode || newMode === 'custom') {
+    if (!newMode) return;
+    if (newMode === 'custom') {
+      setUserSelectedCustom(true);
       return;
     }
+    setUserSelectedCustom(false);
     onChange(Number(newMode));
   };
 
@@ -254,7 +260,7 @@ function LegAltitudeSelector({
         </ToggleButtonGroup>
       </Tooltip>
 
-      {mode === 'custom' && (
+      {isCustom && (
         <NumberInput
           title={title}
           label={label}
