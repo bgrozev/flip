@@ -23,6 +23,7 @@ interface ToolbarActionsProps {
   onPresetSelect: (id: string | null) => void;
   onPresetSave: (name?: string) => void;
   onPresetDelete: () => void;
+  onPresetRename: (id: string, newName: string) => void;
 }
 
 export default function ToolbarActions({
@@ -36,7 +37,8 @@ export default function ToolbarActions({
   activePresetId,
   onPresetSelect,
   onPresetSave,
-  onPresetDelete
+  onPresetDelete,
+  onPresetRename
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
@@ -53,6 +55,7 @@ export default function ToolbarActions({
           onSelect={onPresetSelect}
           onSave={onPresetSave}
           onDelete={onPresetDelete}
+          onRename={onPresetRename}
         />
       )}
     </Stack>

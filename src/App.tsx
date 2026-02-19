@@ -186,7 +186,8 @@ function DashboardContent() {
     createPreset,
     loadPreset,
     updatePreset,
-    deletePreset
+    deletePreset,
+    renamePreset
   } = usePresets({
     target,
     patternParams,
@@ -338,6 +339,7 @@ function DashboardContent() {
             onPresetSelect={loadPreset}
             onPresetSave={handlePresetSave}
             onPresetDelete={handlePresetDelete}
+            onPresetRename={renamePreset}
           />
         ),
         sidebarFooter: SidebarFooter,

@@ -1,21 +1,29 @@
 import {
+  Add as AddIcon,
+  Bookmark as BookmarkIcon,
+  BookmarkBorder as BookmarkBorderIcon,
+  Check as CheckIcon,
   Delete as DeleteIcon,
+  DriveFileRenameOutline as RenameIcon,
+  KeyboardArrowDown as ArrowDownIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
 import {
+  Alert,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
-  FormControl,
-  IconButton,
+  Divider,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
-  Select,
-  SelectChangeEvent,
-  Stack,
+  Snackbar,
   TextField,
-  Tooltip
+  Typography
 } from '@mui/material';
 import React, { useState } from 'react';
 
@@ -27,6 +35,7 @@ interface PresetSelectorProps {
   onSelect: (id: string | null) => void;
   onSave: (name?: string) => void;
   onDelete: () => void;
+  onRename: (id: string, newName: string) => void;
 }
 
 export default function PresetSelector({
@@ -34,71 +43,166 @@ export default function PresetSelector({
   activePresetId,
   onSelect,
   onSave,
-  onDelete
+  onDelete,
+  onRename
 }: PresetSelectorProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [inputName, setInputName] = useState('');
+  const [snackbarName, setSnackbarName] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const handleSelectChange = (event: SelectChangeEvent<string>) => {
-    const value = event.target.value;
-    onSelect(value === '' ? null : value);
+  const activePreset = presets.find(p => p.id === activePresetId) ?? null;
+  const menuOpen = Boolean(anchorEl);
+
+  const closeMenu = () => setAnchorEl(null);
+
+  const handleSelect = (id: string) => {
+    if (id !== activePresetId) onSelect(id);
+    closeMenu();
   };
 
-  const handleSaveClick = () => {
-    if (activePresetId) {
-      onSave();
-    } else {
-      setDialogOpen(true);
-    }
+  const handleUpdate = () => {
+    const name = activePreset?.name ?? '';
+    onSave();
+    closeMenu();
+    setSnackbarName(name);
+    setSnackbarOpen(true);
   };
 
-  const handleDialogSave = () => {
-    if (newName.trim()) {
-      onSave(newName.trim());
-      setNewName('');
-      setDialogOpen(false);
-    }
+  const handleOpenSaveDialog = () => {
+    closeMenu();
+    setInputName('');
+    setSaveDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
-    setNewName('');
-    setDialogOpen(false);
+  const handleSaveConfirm = () => {
+    if (!inputName.trim()) return;
+    onSave(inputName.trim());
+    setSaveDialogOpen(false);
+  };
+
+  const handleOpenRenameDialog = () => {
+    closeMenu();
+    setInputName(activePreset?.name ?? '');
+    setRenameDialogOpen(true);
+  };
+
+  const handleRenameConfirm = () => {
+    if (!activePresetId || !inputName.trim()) return;
+    onRename(activePresetId, inputName.trim());
+    setRenameDialogOpen(false);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    closeMenu();
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    onDelete();
+    setDeleteDialogOpen(false);
   };
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <FormControl size="small" sx={{ minWidth: 150 }}>
-        <Select
-          value={activePresetId ?? ''}
-          displayEmpty
-          onChange={handleSelectChange}
-        >
-          <MenuItem value="">
-            <em>No preset</em>
+    <>
+      <Button
+        size="small"
+        onClick={e => setAnchorEl(e.currentTarget)}
+        startIcon={
+          activePreset ? (
+            <BookmarkIcon fontSize="small" />
+          ) : (
+            <BookmarkBorderIcon fontSize="small" />
+          )
+        }
+        endIcon={<ArrowDownIcon fontSize="small" />}
+        variant={activePreset ? 'outlined' : 'text'}
+        color="inherit"
+        sx={{ textTransform: 'none', minWidth: 0 }}
+      >
+        {activePreset && (
+          <Typography
+            variant="body2"
+            noWrap
+            sx={{ maxWidth: { xs: 90, sm: 130 }, display: 'block' }}
+          >
+            {activePreset.name}
+          </Typography>
+        )}
+      </Button>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={menuOpen}
+        onClose={closeMenu}
+        slotProps={{ paper: { sx: { minWidth: 220 } } }}
+      >
+        {presets.length === 0 ? (
+          <MenuItem disabled>
+            <ListItemText secondary="No saved presets" />
           </MenuItem>
-          {presets.map(p => (
-            <MenuItem key={p.id} value={p.id}>
-              {p.name}
+        ) : (
+          presets.map(p => (
+            <MenuItem
+              key={p.id}
+              selected={p.id === activePresetId}
+              onClick={() => handleSelect(p.id)}
+            >
+              <ListItemIcon sx={{ minWidth: 32 }}>
+                {p.id === activePresetId && <CheckIcon fontSize="small" />}
+              </ListItemIcon>
+              <ListItemText>{p.name}</ListItemText>
             </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          ))
+        )}
 
-      <Tooltip title={activePresetId ? 'Update preset' : 'Save as new preset'}>
-        <IconButton onClick={handleSaveClick}>
-          <SaveIcon />
-        </IconButton>
-      </Tooltip>
+        <Divider />
 
-      {activePresetId && (
-        <Tooltip title="Delete preset">
-          <IconButton onClick={onDelete}>
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      )}
+        {activePreset && (
+          <MenuItem onClick={handleUpdate}>
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              <SaveIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Update &ldquo;{activePreset.name}&rdquo;</ListItemText>
+          </MenuItem>
+        )}
 
-      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+        {activePreset && (
+          <MenuItem onClick={handleOpenRenameDialog}>
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              <RenameIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Rename&hellip;</ListItemText>
+          </MenuItem>
+        )}
+
+        <MenuItem onClick={handleOpenSaveDialog}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <AddIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Save as new preset&hellip;</ListItemText>
+        </MenuItem>
+
+        {activePreset && (
+          <MenuItem onClick={handleOpenDeleteDialog} sx={{ color: 'error.main' }}>
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
+            </ListItemIcon>
+            <ListItemText>Delete &ldquo;{activePreset.name}&rdquo;</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* Save as new */}
+      <Dialog
+        open={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Save New Preset</DialogTitle>
         <DialogContent>
           <TextField
@@ -107,22 +211,90 @@ export default function PresetSelector({
             label="Preset name"
             fullWidth
             variant="outlined"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                handleDialogSave();
-              }
-            }}
+            value={inputName}
+            onChange={e => setInputName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSaveConfirm()}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose}>Cancel</Button>
-          <Button onClick={handleDialogSave} disabled={!newName.trim()}>
+          <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleSaveConfirm}
+            disabled={!inputName.trim()}
+            variant="contained"
+          >
             Save
           </Button>
         </DialogActions>
       </Dialog>
-    </Stack>
+
+      {/* Rename */}
+      <Dialog
+        open={renameDialogOpen}
+        onClose={() => setRenameDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Rename Preset</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="New name"
+            fullWidth
+            variant="outlined"
+            value={inputName}
+            onChange={e => setInputName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleRenameConfirm()}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleRenameConfirm}
+            disabled={!inputName.trim()}
+            variant="contained"
+          >
+            Rename
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="xs"
+      >
+        <DialogTitle>Delete preset?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            &ldquo;{activePreset?.name}&rdquo; will be permanently deleted.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Update feedback */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={2000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="success"
+          onClose={() => setSnackbarOpen(false)}
+          sx={{ width: '100%' }}
+        >
+          &ldquo;{snackbarName}&rdquo; updated
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
