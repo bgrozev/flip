@@ -402,7 +402,7 @@ function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
         variant="h6"
         sx={{
           fontWeight: 'bold',
-          color: '#14E02B',
+          color: '#4ade80',
           textTransform: 'uppercase'
         }}
       >

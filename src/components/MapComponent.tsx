@@ -402,13 +402,13 @@ function MapComponent({
         {showPreWind && (
           <PolylineF
             path={pathALatLngs.filter(p => p.phase === 'manoeuvre')}
-            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.manoeuvre }}
+            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.preWind }}
           />
         )}
         {showPreWind && (
           <PolylineF
             path={pathALatLngs.filter(p => p.phase === 'pattern')}
-            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.pattern }}
+            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.preWind }}
           />
         )}
         <PolylineF
@@ -430,9 +430,11 @@ function MapComponent({
             pathStats={preWindPathStats}
             options={{
               ...(point.phase === 'manoeuvre' ? POM_OPTIONS.manoeuvre : POM_OPTIONS.pattern),
+              fillColor: PATH_COLORS.preWind,
+              strokeColor: PATH_COLORS.markerStroke,
               // Only show circle visually for POMs
-              fillOpacity: (showPoms && point.pom) ? 1 : 0,
-              strokeOpacity: (showPoms && point.pom) ? 1 : 0
+              fillOpacity: (showPoms && point.pom) ? 0.7 : 0,
+              strokeOpacity: (showPoms && point.pom) ? 0.7 : 0
             }}
             showTooltip={showPomTooltips}
             showDrift={false}

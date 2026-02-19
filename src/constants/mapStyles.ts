@@ -5,9 +5,11 @@
 // Colors for flight path visualization
 export const PATH_COLORS = {
   /** Manoeuvre path color (red) */
-  manoeuvre: '#ff0000',
+  manoeuvre: '#ff4444',
   /** Pattern path color (green) */
-  pattern: '#00ff00',
+  pattern: '#00e676',
+  /** Pre-wind (ghost) path color — muted grey */
+  preWind: '#aaaaaa',
   /** Marker stroke color */
   markerStroke: '#000000'
 } as const;
