@@ -134,12 +134,6 @@ function useDemoRouter(initialPath: string): Router {
   }, [pathname, navigate]);
 }
 
-function getTitleFromPathname(pathname: string): string {
-  const segment = pathname.replace('/', '');
-  const entry = NAVIGATION.find(item => 'segment' in item && item.segment === segment);
-
-  return entry && 'title' in entry ? entry.title ?? 'Unknown' : 'Unknown';
-}
 
 export default function DashboardLayoutBasic() {
   return (
@@ -351,11 +345,7 @@ function DashboardContent() {
         appTitle: () => CustomAppTitle({ wind: windSummary })
       }}
     >
-      <LayoutWithSidebar
-        title={getTitleFromPathname(router.pathname)}
-        box={sidebar}
-        map={map}
-      />
+      <LayoutWithSidebar box={sidebar} map={map} />
     </DashboardLayout>
   );
 
@@ -439,10 +429,9 @@ function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
 interface LayoutWithSidebarProps {
   box: React.ReactNode;
   map: React.ReactNode;
-  title: string;
 }
 
-function LayoutWithSidebar({ box, map, title }: LayoutWithSidebarProps) {
+function LayoutWithSidebar({ box, map }: LayoutWithSidebarProps) {
   const isMobile = useMediaQuery('(max-width:600px)');
 
   // On mobile: show either the panel (full-width) or the map — not both
@@ -451,10 +440,6 @@ function LayoutWithSidebar({ box, map, title }: LayoutWithSidebarProps) {
       <Box sx={{ width: '100%', height: '100%', overflow: 'auto', pb: '56px' }}>
         {box ? (
           <Box sx={{ px: 2, pt: 2 }}>
-            <Typography variant="h6" fontWeight="medium" gutterBottom>
-              {title}
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
             {box}
           </Box>
         ) : (
@@ -479,12 +464,6 @@ function LayoutWithSidebar({ box, map, title }: LayoutWithSidebarProps) {
             overflow: 'auto'
           }}
         >
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <Typography variant="h6" fontWeight="medium" gutterBottom>
-              {title}
-            </Typography>
-            <Divider />
-          </Box>
           {box}
         </Box>
       )}

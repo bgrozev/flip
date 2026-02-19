@@ -123,15 +123,13 @@ export default function PresetSelector({
         color="inherit"
         sx={{ textTransform: 'none', minWidth: 0 }}
       >
-        {activePreset && (
-          <Typography
-            variant="body2"
-            noWrap
-            sx={{ maxWidth: { xs: 90, sm: 130 }, display: 'block' }}
-          >
-            {activePreset.name}
-          </Typography>
-        )}
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{ maxWidth: { xs: 90, sm: 130 }, display: 'block' }}
+        >
+          {activePreset ? activePreset.name : 'Presets'}
+        </Typography>
       </Button>
 
       <Menu
