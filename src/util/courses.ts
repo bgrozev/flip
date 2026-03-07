@@ -64,7 +64,65 @@ export function makeDistanceCourse(
     })
   ];
 
-  return { id, name, elements };
+  return { id, name, elements, center: { lat, lng }, direction };
+}
+
+/**
+ * Return the depth and offset of a point relative to a course, plus its
+ * absolute bearing from the course center.
+ *
+ * depth:   metres along the (direction+180) axis — positive = away from course
+ * offset:  metres along the (direction+90) axis  — positive = right of course direction
+ * bearing: absolute compass bearing from center to point (0–360)
+ */
+export function getTargetRelativeToCourse(
+  point: LatLng,
+  center: LatLng,
+  courseDir: number
+): { depth: number; offset: number; bearing: number } {
+  const dist = turf.distance(
+    [center.lng, center.lat],
+    [point.lng, point.lat],
+    { units: 'meters' }
+  );
+
+  if (dist < 1e-6) {
+    return { depth: 0, offset: 0, bearing: (courseDir + 180) % 360 };
+  }
+
+  const bearing = turf.bearing([center.lng, center.lat], [point.lng, point.lat]);
+  const dAway = (courseDir + 180) % 360;
+
+  let angle = bearing - dAway;
+  while (angle >  180) angle -= 360;
+  while (angle < -180) angle += 360;
+
+  const rad = angle * Math.PI / 180;
+  return {
+    depth: dist * Math.cos(rad),
+    offset: dist * Math.sin(rad),
+    bearing: (bearing + 360) % 360
+  };
+}
+
+/**
+ * Convert depth + offset (in course-relative coordinates) back to a LatLng.
+ */
+export function fromCourseRelative(
+  depth: number,
+  offset: number,
+  center: LatLng,
+  courseDir: number
+): LatLng {
+  const dist = Math.sqrt(depth * depth + offset * offset);
+  if (dist < 1e-6) return center;
+
+  const dAway = (courseDir + 180) % 360;
+  const rotDeg = Math.atan2(offset, depth) * 180 / Math.PI;
+  const bearing = ((dAway + rotDeg) + 360) % 360;
+
+  const pt = turf.destination([center.lng, center.lat], dist, bearing, { units: 'meters' });
+  return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
 }
 
 export const COURSES: Course[] = [

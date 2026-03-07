@@ -311,6 +311,8 @@ function DashboardContent() {
       <CoursesComponent
         selectedCourseId={selectedCourseId}
         onSelect={setSelectedCourseId}
+        target={target}
+        onTargetChange={setTarget}
       />
     );
   } else if (router.pathname === '/about') {

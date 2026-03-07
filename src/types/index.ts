@@ -132,6 +132,8 @@ export interface Course {
   id: string;
   name: string;
   elements: CourseElement[];
+  center?: LatLng;
+  direction?: number;
 }
 
 // Preset types
