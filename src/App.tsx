@@ -4,6 +4,7 @@ import {
   Air as AirIcon,
   Crop as CropIcon,
   FavoriteSharp as FavoriteIcon,
+  Flag as FlagIcon,
   Info as InfoIcon,
   RotateLeft as RotateLeftIcon,
   Settings as SettingsIcon
@@ -25,6 +26,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 
 import {
   AboutComponent,
+  CoursesComponent,
   FlipIcon,
   ManoeuvreComponent,
   MapComponent,
@@ -44,8 +46,9 @@ import {
   useMapClickHandler,
   usePresets
 } from './hooks';
-import { Target, WindSummaryData } from './types';
+import { Course, Target, WindSummaryData } from './types';
 import { addWind, hasTargetMovedTooFar } from './util/geo';
+import { COURSES } from './util/courses';
 import { averageWind, reposition, straightenLegs } from './util/util';
 import { WindRow } from './util/wind';
 
@@ -69,6 +72,11 @@ const NAVIGATION: Navigation = [
     segment: 'wind',
     title: 'Wind',
     icon: <AirIcon />
+  },
+  {
+    segment: 'courses',
+    title: 'Courses',
+    icon: <FlagIcon />
   },
   {
     kind: 'divider'
@@ -154,7 +162,9 @@ function DashboardContent() {
     patternParams,
     setPatternParams,
     settings,
-    setSettings
+    setSettings,
+    selectedCourseId,
+    setSelectedCourseId
   } = useAppState();
 
   const [forecastTime, setForecastTime] = useState<Date | null>(null);
@@ -197,9 +207,11 @@ function DashboardContent() {
     target,
     patternParams,
     manoeuvreConfig,
+    selectedCourseId,
     setTarget,
     setPatternParams,
-    setManoeuvreConfig
+    setManoeuvreConfig,
+    setSelectedCourseId
   });
 
   const handlePresetSave = (name?: string) => {
@@ -294,6 +306,13 @@ function DashboardContent() {
         onForecastTimeChange={setForecastTime}
       />
     );
+  } else if (router.pathname === '/courses') {
+    p = (
+      <CoursesComponent
+        selectedCourseId={selectedCourseId}
+        onSelect={setSelectedCourseId}
+      />
+    );
   } else if (router.pathname === '/about') {
     p = <AboutComponent />;
   } else if (router.pathname === '/settings') {
@@ -318,6 +337,9 @@ function DashboardContent() {
       </Box>
     );
   }
+  const selectedCourse = selectedCourseId ? COURSES.find(c => c.id === selectedCourseId) : undefined;
+  const enabledCourses: Course[] = selectedCourse ? [selectedCourse] : [];
+
   const map = (
     <MapComponent
       center={target.target}
@@ -328,6 +350,7 @@ function DashboardContent() {
       windDirection={averageWind_?.direction ?? 0}
       windSpeed={averageWind_?.speedKts ?? 0}
       waitingForClick={isWaitingForClick}
+      courses={enabledCourses}
     />
   );
   const dashboard = (

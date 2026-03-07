@@ -18,7 +18,7 @@ import {
   POM_OPTIONS
 } from '../constants';
 import { useUnits } from '../hooks';
-import { LatLng, Settings } from '../types';
+import { Course, CourseElement, CourseMarker, LatLng, Settings } from '../types';
 import { pathToLatLngs } from '../util/coords';
 import { FlightPath } from '../types';
 import {
@@ -283,7 +283,7 @@ const HIGHLIGHT_OPTIONS: google.maps.CircleOptions = {
   strokeColor: '#FFFFFF',
   strokeOpacity: 1,
   strokeWeight: 2,
-  radius: 6,
+  radius: 3,
   zIndex: 50,
   clickable: false
 };
@@ -354,6 +354,7 @@ interface MapComponentProps {
   pathB: FlightPath;
   settings: Settings;
   waitingForClick: boolean;
+  courses?: Course[];
 }
 
 function MapComponent({
@@ -364,7 +365,8 @@ function MapComponent({
   pathA,
   pathB,
   settings,
-  waitingForClick
+  waitingForClick,
+  courses = []
 }: MapComponentProps) {
   const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
   const { formatAltitude, altitudeLabel } = useUnits();
@@ -563,6 +565,104 @@ function MapComponent({
               clickable: false
             }}
           />
+        )}
+
+        {/* Course elements */}
+        {courses.flatMap(course =>
+          course.elements.map((element: CourseElement, i) => {
+            const key = `${course.id}-${element.type}-${i}`;
+
+            if (element.type === 'buoy') {
+              // Two concentric circles.
+              // White buoy: white outer + white inner, both with black stroke.
+              // Orange buoy: orange outer + white inner; black stroke on both
+              //   creates a thin black ring between the two fills.
+              const outerFill = element.color === 'white' ? '#ffffff' : '#ff8800';
+              const center = { lat: element.lat, lng: element.lng };
+              return (
+                <React.Fragment key={key}>
+                  <CircleF
+                    center={center}
+                    options={{
+                      radius: 1.5,
+                      fillColor: outerFill,
+                      fillOpacity: 1,
+                      strokeColor: '#000',
+                      strokeWeight: 0.75,
+                      strokeOpacity: 1,
+                      zIndex: 15,
+                      clickable: false
+                    }}
+                  />
+                  <CircleF
+                    center={center}
+                    options={{
+                      radius: 0.75,
+                      fillColor: '#ffffff',
+                      fillOpacity: 1,
+                      strokeColor: '#000',
+                      strokeWeight: 0.4,
+                      strokeOpacity: 1,
+                      zIndex: 16,
+                      clickable: false
+                    }}
+                  />
+                </React.Fragment>
+              );
+            }
+            if (element.type === 'line') {
+              return (
+                <PolylineF
+                  key={key}
+                  path={[element.from, element.to]}
+                  options={{
+                    strokeColor: element.color,
+                    strokeOpacity: 0.9,
+                    strokeWeight: 1.5,
+                    zIndex: 10,
+                    clickable: false
+                  }}
+                />
+              );
+            }
+            if (element.type === 'marker') {
+              const marker = element as CourseMarker;
+              const pos = { lat: marker.lat, lng: marker.lng };
+              return (
+                <React.Fragment key={key}>
+                  <CircleF
+                    center={pos}
+                    options={{
+                      radius: 0.6,
+                      fillColor: '#ffffff',
+                      fillOpacity: 1,
+                      strokeColor: '#000',
+                      strokeWeight: 0.5,
+                      strokeOpacity: 1,
+                      zIndex: 12,
+                      clickable: false
+                    }}
+                  />
+                  {marker.label && (
+                    <OverlayView position={pos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                      <div style={{
+                        color: '#fff',
+                        fontSize: '10px',
+                        whiteSpace: 'nowrap',
+                        transform: 'translate(6px, -50%)',
+                        pointerEvents: 'none',
+                        textShadow: '0 0 3px #000, 0 0 3px #000',
+                        fontWeight: 'bold'
+                      }}>
+                        {marker.label}
+                      </div>
+                    </OverlayView>
+                  )}
+                </React.Fragment>
+              );
+            }
+            return null;
+          })
         )}
 
         {/* Measure tool — point markers and cumulative distance labels */}

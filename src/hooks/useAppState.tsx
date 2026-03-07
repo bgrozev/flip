@@ -100,12 +100,14 @@ interface AppStateContextValue {
   patternParams: PatternParams;
   target: Target;
   settings: Settings;
+  selectedCourseId: string | null;
 
   // Setters
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
   setPatternParams: (params: PatternParams) => void;
   setTarget: (target: Target) => void;
   setSettings: (settings: Settings) => void;
+  setSelectedCourseId: (id: string | null) => void;
 
   // Actions
   resetAll: () => void;
@@ -157,6 +159,13 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
   const settings = storedSettings ?? DEFAULT_SETTINGS;
 
+  // Selected course
+  const [storedSelectedCourseId, setStoredSelectedCourseId] = useLocalStorageState<string | null>(
+    'flip.courses.selected',
+    null
+  );
+  const selectedCourseId = storedSelectedCourseId ?? null;
+
   // Derived paths — computed from configs, not stored
   const manoeuvre = useMemo(() => computeManoeuvre(manoeuvreConfig), [manoeuvreConfig]);
   const pattern = useMemo(() => makePatternByType(patternParams), [patternParams]);
@@ -181,12 +190,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     [setStoredSettings]
   );
 
+  const setSelectedCourseId = useCallback(
+    (value: string | null) => setStoredSelectedCourseId(value),
+    [setStoredSelectedCourseId]
+  );
+
   const resetAll = useCallback(() => {
     setStoredManoeuvreConfig(DEFAULT_MANOEUVRE_CONFIG);
     setStoredTarget(DEFAULT_TARGET);
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
-  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredSettings]);
+    setStoredSelectedCourseId(null);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredSettings, setStoredSelectedCourseId]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -196,10 +211,12 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       patternParams,
       target,
       settings,
+      selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
       setTarget,
       setSettings,
+      setSelectedCourseId,
       resetAll
     }),
     [
@@ -209,10 +226,12 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       patternParams,
       target,
       settings,
+      selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
       setTarget,
       setSettings,
+      setSelectedCourseId,
       resetAll
     ]
   );
