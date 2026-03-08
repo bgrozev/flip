@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 
-import { Course, CourseElement, LatLng } from '../types';
+import { Course, CourseElement, CourseParams, LatLng } from '../types';
 
 function dest(lat: number, lng: number, distanceM: number, bearing: number): LatLng {
   const pt = turf.destination([lng, lat], distanceM, bearing, { units: 'meters' });
@@ -252,19 +252,32 @@ export function makeZACourse(
   return { id, name, elements, center: { lat, lng }, direction };
 }
 
-export const COURSES: Course[] = [
-  makeDistanceCourse(
-    'skydive-city-distance',
-    'Skydive City: Distance',
-    28.2187820,
-    -82.1514716,
-    197.46
-  ),
-  makeZACourse(
-    'skydive-city-za',
-    'Skydive City: Zone Accuracy',
-    28.2188610,
-    -82.1512317,
-    360 - 89.6920
-  )
+/** Build a Course object from stored parameters. */
+export function buildCourse(params: CourseParams): Course {
+  if (params.type === 'distance') {
+    return makeDistanceCourse(params.id, params.name, params.lat, params.lng, params.direction);
+  }
+  return makeZACourse(params.id, params.name, params.lat, params.lng, params.direction);
+}
+
+/** Parameters for the pre-built courses (also the template for duplicates). */
+export const BUILT_IN_PARAMS: CourseParams[] = [
+  {
+    id: 'skydive-city-distance',
+    name: 'Skydive City: Distance',
+    type: 'distance',
+    lat: 28.2187820,
+    lng: -82.1514716,
+    direction: 197.46
+  },
+  {
+    id: 'skydive-city-za',
+    name: 'Skydive City: Zone Accuracy',
+    type: 'zone-accuracy',
+    lat: 28.2188610,
+    lng: -82.1512317,
+    direction: 360 - 89.6920
+  }
 ];
+
+export const COURSES: Course[] = BUILT_IN_PARAMS.map(buildCourse);

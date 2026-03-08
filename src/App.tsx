@@ -37,16 +37,18 @@ import {
   WindSummary,
   WindsComponent
 } from './components';
+import { CourseEditTarget } from './components/MapComponent';
 import { SOURCE_DZ, SOURCE_MANUAL } from './forecast/forecast';
 import {
   AppStateProvider,
   DEFAULT_TARGET,
   useAppState,
+  useCustomCourses,
   useFetchForecast,
   useMapClickHandler,
   usePresets
 } from './hooks';
-import { Course, Target, WindSummaryData } from './types';
+import { Course, LatLng, Target, WindSummaryData } from './types';
 import { addWind, hasTargetMovedTooFar } from './util/geo';
 import { COURSES } from './util/courses';
 import { averageWind, reposition, straightenLegs } from './util/util';
@@ -168,6 +170,7 @@ function DashboardContent() {
   } = useAppState();
 
   const [forecastTime, setForecastTime] = useState<Date | null>(null);
+  const [courseEditOpen, setCourseEditOpen] = useState(false);
 
   const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
     target: target.target,
@@ -313,6 +316,8 @@ function DashboardContent() {
         onSelect={setSelectedCourseId}
         target={target}
         onTargetChange={setTarget}
+        editOpen={courseEditOpen}
+        onEditOpenChange={setCourseEditOpen}
       />
     );
   } else if (router.pathname === '/about') {
@@ -339,8 +344,21 @@ function DashboardContent() {
       </Box>
     );
   }
-  const selectedCourse = selectedCourseId ? COURSES.find(c => c.id === selectedCourseId) : undefined;
+  const { customCourses, customParams, updateCourse } = useCustomCourses();
+  const allCourses: Course[] = [...customCourses, ...COURSES];
+  const selectedCourse = selectedCourseId ? allCourses.find(c => c.id === selectedCourseId) : undefined;
   const enabledCourses: Course[] = selectedCourse ? [selectedCourse] : [];
+
+  const selectedCustomParam = customParams.find(c => c.id === selectedCourseId) ?? null;
+  const courseEditTarget: CourseEditTarget | undefined =
+    courseEditOpen && selectedCustomParam && router.pathname === '/courses'
+      ? {
+          center: { lat: selectedCustomParam.lat, lng: selectedCustomParam.lng } as LatLng,
+          direction: selectedCustomParam.direction,
+          onMove: (newCenter: LatLng) => updateCourse(selectedCustomParam.id, { lat: newCenter.lat, lng: newCenter.lng }),
+          onRotate: (newDir: number) => updateCourse(selectedCustomParam.id, { direction: newDir })
+        }
+      : undefined;
 
   const map = (
     <MapComponent
@@ -353,6 +371,7 @@ function DashboardContent() {
       windSpeed={averageWind_?.speedKts ?? 0}
       waitingForClick={isWaitingForClick}
       courses={enabledCourses}
+      courseEditTarget={courseEditTarget}
     />
   );
   const dashboard = (
