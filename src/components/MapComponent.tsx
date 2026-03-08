@@ -375,6 +375,7 @@ function MapComponent({
   const [measuring, setMeasuring] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<LatLng[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const [zoom, setZoom] = useState<number>(DEFAULT_MAP_OPTIONS.zoom);
 
   const toggleMeasuring = useCallback(() => {
     setMeasuring(m => {
@@ -459,6 +460,9 @@ function MapComponent({
         }}
         options={DEFAULT_MAP_OPTIONS}
         onLoad={onMapLoad}
+        onZoomChanged={() => {
+          if (mapRef.current) setZoom(mapRef.current.getZoom() ?? DEFAULT_MAP_OPTIONS.zoom);
+        }}
       >
         {showPreWind && (
           <PolylineF
@@ -626,6 +630,7 @@ function MapComponent({
               );
             }
             if (element.type === 'marker') {
+              if (zoom < 20) return null;
               const marker = element as CourseMarker;
               const pos = { lat: marker.lat, lng: marker.lng };
               if (!marker.label) return null;
