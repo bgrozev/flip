@@ -169,7 +169,7 @@ function CoursesComponent({
   };
 
   const courseTypeLabel = (type: CourseType) =>
-    type === 'distance' ? 'Distance' : 'Zone Accuracy';
+    type === 'distance' ? 'Distance' : type === 'speed' ? 'Speed' : 'Zone Accuracy';
 
   const inputSx = { width: '11ch' };
 
@@ -325,12 +325,33 @@ function CoursesComponent({
               <Select
                 value={selectedCustom.type}
                 label="Type"
-                onChange={e => updateCourse(selectedCustom.id, { type: e.target.value as CourseType })}
+                onChange={e => {
+                  const t = e.target.value as CourseType;
+                  updateCourse(selectedCustom.id, {
+                    type: t,
+                    ...(t === 'speed' && !selectedCustom.carveDirection ? { carveDirection: 'left' } : {})
+                  });
+                }}
               >
                 <MenuItem value="distance">Distance</MenuItem>
                 <MenuItem value="zone-accuracy">Zone Accuracy</MenuItem>
+                <MenuItem value="speed">Speed</MenuItem>
               </Select>
             </FormControl>
+
+            {selectedCustom.type === 'speed' && (
+              <FormControl size="small" fullWidth>
+                <InputLabel>Carve Direction</InputLabel>
+                <Select
+                  value={selectedCustom.carveDirection ?? 'left'}
+                  label="Carve Direction"
+                  onChange={e => updateCourse(selectedCustom.id, { carveDirection: e.target.value as 'left' | 'right' })}
+                >
+                  <MenuItem value="left">Left</MenuItem>
+                  <MenuItem value="right">Right</MenuItem>
+                </Select>
+              </FormControl>
+            )}
 
             <Stack direction="row" spacing={1}>
               <TextField

@@ -102,7 +102,7 @@ export interface Dropzone {
 }
 
 // Course types
-export type CourseType = 'distance' | 'zone-accuracy';
+export type CourseType = 'distance' | 'zone-accuracy' | 'speed';
 
 export interface CourseParams {
   id: string;
@@ -111,6 +111,8 @@ export interface CourseParams {
   lat: number;
   lng: number;
   direction: number;
+  /** Speed courses only */
+  carveDirection?: 'left' | 'right';
 }
 
 export interface CourseBuoy {

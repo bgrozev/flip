@@ -252,10 +252,109 @@ export function makeZACourse(
   return { id, name, elements, center: { lat, lng }, direction };
 }
 
+/**
+ * Build a Speed course from a centre point and direction.
+ *
+ * Five 10 m-wide gates on a circle of radius 53.48 m centred on the focal point F.
+ * F lies perpendicular to d from p: d−90° (left carve) or d+90° (right carve).
+ * Gates are spaced 18.75° apart (75° total arc over 4 intervals).
+ * Travel direction at gate i rotates by i×18.75°: left carve subtracts, right adds.
+ * Inside buoys (side facing F) = orange; outside buoys = white.
+ */
+export function makeSpeedCourse(
+  id: string,
+  name: string,
+  lat: number,
+  lng: number,
+  direction: number,
+  carveDirection: 'left' | 'right' = 'left'
+): Course {
+  const RADIUS    = 53.48;
+  const NUM_GATES = 5;
+  const GATE_ANGLE = 75 / (NUM_GATES - 1); // 18.75°
+  const HALF_WIDTH = 5;
+
+  // Focal point: perpendicular to d, on the inside of the carve
+  const focalBearing = carveDirection === 'left'
+    ? (direction - 90 + 360) % 360
+    : (direction + 90) % 360;
+  const focal = dest(lat, lng, RADIUS, focalBearing);
+
+  interface GateInfo { center: LatLng; inside: LatLng; outside: LatLng; radiusBearing: number; insideBearing: number }
+
+  const gates: GateInfo[] = [];
+  for (let i = 0; i < NUM_GATES; i++) {
+    const theta = i * GATE_ANGLE;
+    // Travel direction at this gate
+    const travelDir = carveDirection === 'left'
+      ? (direction - theta + 360) % 360
+      : (direction + theta) % 360;
+
+    // Gate centre lies on the circle; the radius from F points toward the outside of the carve
+    const radiusBearing = carveDirection === 'left'
+      ? (travelDir + 90) % 360          // right of travel = outside for left carve
+      : (travelDir - 90 + 360) % 360;   // left of travel  = outside for right carve
+
+    const center = dest(focal.lat, focal.lng, RADIUS, radiusBearing);
+
+    // Inside buoy (toward F) = orange; outside buoy (away from F) = white
+    const insideBearing  = (radiusBearing + 180) % 360; // points toward F
+    const outsideBearing = radiusBearing;                // points away from F
+
+    gates.push({
+      center,
+      inside:  dest(center.lat, center.lng, HALF_WIDTH, insideBearing),
+      outside: dest(center.lat, center.lng, HALF_WIDTH, outsideBearing),
+      radiusBearing,
+      insideBearing
+    });
+  }
+
+  const elements: CourseElement[] = [];
+
+  // Rails: arc lines along the circle, approximated with short segments
+  const ARC_STEPS = 8;
+  const arcStep = carveDirection === 'left' ? -GATE_ANGLE : GATE_ANGLE;
+  for (let i = 0; i < gates.length - 1; i++) {
+    const startBearing = gates[i].radiusBearing;
+    for (let s = 0; s < ARC_STEPS; s++) {
+      const b0 = (startBearing + (s / ARC_STEPS) * arcStep + 360) % 360;
+      const b1 = (startBearing + ((s + 1) / ARC_STEPS) * arcStep + 360) % 360;
+      // Inside arc (radius - HALF_WIDTH from focal) = orange
+      elements.push({ type: 'line',
+        from: dest(focal.lat, focal.lng, RADIUS - HALF_WIDTH, b0),
+        to:   dest(focal.lat, focal.lng, RADIUS - HALF_WIDTH, b1),
+        color: 'orange' });
+      // Outside arc (radius + HALF_WIDTH from focal) = white
+      elements.push({ type: 'line',
+        from: dest(focal.lat, focal.lng, RADIUS + HALF_WIDTH, b0),
+        to:   dest(focal.lat, focal.lng, RADIUS + HALF_WIDTH, b1),
+        color: 'white' });
+    }
+  }
+
+  // Gate buoys, cross-lines, and labels
+  for (let i = 0; i < gates.length; i++) {
+    const { center, inside, outside, insideBearing } = gates[i];
+    elements.push({ type: 'buoy', lat: inside.lat,  lng: inside.lng,  color: 'orange' });
+    elements.push({ type: 'buoy', lat: outside.lat, lng: outside.lng, color: 'white'  });
+    elements.push({ type: 'line', from: inside, to: outside, color: '#55aaff' });
+
+    // Gate label 3 m toward focal (inside the channel)
+    const labelPos = dest(center.lat, center.lng, 3, insideBearing);
+    elements.push({ type: 'marker', lat: labelPos.lat, lng: labelPos.lng, color: 'white', label: `G${i + 1}` });
+  }
+
+  return { id, name, elements, center: { lat, lng }, direction };
+}
+
 /** Build a Course object from stored parameters. */
 export function buildCourse(params: CourseParams): Course {
   if (params.type === 'distance') {
     return makeDistanceCourse(params.id, params.name, params.lat, params.lng, params.direction);
+  }
+  if (params.type === 'speed') {
+    return makeSpeedCourse(params.id, params.name, params.lat, params.lng, params.direction, params.carveDirection ?? 'left');
   }
   return makeZACourse(params.id, params.name, params.lat, params.lng, params.direction);
 }
