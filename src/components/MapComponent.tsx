@@ -628,37 +628,25 @@ function MapComponent({
             if (element.type === 'marker') {
               const marker = element as CourseMarker;
               const pos = { lat: marker.lat, lng: marker.lng };
+              if (!marker.label) return null;
               return (
-                <React.Fragment key={key}>
-                  <CircleF
-                    center={pos}
-                    options={{
-                      radius: 0.6,
-                      fillColor: '#ffffff',
-                      fillOpacity: 1,
-                      strokeColor: '#000',
-                      strokeWeight: 0.5,
-                      strokeOpacity: 1,
-                      zIndex: 12,
-                      clickable: false
-                    }}
-                  />
-                  {marker.label && (
-                    <OverlayView position={pos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                      <div style={{
-                        color: '#fff',
-                        fontSize: '10px',
-                        whiteSpace: 'nowrap',
-                        transform: 'translate(6px, -50%)',
-                        pointerEvents: 'none',
-                        textShadow: '0 0 3px #000, 0 0 3px #000',
-                        fontWeight: 'bold'
-                      }}>
-                        {marker.label}
-                      </div>
-                    </OverlayView>
-                  )}
-                </React.Fragment>
+                <OverlayView key={key} position={pos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <div style={{
+                    display: 'inline-block',
+                    color: marker.color,
+                    fontSize: '10px',
+                    whiteSpace: 'nowrap',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    fontWeight: 'bold',
+                    background: 'rgba(0,0,0,0.65)',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    borderRadius: '2px',
+                    padding: '1px 3px',
+                  }}>
+                    {marker.label}
+                  </div>
+                </OverlayView>
               );
             }
             return null;
