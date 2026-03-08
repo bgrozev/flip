@@ -376,6 +376,15 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
     lat: 28.2188610,
     lng: -82.1512317,
     direction: 360 - 89.6920
+  },
+  {
+    id: 'skydive-city-speed',
+    name: 'Skydive City: Speed',
+    type: 'speed',
+    lat: 28.2187600,
+    lng: -82.1514781,
+    direction: 235,
+    carveDirection: 'left'
   }
 ];
 
