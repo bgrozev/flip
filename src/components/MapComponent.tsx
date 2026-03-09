@@ -1,10 +1,12 @@
 import {
   CircleF,
   GoogleMap,
+  MarkerF,
   OverlayView,
   PolylineF,
   useJsApiLoader
 } from '@react-google-maps/api';
+import * as turf from '@turf/turf';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
 import {
@@ -18,7 +20,14 @@ import {
   POM_OPTIONS
 } from '../constants';
 import { useUnits } from '../hooks';
-import { LatLng, Settings } from '../types';
+import { Course, CourseElement, CourseMarker, LatLng, Settings } from '../types';
+
+export interface CourseEditTarget {
+  center: LatLng;
+  direction: number;
+  onMove: (newCenter: LatLng) => void;
+  onRotate: (newDirection: number) => void;
+}
 import { pathToLatLngs } from '../util/coords';
 import { FlightPath } from '../types';
 import {
@@ -283,7 +292,7 @@ const HIGHLIGHT_OPTIONS: google.maps.CircleOptions = {
   strokeColor: '#FFFFFF',
   strokeOpacity: 1,
   strokeWeight: 2,
-  radius: 6,
+  radius: 3,
   zIndex: 50,
   clickable: false
 };
@@ -354,6 +363,8 @@ interface MapComponentProps {
   pathB: FlightPath;
   settings: Settings;
   waitingForClick: boolean;
+  courses?: Course[];
+  courseEditTarget?: CourseEditTarget;
 }
 
 function MapComponent({
@@ -364,7 +375,9 @@ function MapComponent({
   pathA,
   pathB,
   settings,
-  waitingForClick
+  waitingForClick,
+  courses = [],
+  courseEditTarget
 }: MapComponentProps) {
   const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
   const { formatAltitude, altitudeLabel } = useUnits();
@@ -373,6 +386,9 @@ function MapComponent({
   const [measuring, setMeasuring] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<LatLng[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const [zoom, setZoom] = useState<number>(DEFAULT_MAP_OPTIONS.zoom);
+  // Live position of the rotation handle while dragging (for smooth line preview)
+  const [liveHandlePos, setLiveHandlePos] = useState<LatLng | null>(null);
 
   const toggleMeasuring = useCallback(() => {
     setMeasuring(m => {
@@ -457,6 +473,9 @@ function MapComponent({
         }}
         options={DEFAULT_MAP_OPTIONS}
         onLoad={onMapLoad}
+        onZoomChanged={() => {
+          if (mapRef.current) setZoom(mapRef.current.getZoom() ?? DEFAULT_MAP_OPTIONS.zoom);
+        }}
       >
         {showPreWind && (
           <PolylineF
@@ -565,6 +584,93 @@ function MapComponent({
           />
         )}
 
+        {/* Course elements */}
+        {courses.flatMap(course =>
+          course.elements.map((element: CourseElement, i) => {
+            const key = `${course.id}-${element.type}-${i}`;
+
+            if (element.type === 'buoy') {
+              // Two concentric circles.
+              // White buoy: white outer + white inner, both with black stroke.
+              // Orange buoy: orange outer + white inner; black stroke on both
+              //   creates a thin black ring between the two fills.
+              const outerFill = element.color === 'white' ? '#ffffff' : '#ff8800';
+              const center = { lat: element.lat, lng: element.lng };
+              return (
+                <React.Fragment key={key}>
+                  <CircleF
+                    center={center}
+                    options={{
+                      radius: 1.2,
+                      fillColor: outerFill,
+                      fillOpacity: 1,
+                      strokeColor: '#000',
+                      strokeWeight: 0.75,
+                      strokeOpacity: 1,
+                      zIndex: 15,
+                      clickable: false
+                    }}
+                  />
+                  <CircleF
+                    center={center}
+                    options={{
+                      radius: 0.6,
+                      fillColor: '#ffffff',
+                      fillOpacity: 1,
+                      strokeColor: '#000',
+                      strokeWeight: 0.4,
+                      strokeOpacity: 1,
+                      zIndex: 16,
+                      clickable: false
+                    }}
+                  />
+                </React.Fragment>
+              );
+            }
+            if (element.type === 'line') {
+              return (
+                <PolylineF
+                  key={key}
+                  path={[element.from, element.to]}
+                  options={{
+                    strokeColor: element.color,
+                    strokeOpacity: 0.9,
+                    strokeWeight: 1.5,
+                    zIndex: 10,
+                    clickable: false
+                  }}
+                />
+              );
+            }
+            if (element.type === 'marker') {
+              if (zoom < 20) return null;
+              const marker = element as CourseMarker;
+              const pos = { lat: marker.lat, lng: marker.lng };
+              if (!marker.label) return null;
+              return (
+                <OverlayView key={key} position={pos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <div style={{
+                    display: 'inline-block',
+                    color: marker.color,
+                    fontSize: '10px',
+                    whiteSpace: 'nowrap',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    fontWeight: 'bold',
+                    background: 'rgba(0,0,0,0.65)',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    borderRadius: '2px',
+                    padding: '1px 3px',
+                  }}>
+                    {marker.label}
+                  </div>
+                </OverlayView>
+              );
+            }
+            return null;
+          })
+        )}
+
         {/* Measure tool — point markers and cumulative distance labels */}
         {showMeasureTool && measuring && measurePoints.map((point, i) => (
           <React.Fragment key={`measure-${i}`}>
@@ -591,6 +697,68 @@ function MapComponent({
             )}
           </React.Fragment>
         ))}
+        {/* Course edit handles — center drag + rotation handle */}
+        {courseEditTarget && (() => {
+          const rotationHandlePos = (() => {
+            const pt = turf.destination(
+              [courseEditTarget.center.lng, courseEditTarget.center.lat],
+              15, courseEditTarget.direction, { units: 'meters' }
+            );
+            return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
+          })();
+          const lineEnd = liveHandlePos ?? rotationHandlePos;
+          /* eslint-disable @typescript-eslint/no-explicit-any */
+          const circleIcon = (color: string, scale: number) => ({
+            path: (window as any).google.maps.SymbolPath.CIRCLE,
+            scale,
+            fillColor: color,
+            fillOpacity: 0.85,
+            strokeColor: '#fff',
+            strokeWeight: 2
+          });
+          /* eslint-enable @typescript-eslint/no-explicit-any */
+          return (
+            <React.Fragment key="course-edit-handles">
+              {/* Line from center to rotation handle */}
+              <PolylineF
+                path={[courseEditTarget.center, lineEnd]}
+                options={{ strokeColor: '#ffaa00', strokeWeight: 2, strokeOpacity: 0.9, zIndex: 25, clickable: false }}
+              />
+              {/* Center drag marker (cyan crosshair) */}
+              <MarkerF
+                position={courseEditTarget.center}
+                draggable
+                cursor="move"
+                zIndex={26}
+                icon={circleIcon('#00ccff', 9)}
+                onDragEnd={e => {
+                  if (e.latLng) courseEditTarget.onMove({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+                }}
+              />
+              {/* Rotation handle (orange dot at course-direction end) */}
+              <MarkerF
+                position={rotationHandlePos}
+                draggable
+                cursor="pointer"
+                zIndex={27}
+                icon={circleIcon('#ffaa00', 7)}
+                onDrag={e => {
+                  if (e.latLng) setLiveHandlePos({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+                }}
+                onDragEnd={e => {
+                  setLiveHandlePos(null);
+                  if (e.latLng) {
+                    const bearing = turf.bearing(
+                      [courseEditTarget.center.lng, courseEditTarget.center.lat],
+                      [e.latLng.lng(), e.latLng.lat()]
+                    );
+                    courseEditTarget.onRotate((bearing + 360) % 360);
+                  }
+                }}
+              />
+            </React.Fragment>
+          );
+        })()}
       </GoogleMap>
 
       {/* Measure tool — ruler toggle button */}

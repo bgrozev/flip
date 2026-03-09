@@ -1,4 +1,5 @@
 export { default as AboutComponent } from './AboutComponent';
+export { default as CoursesComponent } from './CoursesComponent';
 export { default as CustomLocationsComponent } from './CustomLocationsComponent';
 export { default as DirectionSwitch } from './DirectionSwitch';
 export { default as DropzonesComponent } from './DropzonesComponent';

@@ -101,6 +101,54 @@ export interface Dropzone {
   fetchGroundWind?: () => Promise<IWindRow>;
 }
 
+// Course types
+export type CourseType = 'distance' | 'zone-accuracy' | 'speed';
+
+export interface CourseParams {
+  id: string;
+  name: string;
+  type: CourseType;
+  lat: number;
+  lng: number;
+  direction: number;
+  /** Speed courses only */
+  carveDirection?: 'left' | 'right';
+}
+
+export interface CourseBuoy {
+  type: 'buoy';
+  lat: number;
+  lng: number;
+  color: string;
+  label?: string;
+}
+
+export interface CourseLine {
+  type: 'line';
+  from: LatLng;
+  to: LatLng;
+  color: string;
+  label?: string;
+}
+
+export interface CourseMarker {
+  type: 'marker';
+  lat: number;
+  lng: number;
+  color: string;
+  label?: string;
+}
+
+export type CourseElement = CourseBuoy | CourseLine | CourseMarker;
+
+export interface Course {
+  id: string;
+  name: string;
+  elements: CourseElement[];
+  center?: LatLng;
+  direction?: number;
+}
+
 // Preset types
 export type ManoeuvreType = 'none' | 'parameters' | 'track' | 'samples';
 
@@ -124,5 +172,6 @@ export interface Preset {
   target: Target;
   patternParams: PatternParams;
   manoeuvre: ManoeuvreConfig;
+  selectedCourseId?: string | null;
   createdAt: number;
 }

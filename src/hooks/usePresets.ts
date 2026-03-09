@@ -13,9 +13,11 @@ interface UsePresetsParams {
   target: Target;
   patternParams: PatternParams;
   manoeuvreConfig: ManoeuvreConfig;
+  selectedCourseId: string | null;
   setTarget: (target: Target) => void;
   setPatternParams: (params: PatternParams) => void;
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
+  setSelectedCourseId: (id: string | null) => void;
 }
 
 export interface UsePresetsResult {
@@ -32,9 +34,11 @@ export function usePresets({
   target,
   patternParams,
   manoeuvreConfig,
+  selectedCourseId,
   setTarget,
   setPatternParams,
-  setManoeuvreConfig
+  setManoeuvreConfig,
+  setSelectedCourseId
 }: UsePresetsParams): UsePresetsResult {
   const [storedPresets, setStoredPresets] = useLocalStorageState<Preset[]>(
     STORAGE_KEYS.presets,
@@ -56,13 +60,14 @@ export function usePresets({
         target,
         patternParams,
         manoeuvre: manoeuvreConfig,
+        selectedCourseId,
         createdAt: Date.now()
       };
 
       setStoredPresets([...presets, newPreset]);
       setActivePresetId(newPreset.id);
     },
-    [target, patternParams, manoeuvreConfig, presets, setStoredPresets, setActivePresetId]
+    [target, patternParams, manoeuvreConfig, selectedCourseId, presets, setStoredPresets, setActivePresetId]
   );
 
   const loadPreset = useCallback(
@@ -77,19 +82,20 @@ export function usePresets({
       setTarget(preset.target);
       setPatternParams(preset.patternParams);
       setManoeuvreConfig(preset.manoeuvre);
+      setSelectedCourseId(preset.selectedCourseId ?? null);
     },
-    [presets, setActivePresetId, setTarget, setPatternParams, setManoeuvreConfig]
+    [presets, setActivePresetId, setTarget, setPatternParams, setManoeuvreConfig, setSelectedCourseId]
   );
 
   const updatePreset = useCallback(
     (id: string) => {
       setStoredPresets(
         presets.map(p =>
-          p.id === id ? { ...p, target, patternParams, manoeuvre: manoeuvreConfig } : p
+          p.id === id ? { ...p, target, patternParams, manoeuvre: manoeuvreConfig, selectedCourseId } : p
         )
       );
     },
-    [target, patternParams, manoeuvreConfig, presets, setStoredPresets]
+    [target, patternParams, manoeuvreConfig, selectedCourseId, presets, setStoredPresets]
   );
 
   const deletePreset = useCallback(
