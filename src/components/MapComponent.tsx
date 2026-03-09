@@ -601,7 +601,7 @@ function MapComponent({
                   <CircleF
                     center={center}
                     options={{
-                      radius: 1.5,
+                      radius: 1.2,
                       fillColor: outerFill,
                       fillOpacity: 1,
                       strokeColor: '#000',
@@ -614,7 +614,7 @@ function MapComponent({
                   <CircleF
                     center={center}
                     options={{
-                      radius: 0.75,
+                      radius: 0.6,
                       fillColor: '#ffffff',
                       fillOpacity: 1,
                       strokeColor: '#000',

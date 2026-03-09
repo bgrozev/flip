@@ -362,20 +362,37 @@ export function buildCourse(params: CourseParams): Course {
 /** Parameters for the pre-built courses (also the template for duplicates). */
 export const BUILT_IN_PARAMS: CourseParams[] = [
   {
+    id: 'skydive-arizona-distance',
+    name: 'Skydive Arizona: Distance',
+    type: 'distance',
+    lat: 32.80799563593153,
+    lng: -111.58165927116396,
+    direction: 214.756
+  },
+  {
+    id: 'skydive-arizona-speed',
+    name: 'Skydive Arizona: Speed',
+    type: 'speed',
+    lat: 32.808047486484774,
+    lng: -111.58182489757063,
+    direction: 163.722,
+    carveDirection: 'right'
+  },
+  {
+    id: 'skydive-arizona-za',
+    name: 'Skydive Arizona: Zone Accuracy',
+    type: 'zone-accuracy',
+    lat: 32.80799563593153,
+    lng: -111.58165927116396,
+    direction: 214.756
+  },
+  {
     id: 'skydive-city-distance',
     name: 'Skydive City: Distance',
     type: 'distance',
     lat: 28.2187820,
     lng: -82.1514716,
     direction: 197.46
-  },
-  {
-    id: 'skydive-city-za',
-    name: 'Skydive City: Zone Accuracy',
-    type: 'zone-accuracy',
-    lat: 28.2188610,
-    lng: -82.1512317,
-    direction: 360 - 89.6920
   },
   {
     id: 'skydive-city-speed',
@@ -385,6 +402,14 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
     lng: -82.1514781,
     direction: 235,
     carveDirection: 'left'
+  },
+  {
+    id: 'skydive-city-za',
+    name: 'Skydive City: Zone Accuracy',
+    type: 'zone-accuracy',
+    lat: 28.2188610,
+    lng: -82.1512317,
+    direction: 360 - 89.6920
   }
 ];
 

@@ -106,6 +106,9 @@ function CoursesComponent({
   const [editLat, setEditLat] = useState('');
   const [editLng, setEditLng] = useState('');
   const [editCourseDir, setEditCourseDir] = useState('');
+  const dirFocusedRef = React.useRef(false);
+  const latFocusedRef = React.useRef(false);
+  const lngFocusedRef = React.useRef(false);
 
   useEffect(() => {
     if (selectedCustom) {
@@ -116,6 +119,21 @@ function CoursesComponent({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCustom?.id]);
+
+  // Sync lat/lng/direction from external changes (e.g. map drag) but not while typing
+  useEffect(() => {
+    if (selectedCustom && !latFocusedRef.current) setEditLat(String(selectedCustom.lat));
+  }, [selectedCustom?.lat]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedCustom && !lngFocusedRef.current) setEditLng(String(selectedCustom.lng));
+  }, [selectedCustom?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedCustom && !dirFocusedRef.current) {
+      setEditCourseDir(String(Math.round(selectedCustom.direction * 1000) / 1000));
+    }
+  }, [selectedCustom?.direction]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commitName = () => {
     const v = editName.trim();
@@ -359,7 +377,8 @@ function CoursesComponent({
                 size="small"
                 value={editLat}
                 onChange={e => setEditLat(e.target.value)}
-                onBlur={commitLat}
+                onFocus={() => { latFocusedRef.current = true; }}
+                onBlur={() => { latFocusedRef.current = false; commitLat(); }}
                 onKeyDown={e => { if (e.key === 'Enter') commitLat(); }}
                 sx={{ flex: 1 }}
               />
@@ -368,7 +387,8 @@ function CoursesComponent({
                 size="small"
                 value={editLng}
                 onChange={e => setEditLng(e.target.value)}
-                onBlur={commitLng}
+                onFocus={() => { lngFocusedRef.current = true; }}
+                onBlur={() => { lngFocusedRef.current = false; commitLng(); }}
                 onKeyDown={e => { if (e.key === 'Enter') commitLng(); }}
                 sx={{ flex: 1 }}
               />
@@ -377,11 +397,17 @@ function CoursesComponent({
             <FormControl variant="outlined" size="small" fullWidth>
               <OutlinedInput
                 value={editCourseDir}
-                onChange={e => setEditCourseDir(e.target.value)}
-                onBlur={commitCourseDir}
+                onChange={e => {
+                  const s = e.target.value;
+                  setEditCourseDir(s);
+                  const v = parseFloat(s);
+                  if (!isNaN(v) && selectedCustom) updateCourse(selectedCustom.id, { direction: v });
+                }}
+                onFocus={() => { dirFocusedRef.current = true; }}
+                onBlur={() => { dirFocusedRef.current = false; commitCourseDir(); }}
                 onKeyDown={e => { if (e.key === 'Enter') commitCourseDir(); }}
                 endAdornment={<InputAdornment position="end">°</InputAdornment>}
-                inputProps={{ type: 'number', step: 1 }}
+                inputProps={{ type: 'number', step: 0.1 }}
               />
               <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
                 Direction
