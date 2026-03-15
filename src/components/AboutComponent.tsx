@@ -78,13 +78,9 @@ export default function AboutComponent() {
             >
               Spaceland Load Clock
             </Link>
-            ,{' '}
+            {' '}and{' '}
             <Link href="https://wx.skydivecsc.com/" target="_blank" rel="noopener">
               CSC Weather
-            </Link>
-            , and{' '}
-            <Link href="https://axis.tools/tool_Cond.php" target="_blank" rel="noopener">
-              AXIS Tools
             </Link>
             .
           </Typography>

@@ -72,7 +72,6 @@ npm run lint           # ESLint check
 ### Forecast Providers (`/src/forecast/`)
 
 1. **OpenMeteo GFS** (`openmeteo.js`) - Fetches from `api.open-meteo.com/v1/gfs` with 17 pressure levels
-2. **WindsAloft** (`windsaloft.js`) - Custom endpoint at `mustelinae.net/winds-aloft` with 10 altitude levels
 
 ### Ground Wind Fetchers (dropzone-specific)
 

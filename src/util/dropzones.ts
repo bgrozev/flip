@@ -1,7 +1,6 @@
 import * as turf from '@turf/turf';
 import { Dropzone } from '../types';
 import { fetchCscGroundWind } from '../forecast/csc';
-import { fetchSdazGroundWind } from '../forecast/sdaz';
 import { fetchSpacelandGroundWind } from '../forecast/spaceland';
 
 export const DROPZONES: Dropzone[] = [
@@ -22,8 +21,7 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive Arizona',
     lat: 32.80799,
     lng: -111.58167,
-    direction: 216,
-    fetchGroundWind: () => fetchSdazGroundWind()
+    direction: 216
   },
   {
     name: 'Skydive City (ZHills)',
