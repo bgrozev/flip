@@ -1,5 +1,6 @@
 import {
   Explore as ExploreIcon,
+  FileDownload as FileDownloadIcon,
   ModeStandby as ModeStandbyIcon,
   Public as PublicIcon,
   Refresh as RefreshIcon
@@ -16,6 +17,7 @@ interface ToolbarActionsProps {
   onRefreshWindsClick: () => void;
   onSelectTargetClick: () => void;
   onSelectTargetAndHeadingClick: () => void;
+  onExportClick: () => void;
   fetching: boolean;
   showPresets: boolean;
   presets: Preset[];
@@ -31,6 +33,7 @@ export default function ToolbarActions({
   onRefreshWindsClick,
   onSelectTargetClick,
   onSelectTargetAndHeadingClick,
+  onExportClick,
   fetching,
   showPresets,
   presets,
@@ -47,6 +50,7 @@ export default function ToolbarActions({
       <SelectTargetAndHeadingButton onClick={onSelectTargetAndHeadingClick} />
       <SelectTargetButton onClick={onSelectTargetClick} />
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
+      <ExportButton onClick={onExportClick} />
       <Divider orientation="vertical" flexItem />
       {showPresets && (
         <PresetSelector
@@ -87,6 +91,16 @@ function SelectTargetAndHeadingButton({ onClick }: { onClick: () => void }) {
     <Tooltip title="Select target and direction">
       <IconButton type="button" aria-label="refresh-wind" onClick={onClick}>
         <ExploreIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
+function ExportButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Tooltip title="Export FlySight 2 CSV">
+      <IconButton type="button" aria-label="export" onClick={onClick}>
+        <FileDownloadIcon />
       </IconButton>
     </Tooltip>
   );

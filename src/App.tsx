@@ -27,6 +27,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   AboutComponent,
   CoursesComponent,
+  ExportDialog,
   FlipIcon,
   ManoeuvreComponent,
   MapComponent,
@@ -171,6 +172,7 @@ function DashboardContent() {
 
   const [forecastTime, setForecastTime] = useState<Date | null>(null);
   const [courseEditOpen, setCourseEditOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
     target: target.target,
@@ -385,6 +387,7 @@ function DashboardContent() {
             onRefreshWindsClick={handleFetchWinds}
             onSelectTargetClick={() => selectFromMap(false)}
             onSelectTargetAndHeadingClick={() => selectFromMap(true)}
+            onExportClick={() => setExportOpen(true)}
             showPresets={settings.showPresets}
             presets={presets}
             activePresetId={activePresetId}
@@ -405,9 +408,18 @@ function DashboardContent() {
   const BOTTOM_NAV_PATHS = ['/pattern', '/manoeuvre', '/target', '/wind'];
   const bottomNavValue = BOTTOM_NAV_PATHS.indexOf(router.pathname);
 
+  const activePresetName = presets.find(p => p.id === activePresetId)?.name ?? 'unnamed';
+
   return (
     <AppProvider router={router} theme={demoTheme} navigation={NAVIGATION}>
       {dashboard}
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        path={c2Display}
+        target={target.target}
+        presetName={activePresetName}
+      />
       {isMobile && (
         <Paper
           sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200 }}
