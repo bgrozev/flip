@@ -489,6 +489,10 @@ interface MapComponentProps {
   courseEditTarget?: CourseEditTarget;
   targetEditTarget?: TargetEditTarget;
   observedStations?: ObservedWindStation[];
+  groundWindStation?: ObservedWindStation;
+  forecastGroundWind?: { direction: number; speedKts: number };
+  forecastValidTime?: Date;
+  finalHeading?: number;
 }
 
 function MapComponent({
@@ -501,7 +505,11 @@ function MapComponent({
   courses = [],
   courseEditTarget,
   targetEditTarget,
-  observedStations = []
+  observedStations = [],
+  groundWindStation,
+  forecastGroundWind,
+  forecastValidTime,
+  finalHeading = 0
 }: MapComponentProps) {
   const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
@@ -833,7 +841,7 @@ function MapComponent({
             )}
           </React.Fragment>
         ))}
-        {/* Observed wind stations */}
+        {/* Observed wind stations — each at its real geographic location */}
         {observedStations.map(station => {
           const isHovered = hoveredStationId === station.id;
           const speedKts = station.wind.speedKts;
@@ -866,7 +874,6 @@ function MapComponent({
                     viewBox="0 0 22 26"
                     style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}
                   >
-                    {/* Arrow head */}
                     <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
                   </svg>
                   <div style={{
@@ -890,6 +897,98 @@ function MapComponent({
             </React.Fragment>
           );
         })}
+
+        {/* Arrow anchored near the target: observed station (if available) or forecast ground wind */}
+        {(() => {
+          const rad = (finalHeading * Math.PI) / 180;
+          const dx = +(Math.sin(rad) * 50).toFixed(1);
+          const dy = +(-Math.cos(rad) * 50).toFixed(1);
+          const transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+          if (groundWindStation) {
+            const station = groundWindStation;
+            const hoverId = `${station.id}-target`;
+            const isHovered = hoveredStationId === hoverId;
+            const speedKts = station.wind.speedKts;
+            const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
+            const arrowRotation = station.wind.direction + 180;
+            const speedDisplay = formatWindSpeed(speedKts);
+            return (
+              <React.Fragment key={hoverId}>
+                <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <div
+                    style={{ transform, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default', userSelect: 'none', opacity: isHovered ? 1 : 0.85 }}
+                    onMouseEnter={() => onStationEnter(hoverId)}
+                    onMouseLeave={onStationLeave}
+                  >
+                    <svg width="22" height="26" viewBox="0 0 22 26" style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
+                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                    </svg>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'white', textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)', lineHeight: 1, marginTop: 1, whiteSpace: 'nowrap' }}>
+                      {speedDisplay.value.toFixed(0)} {windSpeedLabel}
+                    </div>
+                  </div>
+                </OverlayView>
+                {isHovered && (
+                  <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                    <StationTooltip station={station} onMouseEnter={() => onStationEnter(hoverId)} onMouseLeave={onStationLeave} />
+                  </OverlayView>
+                )}
+              </React.Fragment>
+            );
+          }
+
+          if (forecastGroundWind) {
+            const { direction, speedKts } = forecastGroundWind;
+            const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
+            const arrowRotation = direction + 180;
+            const speedDisplay = formatWindSpeed(speedKts);
+            const isHovered = hoveredStationId === 'forecast-ground';
+            const validTimeStr = forecastValidTime
+              ? forecastValidTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : null;
+            return (
+              <React.Fragment key="forecast-ground-target">
+                <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <div
+                    style={{ transform, position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', cursor: 'default', userSelect: 'none', opacity: isHovered ? 1 : 0.75, pointerEvents: 'auto' }}
+                    onMouseEnter={() => onStationEnter('forecast-ground')}
+                    onMouseLeave={onStationLeave}
+                  >
+                    <svg width="22" height="26" viewBox="0 0 22 26" style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
+                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                    </svg>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'white', textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)', lineHeight: 1, marginTop: 1, whiteSpace: 'nowrap' }}>
+                      {speedDisplay.value.toFixed(0)} {windSpeedLabel}
+                    </div>
+                    {isHovered && (
+                      <div style={{
+                        position: 'absolute',
+                        left: '100%',
+                        top: 0,
+                        marginLeft: 8,
+                        background: 'rgba(30,30,30,0.92)',
+                        color: 'white',
+                        borderRadius: 6,
+                        padding: '6px 10px',
+                        fontSize: '12px',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                        pointerEvents: 'auto'
+                      }}>
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>Forecast ground wind</div>
+                        <div>{direction}° at {speedDisplay.value.toFixed(0)} {windSpeedLabel}</div>
+                        {validTimeStr && <div style={{ color: '#aaa', fontSize: '11px', marginTop: 2 }}>Valid {validTimeStr}</div>}
+                      </div>
+                    )}
+                  </div>
+                </OverlayView>
+              </React.Fragment>
+            );
+          }
+
+          return null;
+        })()}
 
         {/* Target edit handles — position drag + heading direction handle */}
         {targetEditTarget && (() => {

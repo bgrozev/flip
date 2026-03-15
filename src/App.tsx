@@ -409,6 +409,12 @@ function DashboardContent() {
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}
       observedStations={forecastTime === null ? stations : []}
+      groundWindStation={forecastTime === null && effectiveWinds.groundSource === SOURCE_DZ ? nearestStation ?? undefined : undefined}
+      forecastGroundWind={effectiveWinds.groundSource !== SOURCE_DZ && effectiveWinds.aloftSource !== SOURCE_MANUAL && effectiveWinds.winds.length > 0
+        ? { direction: effectiveWinds.winds[0].direction, speedKts: effectiveWinds.winds[0].speedKts }
+        : undefined}
+      forecastValidTime={effectiveWinds.validTime}
+      finalHeading={target.finalHeading}
     />
   );
   const dashboard = (
