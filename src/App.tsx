@@ -424,7 +424,6 @@ function DashboardContent() {
         toolbarActions: () => (
           <ToolbarActions
             fetching={fetching}
-            onMapButtonClick={() => router.navigate('/map')}
             onRefreshWindsClick={handleFetchWinds}
             onExportClick={() => setExportOpen(true)}
             targetEditOpen={targetEditOpen}

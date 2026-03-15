@@ -1,7 +1,6 @@
 import {
   EditLocation as EditLocationIcon,
   FileDownload as FileDownloadIcon,
-  Public as PublicIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { CircularProgress, Divider, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
@@ -12,7 +11,6 @@ import { Preset } from '../types';
 import PresetSelector from './PresetSelector';
 
 interface ToolbarActionsProps {
-  onMapButtonClick: () => void;
   onRefreshWindsClick: () => void;
   onExportClick: () => void;
   targetEditOpen: boolean;
@@ -28,7 +26,6 @@ interface ToolbarActionsProps {
 }
 
 export default function ToolbarActions({
-  onMapButtonClick,
   onRefreshWindsClick,
   onExportClick,
   targetEditOpen,
@@ -44,8 +41,6 @@ export default function ToolbarActions({
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      <MapButton onClick={onMapButtonClick} />
-      <Divider orientation="vertical" flexItem />
       <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <ExportButton onClick={onExportClick} />
@@ -61,16 +56,6 @@ export default function ToolbarActions({
         />
       )}
     </Stack>
-  );
-}
-
-function MapButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Tooltip title="Show map only">
-      <IconButton type="button" aria-label="refresh-wind" onClick={onClick}>
-        <PublicIcon />
-      </IconButton>
-    </Tooltip>
   );
 }
 
