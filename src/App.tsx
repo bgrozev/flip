@@ -405,7 +405,7 @@ function DashboardContent() {
     </DashboardLayout>
   );
 
-  const BOTTOM_NAV_PATHS = ['/pattern', '/manoeuvre', '/target', '/wind'];
+  const BOTTOM_NAV_PATHS = ['/pattern', '/manoeuvre', '/target', '/wind', '/courses'];
   const bottomNavValue = BOTTOM_NAV_PATHS.indexOf(router.pathname);
 
   const activePresetName = presets.find(p => p.id === activePresetId)?.name ?? 'unnamed';
@@ -434,6 +434,7 @@ function DashboardContent() {
             <BottomNavigationAction label="Manoeuvre" icon={<RotateLeftIcon />} />
             <BottomNavigationAction label="Target" icon={<AdjustIcon />} />
             <BottomNavigationAction label="Wind" icon={<AirIcon />} />
+            <BottomNavigationAction label="Courses" icon={<FlagIcon />} />
           </BottomNavigation>
         </Paper>
       )}
