@@ -92,13 +92,13 @@ export interface CsvRow {
   hMSL: string | number;
 }
 
-// Dropzone type (fetchGroundWind returns WindRow which implements IWindRow)
+// Dropzone type
 export interface Dropzone {
   name: string;
   lat: number;
   lng: number;
   direction: number;
-  fetchGroundWind?: () => Promise<IWindRow>;
+  nearbyStations?: string[]; // ICAO station IDs not in NWS gridpoints (e.g. AWOS at small airports)
 }
 
 // Course types
@@ -147,6 +147,34 @@ export interface Course {
   elements: CourseElement[];
   center?: LatLng;
   direction?: number;
+}
+
+// Observed wind station (from NWS, CSC, Spaceland, etc.)
+export interface ObservedWindStation {
+  id: string;
+  name: string;
+  source: string;        // e.g. 'NWS', 'CSC', 'Spaceland'
+  stationUrl?: string;   // link to external station page
+  lat: number;
+  lng: number;
+  distanceFt: number;
+  observedAt: Date;
+  wind: {
+    direction: number;
+    speedKts: number;
+    gustKts?: number;
+  };
+  // Display-only extras (not used in drift calculations)
+  temperatureC?: number;
+  dewpointC?: number;
+  humidityPct?: number;
+  pressureHpa?: number;       // station pressure
+  seaLevelPressureHpa?: number;
+  visibilityM?: number;
+  windChillC?: number;
+  heatIndexC?: number;
+  cloudLayers?: Array<{ amount: string; baseM: number | null }>;
+  textDescription?: string;
 }
 
 // Preset types

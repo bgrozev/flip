@@ -58,12 +58,8 @@ export default function LocationComponent() {
         aria-label="Location tabs"
         sx={{ '& .MuiTab-root': { fontSize: '0.75rem', minWidth: 0, px: 1.5 } }}
       >
-        <Tooltip title="Default dropzones.">
-          <Tab label="Dropzones" value="dropzones" />
-        </Tooltip>
-        <Tooltip title="Custom locations.">
-          <Tab label="My Locations" value="custom" />
-        </Tooltip>
+        <Tab label={<Tooltip title="Default dropzones."><span>Dropzones</span></Tooltip>} value="dropzones" />
+        <Tab label={<Tooltip title="Custom locations."><span>My Locations</span></Tooltip>} value="custom" />
         <Tab label="Search" value="search" />
       </Tabs>
 

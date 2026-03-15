@@ -46,13 +46,14 @@ import {
   useAppState,
   useCustomCourses,
   useFetchForecast,
+  useObservedWind,
   usePresets
 } from './hooks';
 import { Course, LatLng, Target, WindSummaryData } from './types';
 import { addWind, hasTargetMovedTooFar } from './util/geo';
 import { COURSES } from './util/courses';
 import { averageWind, reposition, straightenLegs } from './util/util';
-import { WindRow } from './util/wind';
+import { WindRow, Winds } from './util/wind';
 
 const NAVIGATION: Navigation = [
   {
@@ -179,16 +180,30 @@ function DashboardContent() {
     settings
   });
 
+  const { stations, nearestStation, stationsFetched, fetchingObserved, fetchObserved, resetObserved } = useObservedWind();
+
+  // Inject nearest observed station as ground wind (when enabled and forecast has been fetched)
+  const effectiveWinds = useMemo(() => {
+    if (!settings.useDzGroundWind || !nearestStation || winds.aloftSource === SOURCE_MANUAL) {
+      return winds;
+    }
+    const cloned = Winds.copy(winds);
+    cloned.setGroundWind(new WindRow(0, nearestStation.wind.direction, nearestStation.wind.speedKts));
+    cloned.groundSource = SOURCE_DZ;
+    return cloned;
+  }, [winds, nearestStation, settings.useDzGroundWind]);
+
   // Wrap setTarget to invalidate winds when target moves too far
   const setTarget = useCallback(
     (newTarget: Target) => {
       if (hasTargetMovedTooFar(target.target, newTarget.target)) {
         console.log('Moved too far, invalidating winds');
         resetWinds();
+        resetObserved();
       }
       setTargetBase(newTarget);
     },
-    [target.target, setTargetBase, resetWinds]
+    [target.target, setTargetBase, resetWinds, resetObserved]
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -228,7 +243,7 @@ function DashboardContent() {
   };
 
   let c = reposition(manoeuvre ?? [], pattern ?? [], target ?? DEFAULT_TARGET, settings.correctPatternHeading);
-  const c2 = winds ? addWind(c, winds, settings.interpolateWind) : [];
+  const c2 = effectiveWinds ? addWind(c, effectiveWinds, settings.interpolateWind) : [];
 
   for (let i = 0; i < c.length; i++) {
     c2[i].properties.phase = c[i].properties.phase;
@@ -240,19 +255,19 @@ function DashboardContent() {
 
   if (
     settings.displayWindSummary &&
-    (winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL) &&
+    (effectiveWinds.groundSource !== SOURCE_MANUAL || effectiveWinds.aloftSource !== SOURCE_MANUAL) &&
     typeof averageWind_.speedKts === 'number'
   ) {
     windSummary = { average: averageWind_ };
-    if (winds.groundSource !== SOURCE_MANUAL && winds.winds && winds.winds.length > 0) {
-      const groundWind = winds.winds[0] as WindRow & { observed?: boolean };
+    if (effectiveWinds.groundSource !== SOURCE_MANUAL && effectiveWinds.winds && effectiveWinds.winds.length > 0) {
+      const groundWind = effectiveWinds.winds[0] as WindRow & { observed?: boolean };
       windSummary.ground = groundWind;
-      if (winds.groundSource === SOURCE_DZ) {
+      if (effectiveWinds.groundSource === SOURCE_DZ) {
         windSummary.ground.observed = true;
       }
     }
-    if (winds.validTime) {
-      windSummary.forecastTime = winds.validTime;
+    if (effectiveWinds.validTime) {
+      windSummary.forecastTime = effectiveWinds.validTime;
     }
   }
 
@@ -260,13 +275,23 @@ function DashboardContent() {
     const maxAlt = c2.length > 0 ? c2[c2.length - 1].properties.alt : undefined;
     const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
     fetchWinds(maxAlt, ft);
+    if (settings.useDzGroundWind && target && ft === null) {
+      fetchObserved(target.target);
+    } else if (ft !== null) {
+      resetObserved();
+    }
+  };
+
+  const handleForecastTimeChange = (newTime: Date | null) => {
+    setForecastTime(newTime);
+    if (newTime !== null) resetObserved();
   };
 
   function onUpwindClick() {
-    if (winds?.winds && winds.winds.length > 0 && winds.winds[0].speedKts > 0 && target) {
+    if (effectiveWinds?.winds && effectiveWinds.winds.length > 0 && effectiveWinds.winds[0].speedKts > 0 && target) {
       const newTarget: Target = {
         target: target.target,
-        finalHeading: Math.round(winds.winds[0].direction % 360)
+        finalHeading: Math.round(effectiveWinds.winds[0].direction % 360)
       };
 
       setTarget(newTarget);
@@ -301,12 +326,15 @@ function DashboardContent() {
   } else if (router.pathname === '/wind') {
     p = (
       <WindsComponent
-        winds={winds}
+        winds={effectiveWinds}
         setWinds={setWinds}
         fetching={fetching}
         fetch={handleFetchWinds}
         forecastTime={forecastTime}
-        onForecastTimeChange={setForecastTime}
+        onForecastTimeChange={handleForecastTimeChange}
+        stations={stations}
+        stationsFetched={stationsFetched}
+        fetchingObserved={fetchingObserved}
       />
     );
   } else if (router.pathname === '/courses') {
@@ -380,6 +408,7 @@ function DashboardContent() {
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}
+      observedStations={forecastTime === null ? stations : []}
     />
   );
   const dashboard = (

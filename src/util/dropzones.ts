@@ -1,15 +1,12 @@
 import * as turf from '@turf/turf';
 import { Dropzone } from '../types';
-import { fetchCscGroundWind } from '../forecast/csc';
-import { fetchSpacelandGroundWind } from '../forecast/spaceland';
 
 export const DROPZONES: Dropzone[] = [
   {
     name: 'Chicagoland Skydiving Center',
     lat: 41.89338,
     lng: -89.07201,
-    direction: 250,
-    fetchGroundWind: () => fetchCscGroundWind()
+    direction: 250
   },
   {
     name: 'Parachute Montreal',
@@ -27,7 +24,8 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive City (ZHills)',
     lat: 28.21887,
     lng: -82.15122,
-    direction: 270
+    direction: 270,
+    nearbyStations: ['KZPH'] // Zephyrhills Municipal Airport AWOS — not in NWS gridpoints
   },
   {
     name: 'Skydive DeLand',
@@ -75,21 +73,20 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive Spaceland Houston',
     lat: 29.357628,
     lng: -95.461775,
-    direction: 151,
-    fetchGroundWind: () => fetchSpacelandGroundWind('HOU')
+    direction: 151
   },
   {
     name: 'Skydive Spaceland San Marcos',
     lat: 29.76994,
     lng: -97.77173,
-    direction: 210,
-    fetchGroundWind: () => fetchSpacelandGroundWind('SSM')
+    direction: 210
   },
   {
     name: 'West Tennessee Skydiving',
     lat: 35.22037,
     lng: -89.18982,
-    direction: 182
+    direction: 182,
+    nearbyStations: ['KM08'] // Bolivar/Whitehurst Field AWOS — not in NWS gridpoints
   }
 ];
 

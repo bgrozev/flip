@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Divider,
   IconButton,
   Paper,
   Stack,
@@ -24,6 +25,7 @@ import React, { useCallback } from 'react';
 
 import { SOURCE_MANUAL } from '../forecast/forecast';
 import { useUnits } from '../hooks';
+import { ObservedWindStation } from '../types';
 import { WindRow, Winds } from '../util/wind';
 
 interface WindsComponentProps {
@@ -33,6 +35,9 @@ interface WindsComponentProps {
   fetch: (ft?: Date | null) => void;
   forecastTime: Date | null;
   onForecastTimeChange: (t: Date | null) => void;
+  stations?: ObservedWindStation[];
+  stationsFetched?: boolean;
+  fetchingObserved?: boolean;
 }
 
 /** Format a Date to the value string required by datetime-local inputs (YYYY-MM-DDTHH:mm) */
@@ -61,7 +66,10 @@ export default function WindsComponent({
   fetching,
   fetch,
   forecastTime,
-  onForecastTimeChange
+  onForecastTimeChange,
+  stations = [],
+  stationsFetched = false,
+  fetchingObserved = false
 }: WindsComponentProps) {
   const {
     formatAltitude,
@@ -69,7 +77,9 @@ export default function WindsComponent({
     altitudeLabel,
     formatWindSpeed,
     parseWindSpeed,
-    windSpeedLabel
+    windSpeedLabel,
+    formatTemperature,
+    formatPressure
   } = useUnits();
 
   const lock =
@@ -327,7 +337,144 @@ export default function WindsComponent({
               )}
             </>
           )}
+
+          {forecastTime === null && (fetchingObserved || stationsFetched) && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                  Observed Stations
+                </Typography>
+                {fetchingObserved && <CircularProgress size={12} />}
+              </Stack>
+              {fetchingObserved ? null : stations.length === 0 ? (
+                <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                  No stations found within 10 miles.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  {stations.map(station => (
+                    <StationCard
+                      key={station.id}
+                      station={station}
+                      formatWindSpeed={formatWindSpeed}
+                      windSpeedLabel={windSpeedLabel}
+                      formatTemperature={formatTemperature}
+                      formatPressure={formatPressure}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </>
+          )}
       </>
     </Box>
+  );
+}
+
+function stationAge(date: Date): string {
+  const diffMin = Math.round((Date.now() - date.getTime()) / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function DataRow({ label, value }: { label: string; value: string | null }) {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+      <Typography variant="caption" color={value !== null ? 'text.primary' : 'text.disabled'}>
+        {value ?? '—'}
+      </Typography>
+    </Box>
+  );
+}
+
+interface StationCardProps {
+  station: ObservedWindStation;
+  formatWindSpeed: (kts: number) => { value: number; label: string };
+  windSpeedLabel: string;
+  formatTemperature: (c: number) => { value: number; label: string };
+  formatPressure: (hpa: number) => { value: number; label: string };
+}
+
+function StationCard({ station, formatWindSpeed, windSpeedLabel, formatTemperature, formatPressure }: StationCardProps) {
+  const wind = formatWindSpeed(station.wind.speedKts);
+  const gust = station.wind.gustKts !== undefined ? formatWindSpeed(station.wind.gustKts) : null;
+  const distMiles = (station.distanceFt / 5280).toFixed(1);
+
+  const CLOUD_AMOUNT_LABELS: Record<string, string> = {
+    SKC: 'Clear', CLR: 'Clear', FEW: 'Few', SCT: 'Scattered',
+    BKN: 'Broken', OVC: 'Overcast', VV: 'Obscured'
+  };
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.25 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{station.name}</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
+          {distMiles} mi
+        </Typography>
+      </Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+        {station.stationUrl
+          ? <a href={station.stationUrl} target="_blank" rel="noopener noreferrer">{station.source}</a>
+          : station.source
+        }
+        {' · '}{stationAge(station.observedAt)}
+      </Typography>
+      {station.textDescription && (
+        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mb: 0.5 }}>
+          {station.textDescription}
+        </Typography>
+      )}
+
+      <DataRow label="Wind" value={`${wind.value.toFixed(1)} ${windSpeedLabel} ${Math.round(station.wind.direction)}°`} />
+      <DataRow label="Gusts" value={gust !== null ? `${gust.value.toFixed(1)} ${windSpeedLabel}` : null} />
+
+      {station.temperatureC !== undefined ? (
+        <DataRow label="Temp" value={`${formatTemperature(station.temperatureC).value} ${formatTemperature(station.temperatureC).label}`} />
+      ) : (
+        <DataRow label="Temp" value={null} />
+      )}
+      {station.dewpointC !== undefined && (
+        <DataRow label="Dewpoint" value={`${formatTemperature(station.dewpointC).value} ${formatTemperature(station.dewpointC).label}`} />
+      )}
+      {station.windChillC !== undefined && (
+        <DataRow label="Wind chill" value={`${formatTemperature(station.windChillC).value} ${formatTemperature(station.windChillC).label}`} />
+      )}
+      {station.heatIndexC !== undefined && (
+        <DataRow label="Heat index" value={`${formatTemperature(station.heatIndexC).value} ${formatTemperature(station.heatIndexC).label}`} />
+      )}
+      {station.humidityPct !== undefined ? (
+        <DataRow label="Humidity" value={`${Math.round(station.humidityPct)}%`} />
+      ) : (
+        <DataRow label="Humidity" value={null} />
+      )}
+      {(station.seaLevelPressureHpa !== undefined || station.pressureHpa !== undefined) ? (
+        <DataRow
+          label={station.seaLevelPressureHpa !== undefined ? 'SLP' : 'Pressure'}
+          value={(() => {
+            const p = formatPressure(station.seaLevelPressureHpa ?? station.pressureHpa!);
+            return `${p.value} ${p.label}`;
+          })()}
+        />
+      ) : (
+        <DataRow label="Pressure" value={null} />
+      )}
+      {station.visibilityM !== undefined && (
+        <DataRow label="Visibility" value={`${(station.visibilityM / 1609).toFixed(1)} mi`} />
+      )}
+      {station.cloudLayers && station.cloudLayers.length > 0 && (
+        <DataRow
+          label="Sky"
+          value={station.cloudLayers.map(l => {
+            const label = CLOUD_AMOUNT_LABELS[l.amount] ?? l.amount;
+            const base = l.baseM !== null ? ` @ ${Math.round(l.baseM * 3.28084)} ft` : '';
+            return `${label}${base}`;
+          }).join(', ')}
+        />
+      )}
+    </Paper>
   );
 }

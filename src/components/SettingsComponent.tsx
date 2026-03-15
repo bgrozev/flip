@@ -20,6 +20,10 @@ import {
   AltitudeUnit,
   DESCENT_RATE_UNIT_OPTIONS,
   DescentRateUnit,
+  PRESSURE_UNIT_OPTIONS,
+  PressureUnit,
+  TEMPERATURE_UNIT_OPTIONS,
+  TemperatureUnit,
   UnitPreferences,
   WIND_SPEED_UNIT_OPTIONS,
   WindSpeedUnit
@@ -286,6 +290,42 @@ export default function SettingsComponent({
           }
         >
           {DESCENT_RATE_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small">
+        <InputLabel id="temperature-unit-label">Temperature</InputLabel>
+        <Select
+          labelId="temperature-unit-label"
+          value={settings.units.temperature ?? 'c'}
+          label="Temperature"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('temperature', e.target.value as TemperatureUnit)
+          }
+        >
+          {TEMPERATURE_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small">
+        <InputLabel id="pressure-unit-label">Pressure</InputLabel>
+        <Select
+          labelId="pressure-unit-label"
+          value={settings.units.pressure ?? 'hpa'}
+          label="Pressure"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('pressure', e.target.value as PressureUnit)
+          }
+        >
+          {PRESSURE_UNIT_OPTIONS.map(opt => (
             <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
             </MenuItem>

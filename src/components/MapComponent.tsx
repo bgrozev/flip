@@ -36,7 +36,7 @@ export interface TargetEditTarget {
   onHeadingChange: (heading: number) => void;
 }
 import { pathToLatLngs } from '../util/coords';
-import { FlightPath } from '../types';
+import { FlightPath, ObservedWindStation } from '../types';
 import {
   calculatePathStats,
   getPointSegmentStats,
@@ -361,6 +361,123 @@ function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, opt
   );
 }
 
+function formatObservedTime(date: Date): string {
+  const now = new Date();
+  const diffMin = Math.round((now.getTime() - date.getTime()) / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+const CLOUD_AMOUNT_LABELS: Record<string, string> = {
+  SKC: 'Clear', CLR: 'Clear', FEW: 'Few', SCT: 'Scattered',
+  BKN: 'Broken', OVC: 'Overcast', VV: 'Obscured'
+};
+
+function StationTooltip({ station, onMouseEnter, onMouseLeave }: {
+  station: ObservedWindStation;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}) {
+  const { formatWindSpeed, formatTemperature, formatPressure, windSpeedLabel, altitudeLabel } = useUnits();
+  const distMiles = (station.distanceFt / 5280).toFixed(1);
+  const wind = formatWindSpeed(station.wind.speedKts);
+  const gust = station.wind.gustKts !== undefined ? formatWindSpeed(station.wind.gustKts) : null;
+
+  return (
+    <div
+      style={{
+        ...TOOLTIP_STYLE,
+        minWidth: 180,
+        pointerEvents: 'auto',
+        transform: 'translate(-50%, calc(-100% - 18px))'
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <div style={{ fontWeight: 'bold', marginBottom: 2 }}>{station.name}</div>
+      <div style={{ color: '#aaa', fontSize: '10px', marginBottom: 2 }}>
+        {station.stationUrl
+          ? <a href={station.stationUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#90caf9', textDecoration: 'none' }}>{station.source}</a>
+          : station.source
+        }
+        {' · '}{distMiles} mi · {formatObservedTime(station.observedAt)}
+      </div>
+      {station.textDescription && (
+        <div style={{ color: '#ccc', fontStyle: 'italic', marginBottom: 2 }}>{station.textDescription}</div>
+      )}
+
+      <div style={SECTION_STYLE}>
+        <div>
+          Wind: {wind.value.toFixed(1)} {windSpeedLabel}{' '}
+          {formatDegrees(station.wind.direction)}
+          <DirectionArrow degrees={station.wind.direction} />
+        </div>
+        {gust !== null
+          ? <div>Gusts: {gust.value.toFixed(1)} {windSpeedLabel}</div>
+          : <div style={{ color: '#666' }}>Gusts: —</div>
+        }
+      </div>
+
+      <div style={SECTION_STYLE}>
+        {station.temperatureC !== undefined
+          ? <div>Temp: {formatTemperature(station.temperatureC).value} {formatTemperature(station.temperatureC).label}</div>
+          : <div style={{ color: '#666' }}>Temp: —</div>
+        }
+        {station.dewpointC !== undefined && (
+          <div>Dewpoint: {formatTemperature(station.dewpointC).value} {formatTemperature(station.dewpointC).label}</div>
+        )}
+        {station.windChillC !== undefined && (
+          <div>Wind chill: {formatTemperature(station.windChillC).value} {formatTemperature(station.windChillC).label}</div>
+        )}
+        {station.heatIndexC !== undefined && (
+          <div>Heat index: {formatTemperature(station.heatIndexC).value} {formatTemperature(station.heatIndexC).label}</div>
+        )}
+        {station.humidityPct !== undefined
+          ? <div>Humidity: {Math.round(station.humidityPct)}%</div>
+          : <div style={{ color: '#666' }}>Humidity: —</div>
+        }
+      </div>
+
+      <div style={SECTION_STYLE}>
+        {station.seaLevelPressureHpa !== undefined
+          ? <div>SLP: {formatPressure(station.seaLevelPressureHpa).value} {formatPressure(station.seaLevelPressureHpa).label}</div>
+          : station.pressureHpa !== undefined
+            ? <div>Pressure: {formatPressure(station.pressureHpa).value} {formatPressure(station.pressureHpa).label}</div>
+            : <div style={{ color: '#666' }}>Pressure: —</div>
+        }
+        {station.visibilityM !== undefined && (
+          <div>
+            Visibility:{' '}
+            {altitudeLabel === 'm'
+              ? `${(station.visibilityM / 1000).toFixed(1)} km`
+              : `${(station.visibilityM / 1609).toFixed(1)} mi`
+            }
+          </div>
+        )}
+      </div>
+
+      {station.cloudLayers && station.cloudLayers.length > 0 && (
+        <div style={SECTION_STYLE}>
+          {station.cloudLayers.map((layer, i) => {
+            const label = CLOUD_AMOUNT_LABELS[layer.amount] ?? layer.amount;
+            const base = layer.baseM !== null
+              ? altitudeLabel === 'm'
+                ? `${Math.round(layer.baseM)} m`
+                : `${Math.round(layer.baseM * 3.28084)} ft`
+              : null;
+            return (
+              <div key={i}>
+                {label}{base !== null ? ` @ ${base}` : ''}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface MapComponentProps {
   windSpeed: number;
   windDirection: number;
@@ -371,6 +488,7 @@ interface MapComponentProps {
   courses?: Course[];
   courseEditTarget?: CourseEditTarget;
   targetEditTarget?: TargetEditTarget;
+  observedStations?: ObservedWindStation[];
 }
 
 function MapComponent({
@@ -382,14 +500,26 @@ function MapComponent({
   settings,
   courses = [],
   courseEditTarget,
-  targetEditTarget
+  targetEditTarget,
+  observedStations = []
 }: MapComponentProps) {
   const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
-  const { formatAltitude, altitudeLabel } = useUnits();
+  const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [hoveredPreWindIndex, setHoveredPreWindIndex] = useState<number | null>(null);
   const [measuring, setMeasuring] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<LatLng[]>([]);
+  const [hoveredStationId, setHoveredStationId] = useState<string | null>(null);
+  const stationLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onStationEnter = useCallback((id: string) => {
+    if (stationLeaveTimer.current) clearTimeout(stationLeaveTimer.current);
+    setHoveredStationId(id);
+  }, []);
+
+  const onStationLeave = useCallback(() => {
+    stationLeaveTimer.current = setTimeout(() => setHoveredStationId(null), 200);
+  }, []);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [zoom, setZoom] = useState<number>(DEFAULT_MAP_OPTIONS.zoom);
   // Live position of drag handles while dragging (for smooth line preview)
@@ -703,6 +833,64 @@ function MapComponent({
             )}
           </React.Fragment>
         ))}
+        {/* Observed wind stations */}
+        {observedStations.map(station => {
+          const isHovered = hoveredStationId === station.id;
+          const speedKts = station.wind.speedKts;
+          const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
+          // Arrow points where wind is going (direction = where it comes FROM, so rotate by direction+180)
+          const arrowRotation = station.wind.direction + 180;
+          const speedDisplay = formatWindSpeed(speedKts);
+          return (
+            <React.Fragment key={station.id}>
+              <OverlayView
+                position={{ lat: station.lat, lng: station.lng }}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <div
+                  style={{
+                    transform: 'translate(-50%, -50%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    cursor: 'default',
+                    userSelect: 'none',
+                    opacity: isHovered ? 1 : 0.85
+                  }}
+                  onMouseEnter={() => onStationEnter(station.id)}
+                  onMouseLeave={onStationLeave}
+                >
+                  <svg
+                    width="22"
+                    height="26"
+                    viewBox="0 0 22 26"
+                    style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}
+                  >
+                    {/* Arrow head */}
+                    <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                  </svg>
+                  <div style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: 'white',
+                    textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
+                    lineHeight: 1,
+                    marginTop: 1,
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {speedDisplay.value.toFixed(0)} {windSpeedLabel}
+                  </div>
+                </div>
+              </OverlayView>
+              {isHovered && (
+                <OverlayView position={{ lat: station.lat, lng: station.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <StationTooltip station={station} onMouseEnter={() => onStationEnter(station.id)} onMouseLeave={onStationLeave} />
+                </OverlayView>
+              )}
+            </React.Fragment>
+          );
+        })}
+
         {/* Target edit handles — position drag + heading direction handle */}
         {targetEditTarget && (() => {
           const headingHandlePos = (() => {

@@ -1,16 +1,14 @@
-import * as turf from '@turf/turf';
 import { useCallback, useRef, useState } from 'react';
 
 import { fetchForecast } from '../forecast/forecast';
-import { Dropzone, LatLng, Settings } from '../types';
-import { findClosestDropzone } from '../util/dropzones';
+import { LatLng, Settings } from '../types';
 import { Winds } from '../util/wind';
 
 interface UseFetchForecastOptions {
   /** Current target location */
   target: LatLng | undefined;
   /** Settings for wind fetching */
-  settings: Pick<Settings, 'useDzGroundWind' | 'limitWind'>;
+  settings: Pick<Settings, 'limitWind'>;
 }
 
 interface UseFetchForecastResult {
@@ -27,13 +25,8 @@ interface UseFetchForecastResult {
 }
 
 /**
- * Hook to manage wind forecast fetching.
- *
- * Handles:
- * - Finding closest dropzone for ground wind
- * - Fetching from OpenMeteo
- * - Error handling with fallback
- * - Wind altitude filtering
+ * Hook to manage wind forecast fetching (aloft winds only).
+ * Ground wind injection from observed stations is handled in App.tsx.
  */
 export function useFetchForecast({
   target,
@@ -53,21 +46,11 @@ export function useFetchForecast({
       return;
     }
 
-    const targetPoint: [number, number] = [target.lng, target.lat];
-    const closestDz = findClosestDropzone(targetPoint);
-    const distanceToDz = turf.distance(targetPoint, [closestDz.lng, closestDz.lat], { units: 'feet' });
-
-    // Only use dropzone ground wind if within 5000 feet
-    const dz: Dropzone | undefined = distanceToDz <= 5000 ? closestDz : undefined;
-
     const hourOffset = forecastTime
       ? Math.max(0, Math.round((forecastTime.getTime() - Date.now()) / 3600000))
       : 0;
 
-    console.log(
-      `Fetching winds for: ${JSON.stringify(target)},` +
-        ` useDzGroundWind=${settings.useDzGroundWind} (dz=${dz?.name}), hourOffset=${hourOffset}`
-    );
+    console.log(`Fetching winds for: ${JSON.stringify(target)}, hourOffset=${hourOffset}`);
 
     // Abort any in-flight request before starting a new one
     abortControllerRef.current?.abort();
@@ -76,12 +59,7 @@ export function useFetchForecast({
 
     setFetching(true);
 
-    fetchForecast(
-      target,
-      settings.useDzGroundWind ? dz?.fetchGroundWind : undefined,
-      hourOffset,
-      controller.signal
-    )
+    fetchForecast(target, hourOffset, controller.signal)
       .then(fetchedWinds => {
         // Determine altitude limit
         let limit = settings.limitWind;
@@ -103,7 +81,7 @@ export function useFetchForecast({
         setFetching(false);
         setWinds(Winds.createDefault());
       });
-  }, [target, settings.useDzGroundWind, settings.limitWind]);
+  }, [target, settings.limitWind]);
 
   return {
     winds,
