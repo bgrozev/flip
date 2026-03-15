@@ -50,56 +50,33 @@ describe('fetchForecast', () => {
     jest.clearAllMocks();
   });
 
-  it('fetches from OpenMeteo', async () => {
+  it('fetches from OpenMeteo with default hour offset', async () => {
     const mockWinds = new Winds([new WindRow(0, 90, 10)]);
     (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
 
-    const result = await fetchForecast(mockCenter, undefined);
+    const result = await fetchForecast(mockCenter);
 
     expect(fetchOpenMeteo).toHaveBeenCalledWith(mockCenter, 0, undefined);
     expect(result).toBe(mockWinds);
   });
 
-  it('fetches ground wind when fetchDzGroundWind is provided', async () => {
-    const mockWinds = new Winds([new WindRow(0, 90, 10), new WindRow(1000, 180, 20)]);
-    const mockGroundWind = new WindRow(0, 270, 5);
-    const mockFetchGroundWind = jest.fn().mockResolvedValue(mockGroundWind);
-
-    (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
-
-    const result = await fetchForecast(mockCenter, mockFetchGroundWind);
-
-    expect(mockFetchGroundWind).toHaveBeenCalled();
-    expect(result.winds[0].direction).toBe(270);
-    expect(result.winds[0].speedKts).toBe(5);
-    expect(result.groundSource).toBe(SOURCE_DZ);
-  });
-
-  it('continues without ground wind if fetch fails', async () => {
+  it('passes hour offset to OpenMeteo', async () => {
     const mockWinds = new Winds([new WindRow(0, 90, 10)]);
-    const mockFetchGroundWind = jest.fn().mockRejectedValue(new Error('Network error'));
-
     (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
 
-    // Spy on console.log to verify error is logged
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { /* noop */ });
+    const result = await fetchForecast(mockCenter, 6);
 
-    const result = await fetchForecast(mockCenter, mockFetchGroundWind);
-
+    expect(fetchOpenMeteo).toHaveBeenCalledWith(mockCenter, 6, undefined);
     expect(result).toBe(mockWinds);
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch DZ winds, continue without.');
-
-    consoleSpy.mockRestore();
   });
 
-  it('does not set ground source when ground wind fetch returns null', async () => {
+  it('passes abort signal to OpenMeteo', async () => {
     const mockWinds = new Winds([new WindRow(0, 90, 10)]);
-    const mockFetchGroundWind = jest.fn().mockResolvedValue(null);
-
+    const controller = new AbortController();
     (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
 
-    const result = await fetchForecast(mockCenter, mockFetchGroundWind);
+    await fetchForecast(mockCenter, 0, controller.signal);
 
-    expect(result.groundSource).toBe(SOURCE_MANUAL);
+    expect(fetchOpenMeteo).toHaveBeenCalledWith(mockCenter, 0, controller.signal);
   });
 });
