@@ -1,11 +1,10 @@
 import {
-  Explore as ExploreIcon,
+  EditLocation as EditLocationIcon,
   FileDownload as FileDownloadIcon,
-  ModeStandby as ModeStandbyIcon,
   Public as PublicIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { CircularProgress, Divider, IconButton, Stack, Tooltip } from '@mui/material';
+import { CircularProgress, Divider, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
 import React from 'react';
 
 import { Preset } from '../types';
@@ -15,9 +14,9 @@ import PresetSelector from './PresetSelector';
 interface ToolbarActionsProps {
   onMapButtonClick: () => void;
   onRefreshWindsClick: () => void;
-  onSelectTargetClick: () => void;
-  onSelectTargetAndHeadingClick: () => void;
   onExportClick: () => void;
+  targetEditOpen: boolean;
+  onTargetEditToggle: () => void;
   fetching: boolean;
   showPresets: boolean;
   presets: Preset[];
@@ -31,9 +30,9 @@ interface ToolbarActionsProps {
 export default function ToolbarActions({
   onMapButtonClick,
   onRefreshWindsClick,
-  onSelectTargetClick,
-  onSelectTargetAndHeadingClick,
   onExportClick,
+  targetEditOpen,
+  onTargetEditToggle,
   fetching,
   showPresets,
   presets,
@@ -47,8 +46,7 @@ export default function ToolbarActions({
     <Stack direction="row" spacing={1} alignItems="center">
       <MapButton onClick={onMapButtonClick} />
       <Divider orientation="vertical" flexItem />
-      <SelectTargetAndHeadingButton onClick={onSelectTargetAndHeadingClick} />
-      <SelectTargetButton onClick={onSelectTargetClick} />
+      <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <ExportButton onClick={onExportClick} />
       <Divider orientation="vertical" flexItem />
@@ -76,21 +74,18 @@ function MapButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function SelectTargetButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Tooltip title="Select target">
-      <IconButton type="button" aria-label="refresh-wind" onClick={onClick}>
-        <ModeStandbyIcon />
-      </IconButton>
-    </Tooltip>
-  );
-}
 
-function SelectTargetAndHeadingButton({ onClick }: { onClick: () => void }) {
+function EditTargetButton({ active, onClick }: { active: boolean; onClick: () => void }) {
+  const theme = useTheme();
   return (
-    <Tooltip title="Select target and direction">
-      <IconButton type="button" aria-label="refresh-wind" onClick={onClick}>
-        <ExploreIcon />
+    <Tooltip title={active ? 'Stop editing target' : 'Edit target on map'}>
+      <IconButton
+        type="button"
+        aria-label="edit-target"
+        onClick={onClick}
+        sx={active ? { color: theme.palette.primary.main } : undefined}
+      >
+        <EditLocationIcon />
       </IconButton>
     </Tooltip>
   );

@@ -1,6 +1,5 @@
 import {
-  Explore as ExploreIcon,
-  ModeStandby as ModeStandbyIcon
+  EditLocation as EditLocationIcon
 } from '@mui/icons-material';
 import {
   Button,
@@ -22,14 +21,16 @@ import { LocationComponent } from './';
 interface TargetComponentProps {
   target: Target;
   setTarget: (target: Target) => void;
-  selectFromMap: (withHeading: boolean) => void;
+  editOpen: boolean;
+  onEditOpenChange: (open: boolean) => void;
   onUpwindClick: () => void;
 }
 
 export default function TargetComponent({
   target,
   setTarget,
-  selectFromMap,
+  editOpen,
+  onEditOpenChange,
   onUpwindClick
 }: TargetComponentProps) {
   const handleHeadingChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,30 +42,15 @@ export default function TargetComponent({
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={1}>
-        <Tooltip title="Select target by clicking on the map." arrow>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<ModeStandbyIcon />}
-            onClick={() => selectFromMap(false)}
-            sx={{ textTransform: 'none' }}
-          >
-            Set Target
-          </Button>
-        </Tooltip>
-        <Tooltip title="Select target and direction by clicking on the map twice." arrow>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<ExploreIcon />}
-            onClick={() => selectFromMap(true)}
-            sx={{ textTransform: 'none' }}
-          >
-            Set Target & Direction
-          </Button>
-        </Tooltip>
-      </Stack>
+      <Button
+        variant={editOpen ? 'contained' : 'outlined'}
+        size="small"
+        startIcon={<EditLocationIcon />}
+        onClick={() => onEditOpenChange(!editOpen)}
+        sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+      >
+        {editOpen ? 'Done' : 'Edit on Map'}
+      </Button>
 
       <Stack direction="row">
         <ControlledNumberInput

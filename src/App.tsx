@@ -38,7 +38,7 @@ import {
   WindSummary,
   WindsComponent
 } from './components';
-import { CourseEditTarget } from './components/MapComponent';
+import { CourseEditTarget, TargetEditTarget } from './components/MapComponent';
 import { SOURCE_DZ, SOURCE_MANUAL } from './forecast/forecast';
 import {
   AppStateProvider,
@@ -46,7 +46,6 @@ import {
   useAppState,
   useCustomCourses,
   useFetchForecast,
-  useMapClickHandler,
   usePresets
 } from './hooks';
 import { Course, LatLng, Target, WindSummaryData } from './types';
@@ -172,6 +171,7 @@ function DashboardContent() {
 
   const [forecastTime, setForecastTime] = useState<Date | null>(null);
   const [courseEditOpen, setCourseEditOpen] = useState(false);
+  const [targetEditOpen, setTargetEditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
   const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
@@ -193,12 +193,6 @@ function DashboardContent() {
 
   const isMobile = useMediaQuery('(max-width:600px)');
   const router = useDemoRouter('/map');
-
-  const { handleMapClick, selectFromMap, isWaitingForClick } = useMapClickHandler({
-    currentTarget: target,
-    onTargetSelected: setTarget,
-    onNavigateToMap: isMobile ? () => router.navigate('/map') : undefined
-  });
 
   const {
     presets,
@@ -294,9 +288,13 @@ function DashboardContent() {
   } else if (router.pathname === '/target') {
     p = (
       <TargetComponent
-        selectFromMap={selectFromMap}
         target={target}
         setTarget={setTarget}
+        editOpen={targetEditOpen}
+        onEditOpenChange={open => {
+          setTargetEditOpen(open);
+          if (open && isMobile) router.navigate('/map');
+        }}
         onUpwindClick={onUpwindClick}
       />
     );
@@ -362,18 +360,26 @@ function DashboardContent() {
         }
       : undefined;
 
+  const targetEditTarget: TargetEditTarget | undefined = targetEditOpen
+    ? {
+        target: target.target,
+        heading: target.finalHeading,
+        onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
+        onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) })
+      }
+    : undefined;
+
   const map = (
     <MapComponent
       center={target.target}
       pathA={c}
       pathB={c2Display}
       settings={settings}
-      onClick={handleMapClick}
       windDirection={averageWind_?.direction ?? 0}
       windSpeed={averageWind_?.speedKts ?? 0}
-      waitingForClick={isWaitingForClick}
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
+      targetEditTarget={targetEditTarget}
     />
   );
   const dashboard = (
@@ -385,9 +391,13 @@ function DashboardContent() {
             fetching={fetching}
             onMapButtonClick={() => router.navigate('/map')}
             onRefreshWindsClick={handleFetchWinds}
-            onSelectTargetClick={() => selectFromMap(false)}
-            onSelectTargetAndHeadingClick={() => selectFromMap(true)}
             onExportClick={() => setExportOpen(true)}
+            targetEditOpen={targetEditOpen}
+            onTargetEditToggle={() => {
+              const next = !targetEditOpen;
+              setTargetEditOpen(next);
+              if (next && isMobile) router.navigate('/map');
+            }}
             showPresets={settings.showPresets}
             presets={presets}
             activePresetId={activePresetId}

@@ -28,6 +28,13 @@ export interface CourseEditTarget {
   onMove: (newCenter: LatLng) => void;
   onRotate: (newDirection: number) => void;
 }
+
+export interface TargetEditTarget {
+  target: LatLng;
+  heading: number;
+  onMove: (pos: LatLng) => void;
+  onHeadingChange: (heading: number) => void;
+}
 import { pathToLatLngs } from '../util/coords';
 import { FlightPath } from '../types';
 import {
@@ -358,26 +365,24 @@ interface MapComponentProps {
   windSpeed: number;
   windDirection: number;
   center: LatLng;
-  onClick: (latLng: LatLng) => void;
   pathA: FlightPath;
   pathB: FlightPath;
   settings: Settings;
-  waitingForClick: boolean;
   courses?: Course[];
   courseEditTarget?: CourseEditTarget;
+  targetEditTarget?: TargetEditTarget;
 }
 
 function MapComponent({
   windSpeed,
   windDirection,
   center,
-  onClick,
   pathA,
   pathB,
   settings,
-  waitingForClick,
   courses = [],
-  courseEditTarget
+  courseEditTarget,
+  targetEditTarget
 }: MapComponentProps) {
   const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
   const { formatAltitude, altitudeLabel } = useUnits();
@@ -387,8 +392,9 @@ function MapComponent({
   const [measurePoints, setMeasurePoints] = useState<LatLng[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [zoom, setZoom] = useState<number>(DEFAULT_MAP_OPTIONS.zoom);
-  // Live position of the rotation handle while dragging (for smooth line preview)
+  // Live position of drag handles while dragging (for smooth line preview)
   const [liveHandlePos, setLiveHandlePos] = useState<LatLng | null>(null);
+  const [liveTargetHeadingPos, setLiveTargetHeadingPos] = useState<LatLng | null>(null);
 
   const toggleMeasuring = useCallback(() => {
     setMeasuring(m => {
@@ -425,7 +431,7 @@ function MapComponent({
 
   // Update cursor without causing map re-render
   if (mapRef.current) {
-    const cursor = (showMeasureTool && measuring) || waitingForClick ? 'crosshair' : 'grab';
+    const cursor = (showMeasureTool && measuring) || targetEditTarget ? 'crosshair' : 'grab';
     mapRef.current.setOptions({ draggableCursor: cursor });
   }
 
@@ -467,8 +473,8 @@ function MapComponent({
           const latlng = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
           if (showMeasureTool && measuring) {
             setMeasurePoints(pts => [...pts, latlng]);
-          } else {
-            onClick(latlng);
+          } else if (targetEditTarget) {
+            targetEditTarget.onMove(latlng);
           }
         }}
         options={DEFAULT_MAP_OPTIONS}
@@ -697,6 +703,66 @@ function MapComponent({
             )}
           </React.Fragment>
         ))}
+        {/* Target edit handles — position drag + heading direction handle */}
+        {targetEditTarget && (() => {
+          const headingHandlePos = (() => {
+            const pt = turf.destination(
+              [targetEditTarget.target.lng, targetEditTarget.target.lat],
+              15, targetEditTarget.heading, { units: 'meters' }
+            );
+            return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
+          })();
+          const headingLineEnd = liveTargetHeadingPos ?? headingHandlePos;
+          /* eslint-disable @typescript-eslint/no-explicit-any */
+          const circleIcon = (color: string, scale: number) => ({
+            path: (window as any).google.maps.SymbolPath.CIRCLE,
+            scale,
+            fillColor: color,
+            fillOpacity: 0.85,
+            strokeColor: '#fff',
+            strokeWeight: 2
+          });
+          /* eslint-enable @typescript-eslint/no-explicit-any */
+          return (
+            <React.Fragment key="target-edit-handles">
+              <PolylineF
+                path={[targetEditTarget.target, headingLineEnd]}
+                options={{ strokeColor: '#ffaa00', strokeWeight: 2, strokeOpacity: 0.9, zIndex: 25, clickable: false }}
+              />
+              <MarkerF
+                position={targetEditTarget.target}
+                draggable
+                cursor="move"
+                zIndex={26}
+                icon={circleIcon('#00ccff', 9)}
+                onDragEnd={e => {
+                  if (e.latLng) targetEditTarget.onMove({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+                }}
+              />
+              <MarkerF
+                position={headingHandlePos}
+                draggable
+                cursor="pointer"
+                zIndex={27}
+                icon={circleIcon('#ffaa00', 7)}
+                onDrag={e => {
+                  if (e.latLng) setLiveTargetHeadingPos({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+                }}
+                onDragEnd={e => {
+                  setLiveTargetHeadingPos(null);
+                  if (e.latLng) {
+                    const bearing = turf.bearing(
+                      [targetEditTarget.target.lng, targetEditTarget.target.lat],
+                      [e.latLng.lng(), e.latLng.lat()]
+                    );
+                    targetEditTarget.onHeadingChange((bearing + 360) % 360);
+                  }
+                }}
+              />
+            </React.Fragment>
+          );
+        })()}
+
         {/* Course edit handles — center drag + rotation handle */}
         {courseEditTarget && (() => {
           const rotationHandlePos = (() => {
