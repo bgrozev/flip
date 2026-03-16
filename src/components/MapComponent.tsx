@@ -187,7 +187,7 @@ function LegStatsDisplay({ stats, formatAltitude, altitudeLabel, showDrift = tru
       <div>Glide: {stats.glideRatio.toFixed(1)}</div>
       {showDrift && stats.windDriftDist > 1 && (
         <div>
-          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees(stats.windDriftDir)}
+          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
           <DirectionArrow degrees={stats.windDriftDir} />
         </div>
       )}
@@ -209,7 +209,7 @@ function ManoeuvreStatsDisplay({ stats, altitudeLabel, showDrift = true }: {
       <div>Back: {formatDistance(stats.distanceY, altitudeLabel)}</div>
       {showDrift && stats.windDriftDist > 1 && (
         <div>
-          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees(stats.windDriftDir)}
+          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
           <DirectionArrow degrees={stats.windDriftDir} />
         </div>
       )}
