@@ -73,6 +73,7 @@ export interface Settings {
   showPresets: boolean;
   showMeasureTool: boolean;
   highlightCorrespondingPoints: boolean;
+  showCrabArrow: boolean;
   units: UnitPreferences;
 }
 

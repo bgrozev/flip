@@ -83,6 +83,11 @@ const settingsGroups: SettingsGroup[] = [
           'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.'
       },
       {
+        key: 'showCrabArrow',
+        label: 'Show crab angle arrows',
+        tooltip: 'Show a heading arrow on pattern points where crab angle exceeds 10°.'
+      },
+      {
         key: 'displayWindArrow',
         label: 'Show average wind on the map',
         tooltip: 'Shows an arrow with the average wind on top of the map.'

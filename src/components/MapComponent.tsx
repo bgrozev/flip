@@ -183,6 +183,10 @@ function LegStatsDisplay({ stats, formatAltitude, altitudeLabel, showDrift = tru
       <div>Time: {stats.timeSec.toFixed(1)}s</div>
       <div>Heading: {formatDegrees(stats.heading)}</div>
       {showBearing && <div>Bearing: {formatDegrees(stats.bearing)}</div>}
+      {showBearing && (() => {
+        const crab = Math.abs(((stats.heading - stats.bearing + 180 + 360) % 360) - 180);
+        return crab >= 1 ? <div>Crab: {Math.round(crab)}°</div> : null;
+      })()}
       <div>Distance: {formatDistance(stats.distance, altitudeLabel)}</div>
       <div>Glide: {stats.glideRatio.toFixed(1)}</div>
       {showDrift && stats.windDriftDist > 1 && (
@@ -286,6 +290,7 @@ interface InteractivePointProps {
   options: google.maps.CircleOptions;
   showTooltip: boolean;
   showDrift: boolean;
+  showCrabArrow: boolean;
   isHovered: boolean;
   onHover: () => void;
   onHoverEnd: () => void;
@@ -308,10 +313,23 @@ const HIGHLIGHT_OPTIONS: google.maps.CircleOptions = {
 const HOVER_RADIUS = 15;
 const HOVER_RADIUS_POM_ONLY = 30;
 
-function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, options, showTooltip, showDrift, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel }: InteractivePointProps) {
+function destPoint(lat: number, lng: number, heading: number, distM: number): google.maps.LatLngLiteral {
+  const pt = turf.destination([lng, lat], distM, heading, { units: 'meters' });
+  return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
+}
+
+function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, options, showTooltip, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel }: InteractivePointProps) {
   // POMs always have hover/tooltip, non-POMs respect the showTooltip setting
   const isPom = Boolean(point.pom);
   const enableHover = isPom || showTooltip;
+
+  // Crab angle arrow: shown on leg POMs when crab > 10°
+  const segStats = isPom ? getPointSegmentStats(pointIndex, pathStats) : null;
+  const legStats = segStats?.type === 'leg' ? segStats.stats : null;
+  const crabAngle = legStats
+    ? Math.abs(((legStats.heading - legStats.bearing + 180 + 360) % 360) - 180)
+    : 0;
+  const renderCrabArrow = showCrabArrow && crabAngle > 10 && legStats != null;
 
   // Use larger hover radius when only POMs are hoverable (showTooltip off)
   const hoverAreaOptions: google.maps.CircleOptions = {
@@ -329,6 +347,19 @@ function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, opt
         center={point}
         options={options}
       />
+      {/* Crab angle heading arrow (40m shaft + arrowhead barbs) */}
+      {renderCrabArrow && (() => {
+        const h = legStats!.heading;
+        const tip = destPoint(point.lat, point.lng, h, 40);
+        const lineOpts: google.maps.PolylineOptions = { strokeColor: '#ffffff', strokeOpacity: 0.9, strokeWeight: 2, zIndex: 40, clickable: false };
+        return (
+          <>
+            <PolylineF path={[{ lat: point.lat, lng: point.lng }, tip]} options={lineOpts} />
+            <PolylineF path={[tip, destPoint(tip.lat, tip.lng, (h + 150 + 360) % 360, 10)]} options={lineOpts} />
+            <PolylineF path={[tip, destPoint(tip.lat, tip.lng, (h - 150 + 360) % 360, 10)]} options={lineOpts} />
+          </>
+        );
+      })()}
       {/* Invisible hover area */}
       {enableHover && (
         <CircleF
@@ -511,7 +542,7 @@ function MapComponent({
   forecastValidTime,
   finalHeading = 0
 }: MapComponentProps) {
-  const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool } = settings;
+  const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool, showCrabArrow } = settings;
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [hoveredPreWindIndex, setHoveredPreWindIndex] = useState<number | null>(null);
@@ -660,6 +691,7 @@ function MapComponent({
             }}
             showTooltip={showPomTooltips}
             showDrift={false}
+            showCrabArrow={false}
             isHovered={hoveredPreWindIndex === i}
             onHover={() => setHoveredPreWindIndex(i)}
             onHoverEnd={() => setHoveredPreWindIndex(null)}
@@ -697,6 +729,7 @@ function MapComponent({
             }}
             showTooltip={showPomTooltips}
             showDrift={true}
+            showCrabArrow={showCrabArrow}
             isHovered={hoveredPointIndex === i}
             onHover={() => setHoveredPointIndex(i)}
             onHoverEnd={() => setHoveredPointIndex(null)}

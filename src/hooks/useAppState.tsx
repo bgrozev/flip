@@ -46,6 +46,7 @@ const DEFAULT_SETTINGS: Settings = {
   showPresets: true,
   showMeasureTool: false,
   highlightCorrespondingPoints: true,
+  showCrabArrow: true,
   units: DEFAULT_UNIT_PREFERENCES
 };
 
