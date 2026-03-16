@@ -81,10 +81,16 @@ async function fetchObservation(
   sLng: number,
   distanceFt: number
 ): Promise<ObservedWindStation | null> {
-  const res = await fetch(`${NWS_BASE}/stations/${stationId}/observations/latest`);
+  // /observations/latest sometimes returns a partial record with null wind.
+  // Fetch the last few observations and use the most recent one with valid wind data.
+  const res = await fetch(`${NWS_BASE}/stations/${stationId}/observations?limit=5`);
   if (!res.ok) return null;
   const data = await res.json();
-  return parseObservation(stationId, name, sLat, sLng, distanceFt, data.properties);
+  for (const feature of data.features ?? []) {
+    const station = parseObservation(stationId, name, sLat, sLng, distanceFt, feature.properties);
+    if (station) return station;
+  }
+  return null;
 }
 
 /** Fetch all NWS observation stations within rangeFt via gridpoints discovery */

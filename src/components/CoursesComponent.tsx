@@ -2,7 +2,8 @@ import {
   Add as AddIcon,
   ContentCopy as ContentCopyIcon,
   Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon
+  ExpandMore as ExpandMoreIcon,
+  FileDownload as FileDownloadIcon
 } from '@mui/icons-material';
 import {
   Accordion,
@@ -28,7 +29,8 @@ import React, { useEffect, useState } from 'react';
 
 import { useCustomCourses } from '../hooks';
 import { CourseParams, CourseType, LatLng, Target } from '../types';
-import { BUILT_IN_PARAMS, fromCourseRelative, getTargetRelativeToCourse } from '../util/courses';
+import { BUILT_IN_PARAMS, buildCourse, fromCourseRelative, getTargetRelativeToCourse } from '../util/courses';
+import { downloadCourseKmz } from '../util/exportKmz';
 
 interface CoursesComponentProps {
   selectedCourseId: string | null;
@@ -265,6 +267,19 @@ function CoursesComponent({
           ))}
         </Select>
       </FormControl>
+
+      {/* ── Course actions ── */}
+      {selectedCourseParams && (
+        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+          <Button
+            size="small"
+            startIcon={<FileDownloadIcon />}
+            onClick={() => downloadCourseKmz(buildCourse(selectedCourseParams))}
+          >
+            Export KMZ
+          </Button>
+        </Stack>
+      )}
 
       {/* ── Target-relative section (all courses) ── */}
       {selectedCourseParams && (
