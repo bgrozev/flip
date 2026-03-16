@@ -31,6 +31,17 @@ import { useCustomCourses } from '../hooks';
 import { CourseParams, CourseType, LatLng, Target } from '../types';
 import { BUILT_IN_PARAMS, buildCourse, fromCourseRelative, getTargetRelativeToCourse } from '../util/courses';
 import { downloadCourseKmz } from '../util/exportKmz';
+import { AltitudeUnit } from '../util/units';
+
+const M_PER_FT = 0.3048;
+
+function metersToDisplay(m: number, unit: AltitudeUnit): number {
+  return unit === 'ft' ? m / M_PER_FT : m;
+}
+
+function displayToMeters(v: number, unit: AltitudeUnit): number {
+  return unit === 'ft' ? v * M_PER_FT : v;
+}
 
 interface CoursesComponentProps {
   selectedCourseId: string | null;
@@ -39,6 +50,7 @@ interface CoursesComponentProps {
   onTargetChange: (t: Target) => void;
   editOpen: boolean;
   onEditOpenChange: (open: boolean) => void;
+  altitudeUnit: AltitudeUnit;
 }
 
 function CoursesComponent({
@@ -47,7 +59,8 @@ function CoursesComponent({
   target,
   onTargetChange,
   editOpen,
-  onEditOpenChange
+  onEditOpenChange,
+  altitudeUnit
 }: CoursesComponentProps) {
   const { customParams, createCourse, updateCourse, removeCourse } = useCustomCourses();
 
@@ -65,14 +78,15 @@ function CoursesComponent({
     if (!selectedCourseParams) return;
     const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
     const rel = getTargetRelativeToCourse(target.target, center, selectedCourseParams.direction);
-    setDepthStr(String(Math.round(rel.depth * 10) / 10));
-    setOffsetStr(String(Math.round(rel.offset * 10) / 10));
+    const toDisp = (m: number) => metersToDisplay(m, altitudeUnit);
+    setDepthStr(String(Math.round(toDisp(rel.depth) * 10) / 10));
+    setOffsetStr(String(Math.round(toDisp(rel.offset) * 10) / 10));
     const approachAngle = selectedCourseParams.direction - target.finalHeading;
     setDirStr(String(Math.round(approachAngle)));
   // Re-sync when the selected course changes OR when the course is moved/rotated.
   // Deliberately excludes target changes to avoid feedback loops.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourseId, selectedCourseParams?.lat, selectedCourseParams?.lng, selectedCourseParams?.direction]);
+  }, [selectedCourseId, selectedCourseParams?.lat, selectedCourseParams?.lng, selectedCourseParams?.direction, altitudeUnit]);
 
   const handleDepth = (e: React.ChangeEvent<HTMLInputElement>) => {
     const s = e.target.value;
@@ -81,7 +95,9 @@ function CoursesComponent({
     if (isNaN(v) || !selectedCourseParams) return;
     const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
     const off = parseFloat(offsetStr);
-    onTargetChange({ ...target, target: fromCourseRelative(v, isNaN(off) ? 0 : off, center, selectedCourseParams.direction) });
+    const depM = displayToMeters(v, altitudeUnit);
+    const offM = displayToMeters(isNaN(off) ? 0 : off, altitudeUnit);
+    onTargetChange({ ...target, target: fromCourseRelative(depM, offM, center, selectedCourseParams.direction) });
   };
 
   const handleOffset = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +107,9 @@ function CoursesComponent({
     if (isNaN(v) || !selectedCourseParams) return;
     const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
     const dep = parseFloat(depthStr);
-    onTargetChange({ ...target, target: fromCourseRelative(isNaN(dep) ? 0 : dep, v, center, selectedCourseParams.direction) });
+    const depM = displayToMeters(isNaN(dep) ? 0 : dep, altitudeUnit);
+    const offM = displayToMeters(v, altitudeUnit);
+    onTargetChange({ ...target, target: fromCourseRelative(depM, offM, center, selectedCourseParams.direction) });
   };
 
   const handleApproachAngle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,8 +310,8 @@ function CoursesComponent({
                 value={depthStr}
                 onChange={handleDepth}
                 type="number"
-                endAdornment={<InputAdornment position="end">m</InputAdornment>}
-                inputProps={{ step: 0.5 }}
+                endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
+                inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
               />
               <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
                 Depth
@@ -305,8 +323,8 @@ function CoursesComponent({
                 value={offsetStr}
                 onChange={handleOffset}
                 type="number"
-                endAdornment={<InputAdornment position="end">m</InputAdornment>}
-                inputProps={{ step: 0.5 }}
+                endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
+                inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
               />
               <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
                 Offset

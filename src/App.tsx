@@ -346,6 +346,7 @@ function DashboardContent() {
         onTargetChange={setTarget}
         editOpen={courseEditOpen}
         onEditOpenChange={setCourseEditOpen}
+        altitudeUnit={settings.units.altitude}
       />
     );
   } else if (router.pathname === '/about') {
