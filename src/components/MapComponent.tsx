@@ -106,6 +106,25 @@ function formatDegrees(deg: number): string {
   return `${Math.round(deg)}°`;
 }
 
+/** Beaufort-scale fill color for a wind speed in knots. */
+function beaufortColor(kts: number): string {
+  if (kts < 1)  return '#cccccc';
+  if (kts < 4)  return '#aaddff';
+  if (kts < 7)  return '#00cc88';
+  if (kts < 11) return '#44cc44';
+  if (kts < 17) return '#ffdd00';
+  if (kts < 22) return '#ff9900';
+  if (kts < 28) return '#ff4400';
+  if (kts < 34) return '#cc0000';
+  return '#880000';
+}
+
+/** Format a speed+gust label, e.g. "5g12" or "5". Values already converted to display units. */
+function speedGustLabel(speed: number, gust?: number): string {
+  const s = speed.toFixed(0);
+  return gust != null ? `${s}g${gust.toFixed(0)}` : s;
+}
+
 function DirectionArrow({ degrees }: { degrees: number }) {
   return (
     <span
@@ -878,10 +897,12 @@ function MapComponent({
         {observedStations.map(station => {
           const isHovered = hoveredStationId === station.id;
           const speedKts = station.wind.speedKts;
-          const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
+          const gustKts = station.wind.gustKts;
+          const color = beaufortColor(speedKts);
           // Arrow points where wind is going (direction = where it comes FROM, so rotate by direction+180)
           const arrowRotation = station.wind.direction + 180;
           const speedDisplay = formatWindSpeed(speedKts);
+          const gustDisplay = gustKts != null ? formatWindSpeed(gustKts) : null;
           return (
             <React.Fragment key={station.id}>
               <OverlayView
@@ -907,7 +928,7 @@ function MapComponent({
                     viewBox="0 0 22 26"
                     style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}
                   >
-                    <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                    <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
                   </svg>
                   <div style={{
                     fontSize: '10px',
@@ -918,7 +939,7 @@ function MapComponent({
                     marginTop: 1,
                     whiteSpace: 'nowrap'
                   }}>
-                    {speedDisplay.value.toFixed(0)} {windSpeedLabel}
+                    {speedGustLabel(speedDisplay.value, gustDisplay?.value)} {windSpeedLabel}
                   </div>
                 </div>
               </OverlayView>
@@ -943,9 +964,11 @@ function MapComponent({
             const hoverId = `${station.id}-target`;
             const isHovered = hoveredStationId === hoverId;
             const speedKts = station.wind.speedKts;
-            const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
+            const gustKts = station.wind.gustKts;
+            const color = beaufortColor(speedKts);
             const arrowRotation = station.wind.direction + 180;
             const speedDisplay = formatWindSpeed(speedKts);
+            const gustDisplay = gustKts != null ? formatWindSpeed(gustKts) : null;
             return (
               <React.Fragment key={hoverId}>
                 <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
@@ -955,10 +978,10 @@ function MapComponent({
                     onMouseLeave={onStationLeave}
                   >
                     <svg width="22" height="26" viewBox="0 0 22 26" style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
-                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
                     </svg>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'white', textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)', lineHeight: 1, marginTop: 1, whiteSpace: 'nowrap' }}>
-                      {speedDisplay.value.toFixed(0)} {windSpeedLabel}
+                      {speedGustLabel(speedDisplay.value, gustDisplay?.value)} {windSpeedLabel}
                     </div>
                   </div>
                 </OverlayView>
@@ -973,7 +996,7 @@ function MapComponent({
 
           if (forecastGroundWind) {
             const { direction, speedKts } = forecastGroundWind;
-            const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
+            const color = beaufortColor(speedKts);
             const arrowRotation = direction + 180;
             const speedDisplay = formatWindSpeed(speedKts);
             const isHovered = hoveredStationId === 'forecast-ground';
@@ -989,7 +1012,7 @@ function MapComponent({
                     onMouseLeave={onStationLeave}
                   >
                     <svg width="22" height="26" viewBox="0 0 22 26" style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
-                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
                     </svg>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'white', textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)', lineHeight: 1, marginTop: 1, whiteSpace: 'nowrap' }}>
                       {speedDisplay.value.toFixed(0)} {windSpeedLabel}
