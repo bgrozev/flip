@@ -97,23 +97,46 @@ settings.straightenLegs ─→ straightenLegs(c2) ─→ display path
 
 ---
 
-## 3. Open questions for the owner
+## 3. Owner's answers (2026-07-13)
 
-1. **Users & audience** — who uses FliP today (just you? your DZ? public
-   swooper community)? Rough user count? Primary persona: competitive
-   canopy pilots, or general skydivers planning patterns?
-2. **Platform priorities** — desktop-web vs. phone at the DZ? Any interest
-   in installable PWA / offline support / native app?
-3. **Backend appetite** — everything is client-side + localStorage today.
-   Are accounts, sync, sharing links, or a server component acceptable in
-   the future architecture, or is "static hosting only" a hard constraint?
-4. **Compatibility constraints** — must existing users' localStorage data
-   survive the migration? Is the current URL (single-page, no routes)
-   linked anywhere that matters?
-5. **Tooling freedom** — OK to migrate CRA → Vite, upgrade TS, add a
-   router? Any attachment to Toolpad/MUI dashboard shell?
-6. **Google Maps** — happy with Google Maps (API key, cost), or is a
-   switch/abstraction (MapLibre etc.) worth considering?
+1. **Audiences — multiple, and this drives the design:**
+   - **Swoopers** — manoeuvre + courses features. Only they need those tabs.
+   - **General skydivers (incl. students)** — standard pattern planning.
+   - **Flocking community** — goal: absorb the *flocking wind calculator*
+     (`~/git/flocking-wind-drift`, Kotlin/JS) into FliP.
+   - **Coaches / instructors** — classes, multiple students; presets matter.
+   - **Demo jumpers** — planning demo jumps (potential).
+   - Owner insight: Manoeuvre and Courses tabs get in the way for
+     non-swoopers → **"modes" concept** (per-audience UI profiles).
+2. **Platform** — desktop and mobile equal priority. Advanced features may
+   be desktop-only if needed. Users have asked for a phone "app" → **PWA
+   (installable, offline) is wanted**.
+3. **Backend** — plan for BOTH: keep a fully free static client-only
+   version, AND allow optional accounts for sync + logbook; possible
+   monetization. Architecture must support "no backend" and
+   "backend attached" as deployment/feature tiers.
+4. **Compatibility** — localStorage migration may break, as long as the new
+   app handles old data gracefully (no crashes; fall back to defaults).
+5. **Tooling** — no attachments to current frameworks, but change needs a
+   reason. (CRA → Vite has one: CRA is unmaintained.)
+6. **Maps** — abstraction over the map provider is desired.
+
+### Flocking wind calculator (read 2026-07-13)
+
+`~/git/flocking-wind-drift` — Kotlin/JS + React, separate site.
+Function: for altitude band [end, start] kft, descent rate (mph),
+horizontal speed (mph), jumprun direction (or auto = into average drift):
+
+- integrates wind drift across altitude band from OpenMeteo winds aloft
+  (same data source as FliP)
+- adds canopy/wingsuit flight vector along jumprun
+- outputs: wind drift, flight vector, combined; recommended **spot**
+  (distance prior/past target along jumprun + left/right offset)
+
+Text-only UI, dropzone dropdown, hour offset, localStorage persistence.
+In FliP this becomes a **Flocking/Drift mode**: same winds pipeline,
+rendered on the map (drift vectors, exit point, jumprun line) instead of
+text. Core math is ~100 lines — straightforward TS port + tests.
 
 ---
 
