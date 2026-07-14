@@ -1,6 +1,8 @@
 import { IWindRow, LatLng } from '../types';
 import { ForecastSource, SOURCE_MANUAL } from '../forecast/sources';
 
+const DEG_TO_RAD = Math.PI / 180;
+
 export class WindRow implements IWindRow {
   altFt: number;
   direction: number;
@@ -17,6 +19,35 @@ export class WindRow implements IWindRow {
   copy(): WindRow {
     return new WindRow(this.altFt, this.direction, this.speedKts);
   }
+}
+
+/**
+ * Interpolate between two wind rows by blending the wind VECTOR (u/v
+ * components) instead of direction/speed independently. This makes
+ * direction changes take the shortest arc across north (350°→10° passes
+ * through 0°, not 180°) and lets opposing winds partially cancel — the
+ * interpolated speed between two opposing rows is lower than either,
+ * which is physically correct.
+ */
+export function interpolateWindRows(
+  lower: IWindRow,
+  higher: IWindRow,
+  p: number,
+  altFt: number
+): WindRow {
+  const u1 = -lower.speedKts * Math.sin(lower.direction * DEG_TO_RAD);
+  const v1 = -lower.speedKts * Math.cos(lower.direction * DEG_TO_RAD);
+  const u2 = -higher.speedKts * Math.sin(higher.direction * DEG_TO_RAD);
+  const v2 = -higher.speedKts * Math.cos(higher.direction * DEG_TO_RAD);
+  const u = u1 + p * (u2 - u1);
+  const v = v1 + p * (v2 - v1);
+  const speedKts = Math.hypot(u, v);
+  // At (near-)zero speed the direction is meaningless; keep the lower row's
+  const direction = speedKts > 1e-9
+    ? (Math.atan2(-u, -v) / DEG_TO_RAD + 360) % 360
+    : lower.direction;
+
+  return new WindRow(altFt, direction, speedKts);
 }
 
 export interface IWinds {
@@ -94,10 +125,8 @@ export class Winds implements IWinds {
 
     if (interpolate && lower && higher) {
       const p = (altFt - lower.altFt) / (higher.altFt - lower.altFt);
-      const direction = lower.direction + p * (higher.direction - lower.direction);
-      const speedKts = lower.speedKts + p * (higher.speedKts - lower.speedKts);
 
-      return new WindRow(altFt, (direction + 360) % 360, speedKts);
+      return interpolateWindRows(lower, higher, p, altFt);
     }
 
     return lower || this.winds[0];

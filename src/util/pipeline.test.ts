@@ -212,8 +212,8 @@ describe('Winds.getWindAt (non-wrapping pins)', () => {
     const wind = makeVariedWinds().getWindAt(500, true);
 
     expect(wind.altFt).toBe(500);
-    expect(wind.direction).toBe(210);
-    expect(wind.speedKts).toBe(12);
+    expect(wind.direction).toBeCloseTo(210, 9);
+    expect(wind.speedKts).toBeCloseTo(12, 9);
   });
 
   it('returns the lower bracket without interpolation', () => {
