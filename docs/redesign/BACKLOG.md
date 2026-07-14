@@ -199,6 +199,20 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   especially before refactoring a module (migration phases 1–4 must land
   with tests that pin existing behavior first). Reduces risk of breaking
   working code.
+- ☐ **Better usage observability** — replace Google Analytics. Owner wants
+  suggestions; revisit later. Candidates:
+  - **Plausible / Umami** — privacy-first page+event analytics, no cookie
+    banner, lightweight script; both self-hostable (mustelinae infra) or
+    cheap hosted. Good GA replacement for "how many users, which modes".
+  - **PostHog** — product analytics (funnels, feature usage, retention),
+    self-hostable; heavier but answers "do people use the wind scrubber".
+  - **Matomo** — closest to GA feature-wise, self-hosted, aging UX.
+  - Separate concern worth adding regardless: **error tracking** (Sentry
+    or GlitchTip self-hosted) — today client errors vanish.
+  Fit: event taxonomy per mode/feature; static tier must work with
+  analytics blocked; PWA offline queueing nice-to-have.
+- ☐ **Deployment note** — long-lived redesign branch deploys to
+  **flip-next.mustelinae.net** for testing; merge to main deferred.
 
 ## Cross-cutting observations
 

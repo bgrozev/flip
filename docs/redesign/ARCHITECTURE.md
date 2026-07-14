@@ -222,6 +222,14 @@ client-only app.
 script covers `.ts/.tsx` and runs in CI/build; TS → 5.x; verify dev server,
 prod build, tests, identical app behavior. ~1 day.
 
+*Scope limit:* build-chain deps only. App deps stay put in Phase 0:
+- **MUI 7 → 9 deferred to Phase 3** — Toolpad 0.16 pins MUI compat, and
+  Phase 3 removes Toolpad; upgrading MUI before that means doing the
+  migration twice.
+- **socket.io-client stays pinned at 2.5.0** — Spaceland server almost
+  certainly speaks the socket.io v2 protocol; verify before ever bumping.
+- Everything else is already current (React 19, turf 7, d3 7, …).
+
 **Phase 1 — Core extraction & correctness**
 Create `core/`; move `util/` + pattern/manoeuvre/wind math into it;
 fix known bugs on the way (direction interpolation wrap, offset clamp,
