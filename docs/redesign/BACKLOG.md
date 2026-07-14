@@ -163,6 +163,17 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
      recorded tracks.
   Complements plan-vs-jump comparison: FliP does quick stats + scoring,
   viewer does deep analysis. ✎ gauge upstream maintainer interest first.
+- ☐ **VCPS integration** (vcps.mustelinae.net — Virtual CP Series, owner's
+  own platform: track upload + scoring for canopy piloting) — submit
+  tracks to VCPS directly from FliP, e.g. "Submit to VCPS" on a track in
+  the logbook. Owner controls both sides, so unlike the FlySight Viewer
+  item this needs no third party: add an upload API + auth (token) to
+  VCPS. Synergies ✎ to decide later:
+  - shared scoring logic (FliP's "automated scoring" item) — score
+    locally in FliP core vs authoritative scoring server-side in VCPS?
+  - equipment metadata (canopy/size/WL) overlaps the planned canopy
+    presets — one shared equipment description?
+  - could VCPS accounts double as FliP tier-1 accounts (single sign-on)?
 
 ## Ideas / research (needs design)
 
