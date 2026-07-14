@@ -66,29 +66,33 @@ export function reposition(
 
   patternPoints = setFinalHeading(patternPoints, patternFinalHeading);
 
+  // Time/alt offsets making the pattern connect to the end of the manoeuvre
+  let timeOffset = 0;
+  let altOffset = 0;
+
   if (manoeuvrePoints.length > 0 && patternPoints.length > 0) {
-    // Fix time and alt for pattern
     const m0 = manoeuvrePoints[manoeuvrePoints.length - 1];
     const p0 = patternPoints[0];
-    const timeOffset = p0.properties.time - m0.properties.time;
-    const altOffset = p0.properties.alt - m0.properties.alt;
 
-    for (let i = 0; i < patternPoints.length; i++) {
-      const p = patternPoints[i];
-      p.properties.time = p.properties.time - timeOffset;
-      p.properties.alt = p.properties.alt - altOffset;
-    }
+    timeOffset = p0.properties.time - m0.properties.time;
+    altOffset = p0.properties.alt - m0.properties.alt;
   }
 
+  // Produce new point objects — never mutate the (possibly memoized) inputs
   const merged: FlightPath = [
-    ...manoeuvrePoints.map(point => {
-      point.properties.phase = 'manoeuvre';
-      return point;
-    }),
-    ...patternPoints.map(point => {
-      point.properties.phase = 'pattern';
-      return point;
-    })
+    ...manoeuvrePoints.map(point => ({
+      ...point,
+      properties: { ...point.properties, phase: 'manoeuvre' as const }
+    })),
+    ...patternPoints.map(point => ({
+      ...point,
+      properties: {
+        ...point.properties,
+        time: point.properties.time - timeOffset,
+        alt: point.properties.alt - altOffset,
+        phase: 'pattern' as const
+      }
+    }))
   ];
 
   return merged;

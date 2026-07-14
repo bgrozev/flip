@@ -114,6 +114,18 @@ describe('reposition (golden values)', () => {
     expectCoords(c, 3, -82.15028673806438, 28.219281166090397);
     expectCoords(c, 72, -82.14748694985781, 28.219281145823334);
   });
+
+  it('does not mutate its input paths', () => {
+    const manoeuvre = makeManoeuvre();
+    const pattern = makeThreeLegPattern();
+    const manoeuvreBefore = JSON.stringify(manoeuvre);
+    const patternBefore = JSON.stringify(pattern);
+
+    reposition(manoeuvre, pattern, TARGET, true);
+
+    expect(JSON.stringify(manoeuvre)).toBe(manoeuvreBefore);
+    expect(JSON.stringify(pattern)).toBe(patternBefore);
+  });
 });
 
 describe('addWind (golden values)', () => {

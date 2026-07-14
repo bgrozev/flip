@@ -46,13 +46,13 @@ import {
   useAppState,
   useCustomCourses,
   useFetchForecast,
+  useFlightPaths,
   useObservedWind,
   usePresets
 } from './hooks';
 import { Course, LatLng, Target, WindSummaryData } from './types';
-import { addWind, hasTargetMovedTooFar } from './util/geo';
+import { hasTargetMovedTooFar } from './util/geo';
 import { COURSES } from './util/courses';
-import { averageWind, reposition, straightenLegs } from './util/util';
 import { WindRow, Winds } from './util/wind';
 
 const NAVIGATION: Navigation = [
@@ -242,14 +242,16 @@ function DashboardContent() {
     }
   };
 
-  let c = reposition(manoeuvre ?? [], pattern ?? [], target ?? DEFAULT_TARGET, settings.correctPatternHeading);
-  const c2 = effectiveWinds ? addWind(c, effectiveWinds, settings.interpolateWind) : [];
-
-  for (let i = 0; i < c.length; i++) {
-    c2[i].properties.phase = c[i].properties.phase;
-  }
-  const c2Display = settings.straightenLegs ? straightenLegs(c2) : c2;
-  const averageWind_ = averageWind(c, c2);
+  const paths = useFlightPaths({
+    manoeuvre: manoeuvre ?? [],
+    pattern: pattern ?? [],
+    target: target ?? DEFAULT_TARGET,
+    winds: effectiveWinds,
+    correctPatternHeading: settings.correctPatternHeading,
+    interpolateWind: settings.interpolateWind,
+    straightenLegsEnabled: settings.straightenLegs
+  });
+  const averageWind_ = paths.averageWind;
 
   let windSummary: WindSummaryData | undefined;
 
@@ -272,7 +274,9 @@ function DashboardContent() {
   }
 
   const handleFetchWinds = (overrideForecastTime?: Date | null) => {
-    const maxAlt = c2.length > 0 ? c2[c2.length - 1].properties.alt : undefined;
+    const maxAlt = paths.corrected.length > 0
+      ? paths.corrected[paths.corrected.length - 1].properties.alt
+      : undefined;
     const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
     fetchWinds(maxAlt, ft);
     if (settings.useDzGroundWind && target && ft === null) {
@@ -305,7 +309,7 @@ function DashboardContent() {
       <ManoeuvreComponent
         manoeuvreConfig={manoeuvreConfig}
         onConfigChange={setManoeuvreConfig}
-        manoeuvreToSave={c2.filter(point => point.properties.phase === 'manoeuvre')}
+        manoeuvreToSave={paths.corrected.filter(point => point.properties.phase === 'manoeuvre')}
       />
     );
   } else if (router.pathname === '/pattern') {
@@ -401,8 +405,8 @@ function DashboardContent() {
   const map = (
     <MapComponent
       center={target.target}
-      pathA={c}
-      pathB={c2Display}
+      pathA={paths.ideal}
+      pathB={paths.display}
       settings={settings}
       windDirection={averageWind_?.direction ?? 0}
       windSpeed={averageWind_?.speedKts ?? 0}
@@ -461,7 +465,7 @@ function DashboardContent() {
       <ExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        path={c2Display}
+        path={paths.display}
         target={target.target}
         presetName={activePresetName}
       />
