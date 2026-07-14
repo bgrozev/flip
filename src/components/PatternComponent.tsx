@@ -27,6 +27,7 @@ import {
   isLeftTurn,
   PatternLeg
 } from '../util/pattern';
+import { LIMITS } from '../util/validation';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
@@ -93,7 +94,8 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
               label="Descent Rate"
               initialValue={formatDescentRate(params.descentRateMph).value}
               step={1}
-              min={1}
+              min={formatDescentRate(LIMITS.descentRateMph.min).value}
+              max={formatDescentRate(LIMITS.descentRateMph.max).value}
               unit={descentRateLabel}
               onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
             />
@@ -102,7 +104,8 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
               label="Glide Ratio"
               initialValue={params.glideRatio}
               step={0.1}
-              min={0.1}
+              min={LIMITS.glideRatio.min}
+              max={LIMITS.glideRatio.max}
               unit=""
               onChange={value => handleChange('glideRatio', value)}
             />
@@ -266,7 +269,8 @@ function LegAltitudeSelector({
           label={label}
           initialValue={Math.round(formatAltitude(value).value)}
           step={altitudeLabel === 'ft' ? 100 : 10}
-          min={altitudeLabel === 'ft' ? 100 : 30}
+          min={Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.min).value)}
+          max={Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.max).value)}
           unit={altitudeLabel}
           onChange={handleCustomChange}
         />

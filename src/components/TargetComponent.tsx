@@ -15,6 +15,7 @@ import React from 'react';
 
 import { TargetProvider } from '../hooks';
 import { Target } from '../types';
+import { normalizeDirection } from '../util/validation';
 
 import { LocationComponent } from './';
 
@@ -34,7 +35,9 @@ export default function TargetComponent({
   onUpwindClick
 }: TargetComponentProps) {
   const handleHeadingChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    const value = (Number(ev.target.value) + 360) % 360;
+    // Normalize into [0, 360); the old `(x + 360) % 360` stayed negative for
+    // values below -360, and NaN (empty input) becomes 0.
+    const value = normalizeDirection(Number(ev.target.value));
     const updated = { ...target, finalHeading: value };
 
     setTarget(updated);

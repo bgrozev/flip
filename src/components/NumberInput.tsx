@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
-import { getRangeErrorText, isNumberInRange } from '../util/validation';
+import { clampNumber, getRangeErrorText, isNumberInRange } from '../util/validation';
 
 interface NumberInputProps {
   title: string;
@@ -50,6 +50,19 @@ export default function NumberInput({
     }
   };
 
+  // Out-of-range entries are never propagated raw; on blur they are clamped
+  // into range, shown, and propagated.
+  const handleBlur = () => {
+    const num = typeof value === 'number' ? value : Number(value);
+    const clamped = clampNumber(num, min, max);
+
+    if (clamped !== num || !valid) {
+      setValue(clamped);
+      setValid(true);
+      onChange(clamped);
+    }
+  };
+
   return (
     <Tooltip
       title={valid ? title : `${title} ${getRangeErrorText(min, max)}`}
@@ -66,11 +79,15 @@ export default function NumberInput({
           aria-describedby={`${label}-helper-text`}
           value={typeof value === 'number' ? value : Number(value) || 0}
           onChange={handleChange}
+          onBlur={handleBlur}
           type="number"
+          error={!valid}
           inputProps={{ 'aria-label': label, step, min, max }}
           sx={valid ? {} : { color: 'red' }}
         />
-        <FormHelperText id={`${label}-helper-text`}>{label}</FormHelperText>
+        <FormHelperText id={`${label}-helper-text`} error={!valid}>
+          {valid ? label : getRangeErrorText(min, max)}
+        </FormHelperText>
       </FormControl>
     </Tooltip>
   );

@@ -26,6 +26,7 @@ import React, { useCallback } from 'react';
 import { SOURCE_MANUAL } from '../forecast/forecast';
 import { useUnits } from '../hooks';
 import { ObservedWindStation } from '../types';
+import { LIMITS, clampNumber, normalizeDirection } from '../util/validation';
 import { WindRow, Winds } from '../util/wind';
 
 interface WindsComponentProps {
@@ -123,12 +124,18 @@ export default function WindsComponent({
   };
 
   const updateRow = (index: number, field: 'altFt' | 'direction' | 'speedKts', value: number) => {
+    // Clamp/normalize so absurd manual entries never reach the path math
+    const safeValue = field === 'direction'
+      ? normalizeDirection(value)
+      : field === 'altFt'
+        ? clampNumber(value, LIMITS.windAltFt.min, LIMITS.windAltFt.max)
+        : clampNumber(value, LIMITS.windSpeedKts.min, LIMITS.windSpeedKts.max);
     const updated = winds.winds.map((row, i) => {
       if (i !== index) return row;
       return new WindRow(
-        field === 'altFt' ? value : row.altFt,
-        field === 'direction' ? value : row.direction,
-        field === 'speedKts' ? value : row.speedKts
+        field === 'altFt' ? safeValue : row.altFt,
+        field === 'direction' ? safeValue : row.direction,
+        field === 'speedKts' ? safeValue : row.speedKts
       );
     });
     setWinds(new Winds(updated));
@@ -280,7 +287,7 @@ export default function WindsComponent({
                             inputProps={{ step: 5 }}
                             value={row.direction}
                             onChange={e => {
-                              updateRow(i, 'direction', (360 + Number(e.target.value)) % 360);
+                              updateRow(i, 'direction', Number(e.target.value));
                             }}
                             sx={{ width: '100%' }}
                             size="small"

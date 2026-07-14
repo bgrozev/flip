@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useUnits } from '../hooks';
 import { ManoeuvreParams } from '../types';
+import { LIMITS } from '../util/validation';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
@@ -37,11 +38,12 @@ export default function ManoeuvreParametersComponent({
   return (
     <Stack direction="column" spacing={2}>
       <NumberInput
-        title="Distance in the depth direction."
+        title="Distance in the depth direction. Negative values offset to the opposite side."
         label="Back"
         initialValue={formatAltitude(params.offsetXFt).value}
         step={altitudeLabel === 'ft' ? 50 : 15}
-        min={altitudeLabel === 'ft' ? 50 : 15}
+        min={Math.round(formatAltitude(LIMITS.manoeuvreOffsetXFt.min).value)}
+        max={Math.round(formatAltitude(LIMITS.manoeuvreOffsetXFt.max).value)}
         unit={altitudeLabel}
         onChange={v => handleChange('offsetXFt')(parseAltitude(v))}
       />
@@ -50,7 +52,8 @@ export default function ManoeuvreParametersComponent({
         label="Offset"
         initialValue={formatAltitude(params.offsetYFt).value}
         step={altitudeLabel === 'ft' ? 50 : 15}
-        min={altitudeLabel === 'ft' ? 50 : 15}
+        min={Math.round(formatAltitude(LIMITS.manoeuvreOffsetYFt.min).value)}
+        max={Math.round(formatAltitude(LIMITS.manoeuvreOffsetYFt.max).value)}
         unit={altitudeLabel}
         onChange={v => handleChange('offsetYFt')(parseAltitude(v))}
       />
@@ -59,7 +62,8 @@ export default function ManoeuvreParametersComponent({
         label="Altitude"
         initialValue={formatAltitude(params.altitudeFt).value}
         step={altitudeLabel === 'ft' ? 50 : 15}
-        min={altitudeLabel === 'ft' ? 300 : 90}
+        min={Math.round(formatAltitude(LIMITS.manoeuvreAltitudeFt.min).value)}
+        max={Math.round(formatAltitude(LIMITS.manoeuvreAltitudeFt.max).value)}
         unit={altitudeLabel}
         onChange={v => handleChange('altitudeFt')(parseAltitude(v))}
       />
@@ -68,7 +72,8 @@ export default function ManoeuvreParametersComponent({
         label="Duration"
         initialValue={params.duration}
         step={0.5}
-        min={1}
+        min={LIMITS.manoeuvreDurationS.min}
+        max={LIMITS.manoeuvreDurationS.max}
         unit="s"
         onChange={handleChange('duration')}
       />

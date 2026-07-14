@@ -1,4 +1,84 @@
-import { getRangeErrorText, isNumberInRange } from './validation';
+import {
+  LIMITS,
+  clampNumber,
+  getRangeErrorText,
+  isNumberInRange,
+  normalizeDirection
+} from './validation';
+
+describe('clampNumber', () => {
+  it('returns the number when within bounds', () => {
+    expect(clampNumber(5, 0, 10)).toBe(5);
+    expect(clampNumber(0, 0, 10)).toBe(0);
+    expect(clampNumber(10, 0, 10)).toBe(10);
+  });
+
+  it('clamps to min and max', () => {
+    expect(clampNumber(-5, 0, 10)).toBe(0);
+    expect(clampNumber(1000000, 0, 10)).toBe(10);
+  });
+
+  it('supports negative bounds', () => {
+    expect(clampNumber(-5000, -3000, 3000)).toBe(-3000);
+    expect(clampNumber(-500, -3000, 3000)).toBe(-500);
+  });
+
+  it('works with only one bound', () => {
+    expect(clampNumber(-5, 0, undefined)).toBe(0);
+    expect(clampNumber(99, 0, undefined)).toBe(99);
+    expect(clampNumber(99, undefined, 10)).toBe(10);
+    expect(clampNumber(-99, undefined, 10)).toBe(-99);
+  });
+
+  it('returns the number unchanged without bounds', () => {
+    expect(clampNumber(1e9)).toBe(1e9);
+  });
+
+  it('falls back to a bound for non-finite input', () => {
+    expect(clampNumber(NaN, 0, 10)).toBe(0);
+    expect(clampNumber(Infinity, 0, 10)).toBe(0);
+    expect(clampNumber(-Infinity, undefined, 10)).toBe(10);
+    expect(clampNumber(NaN)).toBe(0);
+  });
+});
+
+describe('normalizeDirection', () => {
+  it('keeps values already in range', () => {
+    expect(normalizeDirection(0)).toBe(0);
+    expect(normalizeDirection(359)).toBe(359);
+  });
+
+  it('wraps values at or above 360', () => {
+    expect(normalizeDirection(360)).toBe(0);
+    expect(normalizeDirection(725)).toBe(5);
+  });
+
+  it('wraps negative values, including below -360', () => {
+    expect(normalizeDirection(-10)).toBe(350);
+    expect(normalizeDirection(-370)).toBe(350);
+    expect(normalizeDirection(-1000)).toBe(80);
+  });
+
+  it('returns 0 for non-finite input', () => {
+    expect(normalizeDirection(NaN)).toBe(0);
+    expect(normalizeDirection(Infinity)).toBe(0);
+  });
+});
+
+describe('LIMITS', () => {
+  it('defines a sane range for every limit', () => {
+    for (const { min, max } of Object.values(LIMITS)) {
+      expect(Number.isFinite(min)).toBe(true);
+      expect(Number.isFinite(max)).toBe(true);
+      expect(min).toBeLessThan(max);
+    }
+  });
+
+  it('allows zero and negative manoeuvre depth offsets', () => {
+    expect(LIMITS.manoeuvreOffsetXFt.min).toBeLessThan(0);
+    expect(clampNumber(0, LIMITS.manoeuvreOffsetXFt.min, LIMITS.manoeuvreOffsetXFt.max)).toBe(0);
+  });
+});
 
 describe('isNumberInRange', () => {
   describe('with both min and max', () => {
