@@ -196,6 +196,22 @@ releasable.** No big-bang rewrite — current app keeps working throughout.
 CRA → Vite + Vitest; TS 5.x; fix lint script (`.ts/.tsx`), re-enable lint in
 CI; keep tests green. Update stale CLAUDE.md.
 
+*Why:* CRA (`react-scripts`) is abandoned/deprecated — visible rot in this
+repo already: TS pinned to 4.9, `DISABLE_ESLINT_PLUGIN=true` and
+`GENERATE_SOURCEMAP=false` workarounds, hand-maintained jest
+`transformIgnorePatterns` for ESM deps (turf/d3), audit noise. Vite is the
+maintained default for client-side React; unlocks TS 5 (Phase 1 wants it),
+Vitest (same test API, native ESM — the transform hack disappears), and
+`vite-plugin-pwa` (Phase 5 depends on it). Alternatives rejected:
+Next/Remix are server-rendering frameworks — wrong shape for a static
+client-only app.
+
+*Checklist:* swap `react-scripts` → `vite` + `@vitejs/plugin-react`;
+`index.html` to root with module script; env vars `REACT_APP_*` → `VITE_*`
+(Maps API key); Jest → Vitest, drop `transformIgnorePatterns`; `lint`
+script covers `.ts/.tsx` and runs in CI/build; TS → 5.x; verify dev server,
+prod build, tests, identical app behavior. ~1 day.
+
 **Phase 1 — Core extraction & correctness**
 Create `core/`; move `util/` + pattern/manoeuvre/wind math into it;
 fix known bugs on the way (direction interpolation wrap, offset clamp,

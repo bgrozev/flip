@@ -1,16 +1,11 @@
 # FliP Next-Generation Redesign — Working Notes
 
 Branch: `claude/flip-redesign-architecture-e767df`
-Status: **Phase 0 — understanding the project.** Awaiting the owner's list of
-long-term goals/ideas before drafting the architecture.
+Status: **design docs drafted, iterating with owner.** Next concrete step:
+Phase 0 of the migration plan (CRA → Vite; see `ARCHITECTURE.md`).
 
-This file is the running log of the redesign effort. It will grow into:
-
-1. High-level architecture for future goals
-2. Migration plan (incremental, non-breaking)
-3. UI/UX improvements
-4. New feature ideas
-5. Flaws found in code / approach
+This file is the running log of the redesign effort: current-state survey,
+flaws, owner Q&A. Deliverables live in companion files (see §4).
 
 ---
 
