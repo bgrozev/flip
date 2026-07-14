@@ -1,9 +1,12 @@
 # FliP Next-Generation Redesign — Working Notes
 
 Branch: `claude/flip-redesign-architecture-e767df`
-Status: **Phase 0 complete** (2026-07-13, commit `e4df103`): CRA → Vite +
-Vitest, TS 5, lint working and in CI, CLAUDE.md rewritten. Next: Phase 1
-(core extraction & correctness; see `ARCHITECTURE.md`).
+Status: **Phase 1 complete** (2026-07-13, commits `cd2d8b6`…`38adcfd`):
+pinning tests, wind-interpolation + offset-clamp fixes, input validation,
+memoized derive pipeline, Winds → plain WindProfile data, `src/core/`
+extraction, versioned storage schemas. 244 tests, 0 lint errors.
+(Phase 0 done at `e4df103`.) Next: Phase 2 (map layerization) or Phase 3
+(router + modes); see `ARCHITECTURE.md`.
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).

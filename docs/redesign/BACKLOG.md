@@ -189,6 +189,20 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ---
 
+## Phase-1 follow-ups (found during implementation, 2026-07-13)
+
+- ☐ Extend versioned codecs to remaining unversioned storage:
+  `flip.locations.custom` (CustomLocationsComponent), stored tracks
+  (ManoeuvreTrackComponent), simple string keys.
+- ☐ `setManoeuvreAltitude` (`src/core/manoeuvre.ts`) appears dead outside
+  tests — confirm and remove.
+- ☐ Manoeuvre param naming: `offsetXFt` is labeled "Back" (depth),
+  `offsetYFt` "Offset" (lateral) — rename fields in a future schema
+  version to match the labels.
+- ☐ `createSafeCodec`/`createSimpleCodec` in `src/util/storage.ts` unused
+  by app code after step 6 — remove once nothing else adopts them.
+- (Same-path nav toggle flakiness — already covered by Phase 3 router work.)
+
 ## Process / engineering health
 
 - ☐ **Improve documentation** — CLAUDE.md is stale (rewrite in Phase 0);
