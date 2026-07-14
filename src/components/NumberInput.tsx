@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
-import { clampNumber, getRangeErrorText, isNumberInRange } from '../util/validation';
+import { clampNumber, getRangeErrorText, isNumberInRange } from '../core/validation';
 
 interface NumberInputProps {
   title: string;

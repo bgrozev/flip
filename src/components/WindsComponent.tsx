@@ -26,7 +26,7 @@ import React, { useCallback } from 'react';
 import { SOURCE_MANUAL } from '../forecast/forecast';
 import { useUnits } from '../hooks';
 import { ObservedWindStation } from '../types';
-import { LIMITS, clampNumber, normalizeDirection } from '../util/validation';
+import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
 import { WindProfile, createWindProfile, createWindRow } from '../core/wind';
 
 interface WindsComponentProps {

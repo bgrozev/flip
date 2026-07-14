@@ -15,7 +15,7 @@ import React from 'react';
 
 import { TargetProvider } from '../hooks';
 import { Target } from '../types';
-import { normalizeDirection } from '../util/validation';
+import { normalizeDirection } from '../core/validation';
 
 import { LocationComponent } from './';
 

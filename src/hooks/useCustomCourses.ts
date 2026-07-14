@@ -1,12 +1,13 @@
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { useMemo } from 'react';
 
+import { SCHEMA_VERSION, migrateCustomCourses } from '../core/model';
 import { CourseParams } from '../types';
 import { buildCourse } from '../util/courses';
-import { createSimpleCodec } from '../util/storage';
+import { createVersionedCodec } from '../util/storage';
 
 const EMPTY: CourseParams[] = [];
-const codec = createSimpleCodec<CourseParams[]>(EMPTY);
+const codec = createVersionedCodec(SCHEMA_VERSION, migrateCustomCourses);
 
 export function useCustomCourses() {
   const [stored, setStored] = useLocalStorageState<CourseParams[]>(

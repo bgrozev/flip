@@ -1,8 +1,9 @@
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { useCallback, useMemo } from 'react';
 
+import { SCHEMA_VERSION, migratePresets } from '../core/model';
 import { ManoeuvreConfig, PatternParams, Preset, Target } from '../types';
-import { createSimpleCodec } from '../util/storage';
+import { createVersionedCodec } from '../util/storage';
 
 const STORAGE_KEYS = {
   presets: 'flip.presets',
@@ -43,7 +44,7 @@ export function usePresets({
   const [storedPresets, setStoredPresets] = useLocalStorageState<Preset[]>(
     STORAGE_KEYS.presets,
     [],
-    { codec: createSimpleCodec<Preset[]>([]) }
+    { codec: createVersionedCodec(SCHEMA_VERSION, migratePresets) }
   );
   const presets = storedPresets ?? [];
 

@@ -1,54 +1,26 @@
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { createContext, useContext, useCallback, ReactNode, useMemo } from 'react';
 
+import {
+  DEFAULT_MANOEUVRE_CONFIG,
+  DEFAULT_PATTERN_PARAMS,
+  DEFAULT_SETTINGS,
+  DEFAULT_TARGET,
+  SCHEMA_VERSION,
+  migrateManoeuvreConfig,
+  migratePatternParams,
+  migrateSettings,
+  migrateTarget
+} from '../core/model';
 import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
-import { createSafeCodec, createSimpleCodec } from '../util/storage';
-import { DEFAULT_UNIT_PREFERENCES } from '../core/units';
+import { createVersionedCodec } from '../util/storage';
 import { makePatternByType } from '../core/pattern';
 import { createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
 import { samples } from '../samples';
 
-// Default values
-const DEFAULT_TARGET: Target = {
-  target: {
-    lat: 28.21887,
-    lng: -82.15122
-  },
-  finalHeading: 270
-};
-
-export const DEFAULT_PATTERN_PARAMS: PatternParams = {
-  type: 'three-leg',
-  descentRateMph: 9,
-  glideRatio: 3.0,
-  legs: [
-    { altitude: 300, direction: 0 },
-    { altitude: 300, direction: 270 },
-    { altitude: 300, direction: 270 }
-  ]
-};
-
-export const DEFAULT_MANOEUVRE_CONFIG: ManoeuvreConfig = { type: 'none' };
-
-const DEFAULT_SETTINGS: Settings = {
-  showPoms: true,
-  showPomAltitudes: true,
-  showPomTooltips: true,
-  showPreWind: true,
-  displayWindArrow: false,
-  displayWindSummary: true,
-  interpolateWind: true,
-  correctPatternHeading: true,
-  straightenLegs: true,
-  useDzGroundWind: true,
-  limitWind: 3000,
-  showPresets: true,
-  showMeasureTool: false,
-  highlightCorrespondingPoints: true,
-  showCrabArrow: true,
-  units: DEFAULT_UNIT_PREFERENCES
-};
+// Canonical defaults live in core/model; re-exported here for existing users
+export { DEFAULT_PATTERN_PARAMS, DEFAULT_MANOEUVRE_CONFIG };
 
 function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
   let path: FlightPath;
@@ -131,7 +103,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     useLocalStorageState<ManoeuvreConfig>(
       'flip.manoeuvre.config',
       DEFAULT_MANOEUVRE_CONFIG,
-      { codec: createSimpleCodec<ManoeuvreConfig>(DEFAULT_MANOEUVRE_CONFIG) }
+      { codec: createVersionedCodec(SCHEMA_VERSION, migrateManoeuvreConfig) }
     );
   const manoeuvreConfig = storedManoeuvreConfig ?? DEFAULT_MANOEUVRE_CONFIG;
 
@@ -139,7 +111,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   const [storedTarget, setStoredTarget] = useLocalStorageState<Target>(
     'flip.target',
     DEFAULT_TARGET,
-    { codec: createSafeCodec(DEFAULT_TARGET) }
+    { codec: createVersionedCodec(SCHEMA_VERSION, migrateTarget) }
   );
   const target = storedTarget ?? DEFAULT_TARGET;
 
@@ -148,7 +120,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   const [storedPatternParams, setStoredPatternParams] = useLocalStorageState<PatternParams>(
     'flip.pattern.params',
     DEFAULT_PATTERN_PARAMS,
-    { codec: createSafeCodec(DEFAULT_PATTERN_PARAMS) }
+    { codec: createVersionedCodec(SCHEMA_VERSION, migratePatternParams) }
   );
   const patternParams = storedPatternParams ?? DEFAULT_PATTERN_PARAMS;
 
@@ -156,7 +128,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   const [storedSettings, setStoredSettings] = useLocalStorageState<Settings>(
     'flip.settings',
     DEFAULT_SETTINGS,
-    { codec: createSafeCodec(DEFAULT_SETTINGS) }
+    { codec: createVersionedCodec(SCHEMA_VERSION, migrateSettings) }
   );
   const settings = storedSettings ?? DEFAULT_SETTINGS;
 

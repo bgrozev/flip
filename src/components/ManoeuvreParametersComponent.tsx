@@ -1,20 +1,16 @@
 import { Stack } from '@mui/material';
 import React from 'react';
 
+import { DEFAULT_MANOEUVRE_PARAMS } from '../core/model';
 import { useUnits } from '../hooks';
 import { ManoeuvreParams } from '../types';
-import { LIMITS } from '../util/validation';
+import { LIMITS } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';
 
-export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
-  offsetXFt: 300,
-  offsetYFt: 150,
-  altitudeFt: 900,
-  duration: 8,
-  left: true
-};
+// Canonical definition lives in core/model; re-exported for existing users
+export { DEFAULT_MANOEUVRE_PARAMS };
 
 interface ManoeuvreParametersComponentProps {
   params: ManoeuvreParams;

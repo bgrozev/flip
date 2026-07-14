@@ -27,7 +27,7 @@ import {
   isLeftTurn,
   PatternLeg
 } from '../core/pattern';
-import { LIMITS } from '../util/validation';
+import { LIMITS } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
 import NumberInput from './NumberInput';

@@ -1,5 +1,5 @@
 import { FlightPath } from '../types';
-import { legacyToFlightPath, LegacyFlipPoint } from '../util/migration';
+import { legacyToFlightPath, LegacyFlipPoint } from '../core/migration';
 
 import sample90Data from './sample90';
 import sample270Data from './sample270';
