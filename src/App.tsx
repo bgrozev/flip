@@ -382,20 +382,20 @@ function DashboardContent() {
   const courseEditTarget: CourseEditTarget | undefined =
     courseEditOpen && selectedCustomParam && router.pathname === '/courses'
       ? {
-          center: { lat: selectedCustomParam.lat, lng: selectedCustomParam.lng } as LatLng,
-          direction: selectedCustomParam.direction,
-          onMove: (newCenter: LatLng) => updateCourse(selectedCustomParam.id, { lat: newCenter.lat, lng: newCenter.lng }),
-          onRotate: (newDir: number) => updateCourse(selectedCustomParam.id, { direction: newDir })
-        }
+        center: { lat: selectedCustomParam.lat, lng: selectedCustomParam.lng } as LatLng,
+        direction: selectedCustomParam.direction,
+        onMove: (newCenter: LatLng) => updateCourse(selectedCustomParam.id, { lat: newCenter.lat, lng: newCenter.lng }),
+        onRotate: (newDir: number) => updateCourse(selectedCustomParam.id, { direction: newDir })
+      }
       : undefined;
 
   const targetEditTarget: TargetEditTarget | undefined = targetEditOpen
     ? {
-        target: target.target,
-        heading: target.finalHeading,
-        onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
-        onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) })
-      }
+      target: target.target,
+      heading: target.finalHeading,
+      onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
+      onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) })
+    }
     : undefined;
 
   const map = (

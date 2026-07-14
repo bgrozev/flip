@@ -96,7 +96,7 @@ function crc32(data: Uint8Array): number {
 }
 
 /** Build a minimal uncompressed ZIP (STORE method) with a single file. */
-function buildZip(filename: string, data: Uint8Array): Uint8Array {
+function buildZip(filename: string, data: Uint8Array): Uint8Array<ArrayBuffer> {
   const enc = new TextEncoder();
   const name = enc.encode(filename);
   const crc = crc32(data);

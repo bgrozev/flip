@@ -7,7 +7,8 @@ if (!GA_ID) {
   process.exit(0);
 }
 
-const indexPath = path.join(__dirname, '..', 'public', 'index.html');
+// Vite's HTML entry lives at the repo root (was public/index.html under CRA)
+const indexPath = path.join(__dirname, '..', 'index.html');
 let html = fs.readFileSync(indexPath, 'utf8');
 
 const gaScript = `

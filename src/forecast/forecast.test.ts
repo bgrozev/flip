@@ -1,4 +1,4 @@
-/* eslint-env jest */
+import { vi } from 'vitest';
 import { WindRow, Winds } from '../util/wind';
 
 import {
@@ -11,8 +11,8 @@ import {
 import { fetchOpenMeteo } from './openmeteo';
 
 // Mock the fetch functions
-jest.mock('./openmeteo', () => ({
-  fetchOpenMeteo: jest.fn()
+vi.mock('./openmeteo', () => ({
+  fetchOpenMeteo: vi.fn()
 }));
 
 describe('Source Constants', () => {
@@ -47,12 +47,12 @@ describe('fetchForecast', () => {
   const mockCenter = { lat: 33.5, lng: -112.0 };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('fetches from OpenMeteo with default hour offset', async () => {
     const mockWinds = new Winds([new WindRow(0, 90, 10)]);
-    (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
+    (fetchOpenMeteo as ReturnType<typeof vi.fn>).mockResolvedValue(mockWinds);
 
     const result = await fetchForecast(mockCenter);
 
@@ -62,7 +62,7 @@ describe('fetchForecast', () => {
 
   it('passes hour offset to OpenMeteo', async () => {
     const mockWinds = new Winds([new WindRow(0, 90, 10)]);
-    (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
+    (fetchOpenMeteo as ReturnType<typeof vi.fn>).mockResolvedValue(mockWinds);
 
     const result = await fetchForecast(mockCenter, 6);
 
@@ -73,7 +73,7 @@ describe('fetchForecast', () => {
   it('passes abort signal to OpenMeteo', async () => {
     const mockWinds = new Winds([new WindRow(0, 90, 10)]);
     const controller = new AbortController();
-    (fetchOpenMeteo as jest.Mock).mockResolvedValue(mockWinds);
+    (fetchOpenMeteo as ReturnType<typeof vi.fn>).mockResolvedValue(mockWinds);
 
     await fetchForecast(mockCenter, 0, controller.signal);
 

@@ -94,37 +94,6 @@ function calcWindDrift(
 }
 
 /**
- * Find segments (legs) in a path by identifying POM boundaries
- */
-function findSegments(path: PointData[]): { start: number; end: number; phase: string }[] {
-  const segments: { start: number; end: number; phase: string }[] = [];
-  let segmentStart = 0;
-
-  for (let i = 1; i < path.length; i++) {
-    // Start new segment at POMs or phase changes
-    if (path[i].pom || path[i].phase !== path[segmentStart].phase) {
-      segments.push({
-        start: segmentStart,
-        end: i,
-        phase: path[segmentStart].phase ?? 'unknown'
-      });
-      segmentStart = i;
-    }
-  }
-
-  // Add final segment if needed
-  if (segmentStart < path.length - 1) {
-    segments.push({
-      start: segmentStart,
-      end: path.length - 1,
-      phase: path[segmentStart].phase ?? 'unknown'
-    });
-  }
-
-  return segments;
-}
-
-/**
  * Calculate statistics for all segments in the path
  */
 export function calculatePathStats(
@@ -245,9 +214,6 @@ export function calculatePathStats(
   return { legs, manoeuvre, pointToSegment };
 }
 
-/**
- * Get the segment stats for a specific point
- */
 export function getPointSegmentStats(
   pointIndex: number,
   stats: PathStats

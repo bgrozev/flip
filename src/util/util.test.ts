@@ -2,7 +2,6 @@ import * as turf from '@turf/turf';
 
 import { FlightPath, FlightPoint } from '../types';
 import { CODEC_JSON, averageWind, reposition, setManoeuvreAltitude } from './util';
-import { WindRow, Winds } from './wind';
 
 // Helper to create a turf point with properties
 function createPoint(lng: number, lat: number, props: Partial<FlightPoint['properties']> = {}): FlightPoint {
