@@ -140,18 +140,8 @@ text. Core math is ~100 lines — straightforward TS port + tests.
 
 ---
 
-## 4. Architecture proposal
+## 4. Deliverables (see companion files)
 
-*(pending goals list)*
-
-## 5. Migration plan
-
-*(pending)*
-
-## 6. UI/UX improvements
-
-*(pending)*
-
-## 7. Feature ideas
-
-*(pending)*
+- **Architecture + migration plan** → `ARCHITECTURE.md`
+- **Backlog** (owner's list, organized by scope) → `BACKLOG.md`
+- **UI/UX improvements + new feature ideas** → `UIUX.md`
