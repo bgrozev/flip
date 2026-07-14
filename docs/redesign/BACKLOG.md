@@ -110,6 +110,17 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   Viewer-alternative for the common questions.
 - ☐ **Multi-plot** — plot multiple jumps, or jump + plan, on one map.
 - ☐ **Plan-vs-jump comparison** — automated comparison, possibly scored.
+- ☐ **FlySight Viewer 2 integration** — "Open in viewer" button opening the
+  viewer with a specific jump + plan loaded. May require changes on the
+  viewer side. Options, roughly in order of increasing viewer cooperation:
+  1. FliP already exports plans in FlySight 2 track format — viewer opens
+     the plan as just another track (works today, manual file shuffle).
+  2. URL-based handoff: viewer accepts `?track=<url>&plan=<url>` (or a
+     data/blob URL); FliP hosts/encodes both and opens the viewer tab.
+  3. `postMessage`/File System Access handoff for local files, no upload.
+  4. First-class "plan" concept in the viewer (distinct styling vs tracks).
+  Complements plan-vs-jump comparison: FliP does quick stats + scoring,
+  viewer does deep analysis. ✎ scope depends on viewer's extensibility.
 
 ## Ideas / research (needs design)
 
