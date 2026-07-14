@@ -1,38 +1,31 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 
 import { useUnits } from '../hooks';
-import { Course, CourseElement, CourseMarker, LatLng, Settings } from '../types';
-
-export interface CourseEditTarget {
-  center: LatLng;
-  direction: number;
-  onMove: (newCenter: LatLng) => void;
-  onRotate: (newDirection: number) => void;
-}
-
-export interface TargetEditTarget {
-  target: LatLng;
-  heading: number;
-  onMove: (pos: LatLng) => void;
-  onHeadingChange: (heading: number) => void;
-}
-import { bearingBetween, destinationPoint, distanceFeet } from '../core/geometry';
+import { Course, LatLng, Settings } from '../types';
+import { distanceFeet } from '../core/geometry';
 import { formatDegrees, speedGustLabel } from '../core/units';
 import { beaufortColor } from '../core/wind';
 import {
   MapCircle,
   MapContainer,
   MapControl,
-  MapDragHandle,
   MapOverlay,
   MapPolyline,
   useMapClick,
-  useMapCursor,
-  useMapZoom
+  useMapCursor
 } from '../map';
-import { FlightPathsLayer } from '../map/layers';
+import {
+  CourseEditLayer,
+  CourseEditTarget,
+  CourseLayer,
+  FlightPathsLayer,
+  TargetEditLayer,
+  TargetEditTarget
+} from '../map/layers';
 import { DirectionArrow, formatDistance, SECTION_STYLE, TOOLTIP_STYLE } from '../map/layers/tooltip';
 import { FlightPath, ObservedWindStation } from '../types';
+
+export type { CourseEditTarget, TargetEditTarget };
 
 import WindDirectionArrow from './WindDirectionArrow';
 
@@ -235,10 +228,6 @@ function MapContent({
   const onStationLeave = useCallback(() => {
     stationLeaveTimer.current = setTimeout(() => setHoveredStationId(null), 200);
   }, []);
-  const zoom = useMapZoom();
-  // Live position of drag handles while dragging (for smooth line preview)
-  const [liveHandlePos, setLiveHandlePos] = useState<LatLng | null>(null);
-  const [liveTargetHeadingPos, setLiveTargetHeadingPos] = useState<LatLng | null>(null);
 
   const toggleMeasuring = useCallback(() => {
     setMeasuring(m => {
@@ -256,17 +245,12 @@ function MapContent({
     return result;
   }, [measurePoints]);
 
-  // Crosshair cursor during measure or target-edit mode
-  useMapCursor((showMeasureTool && measuring) || targetEditTarget ? 'crosshair' : null);
-
-  // Map background clicks: measure points take precedence over target moves
+  // Crosshair cursor while measuring; clicks add measure points
+  // (priority 10 so measuring takes precedence over target editing).
+  useMapCursor(showMeasureTool && measuring ? 'crosshair' : null);
   useMapClick(latlng => {
-    if (showMeasureTool && measuring) {
-      setMeasurePoints(pts => [...pts, latlng]);
-    } else if (targetEditTarget) {
-      targetEditTarget.onMove(latlng);
-    }
-  }, { enabled: (showMeasureTool && measuring) || Boolean(targetEditTarget) });
+    setMeasurePoints(pts => [...pts, latlng]);
+  }, { enabled: showMeasureTool && measuring, priority: 10 });
 
   return (
     <>
@@ -293,82 +277,7 @@ function MapContent({
       )}
 
       {/* Course elements */}
-      {courses.flatMap(course =>
-        course.elements.map((element: CourseElement, i) => {
-          const key = `${course.id}-${element.type}-${i}`;
-
-          if (element.type === 'buoy') {
-            // Two concentric circles.
-            // White buoy: white outer + white inner, both with black stroke.
-            // Orange buoy: orange outer + white inner; black stroke on both
-            //   creates a thin black ring between the two fills.
-            const outerFill = element.color === 'white' ? '#ffffff' : '#ff8800';
-            const center = { lat: element.lat, lng: element.lng };
-            return (
-              <React.Fragment key={key}>
-                <MapCircle
-                  center={center}
-                  radius={1.2}
-                  fillColor={outerFill}
-                  fillOpacity={1}
-                  strokeColor="#000"
-                  strokeWeight={0.75}
-                  strokeOpacity={1}
-                  zIndex={15}
-                />
-                <MapCircle
-                  center={center}
-                  radius={0.6}
-                  fillColor="#ffffff"
-                  fillOpacity={1}
-                  strokeColor="#000"
-                  strokeWeight={0.4}
-                  strokeOpacity={1}
-                  zIndex={16}
-                />
-              </React.Fragment>
-            );
-          }
-          if (element.type === 'line') {
-            return (
-              <MapPolyline
-                key={key}
-                path={[element.from, element.to]}
-                color={element.color}
-                opacity={0.9}
-                weight={1.5}
-                zIndex={10}
-              />
-            );
-          }
-          if (element.type === 'marker') {
-            if (zoom < 20) return null;
-            const marker = element as CourseMarker;
-            const pos = { lat: marker.lat, lng: marker.lng };
-            if (!marker.label) return null;
-            return (
-              <MapOverlay key={key} position={pos}>
-                <div style={{
-                  display: 'inline-block',
-                  color: marker.color,
-                  fontSize: '10px',
-                  whiteSpace: 'nowrap',
-                  transform: 'translate(-50%, -50%)',
-                  pointerEvents: 'none',
-                  fontWeight: 'bold',
-                  background: 'rgba(0,0,0,0.65)',
-                  border: '1px solid rgba(255,255,255,0.35)',
-                  borderRadius: '2px',
-                  padding: '1px 3px',
-                }}>
-                  {marker.label}
-                </div>
-              </MapOverlay>
-            );
-          }
-          return null;
-        })
-      )}
+      <CourseLayer courses={courses} />
 
       {/* Measure tool — point markers and cumulative distance labels */}
       {showMeasureTool && measuring && measurePoints.map((point, i) => (
@@ -545,81 +454,10 @@ function MapContent({
       })()}
 
       {/* Target edit handles — position drag + heading direction handle */}
-      {targetEditTarget && (() => {
-        const headingHandlePos = destinationPoint(targetEditTarget.target, targetEditTarget.heading, 15);
-        const headingLineEnd = liveTargetHeadingPos ?? headingHandlePos;
-        return (
-          <React.Fragment key="target-edit-handles">
-            <MapPolyline
-              path={[targetEditTarget.target, headingLineEnd]}
-              color="#ffaa00"
-              weight={2}
-              opacity={0.9}
-              zIndex={25}
-            />
-            <MapDragHandle
-              position={targetEditTarget.target}
-              cursor="move"
-              zIndex={26}
-              color="#00ccff"
-              scale={9}
-              onDragEnd={pos => targetEditTarget.onMove(pos)}
-            />
-            <MapDragHandle
-              position={headingHandlePos}
-              cursor="pointer"
-              zIndex={27}
-              color="#ffaa00"
-              scale={7}
-              onDrag={pos => setLiveTargetHeadingPos(pos)}
-              onDragEnd={pos => {
-                setLiveTargetHeadingPos(null);
-                targetEditTarget.onHeadingChange(bearingBetween(targetEditTarget.target, pos));
-              }}
-            />
-          </React.Fragment>
-        );
-      })()}
+      {targetEditTarget && <TargetEditLayer edit={targetEditTarget} />}
 
       {/* Course edit handles — center drag + rotation handle */}
-      {courseEditTarget && (() => {
-        const rotationHandlePos = destinationPoint(courseEditTarget.center, courseEditTarget.direction, 15);
-        const lineEnd = liveHandlePos ?? rotationHandlePos;
-        return (
-          <React.Fragment key="course-edit-handles">
-            {/* Line from center to rotation handle */}
-            <MapPolyline
-              path={[courseEditTarget.center, lineEnd]}
-              color="#ffaa00"
-              weight={2}
-              opacity={0.9}
-              zIndex={25}
-            />
-            {/* Center drag marker (cyan crosshair) */}
-            <MapDragHandle
-              position={courseEditTarget.center}
-              cursor="move"
-              zIndex={26}
-              color="#00ccff"
-              scale={9}
-              onDragEnd={pos => courseEditTarget.onMove(pos)}
-            />
-            {/* Rotation handle (orange dot at course-direction end) */}
-            <MapDragHandle
-              position={rotationHandlePos}
-              cursor="pointer"
-              zIndex={27}
-              color="#ffaa00"
-              scale={7}
-              onDrag={pos => setLiveHandlePos(pos)}
-              onDragEnd={pos => {
-                setLiveHandlePos(null);
-                courseEditTarget.onRotate(bearingBetween(courseEditTarget.center, pos));
-              }}
-            />
-          </React.Fragment>
-        );
-      })()}
+      {courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
 
       {/* Measure tool — ruler toggle button */}
       {showMeasureTool && (
