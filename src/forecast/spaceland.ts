@@ -1,5 +1,5 @@
 import io from 'socket.io-client';
-import { WindRow } from '../util/wind';
+import { WindRow, createWindRow } from '../util/wind';
 
 const mphToKts = 1 / 1.151;
 
@@ -15,7 +15,7 @@ interface WeatherAnnouncement {
 function getGroundWind(data: WeatherData): WindRow {
   const { windDirection, windSpeed } = data;
 
-  return new WindRow(0, windDirection, windSpeed * mphToKts);
+  return createWindRow(0, windDirection, windSpeed * mphToKts);
 }
 
 export function fetchSpacelandGroundWind(location: string): Promise<WindRow> {

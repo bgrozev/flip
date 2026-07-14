@@ -27,11 +27,11 @@ import { SOURCE_MANUAL } from '../forecast/forecast';
 import { useUnits } from '../hooks';
 import { ObservedWindStation } from '../types';
 import { LIMITS, clampNumber, normalizeDirection } from '../util/validation';
-import { WindRow, Winds } from '../util/wind';
+import { WindProfile, createWindProfile, createWindRow } from '../util/wind';
 
 interface WindsComponentProps {
-  winds: Winds;
-  setWinds: (winds: Winds) => void;
+  winds: WindProfile;
+  setWinds: (winds: WindProfile) => void;
   fetching: boolean;
   fetch: (ft?: Date | null) => void;
   forecastTime: Date | null;
@@ -87,7 +87,7 @@ export default function WindsComponent({
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
 
   const reset = useCallback(() => {
-    setWinds(Winds.createDefault());
+    setWinds(createWindProfile());
   }, [setWinds]);
 
   // Forecast time picker
@@ -113,14 +113,14 @@ export default function WindsComponent({
     fetch(newTime);
   };
 
+  // Note: the row-editing actions below intentionally produce a fresh
+  // manual-source profile (they are only reachable when unlocked).
   const addRow = () => {
-    winds.addRow(new WindRow(0, 0, 0));
-    setWinds(new Winds([...winds.winds]));
+    setWinds(createWindProfile([...winds.winds, createWindRow(0, 0, 0)]));
   };
 
   const removeRowAt = (index: number) => {
-    const updated = winds.winds.filter((_, i) => i !== index);
-    setWinds(new Winds(updated));
+    setWinds(createWindProfile(winds.winds.filter((_, i) => i !== index)));
   };
 
   const updateRow = (index: number, field: 'altFt' | 'direction' | 'speedKts', value: number) => {
@@ -132,27 +132,24 @@ export default function WindsComponent({
         : clampNumber(value, LIMITS.windSpeedKts.min, LIMITS.windSpeedKts.max);
     const updated = winds.winds.map((row, i) => {
       if (i !== index) return row;
-      return new WindRow(
+      return createWindRow(
         field === 'altFt' ? safeValue : row.altFt,
         field === 'direction' ? safeValue : row.direction,
         field === 'speedKts' ? safeValue : row.speedKts
       );
     });
-    setWinds(new Winds(updated));
+    setWinds(createWindProfile(updated));
   };
 
   const unlock = () => {
-    const newWinds = new Winds([...winds.winds]);
-    newWinds.groundSource = SOURCE_MANUAL;
-    newWinds.aloftSource = SOURCE_MANUAL;
-    setWinds(newWinds);
+    setWinds(createWindProfile([...winds.winds]));
   };
 
   const invertWind = () => {
     const inverted = winds.winds.map(
-      row => new WindRow(row.altFt, (row.direction + 180) % 360, row.speedKts)
+      row => createWindRow(row.altFt, (row.direction + 180) % 360, row.speedKts)
     );
-    setWinds(new Winds(inverted));
+    setWinds(createWindProfile(inverted));
   };
 
   return (

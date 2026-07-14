@@ -53,7 +53,7 @@ import {
 import { Course, LatLng, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './util/geo';
 import { COURSES } from './util/courses';
-import { WindRow, Winds } from './util/wind';
+import { WindRow, composeWinds, createWindRow } from './util/wind';
 
 const NAVIGATION: Navigation = [
   {
@@ -187,10 +187,10 @@ function DashboardContent() {
     if (!settings.useDzGroundWind || !nearestStation || winds.aloftSource === SOURCE_MANUAL) {
       return winds;
     }
-    const cloned = Winds.copy(winds);
-    cloned.setGroundWind(new WindRow(0, nearestStation.wind.direction, nearestStation.wind.speedKts));
-    cloned.groundSource = SOURCE_DZ;
-    return cloned;
+    return composeWinds(
+      winds,
+      createWindRow(0, nearestStation.wind.direction, nearestStation.wind.speedKts)
+    );
   }, [winds, nearestStation, settings.useDzGroundWind]);
 
   // Wrap setTarget to invalidate winds when target moves too far
@@ -262,11 +262,12 @@ function DashboardContent() {
   ) {
     windSummary = { average: averageWind_ };
     if (effectiveWinds.groundSource !== SOURCE_MANUAL && effectiveWinds.winds && effectiveWinds.winds.length > 0) {
-      const groundWind = effectiveWinds.winds[0] as WindRow & { observed?: boolean };
-      windSummary.ground = groundWind;
+      const groundWind: WindRow & { observed?: boolean } = { ...effectiveWinds.winds[0] };
+
       if (effectiveWinds.groundSource === SOURCE_DZ) {
-        windSummary.ground.observed = true;
+        groundWind.observed = true;
       }
+      windSummary.ground = groundWind;
     }
     if (effectiveWinds.validTime) {
       windSummary.forecastTime = effectiveWinds.validTime;

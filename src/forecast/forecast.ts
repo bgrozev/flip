@@ -1,5 +1,5 @@
 import { LatLng } from '../types';
-import { Winds } from '../util/wind';
+import { WindProfile } from '../util/wind';
 import { fetchOpenMeteo } from './openmeteo';
 import {
   ForecastSource,
@@ -22,6 +22,6 @@ export function fetchForecast(
   center: LatLng,
   hourOffset: number = 0,
   signal?: AbortSignal
-): Promise<Winds> {
+): Promise<WindProfile> {
   return fetchOpenMeteo(center, hourOffset, signal);
 }

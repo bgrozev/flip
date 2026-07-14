@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { FlightPath, Target } from '../types';
 import { addWind } from '../util/geo';
 import { averageWind, reposition, straightenLegs } from '../util/util';
-import { Winds } from '../util/wind';
+import { WindProfile } from '../util/wind';
 
 export interface FlightPaths {
   /** Ideal path (manoeuvre + pattern repositioned to the target), no wind */
@@ -20,7 +20,7 @@ interface UseFlightPathsParams {
   manoeuvre: FlightPath;
   pattern: FlightPath;
   target: Target;
-  winds: Winds;
+  winds: WindProfile;
   correctPatternHeading: boolean;
   interpolateWind: boolean;
   straightenLegsEnabled: boolean;

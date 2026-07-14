@@ -1,6 +1,6 @@
 /**
  * Behavior-pinning tests for the derive pipeline:
- * reposition → addWind → straightenLegs → averageWind, plus Winds.getWindAt.
+ * reposition → addWind → straightenLegs → averageWind, plus getWindAt.
  *
  * These are golden-value tests with realistic inputs (a 3-leg pattern, a
  * parameter manoeuvre and multi-row winds). Their purpose is to act as a
@@ -19,7 +19,7 @@
 import { createManoeuvrePath } from './manoeuvre';
 import { makePattern } from './pattern';
 import { addWind } from './geo';
-import { WindRow, Winds } from './wind';
+import { WindProfile, createWindProfile, createWindRow, getWindAt } from './wind';
 import { averageWind, reposition, straightenLegs } from './util';
 import { FlightPath, Target } from '../types';
 
@@ -49,22 +49,22 @@ function makeThreeLegPattern(): FlightPath {
 
 // Wind rows with varying directions — used without interpolation so the
 // values stay valid when interpolation switches to vector (u/v) blending.
-function makeVariedWinds(): Winds {
-  return new Winds([
-    new WindRow(0, 180, 8),
-    new WindRow(500, 210, 12),
-    new WindRow(1500, 240, 18),
-    new WindRow(3000, 270, 25)
+function makeVariedWinds(): WindProfile {
+  return createWindProfile([
+    createWindRow(0, 180, 8),
+    createWindRow(500, 210, 12),
+    createWindRow(1500, 240, 18),
+    createWindRow(3000, 270, 25)
   ]);
 }
 
 // Wind rows sharing one direction — linear and vector interpolation agree,
 // so these pins survive the step 2a interpolation fix.
-function makeUniformDirectionWinds(): Winds {
-  return new Winds([
-    new WindRow(0, 225, 8),
-    new WindRow(500, 225, 14),
-    new WindRow(1500, 225, 20)
+function makeUniformDirectionWinds(): WindProfile {
+  return createWindProfile([
+    createWindRow(0, 225, 8),
+    createWindRow(500, 225, 14),
+    createWindRow(1500, 225, 20)
   ]);
 }
 
@@ -214,14 +214,14 @@ describe('averageWind (golden values)', () => {
   });
 });
 
-describe('Winds.getWindAt (non-wrapping pins)', () => {
+describe('getWindAt (non-wrapping pins)', () => {
   // TODO(step 2a): direction interpolation between rows with different
   // directions wraps the wrong way across north (350°→10° goes through
   // 180°). The buggy outputs are intentionally NOT pinned here; step 2a
   // replaces linear direction/speed blending with vector (u/v)
   // interpolation and adds wrap tests.
   it('returns the exact row when the altitude matches', () => {
-    const wind = makeVariedWinds().getWindAt(500, true);
+    const wind = getWindAt(makeVariedWinds(), 500, true);
 
     expect(wind.altFt).toBe(500);
     expect(wind.direction).toBeCloseTo(210, 9);
@@ -229,7 +229,7 @@ describe('Winds.getWindAt (non-wrapping pins)', () => {
   });
 
   it('returns the lower bracket without interpolation', () => {
-    const wind = makeVariedWinds().getWindAt(1000, false);
+    const wind = getWindAt(makeVariedWinds(), 1000, false);
 
     expect(wind.altFt).toBe(500);
     expect(wind.direction).toBe(210);
@@ -239,19 +239,19 @@ describe('Winds.getWindAt (non-wrapping pins)', () => {
   it('interpolates speed between uniform-direction rows', () => {
     const winds = makeUniformDirectionWinds();
 
-    const mid = winds.getWindAt(1000, true);
+    const mid = getWindAt(winds, 1000, true);
     expect(mid.altFt).toBe(1000);
     expect(mid.direction).toBeCloseTo(225, 9);
     expect(mid.speedKts).toBeCloseTo(17, 9);
 
-    const quarter = winds.getWindAt(625, true);
+    const quarter = getWindAt(winds, 625, true);
     expect(quarter.altFt).toBe(625);
     expect(quarter.direction).toBeCloseTo(225, 9);
     expect(quarter.speedKts).toBeCloseTo(14.75, 9);
   });
 
   it('returns the highest row above the profile', () => {
-    const wind = makeUniformDirectionWinds().getWindAt(9999, true);
+    const wind = getWindAt(makeUniformDirectionWinds(), 9999, true);
 
     expect(wind.altFt).toBe(1500);
     expect(wind.direction).toBe(225);

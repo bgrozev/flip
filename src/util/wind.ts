@@ -1,24 +1,78 @@
 import { IWindRow, LatLng } from '../types';
-import { ForecastSource, SOURCE_MANUAL } from '../forecast/sources';
+import { ForecastSource, SOURCE_DZ, SOURCE_MANUAL } from '../forecast/sources';
 
 const DEG_TO_RAD = Math.PI / 180;
 
-export class WindRow implements IWindRow {
-  altFt: number;
-  direction: number;
-  speedKts: number;
+/** A single wind measurement: altitude, direction (from, degrees), speed. */
+export type WindRow = IWindRow;
 
-  constructor(altFt: number, direction: number, speedKts: number) {
-    this.altFt = Number(altFt);
-    this.direction = Number(direction);
-    this.speedKts = Number(speedKts);
+/**
+ * A wind profile: rows ordered by altitude plus source metadata.
+ * Plain serializable data — use the pure functions below to work with it.
+ */
+export interface WindProfile {
+  winds: WindRow[];
+  center?: LatLng;
+  groundSource: ForecastSource;
+  aloftSource: ForecastSource;
+  validTime?: Date;
+}
 
-    this.copy = this.copy.bind(this);
-  }
+/** Create a wind row, coercing string inputs (e.g. from forms) to numbers. */
+export function createWindRow(altFt: number, direction: number, speedKts: number): WindRow {
+  return {
+    altFt: Number(altFt),
+    direction: Number(direction),
+    speedKts: Number(speedKts)
+  };
+}
 
-  copy(): WindRow {
-    return new WindRow(this.altFt, this.direction, this.speedKts);
-  }
+/** Copy a wind row. */
+export function copyWindRow(row: WindRow): WindRow {
+  return { ...row };
+}
+
+/** Create a wind profile with manual sources; defaults to a single empty row. */
+export function createWindProfile(
+  winds: WindRow[] = [createWindRow(0, 0, 0)],
+  center?: LatLng
+): WindProfile {
+  return {
+    winds,
+    center,
+    groundSource: SOURCE_MANUAL,
+    aloftSource: SOURCE_MANUAL
+  };
+}
+
+/** Deep-copy a wind profile. */
+export function copyProfile(profile: WindProfile): WindProfile {
+  return {
+    ...profile,
+    winds: profile.winds.map(copyWindRow)
+  };
+}
+
+/** Replace (or add) the ground wind row. Returns a new profile. */
+export function setGroundWind(profile: WindProfile, row: WindRow): WindProfile {
+  return {
+    ...profile,
+    winds: profile.winds.length > 0
+      ? [row, ...profile.winds.slice(1)]
+      : [row]
+  };
+}
+
+/**
+ * Compose the effective wind profile from a forecast/manual profile and an
+ * observed ground wind row: the observed row replaces the ground row and is
+ * marked as dropzone-observed. Replaces the old clone-and-patch surgery.
+ */
+export function composeWinds(profile: WindProfile, observedGround: WindRow): WindProfile {
+  return {
+    ...setGroundWind(profile, observedGround),
+    groundSource: SOURCE_DZ
+  };
 }
 
 /**
@@ -30,8 +84,8 @@ export class WindRow implements IWindRow {
  * which is physically correct.
  */
 export function interpolateWindRows(
-  lower: IWindRow,
-  higher: IWindRow,
+  lower: WindRow,
+  higher: WindRow,
   p: number,
   altFt: number
 ): WindRow {
@@ -47,88 +101,57 @@ export function interpolateWindRows(
     ? (Math.atan2(-u, -v) / DEG_TO_RAD + 360) % 360
     : lower.direction;
 
-  return new WindRow(altFt, direction, speedKts);
+  return createWindRow(altFt, direction, speedKts);
 }
 
-export interface IWinds {
-  winds: WindRow[];
-  center?: LatLng;
-  groundSource: ForecastSource;
-  aloftSource: ForecastSource;
-  validTime?: Date;
-  addRow(wind: WindRow): void;
-  setGroundWind(windRow: WindRow): void;
-  getWindAt(altFt: number, interpolate?: boolean): WindRow;
-}
+/**
+ * Get the wind at an altitude: the row at or below altFt, optionally
+ * interpolated toward the next row up.
+ */
+export function getWindAt(profile: WindProfile, altFt: number, interpolate?: boolean): WindRow {
+  const rows = profile.winds;
 
-export class Winds implements IWinds {
-  winds: WindRow[];
-  center?: LatLng;
-  groundSource: ForecastSource;
-  aloftSource: ForecastSource;
-  validTime?: Date;
-
-  constructor(winds: WindRow[] = [new WindRow(0, 0, 0)], center?: LatLng) {
-    this.winds = winds;
-    this.center = center;
-    this.groundSource = SOURCE_MANUAL;
-    this.aloftSource = SOURCE_MANUAL;
-
-    this.addRow = this.addRow.bind(this);
-    this.getWindAt = this.getWindAt.bind(this);
-    this.setGroundWind = this.setGroundWind.bind(this);
+  if (!rows.length) {
+    return createWindRow(0, 0, 0);
   }
 
-  /** Create a new Winds instance with default empty wind row */
-  static createDefault(): Winds {
-    return new Winds([new WindRow(0, 0, 0)]);
-  }
+  let higher: WindRow | undefined;
+  let lower: WindRow | undefined;
 
-  /** Create a copy of an existing Winds instance */
-  static copy(other: Winds): Winds {
-    const winds = new Winds(other.winds.map(w => w.copy()), other.center);
-    winds.groundSource = other.groundSource;
-    winds.aloftSource = other.aloftSource;
-    winds.validTime = other.validTime;
-    return winds;
-  }
-
-  addRow(wind: WindRow): void {
-    this.winds.push(wind);
-  }
-
-  setGroundWind(windRow: WindRow): void {
-    if (this.winds.length > 0) {
-      this.winds[0] = windRow;
-    } else {
-      this.winds.push(windRow);
-    }
-  }
-
-  getWindAt(altFt: number, interpolate?: boolean): WindRow {
-    if (!this.winds.length) {
-      return new WindRow(0, 0, 0);
-    }
-
-    let higher: WindRow | undefined;
-    let lower: WindRow | undefined;
-
-    for (let i = this.winds.length - 1; i >= 0; i--) {
-      if (this.winds[i].altFt <= altFt) {
-        lower = this.winds[i];
-        if (this.winds.length > i + 1) {
-          higher = this.winds[i + 1];
-        }
-        break;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].altFt <= altFt) {
+      lower = rows[i];
+      if (rows.length > i + 1) {
+        higher = rows[i + 1];
       }
+      break;
     }
-
-    if (interpolate && lower && higher) {
-      const p = (altFt - lower.altFt) / (higher.altFt - lower.altFt);
-
-      return interpolateWindRows(lower, higher, p, altFt);
-    }
-
-    return lower || this.winds[0];
   }
+
+  if (interpolate && lower && higher) {
+    const p = (altFt - lower.altFt) / (higher.altFt - lower.altFt);
+
+    return interpolateWindRows(lower, higher, p, altFt);
+  }
+
+  return lower || rows[0];
+}
+
+/**
+ * Sanitize a profile for wind application: drop rows whose altitude is out
+ * of order (e.g. user entered altitudes 0, 1000, 500) or empty rows in the
+ * middle.
+ */
+export function prepWind(profile: WindProfile): WindProfile {
+  const rows: WindRow[] = [];
+  let prevAlt = -1;
+
+  profile.winds.forEach(row => {
+    if (row.altFt > prevAlt) {
+      rows.push(copyWindRow(row));
+      prevAlt = row.altFt;
+    }
+  });
+
+  return { ...profile, winds: rows };
 }

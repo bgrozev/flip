@@ -14,7 +14,7 @@ import {
   setFinalHeading,
   translate
 } from './geo';
-import { WindRow, Winds } from './wind';
+import { createWindProfile, createWindRow } from './wind';
 import { FlightPath, FlightPoint } from '../types';
 
 // Helper to create a turf point with properties
@@ -173,7 +173,7 @@ describe('mirror', () => {
 
 describe('addWind', () => {
   it('returns unchanged for 0 or 1 points', () => {
-    const winds = new Winds([new WindRow(0, 90, 10)]);
+    const winds = createWindProfile([createWindRow(0, 90, 10)]);
 
     expect(addWind([], winds, false)).toEqual([]);
 
@@ -183,7 +183,7 @@ describe('addWind', () => {
   });
 
   it('keeps first point fixed (landing point)', () => {
-    const winds = new Winds([new WindRow(0, 90, 20)]);
+    const winds = createWindProfile([createWindRow(0, 90, 20)]);
     const p1 = createPoint(-112.0, 33.5, { alt: 0, time: 0 });
     const p2 = createPoint(-112.0, 33.5001, { alt: 500, time: -30000 });
 
@@ -194,7 +194,7 @@ describe('addWind', () => {
   });
 
   it('offsets earlier points based on wind', () => {
-    const winds = new Winds([new WindRow(0, 90, 20)]); // 20 knots from east
+    const winds = createWindProfile([createWindRow(0, 90, 20)]); // 20 knots from east
     const p1 = createPoint(-112.0, 33.5, { alt: 0, time: 0 });
     const p2 = createPoint(-112.0, 33.5001, { alt: 500, time: -30000 }); // 30 seconds earlier
 
@@ -205,7 +205,7 @@ describe('addWind', () => {
   });
 
   it('accumulates wind offset over multiple points', () => {
-    const winds = new Winds([new WindRow(0, 90, 20)]);
+    const winds = createWindProfile([createWindRow(0, 90, 20)]);
     const p1 = createPoint(-112.0, 33.5, { alt: 0, time: 0 });
     const p2 = createPoint(-112.0, 33.5001, { alt: 250, time: -15000 });
     const p3 = createPoint(-112.0, 33.5002, { alt: 500, time: -30000 });
@@ -220,9 +220,9 @@ describe('addWind', () => {
   });
 
   it('uses altitude-appropriate wind when winds vary', () => {
-    const winds = new Winds([
-      new WindRow(0, 90, 5),
-      new WindRow(1000, 270, 20)
+    const winds = createWindProfile([
+      createWindRow(0, 90, 5),
+      createWindRow(1000, 270, 20)
     ]);
 
     const p1 = createPoint(-112.0, 33.5, { alt: 0, time: 0 });

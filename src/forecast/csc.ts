@@ -1,4 +1,4 @@
-import { WindRow } from '../util/wind';
+import { WindRow, createWindRow } from '../util/wind';
 
 const url = 'wss://api.skydivecsc.com/graphql';
 const protocol = 'graphql-ws';
@@ -50,7 +50,7 @@ export function fetchCscGroundWind(): Promise<WindRow> {
           console.log(`Fetched ${JSON.stringify(json)}`);
           ws.close();
           resolve(
-            new WindRow(
+            createWindRow(
               0,
               // The data has gusts. Should we take them into account somehow?
               json.payload.data.wind.direction,

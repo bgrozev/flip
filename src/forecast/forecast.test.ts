@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { WindRow, Winds } from '../util/wind';
+import { createWindProfile, createWindRow } from '../util/wind';
 
 import {
   SOURCE_DZ,
@@ -51,7 +51,7 @@ describe('fetchForecast', () => {
   });
 
   it('fetches from OpenMeteo with default hour offset', async () => {
-    const mockWinds = new Winds([new WindRow(0, 90, 10)]);
+    const mockWinds = createWindProfile([createWindRow(0, 90, 10)]);
     (fetchOpenMeteo as ReturnType<typeof vi.fn>).mockResolvedValue(mockWinds);
 
     const result = await fetchForecast(mockCenter);
@@ -61,7 +61,7 @@ describe('fetchForecast', () => {
   });
 
   it('passes hour offset to OpenMeteo', async () => {
-    const mockWinds = new Winds([new WindRow(0, 90, 10)]);
+    const mockWinds = createWindProfile([createWindRow(0, 90, 10)]);
     (fetchOpenMeteo as ReturnType<typeof vi.fn>).mockResolvedValue(mockWinds);
 
     const result = await fetchForecast(mockCenter, 6);
@@ -71,7 +71,7 @@ describe('fetchForecast', () => {
   });
 
   it('passes abort signal to OpenMeteo', async () => {
-    const mockWinds = new Winds([new WindRow(0, 90, 10)]);
+    const mockWinds = createWindProfile([createWindRow(0, 90, 10)]);
     const controller = new AbortController();
     (fetchOpenMeteo as ReturnType<typeof vi.fn>).mockResolvedValue(mockWinds);
 

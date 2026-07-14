@@ -1,6 +1,6 @@
 import { LatLng } from '../types';
 import { metersToFeet } from '../util/geo';
-import { WindRow, Winds } from '../util/wind';
+import { WindProfile, WindRow, createWindRow } from '../util/wind';
 import { SOURCE_OPEN_METEO } from './sources';
 
 const hPas = [
@@ -24,30 +24,23 @@ interface ElevationResponse {
   elevation: number[];
 }
 
-export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): Promise<Winds> {
+export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): Promise<WindProfile> {
   const elevationFt = await fetchElevation(point, signal);
   const gfs = await fetchGfs(point, hourOffset, signal);
 
   console.log(`Elevation is ${elevationFt} ft`);
 
-  const winds = new Winds([]);
+  const rows: WindRow[] = [
+    createWindRow(10 * metersToFeet, (gfs.hourly.wind_direction_10m as number[])[hourOffset], (gfs.hourly.wind_speed_10m as number[])[hourOffset]),
+    createWindRow(80 * metersToFeet, (gfs.hourly.wind_direction_80m as number[])[hourOffset], (gfs.hourly.wind_speed_80m as number[])[hourOffset])
+  ];
 
-  winds.aloftSource = SOURCE_OPEN_METEO;
-  winds.groundSource = SOURCE_OPEN_METEO;
-  winds.validTime = new Date((gfs.hourly.time[hourOffset] as string) + 'Z');
-
-  winds.addRow(
-    new WindRow(10 * metersToFeet, (gfs.hourly.wind_direction_10m as number[])[hourOffset], (gfs.hourly.wind_speed_10m as number[])[hourOffset])
-  );
-  winds.addRow(
-    new WindRow(80 * metersToFeet, (gfs.hourly.wind_direction_80m as number[])[hourOffset], (gfs.hourly.wind_speed_80m as number[])[hourOffset])
-  );
   hPas.forEach(hPa => {
     const e = (gfs.hourly[`geopotential_height_${hPa}hPa`] as number[])[hourOffset] * metersToFeet - elevationFt;
 
     if (e > 80) {
-      winds.addRow(
-        new WindRow(
+      rows.push(
+        createWindRow(
           e,
           (gfs.hourly[`wind_direction_${hPa}hPa`] as number[])[hourOffset],
           (gfs.hourly[`wind_speed_${hPa}hPa`] as number[])[hourOffset]
@@ -56,7 +49,12 @@ export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, sign
     }
   });
 
-  return winds;
+  return {
+    winds: rows,
+    aloftSource: SOURCE_OPEN_METEO,
+    groundSource: SOURCE_OPEN_METEO,
+    validTime: new Date((gfs.hourly.time[hourOffset] as string) + 'Z')
+  };
 }
 
 function fetchElevation(point: LatLng, signal?: AbortSignal): Promise<number> {

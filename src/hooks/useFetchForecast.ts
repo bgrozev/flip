@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { fetchForecast } from '../forecast/forecast';
 import { LatLng, Settings } from '../types';
-import { Winds } from '../util/wind';
+import { WindProfile, createWindProfile } from '../util/wind';
 
 interface UseFetchForecastOptions {
   /** Current target location */
@@ -13,13 +13,13 @@ interface UseFetchForecastOptions {
 
 interface UseFetchForecastResult {
   /** Current wind data */
-  winds: Winds;
+  winds: WindProfile;
   /** Whether a fetch is in progress */
   fetching: boolean;
   /** Fetch winds for the current target. Pass maxPathAltitude to extend limit if path goes higher. */
   fetchWinds: (maxPathAltitude?: number, forecastTime?: Date | null) => void;
   /** Manually set winds (for manual entry) */
-  setWinds: (winds: Winds) => void;
+  setWinds: (winds: WindProfile) => void;
   /** Reset winds to empty state */
   resetWinds: () => void;
 }
@@ -32,12 +32,12 @@ export function useFetchForecast({
   target,
   settings
 }: UseFetchForecastOptions): UseFetchForecastResult {
-  const [winds, setWinds] = useState<Winds>(new Winds());
+  const [winds, setWinds] = useState<WindProfile>(createWindProfile);
   const [fetching, setFetching] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const resetWinds = useCallback(() => {
-    setWinds(new Winds());
+    setWinds(createWindProfile());
   }, []);
 
   const fetchWinds = useCallback((maxPathAltitude?: number, forecastTime?: Date | null) => {
@@ -68,8 +68,10 @@ export function useFetchForecast({
         }
 
         // Filter winds to altitude limit
-        fetchedWinds.winds = fetchedWinds.winds.filter(w => w.altFt <= limit);
-        setWinds(fetchedWinds);
+        setWinds({
+          ...fetchedWinds,
+          winds: fetchedWinds.winds.filter(w => w.altFt <= limit)
+        });
         setFetching(false);
       })
       .catch(err => {
@@ -79,7 +81,7 @@ export function useFetchForecast({
         }
         console.log(`Failed to fetch winds: ${err}`);
         setFetching(false);
-        setWinds(Winds.createDefault());
+        setWinds(createWindProfile());
       });
   }, [target, settings.limitWind]);
 

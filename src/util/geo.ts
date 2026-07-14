@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 import { FlightPath, FlightPoint, LatLng } from '../types';
-import { Winds, WindRow } from './wind';
+import { WindProfile, getWindAt, prepWind } from './wind';
 
 export const metersToFeet = 3.28084;
 
@@ -36,23 +36,6 @@ export function hasTargetMovedTooFar(
   threshold: number = TARGET_MOVE_THRESHOLD_FT
 ): boolean {
   return distanceFeet(oldTarget, newTarget) > threshold;
-}
-
-function prepWind(winds: Winds): Winds {
-  const wind: WindRow[] = [];
-
-  // Filter out any rows with altitude that's out of order (e.g. user entered altitudes 0, 1000, 500).
-  // Or an empty row in the middle, etc.
-  let prevAlt = -1;
-
-  winds.winds.forEach(row => {
-    if (row.altFt > prevAlt) {
-      wind.push(row.copy());
-      prevAlt = row.altFt;
-    }
-  });
-
-  return new Winds(wind);
 }
 
 /**
@@ -154,7 +137,7 @@ export function mirror(points: FlightPath): FlightPath {
  */
 export function addWind(
   points: FlightPath,
-  wind: Winds,
+  wind: WindProfile,
   interpolate?: boolean
 ): FlightPath {
   if (points.length <= 1) {
@@ -171,7 +154,7 @@ export function addWind(
     // path is backwards in time...
     const ms = points[i - 1].properties.time - points[i].properties.time;
 
-    const windAtAlt = preppedWinds.getWindAt(points[i - 1].properties.alt, interpolate);
+    const windAtAlt = getWindAt(preppedWinds, points[i - 1].properties.alt, interpolate);
     const dOffsetFt = (ms / 1000) * windAtAlt.speedKts * ktsToFps;
     const dOffsetB = windAtAlt.direction;
 
