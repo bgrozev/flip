@@ -1,8 +1,9 @@
 # FliP Next-Generation Redesign — Working Notes
 
 Branch: `claude/flip-redesign-architecture-e767df`
-Status: **design docs drafted, iterating with owner.** Next concrete step:
-Phase 0 of the migration plan (CRA → Vite; see `ARCHITECTURE.md`).
+Status: **Phase 0 complete** (2026-07-13, commit `e4df103`): CRA → Vite +
+Vitest, TS 5, lint working and in CI, CLAUDE.md rewritten. Next: Phase 1
+(core extraction & correctness; see `ARCHITECTURE.md`).
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).
