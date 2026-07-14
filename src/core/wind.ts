@@ -1,5 +1,14 @@
 import { IWindRow, LatLng } from '../types';
-import { ForecastSource, SOURCE_DZ, SOURCE_MANUAL } from '../forecast/sources';
+
+// Wind source identifiers (per-profile metadata)
+export const SOURCE_MANUAL = 'manual';
+export const SOURCE_DZ = 'dropzone-specific';
+export const SOURCE_OPEN_METEO = 'open-meteo';
+
+export type ForecastSource =
+  | typeof SOURCE_MANUAL
+  | typeof SOURCE_DZ
+  | typeof SOURCE_OPEN_METEO;
 
 const DEG_TO_RAD = Math.PI / 180;
 

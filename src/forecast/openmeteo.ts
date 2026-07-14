@@ -1,6 +1,6 @@
 import { LatLng } from '../types';
-import { metersToFeet } from '../util/geo';
-import { WindProfile, WindRow, createWindRow } from '../util/wind';
+import { metersToFeet } from '../core/units';
+import { WindProfile, WindRow, createWindRow } from '../core/wind';
 import { SOURCE_OPEN_METEO } from './sources';
 
 const hPas = [

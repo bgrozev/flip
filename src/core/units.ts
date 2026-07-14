@@ -1,3 +1,12 @@
+// Base conversion constants (internal units are feet / knots / mph)
+export const metersToFeet = 3.28084;
+
+// Knots to feet-per-second
+export const ktsToFps = 1.68781;
+
+// Miles per hour to feet per second.
+export const mphToFps = 5280 / 3600;
+
 // Unit types
 export type AltitudeUnit = 'ft' | 'm';
 export type WindSpeedUnit = 'kts' | 'mps' | 'mph';

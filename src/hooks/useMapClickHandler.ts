@@ -2,8 +2,8 @@ import * as turf from '@turf/turf';
 import { useCallback, useState } from 'react';
 
 import { LatLng, Target } from '../types';
-import { latLngToPoint } from '../util/coords';
-import { normalizeBearing } from '../util/geo';
+import { latLngToPoint } from '../core/coords';
+import { normalizeBearing } from '../core/geometry';
 
 interface UseMapClickHandlerOptions {
   /** Current target (needed for preserving heading when only selecting location) */

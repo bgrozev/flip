@@ -1,18 +1,178 @@
 import * as turf from '@turf/turf';
-import { FlightPath, Target } from '../types';
-import { ktsToFps, normalizeBearing, setFinalHeading, translate } from './geo';
+import { FlightPath, FlightPoint, LatLng, Target } from '../types';
 import { latLngToPoint } from './coords';
+import { ktsToFps } from './units';
+import { WindProfile, getWindAt, prepWind } from './wind';
 
-export const CODEC_JSON = {
-  parse: (value: string) => {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return { _error: 'parse failed' };
-    }
-  },
-  stringify: (value: unknown) => JSON.stringify(value)
-};
+// Maximum distance (in feet) a target can move before wind data is invalidated
+export const TARGET_MOVE_THRESHOLD_FT = 5000;
+
+/**
+ * Calculate the distance in feet between two points.
+ * Points can be LatLng objects or [lng, lat] arrays.
+ */
+export function distanceFeet(
+  point1: LatLng | [number, number],
+  point2: LatLng | [number, number]
+): number {
+  const p1 = Array.isArray(point1) ? point1 : [point1.lng, point1.lat];
+  const p2 = Array.isArray(point2) ? point2 : [point2.lng, point2.lat];
+
+  return turf.distance(p1, p2, { units: 'feet' });
+}
+
+/**
+ * Check if target has moved beyond the threshold distance.
+ */
+export function hasTargetMovedTooFar(
+  oldTarget: LatLng,
+  newTarget: LatLng,
+  threshold: number = TARGET_MOVE_THRESHOLD_FT
+): boolean {
+  return distanceFeet(oldTarget, newTarget) > threshold;
+}
+
+/**
+ * Normalize a bearing to 0-360 range.
+ */
+export function normalizeBearing(bearing: number): number {
+  return (bearing + 360) % 360;
+}
+
+/**
+ * Translate a path so that the first point is at the target location.
+ */
+export function translate(points: FlightPath, target: FlightPoint): FlightPath {
+  if (points.length === 0) {
+    return points;
+  }
+
+  const o = turf.clone(points[0]);
+  const ret: FlightPath = [];
+
+  ret.push(turf.clone(points[0]) as FlightPoint);
+  ret[0].geometry.coordinates[0] = target.geometry.coordinates[0];
+  ret[0].geometry.coordinates[1] = target.geometry.coordinates[1];
+
+  for (let i = 1; i < points.length; i++) {
+    const d = turf.distance(o, points[i], { units: 'feet' });
+    const b = turf.bearing(o, points[i]);
+
+    let c = turf.clone(points[i]) as FlightPoint;
+
+    c.geometry.coordinates[0] = target.geometry.coordinates[0];
+    c.geometry.coordinates[1] = target.geometry.coordinates[1];
+    c = turf.transformTranslate(c, d, b, { units: 'feet' }) as FlightPoint;
+    ret.push(c);
+  }
+
+  return ret;
+}
+
+/**
+ * Rotate a path so the heading from point[1] to point[0] matches finalHeading.
+ */
+export function setFinalHeading(points: FlightPath, finalHeading: number): FlightPath {
+  if (points.length < 2) {
+    return points;
+  }
+
+  const currentHeading = turf.bearing(points[1], points[0]);
+  const rotation = finalHeading - currentHeading;
+  const ret = turf.transformRotate(turf.featureCollection(points), rotation, {
+    pivot: points[0],
+    mutate: false
+  });
+
+  return ret.features as FlightPath;
+}
+
+/**
+ * Calculate initial bearing from p1 to p2.
+ */
+export function initialBearing(p1: FlightPoint, p2: FlightPoint): number {
+  return normalizeBearing(turf.bearing(p1, p2));
+}
+
+/**
+ * Mirror a path around the axis defined by the first two points.
+ */
+export function mirror(points: FlightPath): FlightPath {
+  if (points.length < 2) {
+    return points;
+  }
+
+  const mirrored: FlightPath = [points[0], points[1]];
+
+  const centerBearing = normalizeBearing(turf.bearing(points[0], points[1]));
+  const start = points[0];
+
+  for (let i = 2; i < points.length; i++) {
+    const p = turf.clone(points[i]) as FlightPoint;
+    const b = turf.bearing(start, p);
+    const d = turf.distance(start, p, { units: 'feet' });
+
+    const b2 = centerBearing - (b - centerBearing);
+
+    p.geometry.coordinates[0] = start.geometry.coordinates[0];
+    p.geometry.coordinates[1] = start.geometry.coordinates[1];
+    const m = turf.transformTranslate(p, d, b2, { units: 'feet' }) as FlightPoint;
+
+    mirrored.push(m);
+  }
+
+  return mirrored;
+}
+
+/**
+ * Apply wind correction to a path.
+ * Path is processed backward from landing point to exit.
+ * Final point stays fixed at target, earlier points are offset based on wind.
+ */
+export function addWind(
+  points: FlightPath,
+  wind: WindProfile,
+  interpolate?: boolean
+): FlightPath {
+  if (points.length <= 1) {
+    return points;
+  }
+
+  const preppedWinds = prepWind(wind);
+  const start = points[0];
+  const ret: FlightPath = [turf.clone(start) as FlightPoint];
+  let offsetFt = 0;
+  let offsetB = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    // path is backwards in time...
+    const ms = points[i - 1].properties.time - points[i].properties.time;
+
+    const windAtAlt = getWindAt(preppedWinds, points[i - 1].properties.alt, interpolate);
+    const dOffsetFt = (ms / 1000) * windAtAlt.speedKts * ktsToFps;
+    const dOffsetB = windAtAlt.direction;
+
+    let offsetPoint = turf.clone(start) as FlightPoint;
+
+    offsetPoint = turf.transformTranslate(offsetPoint, offsetFt, offsetB, {
+      units: 'feet'
+    }) as FlightPoint;
+    offsetPoint = turf.transformTranslate(offsetPoint, dOffsetFt, dOffsetB, {
+      units: 'feet'
+    }) as FlightPoint;
+
+    offsetFt = turf.distance(start, offsetPoint, { units: 'feet' });
+    offsetB = normalizeBearing(turf.bearing(start, offsetPoint));
+
+    ret.push(
+      turf.transformTranslate(points[i], offsetFt, offsetB, {
+        units: 'feet'
+      }) as FlightPoint
+    );
+  }
+
+  return ret;
+}
 
 /**
  * Reposition manoeuvre and pattern paths to the target location and heading.
@@ -197,19 +357,4 @@ export function straightenLegs(path: FlightPath): FlightPath {
   }
 
   return result;
-}
-
-/**
- * Scale the altitude of all points in a manoeuvre.
- */
-export function setManoeuvreAltitude(points: FlightPath, newAlt: number): void {
-  if (!points.length) {
-    return;
-  }
-
-  const scale = newAlt / points[points.length - 1].properties.alt;
-
-  for (let i = 0; i < points.length; i++) {
-    points[i].properties.alt *= scale;
-  }
 }

@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 
 import { FlightPath, Target } from '../types';
-import { addWind } from '../util/geo';
-import { averageWind, reposition, straightenLegs } from '../util/util';
-import { WindProfile } from '../util/wind';
+import { addWind, averageWind, reposition, straightenLegs } from '../core/geometry';
+import { WindProfile } from '../core/wind';
 
 export interface FlightPaths {
   /** Ideal path (manoeuvre + pattern repositioned to the target), no wind */

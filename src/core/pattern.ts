@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 import { FlightPath, FlightPoint, PatternType } from '../types';
-import { mphToFps } from './geo';
+import { mphToFps } from './units';
 
 // Pattern type constants
 export const PATTERN_NONE: PatternType = 'none';

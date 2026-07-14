@@ -3,10 +3,10 @@ import React, { createContext, useContext, useCallback, ReactNode, useMemo } fro
 
 import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
 import { createSafeCodec, createSimpleCodec } from '../util/storage';
-import { DEFAULT_UNIT_PREFERENCES } from '../util/units';
-import { makePatternByType } from '../util/pattern';
-import { createManoeuvrePath } from '../util/manoeuvre';
-import { mirror } from '../util/geo';
+import { DEFAULT_UNIT_PREFERENCES } from '../core/units';
+import { makePatternByType } from '../core/pattern';
+import { createManoeuvrePath } from '../core/manoeuvre';
+import { mirror } from '../core/geometry';
 import { samples } from '../samples';
 
 // Default values

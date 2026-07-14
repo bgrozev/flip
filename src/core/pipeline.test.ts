@@ -18,9 +18,8 @@
  */
 import { createManoeuvrePath } from './manoeuvre';
 import { makePattern } from './pattern';
-import { addWind } from './geo';
+import { addWind, averageWind, reposition, straightenLegs } from './geometry';
 import { WindProfile, createWindProfile, createWindRow, getWindAt } from './wind';
-import { averageWind, reposition, straightenLegs } from './util';
 import { FlightPath, Target } from '../types';
 
 const TARGET: Target = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };

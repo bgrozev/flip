@@ -1,5 +1,5 @@
 import { LatLng } from '../types';
-import { WindProfile } from '../util/wind';
+import { WindProfile } from '../core/wind';
 import { fetchOpenMeteo } from './openmeteo';
 import {
   ForecastSource,

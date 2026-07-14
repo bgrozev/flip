@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { fetchForecast } from '../forecast/forecast';
 import { LatLng, Settings } from '../types';
-import { WindProfile, createWindProfile } from '../util/wind';
+import { WindProfile, createWindProfile } from '../core/wind';
 
 interface UseFetchForecastOptions {
   /** Current target location */

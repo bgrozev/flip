@@ -1,6 +1,17 @@
 import * as turf from '@turf/turf';
 
-import { createManoeuvrePath } from './manoeuvre';
+import { createManoeuvrePath, setManoeuvreAltitude } from './manoeuvre';
+import { FlightPath, FlightPoint } from '../types';
+
+// Helper to create a turf point with properties
+function createPoint(lng: number, lat: number, props: Partial<FlightPoint['properties']> = {}): FlightPoint {
+  return turf.point([lng, lat], {
+    alt: 0,
+    time: 0,
+    pom: 0,
+    ...props
+  }) as FlightPoint;
+}
 
 describe('createManoeuvrePath', () => {
   it('creates a path with 3 points', () => {
@@ -222,5 +233,41 @@ describe('createManoeuvrePath', () => {
 
     expect(short[0].properties.time).toBe(30000);
     expect(long[0].properties.time).toBe(120000);
+  });
+});
+
+describe('setManoeuvreAltitude', () => {
+  it('scales all altitudes proportionally', () => {
+    const points: FlightPath = [
+      createPoint(0, 0, { alt: 0 }),
+      createPoint(0, 0, { alt: 250 }),
+      createPoint(0, 0, { alt: 500 })
+    ];
+
+    setManoeuvreAltitude(points, 1000);
+
+    expect(points[0].properties.alt).toBe(0);
+    expect(points[1].properties.alt).toBe(500);
+    expect(points[2].properties.alt).toBe(1000);
+  });
+
+  it('handles empty array', () => {
+    const points: FlightPath = [];
+    setManoeuvreAltitude(points, 1000);
+    expect(points).toEqual([]);
+  });
+
+  it('handles scaling down', () => {
+    const points: FlightPath = [
+      createPoint(0, 0, { alt: 0 }),
+      createPoint(0, 0, { alt: 500 }),
+      createPoint(0, 0, { alt: 1000 })
+    ];
+
+    setManoeuvreAltitude(points, 500);
+
+    expect(points[0].properties.alt).toBe(0);
+    expect(points[1].properties.alt).toBe(250);
+    expect(points[2].properties.alt).toBe(500);
   });
 });

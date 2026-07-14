@@ -13,7 +13,7 @@ import React from 'react';
 
 import { useUnits } from '../hooks';
 import { FlightPath, ManoeuvreConfig } from '../types';
-import { mirror } from '../util/geo';
+import { mirror } from '../core/geometry';
 import { samples } from '../samples';
 
 function getOriginalPath(config: ManoeuvreConfig): FlightPath {

@@ -1,6 +1,6 @@
 import { Feature, Point } from 'geojson';
 
-import { UnitPreferences } from '../util/units';
+import { UnitPreferences } from '../core/units';
 
 // Flight point properties
 export interface FlightPointProperties {

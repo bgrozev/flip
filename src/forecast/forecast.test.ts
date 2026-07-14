@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { createWindProfile, createWindRow } from '../util/wind';
+import { createWindProfile, createWindRow } from '../core/wind';
 
 import {
   SOURCE_DZ,

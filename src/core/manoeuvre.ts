@@ -48,3 +48,18 @@ export function createManoeuvrePath({
 
   return [p2, p1, p0];
 }
+
+/**
+ * Scale the altitude of all points in a manoeuvre.
+ */
+export function setManoeuvreAltitude(points: FlightPath, newAlt: number): void {
+  if (!points.length) {
+    return;
+  }
+
+  const scale = newAlt / points[points.length - 1].properties.alt;
+
+  for (let i = 0; i < points.length; i++) {
+    points[i].properties.alt *= scale;
+  }
+}

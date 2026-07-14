@@ -1,11 +1,14 @@
-export const SOURCE_MANUAL = 'manual';
-export const SOURCE_DZ = 'dropzone-specific';
-export const SOURCE_OPEN_METEO = 'open-meteo';
+import {
+  ForecastSource,
+  SOURCE_DZ,
+  SOURCE_MANUAL,
+  SOURCE_OPEN_METEO
+} from '../core/wind';
 
-export type ForecastSource =
-  | typeof SOURCE_MANUAL
-  | typeof SOURCE_DZ
-  | typeof SOURCE_OPEN_METEO;
+// The source identifiers live in core/wind (per-profile metadata);
+// re-exported here for the forecast layer's convenience.
+export { SOURCE_MANUAL, SOURCE_DZ, SOURCE_OPEN_METEO };
+export type { ForecastSource };
 
 export function forecastSourceLabel(source: ForecastSource): string {
   if (source === SOURCE_MANUAL) {

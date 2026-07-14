@@ -51,9 +51,9 @@ import {
   usePresets
 } from './hooks';
 import { Course, LatLng, Target, WindSummaryData } from './types';
-import { hasTargetMovedTooFar } from './util/geo';
+import { hasTargetMovedTooFar } from './core/geometry';
 import { COURSES } from './util/courses';
-import { WindRow, composeWinds, createWindRow } from './util/wind';
+import { WindRow, composeWinds, createWindRow } from './core/wind';
 
 const NAVIGATION: Navigation = [
   {

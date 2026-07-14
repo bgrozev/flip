@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 import { CsvRow, FlightPath, FlightPoint } from '../types';
-import { metersToFeet } from './geo';
+import { metersToFeet } from '../core/units';
 
 // Note we reverse the path so it's more convenient to work with
 // (e.g. rotations and translations are around the first point, not the last)

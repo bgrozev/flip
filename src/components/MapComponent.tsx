@@ -35,7 +35,7 @@ export interface TargetEditTarget {
   onMove: (pos: LatLng) => void;
   onHeadingChange: (heading: number) => void;
 }
-import { pathToLatLngs } from '../util/coords';
+import { pathToLatLngs } from '../core/coords';
 import { FlightPath, ObservedWindStation } from '../types';
 import {
   calculatePathStats,

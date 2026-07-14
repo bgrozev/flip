@@ -27,7 +27,7 @@ import {
   UnitPreferences,
   WIND_SPEED_UNIT_OPTIONS,
   WindSpeedUnit
-} from '../util/units';
+} from '../core/units';
 
 import NumberInput from './NumberInput';
 

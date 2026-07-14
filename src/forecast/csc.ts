@@ -1,4 +1,4 @@
-import { WindRow, createWindRow } from '../util/wind';
+import { WindRow, createWindRow } from '../core/wind';
 
 const url = 'wss://api.skydivecsc.com/graphql';
 const protocol = 'graphql-ws';

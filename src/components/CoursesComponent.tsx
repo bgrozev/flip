@@ -31,7 +31,7 @@ import { useCustomCourses } from '../hooks';
 import { CourseParams, CourseType, LatLng, Target } from '../types';
 import { BUILT_IN_PARAMS, buildCourse, fromCourseRelative, getTargetRelativeToCourse } from '../util/courses';
 import { downloadCourseKmz } from '../util/exportKmz';
-import { AltitudeUnit } from '../util/units';
+import { AltitudeUnit } from '../core/units';
 
 const M_PER_FT = 0.3048;
 

@@ -1,5 +1,5 @@
 import io from 'socket.io-client';
-import { WindRow, createWindRow } from '../util/wind';
+import { WindRow, createWindRow } from '../core/wind';
 
 const mphToKts = 1 / 1.151;
 

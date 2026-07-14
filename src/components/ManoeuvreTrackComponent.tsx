@@ -22,7 +22,7 @@ import React, { useEffect, useState } from 'react';
 
 import { CsvRow, FlightPath } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
-import { mirror as mirrorPath } from '../util/geo';
+import { mirror as mirrorPath } from '../core/geometry';
 import { createSimpleCodec } from '../util/storage';
 
 interface Track {

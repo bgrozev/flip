@@ -26,7 +26,7 @@ import {
   booleanToDirection,
   isLeftTurn,
   PatternLeg
-} from '../util/pattern';
+} from '../core/pattern';
 import { LIMITS } from '../util/validation';
 
 import DirectionSwitch from './DirectionSwitch';
