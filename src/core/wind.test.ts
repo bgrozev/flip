@@ -2,6 +2,7 @@ import { SOURCE_DZ, SOURCE_OPEN_METEO } from '../forecast/sources';
 
 import {
   WindProfile,
+  beaufortColor,
   composeWinds,
   copyProfile,
   copyWindRow,
@@ -303,5 +304,19 @@ describe('getWindAt', () => {
       expect(wind.direction).toBeCloseTo(180, 9);
       expect(wind.speedKts).toBeCloseTo(5, 9);
     });
+  });
+});
+
+describe('beaufortColor', () => {
+  it('maps wind speeds to Beaufort-scale colors', () => {
+    expect(beaufortColor(0)).toBe('#cccccc');
+    expect(beaufortColor(2)).toBe('#aaddff');
+    expect(beaufortColor(5)).toBe('#00cc88');
+    expect(beaufortColor(8)).toBe('#44cc44');
+    expect(beaufortColor(12)).toBe('#ffdd00');
+    expect(beaufortColor(18)).toBe('#ff9900');
+    expect(beaufortColor(25)).toBe('#ff4400');
+    expect(beaufortColor(30)).toBe('#cc0000');
+    expect(beaufortColor(40)).toBe('#880000');
   });
 });

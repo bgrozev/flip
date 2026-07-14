@@ -183,3 +183,32 @@ export function pressureDecimals(unit: PressureUnit): number {
     case 'inhg': return 2;
   }
 }
+
+// Display formatting helpers
+
+/** Format a direction/angle in whole degrees, e.g. "270°". */
+export function formatDegrees(deg: number): string {
+  return `${Math.round(deg)}°`;
+}
+
+/**
+ * Format a distance given in feet for display in the preferred altitude
+ * unit, e.g. "820 ft" or "250 m".
+ */
+export function formatDistanceFeet(feet: number, unit: AltitudeUnit): string {
+  if (unit === 'm') {
+    return `${Math.round(feet / metersToFeet)} m`;
+  }
+
+  return `${Math.round(feet)} ft`;
+}
+
+/**
+ * Format a speed+gust label, e.g. "5g12" or "5". Values are expected to be
+ * already converted to display units.
+ */
+export function speedGustLabel(speed: number, gust?: number): string {
+  const s = speed.toFixed(0);
+
+  return gust != null ? `${s}g${gust.toFixed(0)}` : s;
+}

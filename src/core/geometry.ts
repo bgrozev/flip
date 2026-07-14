@@ -95,6 +95,22 @@ export function initialBearing(p1: FlightPoint, p2: FlightPoint): number {
 }
 
 /**
+ * Project a point along a bearing (degrees) by a distance in meters.
+ */
+export function destinationPoint(from: LatLng, bearingDeg: number, distanceM: number): LatLng {
+  const pt = turf.destination([from.lng, from.lat], distanceM, bearingDeg, { units: 'meters' });
+
+  return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
+}
+
+/**
+ * Initial bearing from one LatLng to another, normalized to 0-360.
+ */
+export function bearingBetween(from: LatLng, to: LatLng): number {
+  return normalizeBearing(turf.bearing([from.lng, from.lat], [to.lng, to.lat]));
+}
+
+/**
  * Mirror a path around the axis defined by the first two points.
  */
 export function mirror(points: FlightPath): FlightPath {

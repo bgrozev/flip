@@ -5,6 +5,8 @@ import {
   TARGET_MOVE_THRESHOLD_FT,
   addWind,
   averageWind,
+  bearingBetween,
+  destinationPoint,
   distanceFeet,
   hasTargetMovedTooFar,
   initialBearing,
@@ -443,5 +445,22 @@ describe('averageWind', () => {
     expect(result).toHaveProperty('direction');
     expect(typeof result.speedKts).toBe('number');
     expect(typeof result.direction).toBe('number');
+  });
+});
+
+describe('destinationPoint / bearingBetween', () => {
+  it('projects a point that is the given distance and bearing away', () => {
+    const from = { lat: 33.5, lng: -112.0 };
+    const dest = destinationPoint(from, 90, 100);
+
+    expect(distanceFeet(from, dest)).toBeCloseTo(100 * metersToFeet, 0);
+    expect(bearingBetween(from, dest)).toBeCloseTo(90, 1);
+  });
+
+  it('normalizes bearings to 0-360', () => {
+    const from = { lat: 33.5, lng: -112.0 };
+    const west = destinationPoint(from, 270, 50);
+
+    expect(bearingBetween(from, west)).toBeCloseTo(270, 1);
   });
 });

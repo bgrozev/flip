@@ -27,6 +27,23 @@ export interface WindProfile {
   validTime?: Date;
 }
 
+/**
+ * Beaufort-scale fill color for a wind speed in knots.
+ * Used for wind arrows on the map (and, later, wind table rows).
+ */
+export function beaufortColor(kts: number): string {
+  if (kts < 1) return '#cccccc';
+  if (kts < 4) return '#aaddff';
+  if (kts < 7) return '#00cc88';
+  if (kts < 11) return '#44cc44';
+  if (kts < 17) return '#ffdd00';
+  if (kts < 22) return '#ff9900';
+  if (kts < 28) return '#ff4400';
+  if (kts < 34) return '#cc0000';
+
+  return '#880000';
+}
+
 /** Create a wind row, coercing string inputs (e.g. from forms) to numbers. */
 export function createWindRow(altFt: number, direction: number, speedKts: number): WindRow {
   return {

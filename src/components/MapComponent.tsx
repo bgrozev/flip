@@ -6,7 +6,6 @@ import {
   PolylineF,
   useJsApiLoader
 } from '@react-google-maps/api';
-import * as turf from '@turf/turf';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
 import {
@@ -36,6 +35,9 @@ export interface TargetEditTarget {
   onHeadingChange: (heading: number) => void;
 }
 import { pathToLatLngs } from '../core/coords';
+import { bearingBetween, destinationPoint, distanceFeet } from '../core/geometry';
+import { formatDegrees, formatDistanceFeet, speedGustLabel } from '../core/units';
+import { beaufortColor } from '../core/wind';
 import { FlightPath, ObservedWindStation } from '../types';
 import {
   calculatePathStats,
@@ -102,29 +104,6 @@ const SECTION_STYLE: React.CSSProperties = {
   paddingTop: '6px'
 };
 
-function formatDegrees(deg: number): string {
-  return `${Math.round(deg)}°`;
-}
-
-/** Beaufort-scale fill color for a wind speed in knots. */
-function beaufortColor(kts: number): string {
-  if (kts < 1)  return '#cccccc';
-  if (kts < 4)  return '#aaddff';
-  if (kts < 7)  return '#00cc88';
-  if (kts < 11) return '#44cc44';
-  if (kts < 17) return '#ffdd00';
-  if (kts < 22) return '#ff9900';
-  if (kts < 28) return '#ff4400';
-  if (kts < 34) return '#cc0000';
-  return '#880000';
-}
-
-/** Format a speed+gust label, e.g. "5g12" or "5". Values already converted to display units. */
-function speedGustLabel(speed: number, gust?: number): string {
-  const s = speed.toFixed(0);
-  return gust != null ? `${s}g${gust.toFixed(0)}` : s;
-}
-
 function DirectionArrow({ degrees }: { degrees: number }) {
   return (
     <span
@@ -139,21 +118,9 @@ function DirectionArrow({ degrees }: { degrees: number }) {
   );
 }
 
+/** Format a distance in feet using the preferred altitude unit ('m' label → meters). */
 function formatDistance(feet: number, altitudeLabel: string): string {
-  if (altitudeLabel === 'm') {
-    return `${Math.round(feet / 3.28084)} m`;
-  }
-  return `${Math.round(feet)} ft`;
-}
-
-function haversineDistanceFt(a: LatLng, b: LatLng): number {
-  const R = 20902231; // Earth radius in feet
-  const dLat = (b.lat - a.lat) * Math.PI / 180;
-  const dLng = (b.lng - a.lng) * Math.PI / 180;
-  const lat1 = a.lat * Math.PI / 180;
-  const lat2 = b.lat * Math.PI / 180;
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(x));
+  return formatDistanceFeet(feet, altitudeLabel === 'm' ? 'm' : 'ft');
 }
 
 const RULER_BUTTON_STYLE: React.CSSProperties = {
@@ -332,11 +299,6 @@ const HIGHLIGHT_OPTIONS: google.maps.CircleOptions = {
 const HOVER_RADIUS = 15;
 const HOVER_RADIUS_POM_ONLY = 30;
 
-function destPoint(lat: number, lng: number, heading: number, distM: number): google.maps.LatLngLiteral {
-  const pt = turf.destination([lng, lat], distM, heading, { units: 'meters' });
-  return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
-}
-
 function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, options, showTooltip, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel }: InteractivePointProps) {
   // POMs always have hover/tooltip, non-POMs respect the showTooltip setting
   const isPom = Boolean(point.pom);
@@ -369,13 +331,13 @@ function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, opt
       {/* Crab angle heading arrow (40m shaft + arrowhead barbs) */}
       {renderCrabArrow && (() => {
         const h = legStats!.heading;
-        const tip = destPoint(point.lat, point.lng, h, 40);
+        const tip = destinationPoint(point, h, 40);
         const lineOpts: google.maps.PolylineOptions = { strokeColor: '#ffffff', strokeOpacity: 0.9, strokeWeight: 2, zIndex: 40, clickable: false };
         return (
           <>
             <PolylineF path={[{ lat: point.lat, lng: point.lng }, tip]} options={lineOpts} />
-            <PolylineF path={[tip, destPoint(tip.lat, tip.lng, (h + 150 + 360) % 360, 10)]} options={lineOpts} />
-            <PolylineF path={[tip, destPoint(tip.lat, tip.lng, (h - 150 + 360) % 360, 10)]} options={lineOpts} />
+            <PolylineF path={[tip, destinationPoint(tip, (h + 150 + 360) % 360, 10)]} options={lineOpts} />
+            <PolylineF path={[tip, destinationPoint(tip, (h - 150 + 360) % 360, 10)]} options={lineOpts} />
           </>
         );
       })()}
@@ -595,7 +557,7 @@ function MapComponent({
   const measureCumulatives = useMemo(() => {
     const result: number[] = [0];
     for (let i = 1; i < measurePoints.length; i++) {
-      result.push(result[i - 1] + haversineDistanceFt(measurePoints[i - 1], measurePoints[i]));
+      result.push(result[i - 1] + distanceFeet(measurePoints[i - 1], measurePoints[i]));
     }
     return result;
   }, [measurePoints]);
@@ -1048,13 +1010,7 @@ function MapComponent({
 
         {/* Target edit handles — position drag + heading direction handle */}
         {targetEditTarget && (() => {
-          const headingHandlePos = (() => {
-            const pt = turf.destination(
-              [targetEditTarget.target.lng, targetEditTarget.target.lat],
-              15, targetEditTarget.heading, { units: 'meters' }
-            );
-            return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
-          })();
+          const headingHandlePos = destinationPoint(targetEditTarget.target, targetEditTarget.heading, 15);
           const headingLineEnd = liveTargetHeadingPos ?? headingHandlePos;
           /* eslint-disable @typescript-eslint/no-explicit-any */
           const circleIcon = (color: string, scale: number) => ({
@@ -1094,11 +1050,9 @@ function MapComponent({
                 onDragEnd={e => {
                   setLiveTargetHeadingPos(null);
                   if (e.latLng) {
-                    const bearing = turf.bearing(
-                      [targetEditTarget.target.lng, targetEditTarget.target.lat],
-                      [e.latLng.lng(), e.latLng.lat()]
+                    targetEditTarget.onHeadingChange(
+                      bearingBetween(targetEditTarget.target, { lat: e.latLng.lat(), lng: e.latLng.lng() })
                     );
-                    targetEditTarget.onHeadingChange((bearing + 360) % 360);
                   }
                 }}
               />
@@ -1108,13 +1062,7 @@ function MapComponent({
 
         {/* Course edit handles — center drag + rotation handle */}
         {courseEditTarget && (() => {
-          const rotationHandlePos = (() => {
-            const pt = turf.destination(
-              [courseEditTarget.center.lng, courseEditTarget.center.lat],
-              15, courseEditTarget.direction, { units: 'meters' }
-            );
-            return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
-          })();
+          const rotationHandlePos = destinationPoint(courseEditTarget.center, courseEditTarget.direction, 15);
           const lineEnd = liveHandlePos ?? rotationHandlePos;
           /* eslint-disable @typescript-eslint/no-explicit-any */
           const circleIcon = (color: string, scale: number) => ({
@@ -1157,11 +1105,9 @@ function MapComponent({
                 onDragEnd={e => {
                   setLiveHandlePos(null);
                   if (e.latLng) {
-                    const bearing = turf.bearing(
-                      [courseEditTarget.center.lng, courseEditTarget.center.lat],
-                      [e.latLng.lng(), e.latLng.lat()]
+                    courseEditTarget.onRotate(
+                      bearingBetween(courseEditTarget.center, { lat: e.latLng.lat(), lng: e.latLng.lng() })
                     );
-                    courseEditTarget.onRotate((bearing + 360) % 360);
                   }
                 }}
               />
