@@ -1,6 +1,14 @@
 import * as turf from '@turf/turf';
 import { FlightPath, FlightPoint, ManoeuvreParams } from '../types';
 
+/**
+ * Length (in feet) of the final segment used when offsetXFt is 0. The final
+ * approach direction is derived downstream from the bearing between the
+ * last two points (setFinalHeading), so they must not coincide; 0.01 ft is
+ * visually indistinguishable from a zero offset.
+ */
+const MIN_FINAL_SEGMENT_FT = 0.01;
+
 export function createManoeuvrePath({
   offsetXFt,
   offsetYFt,
@@ -8,7 +16,6 @@ export function createManoeuvrePath({
   duration,
   left
 }: ManoeuvreParams): FlightPath {
-  // TODO handle the case of offsets being 0
   const p0 = turf.point([0.1, -0.1], {
     time: 0,
     alt: altitudeFt,
@@ -21,8 +28,17 @@ export function createManoeuvrePath({
   p1.properties.alt = altitudeFt / 2;
   p1.properties.pom = 0;
 
-  // We can't set the final heading if the last 2 points are on top of each other, offset at least 3 ft
-  const p2 = turf.transformTranslate(p1, Math.max(offsetXFt, 3), left ? 90 : 270, {
+  // offsetXFt runs along the final-approach axis. Negative values offset to
+  // the opposite side; 0 keeps p2 (visually) on top of p1, using a tiny
+  // epsilon so the final heading stays defined.
+  const finalSegmentFt = Math.max(Math.abs(offsetXFt), MIN_FINAL_SEGMENT_FT);
+  let finalBearing = left ? 90 : 270;
+
+  if (offsetXFt < 0) {
+    finalBearing = (finalBearing + 180) % 360;
+  }
+
+  const p2 = turf.transformTranslate(p1, finalSegmentFt, finalBearing, {
     units: 'feet'
   }) as FlightPoint;
 

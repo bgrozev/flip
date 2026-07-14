@@ -150,19 +150,57 @@ describe('createManoeuvrePath', () => {
     expect(largeDist).toBeGreaterThan(smallDist);
   });
 
-  it('enforces minimum 3ft offsetX to allow heading calculation', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 0,
+  describe('offsetXFt sign handling', () => {
+    const base = {
       offsetYFt: 1000,
       altitudeFt: 800,
       duration: 60,
       left: true
+    };
+
+    it('uses the exact distance for positive offsets', () => {
+      const result = createManoeuvrePath({ ...base, offsetXFt: 300 });
+      const dist = turf.distance(result[1], result[0], { units: 'feet' });
+      const bearing = turf.bearing(result[1], result[0]);
+
+      expect(dist).toBeCloseTo(300, 3);
+      expect(bearing).toBeCloseTo(90, 3);
     });
 
-    // Even with offsetX=0, the path should have distinct last two points
-    const dist = turf.distance(result[1], result[0], { units: 'feet' });
+    it('produces (visually) no offset for offsetX=0 while keeping the heading defined', () => {
+      const result = createManoeuvrePath({ ...base, offsetXFt: 0 });
 
-    expect(dist).toBeGreaterThanOrEqual(3);
+      // Last two points must be distinct (setFinalHeading derives the final
+      // approach direction from them), but within a hair of coinciding.
+      const dist = turf.distance(result[1], result[0], { units: 'feet' });
+
+      expect(dist).toBeGreaterThan(0);
+      expect(dist).toBeLessThan(0.02);
+      expect(turf.bearing(result[1], result[0])).toBeCloseTo(90, 1);
+      expect(result.every(p => p.geometry.coordinates.every(Number.isFinite))).toBe(true);
+    });
+
+    it('offsets to the opposite side for negative offsets', () => {
+      const positive = createManoeuvrePath({ ...base, offsetXFt: 300 });
+      const negative = createManoeuvrePath({ ...base, offsetXFt: -300 });
+
+      const dist = turf.distance(negative[1], negative[0], { units: 'feet' });
+      const bearing = (turf.bearing(negative[1], negative[0]) + 360) % 360;
+
+      expect(dist).toBeCloseTo(300, 3);
+      expect(bearing).toBeCloseTo(270, 3);
+
+      // Same distance as the positive offset, opposite direction
+      const positiveBearing = (turf.bearing(positive[1], positive[0]) + 360) % 360;
+      expect(Math.abs(bearing - positiveBearing)).toBeCloseTo(180, 3);
+    });
+
+    it('respects left=false for negative offsets', () => {
+      const result = createManoeuvrePath({ ...base, offsetXFt: -300, left: false });
+      const bearing = (turf.bearing(result[1], result[0]) + 360) % 360;
+
+      expect(bearing).toBeCloseTo(90, 3);
+    });
   });
 
   it('handles different durations', () => {
