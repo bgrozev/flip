@@ -18,6 +18,7 @@ From the owner's goals:
 | Soundings, station discovery, model choice | Pluggable **wind source** layer with per-row metadata |
 | Map provider abstraction | Adapter interface; declarative map layers |
 | Wind cones, long spot, expected GR | Shared **reachability/glide-integration** primitive in core |
+| Coaches/swoopers juggle many setups | Presets = saved **Plans**; fast switching; later cross-account sharing. Share-links are ⭐ owner-prioritized |
 | localStorage may break, but gracefully | Versioned schemas + validating loaders with fallback |
 
 ## Target structure
@@ -134,7 +135,7 @@ A mode is data:
 
 ```ts
 interface Mode {
-  id: 'pattern' | 'swoop' | 'flocking' | 'coach' | 'demo' | 'explore';
+  id: 'pattern' | 'swoop' | 'flocking' | 'demo' | 'explore';
   nav: NavItem[];              // which panels exist
   mapLayers: LayerId[];        // which layers render
   defaults: Partial<Settings>; // e.g. student pattern defaults
@@ -143,9 +144,16 @@ interface Mode {
 ```
 
 First run: "What are you planning?" picker. Mode switchable any time from
-the toolbar; remembered per device. Coaches can share a preset+mode link to
-students. Manoeuvre/Courses only exist in swoop mode; jumprun config only
-in flocking/coach; etc. No engine changes per mode — only exposure.
+the toolbar; remembered per device. Manoeuvre/Courses only exist in swoop
+mode; jumprun config only in flocking; etc. No engine changes per mode —
+only exposure.
+
+**Coaching is not a mode** (owner decision): a coach is a user who rapidly
+switches between many setups — students, swoopers, flocking groups — and a
+preset/Plan can carry its mode with it. What coaching needs is excellent
+preset switching, and later (tier 1) preset/plan sharing between accounts.
+Swoopers get the same benefit (a preset per canopy). This makes share-links
+(§1) and the Plan document the coaching feature.
 
 ### 4. Deployment tiers
 
@@ -189,8 +197,10 @@ This also forcibly dissolves the 1200-line `MapComponent`.
 
 ## Migration plan
 
-Principle: **incremental, always shippable; each phase independently
+Principles: **incremental, always shippable; each phase independently
 releasable.** No big-bang rewrite — current app keeps working throughout.
+**Tests lead refactors:** before extracting/rewriting a module, add tests
+pinning its current behavior; grow coverage opportunistically everywhere.
 
 **Phase 0 — Tooling (no behavior change)**
 CRA → Vite + Vitest; TS 5.x; fix lint script (`.ts/.tsx`), re-enable lint in
@@ -269,3 +279,9 @@ elevation cache) ride along with their phase.
 - **Backend choice** deferred deliberately; client interface is the contract.
 - **Sync conflicts:** LWW per document is fine for single-user multi-device;
   coach/team sharing may need more later.
+- **Share-link permanence (⭐ prioritized feature, design session pending):**
+  URL-embedded Plans are permanent for free but size-limited (fine for
+  target/pattern/manoeuvre-params/custom-course params; not for tracks).
+  Hosted snapshots give short links but demand storage that "lives
+  forever" — a commitment to make deliberately. Likely hybrid. See
+  BACKLOG "Shareable setup links" for the open questions.

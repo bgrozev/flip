@@ -8,11 +8,13 @@ Then: new feature ideas beyond the owner's backlog.
 ### Structure & navigation
 
 1. **Modes as the front door.** First-run: "What are you planning today?"
-   — Standard pattern / Swoop / Flock / Coaching / Demo. Persistent, one-tap
-   switch in toolbar. Removes the biggest current problem: every user sees
-   every tab.
-2. **Real URLs.** Back button, deep links, shareable state. A coach texts a
-   student a link that opens the exact plan.
+   — Standard pattern / Swoop / Flock / Demo. Persistent, one-tap switch in
+   toolbar. Removes the biggest current problem: every user sees every tab.
+   (Coaching is *not* a mode — it's fast preset switching; see #19.)
+2. **Real URLs + share-links.** ⭐ Owner-prioritized. Back button, deep
+   links, shareable state. A coach texts a student a link that opens the
+   exact setup (incl. mode, possibly course). Needs a design session —
+   open questions tracked in BACKLOG ("Shareable setup links").
 3. **Mobile: bottom sheet over page-swap.** Today panels replace the map
    entirely on mobile. Better: map always visible, panels slide up as
    half-height sheets (peek/expand/dismiss). Editing target while seeing
@@ -23,12 +25,12 @@ Then: new feature ideas beyond the owner's backlog.
 
 ### Onboarding & first use
 
-5. **Sane empty state.** New user today sees a default pattern in Florida.
-   Better: geolocate (with permission) → nearest DZ suggestion → student
-   defaults per chosen mode.
-6. **Guided tour** (dismissable): what the two lines mean, what POMs are,
-   where wind comes from. The dashed-vs-solid distinction is the app's core
-   concept and is currently unexplained.
+5. **Sane empty state.** ⭐ Owner-endorsed. New user today sees a default
+   pattern in Florida. Better: geolocate (with permission) → nearest DZ
+   suggestion → student defaults per chosen mode.
+6. **Guided tour** (dismissable). ⭐ Owner-endorsed. What the two lines
+   mean, what POMs are, where wind comes from. The dashed-vs-solid
+   distinction is the app's core concept and is currently unexplained.
 
 ### Map
 
@@ -57,6 +59,10 @@ Then: new feature ideas beyond the owner's backlog.
 
 ### Wind panel
 
+14b. **Read-only by default.** Owner: the tab is read-only in the vast
+    majority of uses; "unlock" is rare. Redesign as a *display* surface
+    (colors, badges, summary, scrubber) with editing an explicit secondary
+    mode — not a table of input fields with a lock.
 15. **Source badges per row** (forecast model / observed station / manual
     edit) with color; attribution line (NWS etc.).
 16. **Time scrubber**: horizontal hour slider using prefetched hours;
@@ -70,6 +76,10 @@ Then: new feature ideas beyond the owner's backlog.
 19. **Named plans with dirty state** ("Sunset load — edited"), explicit
     "reset to saved", "save as copy". Replaces the confusing implicit
     active-preset behavior; becomes trivial once presets are Plan documents.
+    Presets are the coaching story (owner): a coach flips between students,
+    swoopers, flocking groups — and a swooper flips between canopies. So:
+    fast switcher (toolbar dropdown with search/recents), preset carries
+    its mode, and later (tier 1) sharing presets between accounts.
 
 ## New feature ideas (beyond owner's backlog)
 
@@ -95,9 +105,9 @@ Then: new feature ideas beyond the owner's backlog.
 - **Group separation planner** — given jumprun, airspeed, winds at exit:
   seconds between groups for X ft separation. Natural neighbor of the
   flocking math; useful to every organizer, not just flockers.
-- **Class dashboard (coach mode, tier 1)** — coach sees students' saved
-  plans; pushes a plan to the group; compares the group's tracks after the
-  load.
+- **Class dashboard (coaching use-case, tier 1)** — coach sees students'
+  saved plans; pushes a plan/preset to the group; compares the group's
+  tracks after the load. Builds on preset sharing, not a separate mode.
 
 ### Analysis / logbook
 
@@ -111,8 +121,9 @@ Then: new feature ideas beyond the owner's backlog.
 
 ### Data
 
-- **Winds ensemble view** — fetch 2–3 models (GFS/ECMWF/ICON via OpenMeteo)
-  and show disagreement; disagreement = low confidence, plan conservatively.
+- **Winds ensemble view** — ⭐ owner-endorsed ("had this one but forgot to
+  add it"). Fetch 2–3 models (GFS/ECMWF/ICON via OpenMeteo) and show
+  disagreement; disagreement = low confidence, plan conservatively.
 - **Balloon/PIBAL entry mode** — quick manual entry flow for DZs that do a
   wind drift indicator or balloon observation (common at demo jumps).
 

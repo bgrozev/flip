@@ -22,6 +22,10 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   effectively break the app. Add validation/clamps on all numeric inputs.
   (Related: `limitWind` setting exists for wind table only.)
 - ☐ **Wind table number field too narrow** — custom values don't fit.
+- ☐ **Winds tab: read-only first** — in the vast majority of uses the tab is
+  read-only; the "unlock" button is used very rarely. Redesign around
+  viewing (colors, source badges, summary); editing becomes an explicit,
+  secondary mode.
 - ☐ **Wind direction interpolation wrap bug** (found during code read) —
   `Winds.getWindAt()` interpolates 350°→10° through 180°. `util/wind.ts:97`.
 
@@ -81,7 +85,7 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   GR/descent rate; canopy presets database. (Also serves student mode.)
 - ☐ **Map rotation** — allow rotating map (north-up off); wind arrows and
   overlays need correction.
-- ☐ **Long spot calculator** (coach mode) — how far out can students exit
+- ☐ **Long spot calculator** (coaching use-case) — how far out can students exit
   and still make it back: glide from exit alt vs winds. Related to wind cones.
 - ☐ **Wind cones** — area reachable from current altitude flying in any
   direction given winds. Big safety/teaching value. Related: long spot.
@@ -92,14 +96,47 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 ## Large features (architecture-relevant)
 
 - ☐ **Modes** (from NOTES.md): Swooper / Pattern (student) / Flocking /
-  Coach / Demo — gate tabs, map layers, defaults per mode.
+  Demo / Explore — gate tabs, map layers, defaults per mode.
+  **Not a mode: coaching.** Owner (2026-07-13): a coach is just a user who
+  switches between many setups (students, swoopers, flocking groups) —
+  that's presets/plans, not a separate UI profile. Requirements instead:
+  fast preset switching, and (future, tier 1) sharing presets between
+  accounts. Note swoopers also keep multiple presets (per canopy).
+- ☐ **Shareable setup links** — ⭐ owner-prioritized. A URL that opens an
+  exact setup (target, pattern, manoeuvre, winds?, mode, possibly course).
+  Needs a design session before building. Open questions ✎:
+  - Encoding: whole Plan compressed into URL fragment (no server, links
+    work forever, but long URLs and size limits — tracks won't fit) vs
+    hosted snapshot (short links, anything fits, but requires storage
+    with a permanence promise) vs hybrid (embed small stuff, host blobs).
+  - Custom courses are small parameter sets → embeddable; built-in courses
+    referenced by id. What else must be referencable "forever"?
+  - What does the receiver get: read-only view, or "load into my app"
+    (or both: preview → apply)?
+  - Winds: share the snapshot, or refetch live at open time? (Probably
+    both, labeled.)
 - ☐ **Phone app = PWA** — installable, offline-capable (cache app shell,
   tiles?, last forecast).
-- ☐ **Flocking mode** — beyond a port of flocking-wind-calculator:
+- ☐ **Flocking mode** — beyond a port of flocking-wind-calculator.
+  (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)
   - parity checklist vs FWC: display drift, display average wind,
     "rotate into wind" action
+  - **standard vs reverse build** — standard keeps aircraft direction;
+    reverse does a 180 after deployment. Spot calculation for both.
+  - **jump profiles** — today: fly straight. Add "runback" (leader resets
+    behind the group ≈ full 360; estimate altitude/ground it consumes) and
+    more complex patterns (turns at specified altitudes).
+  - **quick handoff to landing planning** — flocking landings are fairly
+    standardized; one tap from flocking plan → landing pattern with
+    specific params.
+  - **"don't cross" line / altitude-colored reachability zones** — green:
+    comfortably make pattern entry from here; yellow: only by optimizing
+    glide; red: can't. Same `core/reach/` primitive as wind cones.
+- ☐ **XRW planning** — similar to flocking (wingsuit + canopy flying
+  together); differences: may want a **90° jumprun** option, different
+  speed/glide envelope. Design alongside flocking mode.
 - ☐ **Logbook** — save complete plans (winds, time, settings, equipment),
   attach actual jump tracks later, compare plan vs jump. Foundation for
   scoring + analysis features.
@@ -140,6 +177,17 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   a precise point. ✎ clarify concept.
 
 ---
+
+## Process / engineering health
+
+- ☐ **Improve documentation** — CLAUDE.md is stale (rewrite in Phase 0);
+  add user-facing docs/help as features land.
+- ☐ **Update dependencies** — general refresh; largest blocker (CRA → TS,
+  jest, eslint) falls out of Phase 0. Then keep current routinely.
+- ☐ **Grow test coverage continuously** — add tests whenever possible,
+  especially before refactoring a module (migration phases 1–4 must land
+  with tests that pin existing behavior first). Reduces risk of breaking
+  working code.
 
 ## Cross-cutting observations
 
