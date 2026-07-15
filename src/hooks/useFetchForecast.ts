@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { fetchForecast } from '../forecast/forecast';
+import { fetchForecast } from '../data/wind';
 import { LatLng, Settings } from '../types';
 import { WindProfile, createWindProfile } from '../core/wind';
 
@@ -59,7 +59,7 @@ export function useFetchForecast({
 
     setFetching(true);
 
-    fetchForecast(target, hourOffset, controller.signal)
+    fetchForecast(target, { hourOffset, signal: controller.signal })
       .then(fetchedWinds => {
         // Determine altitude limit
         let limit = settings.limitWind;

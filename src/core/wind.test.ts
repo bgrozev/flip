@@ -1,6 +1,6 @@
-import { SOURCE_DZ, SOURCE_OPEN_METEO } from '../forecast/sources';
-
 import {
+  SOURCE_DZ,
+  SOURCE_OPEN_METEO,
   WindProfile,
   beaufortColor,
   composeWinds,

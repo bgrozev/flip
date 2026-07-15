@@ -1,7 +1,8 @@
 import io from 'socket.io-client';
-import * as turf from '@turf/turf';
 
-import { ObservedWindStation } from '../types';
+import { ObservedWindStation } from '../../../types';
+import { ObservedStationSource } from '../source';
+import { STATION_RANGE_FT, distanceFt } from './common';
 
 const mphToKts = 1 / 1.151;
 
@@ -76,18 +77,32 @@ function fetchSpacelandShared(): Promise<WeatherAnnouncement> {
   return spacelandFetchPromise;
 }
 
+/**
+ * Spaceland runs two site-specific feeds (Houston, San Marcos): returns the
+ * ones the location is within range of, otherwise an empty list.
+ */
+export const spacelandSource: ObservedStationSource = {
+  id: 'spaceland',
+  label: 'Skydive Spaceland',
+  kind: 'observed-station',
+  capabilities: {},
+  fetch: async location => {
+    const codes = (Object.keys(SPACELAND_STATIONS) as Array<'HOU' | 'SSM'>).filter(code => {
+      const s = SPACELAND_STATIONS[code];
+
+      return distanceFt(location.lat, location.lng, s.lat, s.lng) <= STATION_RANGE_FT;
+    });
+
+    return Promise.all(codes.map(code => fetchSpacelandStation(code, location.lat, location.lng)));
+  }
+};
+
 export async function fetchSpacelandStation(
   locationCode: 'HOU' | 'SSM',
   targetLat: number,
   targetLng: number
 ): Promise<ObservedWindStation> {
   const station = SPACELAND_STATIONS[locationCode];
-  const distanceFt = turf.distance(
-    [targetLng, targetLat],
-    [station.lng, station.lat],
-    { units: 'feet' }
-  );
-
   const data = await fetchSpacelandShared();
   const locationData = data[locationCode];
 
@@ -102,7 +117,7 @@ export async function fetchSpacelandStation(
     stationUrl: station.url,
     lat: station.lat,
     lng: station.lng,
-    distanceFt,
+    distanceFt: distanceFt(targetLat, targetLng, station.lat, station.lng),
     observedAt: new Date(),
     wind: {
       direction: locationData.windDirection,

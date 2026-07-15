@@ -1,8 +1,23 @@
 import * as turf from '@turf/turf';
 
-import { ObservedWindStation } from '../types';
+import { ObservedWindStation } from '../../../types';
+import { ObservedStationSource } from '../source';
+import { STATION_RANGE_FT } from './common';
 
 const NWS_BASE = 'https://api.weather.gov';
+
+/**
+ * NWS observations with automatic nearby-station discovery: any location in
+ * the US resolves to its gridpoint's observation stations — no hardcoded
+ * station lists needed.
+ */
+export const nwsSource: ObservedStationSource = {
+  id: 'nws',
+  label: 'National Weather Service',
+  kind: 'observed-station',
+  capabilities: { discovery: true },
+  fetch: location => fetchNwsStations(location.lat, location.lng, STATION_RANGE_FT)
+};
 
 const CLOUD_COVER_ORDER = ['SKC', 'CLR', 'FEW', 'SCT', 'BKN', 'OVC', 'VV'];
 

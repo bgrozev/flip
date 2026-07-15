@@ -4,16 +4,45 @@ import { IWindRow, LatLng } from '../types';
 export const SOURCE_MANUAL = 'manual';
 export const SOURCE_DZ = 'dropzone-specific';
 export const SOURCE_OPEN_METEO = 'open-meteo';
+export const SOURCE_SOUNDING = 'sounding';
 
 export type ForecastSource =
   | typeof SOURCE_MANUAL
   | typeof SOURCE_DZ
-  | typeof SOURCE_OPEN_METEO;
+  | typeof SOURCE_OPEN_METEO
+  | typeof SOURCE_SOUNDING;
 
 const DEG_TO_RAD = Math.PI / 180;
 
-/** A single wind measurement: altitude, direction (from, degrees), speed. */
-export type WindRow = IWindRow;
+/**
+ * A single wind measurement: altitude, direction (from, degrees), speed,
+ * plus optional per-row provenance (which source produced it and when it
+ * is valid) so the UI can badge observed vs forecast vs manual rows.
+ */
+export interface WindRow extends IWindRow {
+  /** Air temperature at this altitude, when the source provides it. */
+  tempC?: number;
+  /** Row provenance, e.g. 'open-meteo', 'sounding', a station id, 'manual'. */
+  source?: string;
+  /** When this row is valid (forecast hour or observation/launch time). */
+  validTime?: Date;
+}
+
+/** Profile-level metadata about where/how the winds were obtained. */
+export interface WindProfileMeta {
+  /** Forecast model id (e.g. 'best_match', 'gfs_seamless'). */
+  model?: string;
+  fetchedAt?: Date;
+  /** Location the data was fetched for. */
+  location?: LatLng;
+  /** Ground elevation used to convert MSL heights to AGL. */
+  elevationFt?: number;
+  /** Sounding station id (e.g. 'KTBW'). */
+  station?: string;
+  stationName?: string;
+  /** Distance from the fetch location to the station. */
+  stationDistanceFt?: number;
+}
 
 /**
  * A wind profile: rows ordered by altitude plus source metadata.
@@ -25,6 +54,22 @@ export interface WindProfile {
   groundSource: ForecastSource;
   aloftSource: ForecastSource;
   validTime?: Date;
+  meta?: WindProfileMeta;
+}
+
+/** Human-readable label for a profile-level wind source. */
+export function forecastSourceLabel(source: ForecastSource): string {
+  if (source === SOURCE_MANUAL) {
+    return 'set manually';
+  } else if (source === SOURCE_DZ) {
+    return 'observed conditions';
+  } else if (source === SOURCE_OPEN_METEO) {
+    return 'OpenMeteo';
+  } else if (source === SOURCE_SOUNDING) {
+    return 'sounding';
+  }
+
+  return 'invalid';
 }
 
 /**
@@ -45,8 +90,14 @@ export function beaufortColor(kts: number): string {
 }
 
 /** Create a wind row, coercing string inputs (e.g. from forms) to numbers. */
-export function createWindRow(altFt: number, direction: number, speedKts: number): WindRow {
+export function createWindRow(
+  altFt: number,
+  direction: number,
+  speedKts: number,
+  extra?: Pick<WindRow, 'tempC' | 'source' | 'validTime'>
+): WindRow {
   return {
+    ...extra,
     altFt: Number(altFt),
     direction: Number(direction),
     speedKts: Number(speedKts)

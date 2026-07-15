@@ -50,7 +50,7 @@ import {
   WindsComponent
 } from './components';
 import { CourseEditTarget, TargetEditTarget } from './map/layers';
-import { SOURCE_DZ, SOURCE_MANUAL } from './forecast/forecast';
+import { composeWithObservedGround } from './data/wind';
 import {
   AppStateProvider,
   DEFAULT_TARGET,
@@ -65,7 +65,7 @@ import {
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './core/geometry';
 import { COURSES } from './util/courses';
-import { WindRow, composeWinds, createWindRow } from './core/wind';
+import { SOURCE_DZ, SOURCE_MANUAL, WindRow } from './core/wind';
 
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
@@ -204,10 +204,7 @@ function DashboardContent() {
     if (!modeSettings.useDzGroundWind || !nearestStation || winds.aloftSource === SOURCE_MANUAL) {
       return winds;
     }
-    return composeWinds(
-      winds,
-      createWindRow(0, nearestStation.wind.direction, nearestStation.wind.speedKts)
-    );
+    return composeWithObservedGround(winds, nearestStation);
   }, [winds, nearestStation, modeSettings.useDzGroundWind]);
 
   // Wrap setTarget to invalidate winds when target moves too far

@@ -1,6 +1,6 @@
-import * as turf from '@turf/turf';
-
-import { ObservedWindStation } from '../types';
+import { ObservedWindStation } from '../../../types';
+import { ObservedStationSource } from '../source';
+import { STATION_RANGE_FT, distanceFt } from './common';
 
 // CSC location
 export const CSC_LAT = 41.89338;
@@ -54,13 +54,25 @@ function fetchCscRaw(): Promise<CscWindData> {
   });
 }
 
-export async function fetchCscStation(targetLat: number, targetLng: number): Promise<ObservedWindStation> {
-  const distanceFt = turf.distance(
-    [targetLng, targetLat],
-    [CSC_LNG, CSC_LAT],
-    { units: 'feet' }
-  );
+/**
+ * CSC is a single site-specific feed: returns the station when the location
+ * is within range, otherwise an empty list.
+ */
+export const cscSource: ObservedStationSource = {
+  id: 'csc',
+  label: 'Chicagoland Skydiving Center',
+  kind: 'observed-station',
+  capabilities: {},
+  fetch: async location => {
+    if (distanceFt(location.lat, location.lng, CSC_LAT, CSC_LNG) > STATION_RANGE_FT) {
+      return [];
+    }
 
+    return [await fetchCscStation(location.lat, location.lng)];
+  }
+};
+
+export async function fetchCscStation(targetLat: number, targetLng: number): Promise<ObservedWindStation> {
   const data = await fetchCscRaw();
 
   return {
@@ -70,7 +82,7 @@ export async function fetchCscStation(targetLat: number, targetLng: number): Pro
     stationUrl: 'https://wx.skydivecsc.com/',
     lat: CSC_LAT,
     lng: CSC_LNG,
-    distanceFt,
+    distanceFt: distanceFt(targetLat, targetLng, CSC_LAT, CSC_LNG),
     observedAt: new Date(),
     wind: {
       direction: data.direction,

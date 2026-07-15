@@ -1,7 +1,12 @@
-import { LatLng } from '../types';
-import { metersToFeet } from '../core/units';
-import { WindProfile, WindRow, createWindRow } from '../core/wind';
-import { SOURCE_OPEN_METEO } from './sources';
+import { LatLng } from '../../types';
+import { metersToFeet } from '../../core/units';
+import {
+  SOURCE_OPEN_METEO,
+  WindProfile,
+  WindRow,
+  createWindRow
+} from '../../core/wind';
+import { AloftWindSource, WindFetchOpts } from './source';
 
 const hPas = [
   1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 675, 650, 625, 600
@@ -24,15 +29,32 @@ interface ElevationResponse {
   elevation: number[];
 }
 
-export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): Promise<WindProfile> {
+export async function fetchOpenMeteo(
+  point: LatLng,
+  opts: WindFetchOpts = {}
+): Promise<WindProfile> {
+  const { hourOffset = 0, signal } = opts;
   const elevationFt = await fetchElevation(point, signal);
   const gfs = await fetchGfs(point, hourOffset, signal);
 
   console.log(`Elevation is ${elevationFt} ft`);
 
+  const validTime = new Date((gfs.hourly.time[hourOffset] as string) + 'Z');
+  const extra = { source: SOURCE_OPEN_METEO, validTime };
+
   const rows: WindRow[] = [
-    createWindRow(10 * metersToFeet, (gfs.hourly.wind_direction_10m as number[])[hourOffset], (gfs.hourly.wind_speed_10m as number[])[hourOffset]),
-    createWindRow(80 * metersToFeet, (gfs.hourly.wind_direction_80m as number[])[hourOffset], (gfs.hourly.wind_speed_80m as number[])[hourOffset])
+    createWindRow(
+      10 * metersToFeet,
+      (gfs.hourly.wind_direction_10m as number[])[hourOffset],
+      (gfs.hourly.wind_speed_10m as number[])[hourOffset],
+      extra
+    ),
+    createWindRow(
+      80 * metersToFeet,
+      (gfs.hourly.wind_direction_80m as number[])[hourOffset],
+      (gfs.hourly.wind_speed_80m as number[])[hourOffset],
+      extra
+    )
   ];
 
   hPas.forEach(hPa => {
@@ -43,7 +65,8 @@ export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, sign
         createWindRow(
           e,
           (gfs.hourly[`wind_direction_${hPa}hPa`] as number[])[hourOffset],
-          (gfs.hourly[`wind_speed_${hPa}hPa`] as number[])[hourOffset]
+          (gfs.hourly[`wind_speed_${hPa}hPa`] as number[])[hourOffset],
+          extra
         )
       );
     }
@@ -53,16 +76,20 @@ export async function fetchOpenMeteo(point: LatLng, hourOffset: number = 0, sign
     winds: rows,
     aloftSource: SOURCE_OPEN_METEO,
     groundSource: SOURCE_OPEN_METEO,
-    validTime: new Date((gfs.hourly.time[hourOffset] as string) + 'Z')
+    validTime,
+    meta: {
+      fetchedAt: new Date(),
+      location: point,
+      elevationFt
+    }
   };
 }
 
 function fetchElevation(point: LatLng, signal?: AbortSignal): Promise<number> {
-  return window
-    .fetch(
-      `https://api.open-meteo.com/v1/elevation?latitude=${point.lat}&longitude=${point.lng}`,
-      { signal }
-    )
+  return fetch(
+    `https://api.open-meteo.com/v1/elevation?latitude=${point.lat}&longitude=${point.lng}`,
+    { signal }
+  )
     .then(d => d.json())
     .then((json: ElevationResponse) => json.elevation[0] * metersToFeet);
 }
@@ -82,5 +109,14 @@ function fetchGfs(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): 
 
   console.log(`Fetching open-meteo from ${url}`);
 
-  return window.fetch(url, { signal }).then(d => d.json());
+  return fetch(url, { signal }).then(d => d.json());
 }
+
+/** OpenMeteo model-forecast source. */
+export const openMeteoSource: AloftWindSource = {
+  id: 'open-meteo',
+  label: 'OpenMeteo',
+  kind: 'model-forecast',
+  capabilities: {},
+  fetch: fetchOpenMeteo
+};
