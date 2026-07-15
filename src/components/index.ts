@@ -11,6 +11,8 @@ export { default as ManoeuvreParametersComponent } from './ManoeuvreParametersCo
 export { default as ManoeuvreSamplesComponent } from './ManoeuvreSamplesComponent';
 export { default as ManoeuvreTrackComponent } from './ManoeuvreTrackComponent';
 export { default as MapComponent } from './MapComponent';
+export { default as ModePicker } from './ModePicker';
+export { default as ModeSwitcher } from './ModeSwitcher';
 export { default as NumberInput } from './NumberInput';
 export { default as PatternComponent } from './PatternComponent';
 export { default as PresetSelector } from './PresetSelector';

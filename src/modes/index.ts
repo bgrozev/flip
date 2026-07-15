@@ -66,7 +66,7 @@ export const MODES: readonly Mode[] = [
   {
     id: 'flocking',
     label: 'Flocking',
-    description: 'Wind drift and jump run for flocks (coming soon)',
+    description: 'Wind drift and jump run for flocks',
     enabled: false,
     nav: ['target', 'wind', 'settings', 'about'],
     mapLayers: ['stations', 'targetEdit', 'windArrow'],
@@ -76,7 +76,7 @@ export const MODES: readonly Mode[] = [
   {
     id: 'explore',
     label: 'Explore',
-    description: 'Everything unlocked, no guardrails (coming soon)',
+    description: 'Everything unlocked, no guardrails',
     enabled: false,
     nav: ALL_PANELS,
     mapLayers: ALL_LAYERS,

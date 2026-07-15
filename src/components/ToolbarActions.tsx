@@ -6,11 +6,15 @@ import {
 import { CircularProgress, Divider, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
 import React from 'react';
 
+import { ModeId } from '../modes';
 import { Preset } from '../types';
 
+import ModeSwitcher from './ModeSwitcher';
 import PresetSelector from './PresetSelector';
 
 interface ToolbarActionsProps {
+  modeId: ModeId;
+  onModeChange: (id: ModeId) => void;
   onRefreshWindsClick: () => void;
   onExportClick: () => void;
   targetEditOpen: boolean;
@@ -26,6 +30,8 @@ interface ToolbarActionsProps {
 }
 
 export default function ToolbarActions({
+  modeId,
+  onModeChange,
   onRefreshWindsClick,
   onExportClick,
   targetEditOpen,
@@ -41,6 +47,8 @@ export default function ToolbarActions({
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
+      <ModeSwitcher modeId={modeId} onChange={onModeChange} />
+      <Divider orientation="vertical" flexItem />
       <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <ExportButton onClick={onExportClick} />

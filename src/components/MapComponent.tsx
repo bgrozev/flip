@@ -11,7 +11,15 @@ import {
   TargetEditLayer,
   TargetEditTarget
 } from '../map/layers';
-import { Course, FlightPath, LatLng, ObservedWindStation, Settings } from '../types';
+import {
+  Course,
+  FlightPath,
+  LatLng,
+  MAP_LAYER_IDS,
+  MapLayerId,
+  ObservedWindStation,
+  Settings
+} from '../types';
 
 import WindDirectionArrow from './WindDirectionArrow';
 
@@ -30,6 +38,8 @@ interface MapComponentProps {
   forecastGroundWind?: { direction: number; speedKts: number };
   forecastValidTime?: Date;
   finalHeading?: number;
+  /** Which layers may render (from the active mode); defaults to all. */
+  layers?: readonly MapLayerId[];
 }
 
 /**
@@ -50,8 +60,10 @@ function MapComponent({
   groundWindStation,
   forecastGroundWind,
   forecastValidTime,
-  finalHeading = 0
+  finalHeading = 0,
+  layers = MAP_LAYER_IDS
 }: MapComponentProps) {
+  const has = (layer: MapLayerId) => layers.includes(layer);
   const {
     showPoms,
     showPomAltitudes,
@@ -65,35 +77,39 @@ function MapComponent({
 
   return (
     <MapContainer center={center}>
-      <FlightPathsLayer
-        pathA={pathA}
-        pathB={pathB}
-        showPreWind={showPreWind}
-        showPoms={showPoms}
-        showPomAltitudes={showPomAltitudes}
-        showPomTooltips={showPomTooltips}
-        highlightCorrespondingPoints={highlightCorrespondingPoints}
-        showCrabArrow={showCrabArrow}
-      />
+      {has('flightPaths') && (
+        <FlightPathsLayer
+          pathA={pathA}
+          pathB={pathB}
+          showPreWind={showPreWind}
+          showPoms={showPoms}
+          showPomAltitudes={showPomAltitudes}
+          showPomTooltips={showPomTooltips}
+          highlightCorrespondingPoints={highlightCorrespondingPoints}
+          showCrabArrow={showCrabArrow}
+        />
+      )}
 
-      <CourseLayer courses={courses} />
+      {has('courses') && <CourseLayer courses={courses} />}
 
-      <MeasureLayer enabled={showMeasureTool} />
+      {has('measure') && <MeasureLayer enabled={showMeasureTool} />}
 
-      <StationsLayer
-        stations={observedStations}
-        center={center}
-        finalHeading={finalHeading}
-        groundWindStation={groundWindStation}
-        forecastGroundWind={forecastGroundWind}
-        forecastValidTime={forecastValidTime}
-      />
+      {has('stations') && (
+        <StationsLayer
+          stations={observedStations}
+          center={center}
+          finalHeading={finalHeading}
+          groundWindStation={groundWindStation}
+          forecastGroundWind={forecastGroundWind}
+          forecastValidTime={forecastValidTime}
+        />
+      )}
 
-      {targetEditTarget && <TargetEditLayer edit={targetEditTarget} />}
+      {has('targetEdit') && targetEditTarget && <TargetEditLayer edit={targetEditTarget} />}
 
-      {courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
+      {has('courseEdit') && courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
 
-      {displayWindArrow && (
+      {has('windArrow') && displayWindArrow && (
         <MapControl>
           <WindDirectionArrow direction={windDirection} speed={windSpeed} />
         </MapControl>

@@ -2,6 +2,7 @@ export { AppStateProvider, useAppState, DEFAULT_TARGET, DEFAULT_SETTINGS } from 
 export { useCustomCourses } from './useCustomCourses';
 export { useFetchForecast } from './useFetchForecast';
 export { useFlightPaths } from './useFlightPaths';
+export { useMode } from './useMode';
 export { useObservedWind } from './useObservedWind';
 export { usePresets } from './usePresets';
 export { TargetProvider, useTarget } from './useTargetContext';

@@ -29,8 +29,10 @@ import {
   MAP_PATH,
   isMapPathname,
   isPathnameAllowed,
-  panelFromPathname
+  panelFromPathname,
+  panelPath
 } from './app/routing';
+import { applyModeDefaults, hasFeature, migrateModeId } from './modes';
 
 import {
   AboutComponent,
@@ -39,6 +41,7 @@ import {
   FlipIcon,
   ManoeuvreComponent,
   MapComponent,
+  ModePicker,
   PatternComponent,
   SettingsComponent,
   TargetComponent,
@@ -55,54 +58,40 @@ import {
   useCustomCourses,
   useFetchForecast,
   useFlightPaths,
+  useMode,
   useObservedWind,
   usePresets
 } from './hooks';
-import { Course, LatLng, PANEL_IDS, Target, WindSummaryData } from './types';
+import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './core/geometry';
 import { COURSES } from './util/courses';
 import { WindRow, composeWinds, createWindRow } from './core/wind';
 
-const NAVIGATION: Navigation = [
-  {
-    segment: 'pattern',
-    title: 'Pattern',
-    icon: <CropIcon />
-  },
-  {
-    segment: 'manoeuvre',
-    title: 'Manoeuvre',
-    icon: <RotateLeftIcon />
-  },
-  {
-    segment: 'target',
-    title: 'Target',
-    icon: <AdjustIcon />
-  },
-  {
-    segment: 'wind',
-    title: 'Wind',
-    icon: <AirIcon />
-  },
-  {
-    segment: 'courses',
-    title: 'Courses',
-    icon: <FlagIcon />
-  },
-  {
-    kind: 'divider'
-  },
-  {
-    segment: 'settings',
-    title: 'Settings',
-    icon: <SettingsIcon />
-  },
-  {
-    segment: 'about',
-    title: 'About',
-    icon: <InfoIcon />
-  }
-];
+const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
+  pattern: { title: 'Pattern', icon: <CropIcon /> },
+  manoeuvre: { title: 'Manoeuvre', icon: <RotateLeftIcon /> },
+  target: { title: 'Target', icon: <AdjustIcon /> },
+  wind: { title: 'Wind', icon: <AirIcon /> },
+  courses: { title: 'Courses', icon: <FlagIcon /> },
+  settings: { title: 'Settings', icon: <SettingsIcon /> },
+  about: { title: 'About', icon: <InfoIcon /> }
+};
+
+/** App-level panels shown after a divider, at the bottom of the sidebar. */
+const SECONDARY_PANELS: readonly PanelId[] = ['settings', 'about'];
+
+/** Sidebar navigation for a mode: its panels, divider before the app-level ones. */
+function buildNavigation(nav: readonly PanelId[]): Navigation {
+  const item = (id: PanelId) => ({ segment: id, ...PANEL_NAV[id] });
+  const primary = nav.filter(id => !SECONDARY_PANELS.includes(id));
+  const secondary = nav.filter(id => SECONDARY_PANELS.includes(id));
+
+  return [
+    ...primary.map(item),
+    ...primary.length > 0 && secondary.length > 0 ? [{ kind: 'divider' as const }] : [],
+    ...secondary.map(item)
+  ];
+}
 
 const demoTheme = createTheme({
   colorSchemes: { light: true, dark: true },
@@ -171,23 +160,55 @@ function DashboardContent() {
   const [targetEditOpen, setTargetEditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  const router = useToolpadRouter();
+  const navigate = useNavigate();
+
+  // Mode: ?mode=... in a shared link applies immediately (this render) and
+  // is persisted below; otherwise the stored choice (or first-run) rules.
+  const rawUrlMode = router.searchParams.get('mode');
+  const urlModeId = migrateModeId(rawUrlMode);
+  const { mode, setModeId, firstRun } = useMode(urlModeId);
+
+  // Persist the link's mode, then strip the param to keep the URL canonical
+  useEffect(() => {
+    if (rawUrlMode !== null) {
+      if (urlModeId) {
+        setModeId(urlModeId);
+      }
+      navigate(router.pathname, { replace: true });
+    }
+  }, [rawUrlMode, urlModeId, router.pathname, navigate, setModeId]);
+
+  // Route guard: panels outside the current mode, unknown paths and the
+  // legacy /map alias all redirect to the map
+  useEffect(() => {
+    if (!isPathnameAllowed(router.pathname, mode.nav) ||
+        (isMapPathname(router.pathname) && router.pathname !== MAP_PATH)) {
+      navigate(MAP_PATH, { replace: true });
+    }
+  }, [router.pathname, mode, navigate]);
+
+  // Effective settings: mode defaults fill in where the user is at the
+  // global default; the Settings panel still edits the stored values.
+  const modeSettings = useMemo(() => applyModeDefaults(settings, mode), [settings, mode]);
+
   const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
     target: target.target,
-    settings
+    settings: modeSettings
   });
 
   const { stations, nearestStation, stationsFetched, fetchingObserved, fetchObserved, resetObserved } = useObservedWind();
 
   // Inject nearest observed station as ground wind (when enabled and forecast has been fetched)
   const effectiveWinds = useMemo(() => {
-    if (!settings.useDzGroundWind || !nearestStation || winds.aloftSource === SOURCE_MANUAL) {
+    if (!modeSettings.useDzGroundWind || !nearestStation || winds.aloftSource === SOURCE_MANUAL) {
       return winds;
     }
     return composeWinds(
       winds,
       createWindRow(0, nearestStation.wind.direction, nearestStation.wind.speedKts)
     );
-  }, [winds, nearestStation, settings.useDzGroundWind]);
+  }, [winds, nearestStation, modeSettings.useDzGroundWind]);
 
   // Wrap setTarget to invalidate winds when target moves too far
   const setTarget = useCallback(
@@ -203,16 +224,6 @@ function DashboardContent() {
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
-  const router = useToolpadRouter();
-  const navigate = useNavigate();
-
-  // Route guard: unknown paths and the legacy /map alias redirect to the map
-  useEffect(() => {
-    if (!isPathnameAllowed(router.pathname, PANEL_IDS) ||
-        (isMapPathname(router.pathname) && router.pathname !== MAP_PATH)) {
-      navigate(MAP_PATH, { replace: true });
-    }
-  }, [router.pathname, navigate]);
 
   const {
     presets,
@@ -248,20 +259,20 @@ function DashboardContent() {
   };
 
   const paths = useFlightPaths({
-    manoeuvre: manoeuvre ?? [],
+    manoeuvre: hasFeature(mode, 'manoeuvre') ? manoeuvre ?? [] : [],
     pattern: pattern ?? [],
     target: target ?? DEFAULT_TARGET,
     winds: effectiveWinds,
-    correctPatternHeading: settings.correctPatternHeading,
-    interpolateWind: settings.interpolateWind,
-    straightenLegsEnabled: settings.straightenLegs
+    correctPatternHeading: modeSettings.correctPatternHeading,
+    interpolateWind: modeSettings.interpolateWind,
+    straightenLegsEnabled: modeSettings.straightenLegs
   });
   const averageWind_ = paths.averageWind;
 
   let windSummary: WindSummaryData | undefined;
 
   if (
-    settings.displayWindSummary &&
+    modeSettings.displayWindSummary &&
     (effectiveWinds.groundSource !== SOURCE_MANUAL || effectiveWinds.aloftSource !== SOURCE_MANUAL) &&
     typeof averageWind_.speedKts === 'number'
   ) {
@@ -285,7 +296,7 @@ function DashboardContent() {
       : undefined;
     const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
     fetchWinds(maxAlt, ft);
-    if (settings.useDzGroundWind && target && ft === null) {
+    if (modeSettings.useDzGroundWind && target && ft === null) {
       fetchObserved(target.target);
     } else if (ft !== null) {
       resetObserved();
@@ -308,7 +319,8 @@ function DashboardContent() {
     }
   }
 
-  const activePanel = panelFromPathname(router.pathname);
+  const rawPanel = panelFromPathname(router.pathname);
+  const activePanel = rawPanel && mode.nav.includes(rawPanel) ? rawPanel : null;
 
   let p: React.ReactNode = null;
 
@@ -358,7 +370,7 @@ function DashboardContent() {
         onTargetChange={setTarget}
         editOpen={courseEditOpen}
         onEditOpenChange={setCourseEditOpen}
-        altitudeUnit={settings.units.altitude}
+        altitudeUnit={modeSettings.units.altitude}
       />
     );
   } else if (activePanel === 'about') {
@@ -388,7 +400,7 @@ function DashboardContent() {
   const { customCourses, customParams, updateCourse } = useCustomCourses();
   const allCourses: Course[] = [...customCourses, ...COURSES];
   const selectedCourse = selectedCourseId ? allCourses.find(c => c.id === selectedCourseId) : undefined;
-  const enabledCourses: Course[] = selectedCourse ? [selectedCourse] : [];
+  const enabledCourses: Course[] = hasFeature(mode, 'courses') && selectedCourse ? [selectedCourse] : [];
 
   const selectedCustomParam = customParams.find(c => c.id === selectedCourseId) ?? null;
   const courseEditTarget: CourseEditTarget | undefined =
@@ -415,7 +427,8 @@ function DashboardContent() {
       center={target.target}
       pathA={paths.ideal}
       pathB={paths.display}
-      settings={settings}
+      settings={modeSettings}
+      layers={mode.mapLayers}
       windDirection={averageWind_?.direction ?? 0}
       windSpeed={averageWind_?.speedKts ?? 0}
       courses={enabledCourses}
@@ -436,6 +449,8 @@ function DashboardContent() {
       slots={{
         toolbarActions: () => (
           <ToolbarActions
+            modeId={mode.id}
+            onModeChange={setModeId}
             fetching={fetching}
             onRefreshWindsClick={handleFetchWinds}
             onExportClick={() => setExportOpen(true)}
@@ -445,7 +460,7 @@ function DashboardContent() {
               setTargetEditOpen(next);
               if (next && isMobile) router.navigate(MAP_PATH);
             }}
-            showPresets={settings.showPresets}
+            showPresets={modeSettings.showPresets && hasFeature(mode, 'presets')}
             presets={presets}
             activePresetId={activePresetId}
             onPresetSelect={loadPreset}
@@ -462,14 +477,17 @@ function DashboardContent() {
     </DashboardLayout>
   );
 
-  const BOTTOM_NAV_PATHS = ['/pattern', '/manoeuvre', '/target', '/wind', '/courses'];
-  const bottomNavValue = BOTTOM_NAV_PATHS.indexOf(router.pathname);
+  const bottomNavPanels = mode.nav.filter(id => !SECONDARY_PANELS.includes(id));
+  const bottomNavValue = activePanel ? bottomNavPanels.indexOf(activePanel) : -1;
 
   const activePresetName = presets.find(p => p.id === activePresetId)?.name ?? 'unnamed';
 
+  const navigation = useMemo(() => buildNavigation(mode.nav), [mode]);
+
   return (
-    <AppProvider router={router} theme={demoTheme} navigation={NAVIGATION}>
+    <AppProvider router={router} theme={demoTheme} navigation={navigation}>
       {dashboard}
+      <ModePicker open={firstRun} onSelect={setModeId} />
       <ExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
@@ -484,14 +502,12 @@ function DashboardContent() {
         >
           <BottomNavigation
             value={bottomNavValue === -1 ? false : bottomNavValue}
-            onChange={(_e, newValue) => router.navigate(BOTTOM_NAV_PATHS[newValue])}
+            onChange={(_e, newValue) => router.navigate(panelPath(bottomNavPanels[newValue]))}
             showLabels
           >
-            <BottomNavigationAction label="Pattern" icon={<CropIcon />} />
-            <BottomNavigationAction label="Manoeuvre" icon={<RotateLeftIcon />} />
-            <BottomNavigationAction label="Target" icon={<AdjustIcon />} />
-            <BottomNavigationAction label="Wind" icon={<AirIcon />} />
-            <BottomNavigationAction label="Courses" icon={<FlagIcon />} />
+            {bottomNavPanels.map(id => (
+              <BottomNavigationAction key={id} label={PANEL_NAV[id].title} icon={PANEL_NAV[id].icon} />
+            ))}
           </BottomNavigation>
         </Paper>
       )}
