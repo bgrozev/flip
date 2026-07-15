@@ -55,7 +55,7 @@ describe('WIND_SOURCES registry', () => {
     const ids = WIND_SOURCES.map(s => s.id);
 
     expect(new Set(ids).size).toBe(ids.length);
-    expect(WIND_SOURCES.length).toBeGreaterThanOrEqual(4);
+    expect(WIND_SOURCES.length).toBeGreaterThanOrEqual(5);
 
     for (const source of WIND_SOURCES) {
       expect(source.id).toBeTruthy();
@@ -70,6 +70,7 @@ describe('WIND_SOURCES registry', () => {
     const byId = Object.fromEntries(WIND_SOURCES.map(s => [s.id, s]));
 
     expect(byId['open-meteo'].kind).toBe('model-forecast');
+    expect(byId.sounding.kind).toBe('sounding');
     expect(byId.nws.kind).toBe('observed-station');
     expect(byId.nws.capabilities.discovery).toBe(true);
     expect(byId.csc.kind).toBe('observed-station');

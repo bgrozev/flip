@@ -8,7 +8,7 @@ interface UseFetchForecastOptions {
   /** Current target location */
   target: LatLng | undefined;
   /** Settings for wind fetching */
-  settings: Pick<Settings, 'limitWind' | 'windModel'>;
+  settings: Pick<Settings, 'limitWind' | 'windModel' | 'windAloftSource'>;
 }
 
 interface UseFetchForecastResult {
@@ -65,6 +65,7 @@ export function useFetchForecast({
     fetchForecast(target, {
       hourOffset,
       model: settings.windModel,
+      aloftSource: settings.windAloftSource,
       signal: controller.signal,
       forceRefresh: opts?.force
     })
@@ -91,7 +92,7 @@ export function useFetchForecast({
         setFetching(false);
         setWinds(createWindProfile());
       });
-  }, [target, settings.limitWind, settings.windModel]);
+  }, [target, settings.limitWind, settings.windModel, settings.windAloftSource]);
 
   return {
     winds,

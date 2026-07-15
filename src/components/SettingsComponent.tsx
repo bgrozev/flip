@@ -242,20 +242,36 @@ export default function SettingsComponent({
                 onChange={handleNumberChange('limitWind')}
               />
               <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
-                <InputLabel id="wind-model-label">Forecast model</InputLabel>
+                <InputLabel id="wind-aloft-label">Winds aloft source</InputLabel>
                 <Select
-                  labelId="wind-model-label"
-                  value={settings.windModel}
-                  label="Forecast model"
+                  labelId="wind-aloft-label"
+                  value={settings.windAloftSource}
+                  label="Winds aloft source"
                   onChange={(e: SelectChangeEvent) =>
-                    setSettings({ ...settings, windModel: e.target.value })
+                    setSettings({ ...settings, windAloftSource: e.target.value as 'forecast' | 'sounding' })
                   }
                 >
-                  {OPEN_METEO_MODELS.map(m => (
-                    <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
-                  ))}
+                  <MenuItem value="forecast">Model forecast (OpenMeteo)</MenuItem>
+                  <MenuItem value="sounding">Radiosonde sounding</MenuItem>
                 </Select>
               </FormControl>
+              {settings.windAloftSource === 'forecast' && (
+                <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+                  <InputLabel id="wind-model-label">Forecast model</InputLabel>
+                  <Select
+                    labelId="wind-model-label"
+                    value={settings.windModel}
+                    label="Forecast model"
+                    onChange={(e: SelectChangeEvent) =>
+                      setSettings({ ...settings, windModel: e.target.value })
+                    }
+                  >
+                    {OPEN_METEO_MODELS.map(m => (
+                      <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
             </Box>
           )}
         </React.Fragment>

@@ -70,6 +70,8 @@ export interface Settings {
   straightenLegs: boolean;
   useDzGroundWind: boolean;
   limitWind: number;
+  /** Which winds-aloft source to use: 'forecast' (OpenMeteo) or 'sounding'. */
+  windAloftSource: 'forecast' | 'sounding';
   /** OpenMeteo forecast model id (see core/wind OPEN_METEO_MODELS). */
   windModel: string;
   showPresets: boolean;

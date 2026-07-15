@@ -29,6 +29,7 @@ import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
 import {
   SOURCE_MANUAL,
   SOURCE_OPEN_METEO,
+  SOURCE_SOUNDING,
   WindProfile,
   createWindProfile,
   createWindRow,
@@ -256,6 +257,24 @@ export default function WindsComponent({
                 {winds.meta?.model ? ` · ${windModelLabel(winds.meta.model)}` : ''}
                 {winds.validTime
                   ? ` · valid ${winds.validTime.toLocaleString([], {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                  })}`
+                  : ''}
+              </Typography>
+            )}
+            {winds.aloftSource === SOURCE_SOUNDING && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mb: 0.5, textAlign: 'left' }}
+              >
+                {'Sounding'}
+                {winds.meta?.station ? ` · ${winds.meta.station}` : ''}
+                {winds.meta?.stationDistanceFt !== undefined
+                  ? ` (${(winds.meta.stationDistanceFt / 5280).toFixed(0)} mi)`
+                  : ''}
+                {winds.validTime
+                  ? ` · launched ${winds.validTime.toLocaleString([], {
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                   })}`
                   : ''}

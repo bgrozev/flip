@@ -4,9 +4,10 @@
  * effective profile the planner uses.
  */
 import { LatLng } from '../../types';
-import { WindProfile } from '../../core/wind';
+import { SOURCE_SOUNDING, WindProfile } from '../../core/wind';
 import { openMeteoSource } from './openmeteo';
-import { WindFetchOpts, WindSource } from './source';
+import { soundingSource } from './soundings';
+import { AloftWindSource, WindFetchOpts, WindSource } from './source';
 import { OBSERVED_STATION_SOURCES } from './stations';
 
 export type {
@@ -20,19 +21,39 @@ export type {
 } from './source';
 export { composeWithObservedGround } from './compose';
 export { openMeteoSource } from './openmeteo';
+export { soundingSource } from './soundings';
 export {
   OBSERVED_STATION_SOURCES,
   fetchObservedStations,
   nearestGroundWindStation
 } from './stations';
 
+/** The selectable winds-aloft sources (model forecast + soundings). */
+export const ALOFT_WIND_SOURCES: readonly AloftWindSource[] = [
+  openMeteoSource,
+  soundingSource
+];
+
 /** Every wind source the app knows about. */
 export const WIND_SOURCES: readonly WindSource[] = [
-  openMeteoSource,
+  ...ALOFT_WIND_SOURCES,
   ...OBSERVED_STATION_SOURCES
 ];
 
-/** Fetch the winds-aloft forecast for a location. */
-export function fetchForecast(center: LatLng, opts?: WindFetchOpts): Promise<WindProfile> {
-  return openMeteoSource.fetch(center, opts);
+/** Which winds-aloft source to fetch from. */
+export type AloftSourceId = 'forecast' | 'sounding';
+
+/**
+ * Fetch the winds aloft for a location from the selected source (model
+ * forecast by default, or radiosonde soundings).
+ */
+export function fetchForecast(
+  center: LatLng,
+  opts?: WindFetchOpts & { aloftSource?: AloftSourceId }
+): Promise<WindProfile> {
+  const source = opts?.aloftSource === 'sounding' ? soundingSource : openMeteoSource;
+
+  return source.fetch(center, opts);
 }
+
+export { SOURCE_SOUNDING };
