@@ -32,7 +32,7 @@ interface WindsComponentProps {
   winds: WindProfile;
   setWinds: (winds: WindProfile) => void;
   fetching: boolean;
-  fetch: (ft?: Date | null) => void;
+  fetch: (ft?: Date | null, opts?: { force?: boolean }) => void;
   forecastTime: Date | null;
   onForecastTimeChange: (t: Date | null) => void;
   stations?: ObservedWindStation[];
@@ -225,7 +225,7 @@ export default function WindsComponent({
 
         {/* Action buttons */}
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-          <Button variant="outlined" size="small" onClick={() => fetch()}>
+          <Button variant="outlined" size="small" onClick={() => fetch(undefined, { force: true })}>
               Fetch forecast
           </Button>
           <Button variant="outlined" size="small" onClick={reset}>

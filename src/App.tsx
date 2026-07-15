@@ -287,12 +287,12 @@ function DashboardContent() {
     }
   }
 
-  const handleFetchWinds = (overrideForecastTime?: Date | null) => {
+  const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
     const maxAlt = paths.corrected.length > 0
       ? paths.corrected[paths.corrected.length - 1].properties.alt
       : undefined;
     const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
-    fetchWinds(maxAlt, ft);
+    fetchWinds(maxAlt, ft, opts);
     if (modeSettings.useDzGroundWind && target && ft === null) {
       fetchObserved(target.target);
     } else if (ft !== null) {
@@ -449,7 +449,7 @@ function DashboardContent() {
             modeId={mode.id}
             onModeChange={setModeId}
             fetching={fetching}
-            onRefreshWindsClick={handleFetchWinds}
+            onRefreshWindsClick={() => handleFetchWinds(undefined, { force: true })}
             onExportClick={() => setExportOpen(true)}
             targetEditOpen={targetEditOpen}
             onTargetEditToggle={() => {

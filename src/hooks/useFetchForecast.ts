@@ -16,8 +16,11 @@ interface UseFetchForecastResult {
   winds: WindProfile;
   /** Whether a fetch is in progress */
   fetching: boolean;
-  /** Fetch winds for the current target. Pass maxPathAltitude to extend limit if path goes higher. */
-  fetchWinds: (maxPathAltitude?: number, forecastTime?: Date | null) => void;
+  /**
+   * Fetch winds for the current target. Pass maxPathAltitude to extend limit
+   * if path goes higher; force bypasses the prefetch cache (explicit refresh).
+   */
+  fetchWinds: (maxPathAltitude?: number, forecastTime?: Date | null, opts?: { force?: boolean }) => void;
   /** Manually set winds (for manual entry) */
   setWinds: (winds: WindProfile) => void;
   /** Reset winds to empty state */
@@ -40,7 +43,7 @@ export function useFetchForecast({
     setWinds(createWindProfile());
   }, []);
 
-  const fetchWinds = useCallback((maxPathAltitude?: number, forecastTime?: Date | null) => {
+  const fetchWinds = useCallback((maxPathAltitude?: number, forecastTime?: Date | null, opts?: { force?: boolean }) => {
     if (!target) {
       console.log('Not fetching winds, no target');
       return;
@@ -59,7 +62,7 @@ export function useFetchForecast({
 
     setFetching(true);
 
-    fetchForecast(target, { hourOffset, signal: controller.signal })
+    fetchForecast(target, { hourOffset, signal: controller.signal, forceRefresh: opts?.force })
       .then(fetchedWinds => {
         // Determine altitude limit
         let limit = settings.limitWind;
