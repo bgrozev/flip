@@ -20,9 +20,17 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import { AppProvider, Navigation } from '@toolpad/core/AppProvider';
+import { AppProvider, Navigation, Router } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
+
+import {
+  MAP_PATH,
+  isMapPathname,
+  isPathnameAllowed,
+  panelFromPathname
+} from './app/routing';
 
 import {
   AboutComponent,
@@ -50,7 +58,7 @@ import {
   useObservedWind,
   usePresets
 } from './hooks';
-import { Course, LatLng, Target, WindSummaryData } from './types';
+import { Course, LatLng, PANEL_IDS, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './core/geometry';
 import { COURSES } from './util/courses';
 import { WindRow, composeWinds, createWindRow } from './core/wind';
@@ -112,45 +120,33 @@ const demoTheme = createTheme({
   }
 });
 
-interface Router {
-  pathname: string;
-  searchParams: URLSearchParams;
-  navigate: (path: string | URL) => void;
+/**
+ * Adapts react-router to Toolpad's AppProvider router interface, preserving
+ * one deliberate UX quirk: navigating to the already-open panel closes it
+ * (routes back to the map). Mobile relies on this as the panel-close toggle.
+ */
+function useToolpadRouter(): Router {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  return useMemo(() => ({
+    pathname: location.pathname,
+    searchParams: new URLSearchParams(location.search),
+    navigate: (path: string | URL) => {
+      const target = path instanceof URL ? path.pathname + path.search : String(path);
+
+      navigate(target === location.pathname ? MAP_PATH : target);
+    }
+  }), [location.pathname, location.search, navigate]);
 }
 
-function useDemoRouter(initialPath: string): Router {
-  const [pathname, setPathname] = useState(initialPath);
-
-  const navigate = useCallback(
-    (path: string | URL) => {
-      const normalizedPath = String(path);
-
-      if (normalizedPath === pathname) {
-        setPathname('/map'); // Route to map instead
-
-        return;
-      }
-
-      setPathname(normalizedPath);
-    },
-    [pathname]
-  );
-
-  return useMemo(() => {
-    return {
-      pathname,
-      searchParams: new URLSearchParams(),
-      navigate
-    };
-  }, [pathname, navigate]);
-}
-
-
-export default function DashboardLayoutBasic() {
+export default function App() {
   return (
-    <AppStateProvider>
-      <DashboardContent />
-    </AppStateProvider>
+    <BrowserRouter>
+      <AppStateProvider>
+        <DashboardContent />
+      </AppStateProvider>
+    </BrowserRouter>
   );
 }
 
@@ -207,7 +203,16 @@ function DashboardContent() {
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
-  const router = useDemoRouter('/map');
+  const router = useToolpadRouter();
+  const navigate = useNavigate();
+
+  // Route guard: unknown paths and the legacy /map alias redirect to the map
+  useEffect(() => {
+    if (!isPathnameAllowed(router.pathname, PANEL_IDS) ||
+        (isMapPathname(router.pathname) && router.pathname !== MAP_PATH)) {
+      navigate(MAP_PATH, { replace: true });
+    }
+  }, [router.pathname, navigate]);
 
   const {
     presets,
@@ -303,9 +308,11 @@ function DashboardContent() {
     }
   }
 
+  const activePanel = panelFromPathname(router.pathname);
+
   let p: React.ReactNode = null;
 
-  if (router.pathname === '/manoeuvre') {
+  if (activePanel === 'manoeuvre') {
     p = (
       <ManoeuvreComponent
         manoeuvreConfig={manoeuvreConfig}
@@ -313,9 +320,9 @@ function DashboardContent() {
         manoeuvreToSave={paths.corrected.filter(point => point.properties.phase === 'manoeuvre')}
       />
     );
-  } else if (router.pathname === '/pattern') {
+  } else if (activePanel === 'pattern') {
     p = <PatternComponent params={patternParams} onParamsChange={setPatternParams} />;
-  } else if (router.pathname === '/target') {
+  } else if (activePanel === 'target') {
     p = (
       <TargetComponent
         target={target}
@@ -323,12 +330,12 @@ function DashboardContent() {
         editOpen={targetEditOpen}
         onEditOpenChange={open => {
           setTargetEditOpen(open);
-          if (open && isMobile) router.navigate('/map');
+          if (open && isMobile) router.navigate(MAP_PATH);
         }}
         onUpwindClick={onUpwindClick}
       />
     );
-  } else if (router.pathname === '/wind') {
+  } else if (activePanel === 'wind') {
     p = (
       <WindsComponent
         winds={effectiveWinds}
@@ -342,7 +349,7 @@ function DashboardContent() {
         fetchingObserved={fetchingObserved}
       />
     );
-  } else if (router.pathname === '/courses') {
+  } else if (activePanel === 'courses') {
     p = (
       <CoursesComponent
         selectedCourseId={selectedCourseId}
@@ -354,9 +361,9 @@ function DashboardContent() {
         altitudeUnit={settings.units.altitude}
       />
     );
-  } else if (router.pathname === '/about') {
+  } else if (activePanel === 'about') {
     p = <AboutComponent />;
-  } else if (router.pathname === '/settings') {
+  } else if (activePanel === 'settings') {
     p = <SettingsComponent settings={settings} setSettings={setSettings} />;
   }
 
@@ -385,7 +392,7 @@ function DashboardContent() {
 
   const selectedCustomParam = customParams.find(c => c.id === selectedCourseId) ?? null;
   const courseEditTarget: CourseEditTarget | undefined =
-    courseEditOpen && selectedCustomParam && router.pathname === '/courses'
+    courseEditOpen && selectedCustomParam && activePanel === 'courses'
       ? {
         center: { lat: selectedCustomParam.lat, lng: selectedCustomParam.lng } as LatLng,
         direction: selectedCustomParam.direction,
@@ -436,7 +443,7 @@ function DashboardContent() {
             onTargetEditToggle={() => {
               const next = !targetEditOpen;
               setTargetEditOpen(next);
-              if (next && isMobile) router.navigate('/map');
+              if (next && isMobile) router.navigate(MAP_PATH);
             }}
             showPresets={settings.showPresets}
             presets={presets}

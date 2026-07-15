@@ -77,6 +77,30 @@ export interface Settings {
   units: UnitPreferences;
 }
 
+// Navigation panels. Each panel is a route (`/${id}`); modes expose a subset.
+export const PANEL_IDS = [
+  'pattern',
+  'manoeuvre',
+  'target',
+  'wind',
+  'courses',
+  'settings',
+  'about'
+] as const;
+export type PanelId = typeof PANEL_IDS[number];
+
+// Map layers (src/map/layers). Modes select which ones render.
+export const MAP_LAYER_IDS = [
+  'flightPaths',
+  'courses',
+  'measure',
+  'stations',
+  'targetEdit',
+  'courseEdit',
+  'windArrow'
+] as const;
+export type MapLayerId = typeof MAP_LAYER_IDS[number];
+
 // Wind summary for display
 export interface WindSummaryData {
   average: { speedKts?: number; direction?: number };
