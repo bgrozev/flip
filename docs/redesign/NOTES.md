@@ -1,13 +1,17 @@
 # FliP Next-Generation Redesign — Working Notes
 
 Branch: `claude/flip-redesign-architecture-e767df`
-Status: **Phase 2 complete** (2026-07-14, commits `882f803`…`aa73fe5`):
-`src/map/` adapter (provider-neutral primitives; Google impl quarantined in
-`src/map/google/`), all map features extracted into layers, MapComponent
-down from 1206 to 105 lines, Places autocomplete moved into the adapter.
-247 tests, 0 lint errors / 52 warnings, full browser verification, zero
-behavior change. (Phase 1 at `cd2d8b6`…`38adcfd`, Phase 0 at `e4df103`.)
-Next: Phase 3 (router + modes); see `ARCHITECTURE.md`.
+Status: **Phase 3 complete** (2026-07-14, commits `eb1aad0`, `d018bfe`,
+`340b7ae`): react-router with clean URLs (GitHub-Pages-safe via 404.html
+fallback built by vite plugin), declarative mode system — `pattern` and
+`swoop` live, `flocking`/`explore` stubs; first-run picker, toolbar
+switcher, `?mode=` share links, nav/layer/bottom-nav gating, mode
+persisted via versioned codec, user config survives mode switches.
+Toolpad kept (integrates fine via small router adapter). 272 tests,
+0 lint errors / 52 warnings. Browser-verified by agent + independent spot
+check. (Phase 2 at `882f803`…`aa73fe5`, Phase 1 at `cd2d8b6`…`38adcfd`,
+Phase 0 at `e4df103`.) Next: Phase 4 (wind subsystem) or Phase 5 (PWA);
+see `ARCHITECTURE.md`.
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).

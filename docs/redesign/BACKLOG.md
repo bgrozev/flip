@@ -223,6 +223,23 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   selecting one far from target shows nothing — add "jump to course".
 - ☐ Leg tooltip body rows low-contrast over dark map theme — styling pass.
 
+## Phase-3 follow-ups (found during implementation, 2026-07-14)
+
+- ☐ Mode defaults resolution uses equals-global-default heuristic — a
+  user can't Settings-force a mode-overridden value back to the global
+  default (it re-applies the mode default). Replace with explicit
+  "touched settings" tracking or per-mode overlays when defaults grow.
+- ☐ Settings panel shows stored (not effective) values — add "set by
+  mode" indicators; consider hiding swoop-only settings in pattern mode.
+- ☐ `SECONDARY_PANELS` (Settings/About) split hardcoded in App.tsx —
+  fold into the Mode shape as nav groups.
+- ☐ Presets don't carry their mode yet (ARCHITECTURE: Plan carries mode)
+  — part of the Phase-7 Plan document work.
+- ☐ Selecting a course doesn't pan the map to it (pre-existing; more
+  visible now) — same as the "jump to course" Phase-2 item.
+- ☐ Mode picker cards are unnamed buttons (no accessible name) — a11y
+  fix: aria-label per card.
+
 ## Process / engineering health
 
 - ☐ **Improve documentation** — CLAUDE.md is stale (rewrite in Phase 0);
