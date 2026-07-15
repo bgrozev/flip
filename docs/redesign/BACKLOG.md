@@ -242,14 +242,13 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Phase-4 follow-ups (found during implementation + spot check, 2026-07-15)
 
-- ☐ **Past forecast time → silent empty table** (found in spot check).
-  The prefetch window is now..+N, so a fetch with a past hour
-  (hourOffset < 0) returns an empty profile with no error/message. The
-  forecast-time picker can present a past time (e.g. defaulting to 09:00
-  when it's already evening), so the user sees an empty wind table and no
-  feedback. Fix: clamp/round the picker to the valid window, or fetch a
-  small backward window too, or surface a "time outside forecast range"
-  message. (Verify whether pre-Phase-4 behavior differed.)
+- ~~Past forecast time → silent empty table~~ **(retracted — not a bug).**
+  Initial spot-check hit this by calling the WindSource directly with a
+  negative hourOffset, bypassing the app. In the real UI both the fetch
+  hook (`Math.max(0, …)`, useFetchForecast.ts) and the picker
+  (`next < minDate → null`, WindsComponent.tsx) clamp past times to "now",
+  and fetch populates normally. Verified in-browser: table fills, source
+  badge "OpenMeteo · Best match · valid …", NWS station discovery live.
 - ☐ Remove now-redundant `KZPH` from ZHills `nearbyStations` (gridpoint
   discovery covers it; `KM08` still needs its supplement).
 - ☐ Forecast-time picker is shown but inert for soundings (they ignore
