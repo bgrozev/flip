@@ -6,6 +6,7 @@ import {
   WindRow,
   createWindRow
 } from '../../core/wind';
+import { fetchElevationFt } from './elevation';
 import { AloftWindSource, WindFetchOpts } from './source';
 
 const hPas = [
@@ -25,16 +26,12 @@ interface GfsResponse {
   hourly: GfsHourlyData;
 }
 
-interface ElevationResponse {
-  elevation: number[];
-}
-
 export async function fetchOpenMeteo(
   point: LatLng,
   opts: WindFetchOpts = {}
 ): Promise<WindProfile> {
   const { hourOffset = 0, signal } = opts;
-  const elevationFt = await fetchElevation(point, signal);
+  const elevationFt = await fetchElevationFt(point, signal);
   const gfs = await fetchGfs(point, hourOffset, signal);
 
   console.log(`Elevation is ${elevationFt} ft`);
@@ -83,15 +80,6 @@ export async function fetchOpenMeteo(
       elevationFt
     }
   };
-}
-
-function fetchElevation(point: LatLng, signal?: AbortSignal): Promise<number> {
-  return fetch(
-    `https://api.open-meteo.com/v1/elevation?latitude=${point.lat}&longitude=${point.lng}`,
-    { signal }
-  )
-    .then(d => d.json())
-    .then((json: ElevationResponse) => json.elevation[0] * metersToFeet);
 }
 
 function fetchGfs(point: LatLng, hourOffset: number = 0, signal?: AbortSignal): Promise<GfsResponse> {
