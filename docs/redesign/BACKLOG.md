@@ -177,6 +177,14 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Ideas / research (needs design)
 
+- ☐ **MapLibre adapter** — second `MapAdapter` implementation (MapLibre GL +
+  OSM/satellite tile provider). Now structurally cheap after Phase 2
+  (Google confined to `src/map/google/`). Motivations: offline tiles for
+  the PWA (Google ToS forbids tile caching), no API-key cost exposure,
+  map rotation freedom. Needs: tile source choice (satellite imagery is
+  the hard part — MapTiler/ESRI pricing vs Google), feature parity audit
+  of the adapter primitives.
+
 - ☐ **Conditions delta since last jump** — "what changed since you last
   jumped": wind shift, direction change. Needs jump-time snapshots
   (logbook dependency).
