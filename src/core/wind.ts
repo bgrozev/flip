@@ -12,6 +12,32 @@ export type ForecastSource =
   | typeof SOURCE_OPEN_METEO
   | typeof SOURCE_SOUNDING;
 
+/** A selectable forecast model. */
+export interface WindModelOption {
+  id: string;
+  label: string;
+}
+
+/**
+ * OpenMeteo forecast models verified to return wind at the pressure levels
+ * FliP uses (2026-07): best_match and GFS cover all 17 levels (1000–600hPa);
+ * ICON covers 9; ECMWF IFS only 5 (1000/925/850/700/600) and no 80 m wind —
+ * usable but coarse.
+ */
+export const OPEN_METEO_MODELS: readonly WindModelOption[] = [
+  { id: 'best_match', label: 'Best match' },
+  { id: 'gfs_seamless', label: 'GFS' },
+  { id: 'icon_seamless', label: 'ICON' },
+  { id: 'ecmwf_ifs025', label: 'ECMWF IFS' }
+];
+
+export const DEFAULT_WIND_MODEL = 'best_match';
+
+/** Label for a model id (falls back to the id itself). */
+export function windModelLabel(modelId: string): string {
+  return OPEN_METEO_MODELS.find(m => m.id === modelId)?.label ?? modelId;
+}
+
 const DEG_TO_RAD = Math.PI / 180;
 
 /**

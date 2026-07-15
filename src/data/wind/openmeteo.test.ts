@@ -52,8 +52,27 @@ function mockFetch(elevationM: number, gfs: unknown) {
   });
 }
 
+/**
+ * ECMWF-shaped response: no 80 m wind, and only the 1000/925/850/700/600hPa
+ * levels have data — everything else is null (as /v1/forecast returns).
+ */
+function ecmwfResponse(hours: number) {
+  const available = [1000, 925, 850, 700, 600];
+  const { hourly } = gfsResponse(hours);
+
+  hourly.wind_speed_80m = Array.from({ length: hours }, () => null);
+  hourly.wind_direction_80m = Array.from({ length: hours }, () => null);
+  HPAS.filter(hPa => !available.includes(hPa)).forEach(hPa => {
+    hourly[`wind_speed_${hPa}hPa`] = Array.from({ length: hours }, () => null);
+    hourly[`wind_direction_${hPa}hPa`] = Array.from({ length: hours }, () => null);
+    hourly[`geopotential_height_${hPa}hPa`] = Array.from({ length: hours }, () => null);
+  });
+
+  return { hourly };
+}
+
 function gfsCalls(fetchSpy: ReturnType<typeof vi.fn>): string[] {
-  return fetchSpy.mock.calls.map(c => c[0] as string).filter(u => u.includes('/v1/gfs'));
+  return fetchSpy.mock.calls.map(c => c[0] as string).filter(u => u.includes('/v1/forecast'));
 }
 
 describe('openMeteoSource', () => {
@@ -212,6 +231,47 @@ describe('fetchOpenMeteo', () => {
       await fetchOpenMeteo(POINT, { forceRefresh: true });
 
       expect(gfsCalls(fetchSpy)).toHaveLength(2);
+    });
+  });
+
+  describe('model selection', () => {
+    it('defaults to best_match and puts the model in the request', async () => {
+      await fetchOpenMeteo(POINT);
+
+      expect(gfsCalls(fetchSpy)[0]).toContain('models=best_match');
+    });
+
+    it('passes the requested model and records it in meta', async () => {
+      const profile = await fetchOpenMeteo(POINT, { model: 'gfs_seamless' });
+
+      expect(gfsCalls(fetchSpy)[0]).toContain('models=gfs_seamless');
+      expect(profile.meta?.model).toBe('gfs_seamless');
+    });
+
+    it('refetches when the model changes (model is part of the cache key)', async () => {
+      await fetchOpenMeteo(POINT, { model: 'best_match' });
+      await fetchOpenMeteo(POINT, { model: 'gfs_seamless' });
+
+      expect(gfsCalls(fetchSpy)).toHaveLength(2);
+    });
+
+    it('serves locally when the model is unchanged', async () => {
+      await fetchOpenMeteo(POINT, { model: 'gfs_seamless' });
+      await fetchOpenMeteo(POINT, { model: 'gfs_seamless', hourOffset: 4 });
+
+      expect(gfsCalls(fetchSpy)).toHaveLength(1);
+    });
+
+    it('skips rows the model does not provide (ECMWF: no 80 m, 5 levels)', async () => {
+      fetchSpy = mockFetch(30, ecmwfResponse(24));
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const profile = await fetchOpenMeteo(POINT, { model: 'ecmwf_ifs025' });
+
+      // 10 m only (no 80 m) + the 5 populated pressure levels above ground
+      expect(profile.winds).toHaveLength(1 + 5);
+      expect(profile.winds[0].altFt).toBeCloseTo(10 * 3.28084, 0);
+      expect(profile.winds.every(r => Number.isFinite(r.speedKts))).toBe(true);
     });
   });
 });

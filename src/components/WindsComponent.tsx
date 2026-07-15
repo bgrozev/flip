@@ -26,7 +26,14 @@ import React, { useCallback } from 'react';
 import { useUnits } from '../hooks';
 import { ObservedWindStation } from '../types';
 import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
-import { SOURCE_MANUAL, WindProfile, createWindProfile, createWindRow } from '../core/wind';
+import {
+  SOURCE_MANUAL,
+  SOURCE_OPEN_METEO,
+  WindProfile,
+  createWindProfile,
+  createWindRow,
+  windModelLabel
+} from '../core/wind';
 
 interface WindsComponentProps {
   winds: WindProfile;
@@ -239,6 +246,21 @@ export default function WindsComponent({
           </Box>
         ) : (
           <>
+            {winds.aloftSource === SOURCE_OPEN_METEO && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mb: 0.5, textAlign: 'left' }}
+              >
+                {'OpenMeteo'}
+                {winds.meta?.model ? ` · ${windModelLabel(winds.meta.model)}` : ''}
+                {winds.validTime
+                  ? ` · valid ${winds.validTime.toLocaleString([], {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                  })}`
+                  : ''}
+              </Typography>
+            )}
             <TableContainer
               component={Paper}
               sx={{ flexGrow: 1, padding: 0, overflow: 'hidden' }}

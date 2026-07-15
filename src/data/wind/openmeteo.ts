@@ -2,6 +2,8 @@ import { LatLng } from '../../types';
 import { hasTargetMovedTooFar } from '../../core/geometry';
 import { metersToFeet } from '../../core/units';
 import {
+  DEFAULT_WIND_MODEL,
+  OPEN_METEO_MODELS,
   SOURCE_OPEN_METEO,
   WindProfile,
   WindRow,
@@ -27,24 +29,30 @@ const MAX_PREFETCH_HOURS = 168;
 /** How long a prefetched window stays fresh (models update every few hours). */
 const PREFETCH_TTL_MS = 30 * 60 * 1000;
 
-interface GfsHourlyData {
+/**
+ * Hourly arrays from /v1/forecast. Values are null where the selected
+ * model doesn't provide a variable (e.g. ECMWF has no 80 m wind and only
+ * a subset of the pressure levels).
+ */
+interface OpenMeteoHourlyData {
   time: string[];
-  wind_direction_10m: number[];
-  wind_speed_10m: number[];
-  wind_direction_80m: number[];
-  wind_speed_80m: number[];
-  [key: string]: number[] | string[];
+  wind_direction_10m: (number | null)[];
+  wind_speed_10m: (number | null)[];
+  wind_direction_80m: (number | null)[];
+  wind_speed_80m: (number | null)[];
+  [key: string]: (number | null)[] | string[];
 }
 
-interface GfsResponse {
-  hourly: GfsHourlyData;
+interface OpenMeteoResponse {
+  hourly: OpenMeteoHourlyData;
 }
 
 interface PrefetchedWindow {
   location: LatLng;
+  model: string;
   fetchedAt: number;
   elevationFt: number;
-  hourly: GfsHourlyData;
+  hourly: OpenMeteoHourlyData;
 }
 
 let prefetched: PrefetchedWindow | null = null;
@@ -67,38 +75,47 @@ function prefetchedIndexFor(window: PrefetchedWindow, hourOffset: number): numbe
   return index >= 0 && index < window.hourly.time.length ? index : null;
 }
 
+function hourlyValue(
+  hourly: OpenMeteoHourlyData,
+  key: string,
+  index: number
+): number | null {
+  const arr = hourly[key] as (number | null)[] | undefined;
+  const value = arr?.[index];
+
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function buildProfile(window: PrefetchedWindow, index: number): WindProfile {
   const { hourly, elevationFt } = window;
   const validTime = new Date(`${hourly.time[index]}Z`);
   const extra = { source: SOURCE_OPEN_METEO, validTime };
+  const rows: WindRow[] = [];
 
-  const rows: WindRow[] = [
-    createWindRow(
-      10 * metersToFeet,
-      (hourly.wind_direction_10m as number[])[index],
-      (hourly.wind_speed_10m as number[])[index],
-      extra
-    ),
-    createWindRow(
-      80 * metersToFeet,
-      (hourly.wind_direction_80m as number[])[index],
-      (hourly.wind_speed_80m as number[])[index],
-      extra
-    )
-  ];
+  // 10 m and 80 m surface winds (some models don't provide 80 m)
+  for (const meters of [10, 80]) {
+    const direction = hourlyValue(hourly, `wind_direction_${meters}m`, index);
+    const speed = hourlyValue(hourly, `wind_speed_${meters}m`, index);
 
+    if (direction !== null && speed !== null) {
+      rows.push(createWindRow(meters * metersToFeet, direction, speed, extra));
+    }
+  }
+
+  // Pressure levels above ground (skipping levels the model doesn't provide)
   hPas.forEach(hPa => {
-    const e = (hourly[`geopotential_height_${hPa}hPa`] as number[])[index] * metersToFeet - elevationFt;
+    const height = hourlyValue(hourly, `geopotential_height_${hPa}hPa`, index);
+    const direction = hourlyValue(hourly, `wind_direction_${hPa}hPa`, index);
+    const speed = hourlyValue(hourly, `wind_speed_${hPa}hPa`, index);
+
+    if (height === null || direction === null || speed === null) {
+      return;
+    }
+
+    const e = height * metersToFeet - elevationFt;
 
     if (e > 80) {
-      rows.push(
-        createWindRow(
-          e,
-          (hourly[`wind_direction_${hPa}hPa`] as number[])[index],
-          (hourly[`wind_speed_${hPa}hPa`] as number[])[index],
-          extra
-        )
-      );
+      rows.push(createWindRow(e, direction, speed, extra));
     }
   });
 
@@ -108,6 +125,7 @@ function buildProfile(window: PrefetchedWindow, index: number): WindProfile {
     groundSource: SOURCE_OPEN_METEO,
     validTime,
     meta: {
+      model: window.model,
       fetchedAt: new Date(window.fetchedAt),
       location: window.location,
       elevationFt
@@ -119,13 +137,14 @@ export async function fetchOpenMeteo(
   point: LatLng,
   opts: WindFetchOpts = {}
 ): Promise<WindProfile> {
-  const { hourOffset = 0, forceRefresh = false, signal } = opts;
+  const { hourOffset = 0, model = DEFAULT_WIND_MODEL, forceRefresh = false, signal } = opts;
 
   // Serve locally from the prefetched window when it is fresh, for the
-  // same location, and covers the requested hour
+  // same location and model, and covers the requested hour
   if (
     !forceRefresh &&
     prefetched &&
+    prefetched.model === model &&
     Date.now() - prefetched.fetchedAt < PREFETCH_TTL_MS &&
     !hasTargetMovedTooFar(prefetched.location, point)
   ) {
@@ -143,25 +162,33 @@ export async function fetchOpenMeteo(
     MAX_PREFETCH_HOURS,
     Math.max(MIN_PREFETCH_HOURS, Math.ceil((hourOffset + 1) / 24) * 24)
   );
-  const gfs = await fetchGfs(point, prefetchHours, signal);
+  const response = await fetchWindow(point, prefetchHours, model, signal);
 
   console.log(`Elevation is ${elevationFt} ft`);
 
   prefetched = {
     location: point,
+    model,
     fetchedAt: Date.now(),
     elevationFt,
-    hourly: gfs.hourly
+    hourly: response.hourly
   };
 
   const index = prefetchedIndexFor(prefetched, hourOffset) ??
-    Math.min(hourOffset, gfs.hourly.time.length - 1);
+    Math.min(hourOffset, response.hourly.time.length - 1);
 
   return buildProfile(prefetched, index);
 }
 
-function fetchGfs(point: LatLng, forecastHours: number, signal?: AbortSignal): Promise<GfsResponse> {
-  let url = `https://api.open-meteo.com/v1/gfs?latitude=${point.lat}&longitude=${point.lng}`;
+function fetchWindow(
+  point: LatLng,
+  forecastHours: number,
+  model: string,
+  signal?: AbortSignal
+): Promise<OpenMeteoResponse> {
+  let url = `https://api.open-meteo.com/v1/forecast?latitude=${point.lat}&longitude=${point.lng}`;
+
+  url += `&models=${model}`;
 
   hPas.forEach(hPa => {
     url += `&hourly=wind_speed_${hPa}hPa`;
@@ -183,6 +210,6 @@ export const openMeteoSource: AloftWindSource = {
   id: 'open-meteo',
   label: 'OpenMeteo',
   kind: 'model-forecast',
-  capabilities: { hours: MIN_PREFETCH_HOURS },
+  capabilities: { hours: MIN_PREFETCH_HOURS, models: OPEN_METEO_MODELS },
   fetch: fetchOpenMeteo
 };

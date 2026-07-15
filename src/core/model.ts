@@ -32,6 +32,7 @@ import {
   WindSpeedUnit
 } from './units';
 import { LIMITS, NumericLimits, clampNumber, normalizeDirection } from './validation';
+import { DEFAULT_WIND_MODEL, OPEN_METEO_MODELS } from './wind';
 
 /** Schema version written with every persisted document. */
 export const SCHEMA_VERSION = 1;
@@ -81,6 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
   straightenLegs: true,
   useDzGroundWind: true,
   limitWind: 3000,
+  windModel: DEFAULT_WIND_MODEL,
   showPresets: true,
   showMeasureTool: false,
   highlightCorrespondingPoints: true,
@@ -239,6 +241,7 @@ export function migrateSettings(raw: unknown): Settings {
     straightenLegs: booleanOr(r.straightenLegs, d.straightenLegs),
     useDzGroundWind: booleanOr(r.useDzGroundWind, d.useDzGroundWind),
     limitWind: limitedNumber(r.limitWind, d.limitWind, LIMITS.windAltFt),
+    windModel: oneOf(r.windModel, OPEN_METEO_MODELS.map(m => m.id), d.windModel),
     showPresets: booleanOr(r.showPresets, d.showPresets),
     showMeasureTool: booleanOr(r.showMeasureTool, d.showMeasureTool),
     highlightCorrespondingPoints: booleanOr(r.highlightCorrespondingPoints, d.highlightCorrespondingPoints),

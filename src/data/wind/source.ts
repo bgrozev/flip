@@ -1,5 +1,7 @@
 import { LatLng, ObservedWindStation } from '../../types';
-import { WindProfile } from '../../core/wind';
+import { WindModelOption, WindProfile } from '../../core/wind';
+
+export type { WindModelOption };
 
 /**
  * The wind data layer is a set of source plugins implementing WindSource.
@@ -12,12 +14,6 @@ import { WindProfile } from '../../core/wind';
  * observed-station sources resolve to a list of stations near the location.
  */
 export type WindSourceKind = 'model-forecast' | 'sounding' | 'observed-station';
-
-/** A selectable forecast model offered by a model-forecast source. */
-export interface WindModelOption {
-  id: string;
-  label: string;
-}
 
 export interface WindSourceCapabilities {
   /**

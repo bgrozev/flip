@@ -15,6 +15,7 @@ import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
 import React from 'react';
 
 import { Settings } from '../types';
+import { OPEN_METEO_MODELS } from '../core/wind';
 import {
   ALTITUDE_UNIT_OPTIONS,
   AltitudeUnit,
@@ -240,6 +241,21 @@ export default function SettingsComponent({
                 unit="ft"
                 onChange={handleNumberChange('limitWind')}
               />
+              <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+                <InputLabel id="wind-model-label">Forecast model</InputLabel>
+                <Select
+                  labelId="wind-model-label"
+                  value={settings.windModel}
+                  label="Forecast model"
+                  onChange={(e: SelectChangeEvent) =>
+                    setSettings({ ...settings, windModel: e.target.value })
+                  }
+                >
+                  {OPEN_METEO_MODELS.map(m => (
+                    <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
           )}
         </React.Fragment>

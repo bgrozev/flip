@@ -185,6 +185,12 @@ describe('migrateSettings', () => {
     expect(result.units.altitude).toBe('m');
     expect(result.units.windSpeed).toBe('kts');
   });
+
+  it('accepts known wind models and defaults unknown ones', () => {
+    expect(migrateSettings({ windModel: 'icon_seamless' }).windModel).toBe('icon_seamless');
+    expect(migrateSettings({ windModel: 'skynet_9000' }).windModel).toBe('best_match');
+    expect(migrateSettings({}).windModel).toBe('best_match');
+  });
 });
 
 describe('migratePresets', () => {

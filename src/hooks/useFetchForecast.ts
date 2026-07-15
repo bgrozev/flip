@@ -8,7 +8,7 @@ interface UseFetchForecastOptions {
   /** Current target location */
   target: LatLng | undefined;
   /** Settings for wind fetching */
-  settings: Pick<Settings, 'limitWind'>;
+  settings: Pick<Settings, 'limitWind' | 'windModel'>;
 }
 
 interface UseFetchForecastResult {
@@ -62,7 +62,12 @@ export function useFetchForecast({
 
     setFetching(true);
 
-    fetchForecast(target, { hourOffset, signal: controller.signal, forceRefresh: opts?.force })
+    fetchForecast(target, {
+      hourOffset,
+      model: settings.windModel,
+      signal: controller.signal,
+      forceRefresh: opts?.force
+    })
       .then(fetchedWinds => {
         // Determine altitude limit
         let limit = settings.limitWind;
@@ -86,7 +91,7 @@ export function useFetchForecast({
         setFetching(false);
         setWinds(createWindProfile());
       });
-  }, [target, settings.limitWind]);
+  }, [target, settings.limitWind, settings.windModel]);
 
   return {
     winds,

@@ -70,6 +70,8 @@ export interface Settings {
   straightenLegs: boolean;
   useDzGroundWind: boolean;
   limitWind: number;
+  /** OpenMeteo forecast model id (see core/wind OPEN_METEO_MODELS). */
+  windModel: string;
   showPresets: boolean;
   showMeasureTool: boolean;
   highlightCorrespondingPoints: boolean;
