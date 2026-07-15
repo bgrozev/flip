@@ -1,17 +1,19 @@
 # FliP Next-Generation Redesign — Working Notes
 
 Branch: `claude/flip-redesign-architecture-e767df`
-Status: **Phase 3 complete** (2026-07-14, commits `eb1aad0`, `d018bfe`,
-`340b7ae`): react-router with clean URLs (GitHub-Pages-safe via 404.html
-fallback built by vite plugin), declarative mode system — `pattern` and
-`swoop` live, `flocking`/`explore` stubs; first-run picker, toolbar
-switcher, `?mode=` share links, nav/layer/bottom-nav gating, mode
-persisted via versioned codec, user config survives mode switches.
-Toolpad kept (integrates fine via small router adapter). 272 tests,
-0 lint errors / 52 warnings. Browser-verified by agent + independent spot
-check. (Phase 2 at `882f803`…`aa73fe5`, Phase 1 at `cd2d8b6`…`38adcfd`,
-Phase 0 at `e4df103`.) Next: Phase 4 (wind subsystem) or Phase 5 (PWA);
-see `ARCHITECTURE.md`.
+Status: **Phase 4 complete** (2026-07-15, commits `0694842`, `c7d3776`,
+`99f6313`, `186c555`, `59fb9ec`): `src/data/wind/` WindSource plugin layer
+replaces `src/forecast/`; elevation cache; multi-hour prefetch with local
+hour switching; OpenMeteo model info + selection (best_match/GFS/ICON/ECMWF,
+all CORS-verified); NWS station auto-discovery by location (de-couples
+ground wind from dropzones); radiosonde soundings source (IEM RAOB,
+CORS-verified). 331 tests, 0 lint errors / 49 warnings. Independently
+spot-checked in-browser: fetch returns 19 rows with per-row source tags,
+cached elevation, real Date validTime, both aloft sources registered.
+Known gap found during check → see BACKLOG Phase-4 follow-ups.
+(Phase 3 at `eb1aad0`…`340b7ae`, Phase 2 at `882f803`…`aa73fe5`,
+Phase 1 at `cd2d8b6`…`38adcfd`, Phase 0 at `e4df103`.)
+Next: Phase 5 (PWA), 6 (flocking), or 7 (logbook); see `ARCHITECTURE.md`.
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).
