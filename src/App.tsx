@@ -38,7 +38,7 @@ import {
   WindSummary,
   WindsComponent
 } from './components';
-import { CourseEditTarget, TargetEditTarget } from './components/MapComponent';
+import { CourseEditTarget, TargetEditTarget } from './map/layers';
 import { SOURCE_DZ, SOURCE_MANUAL } from './forecast/forecast';
 import {
   AppStateProvider,
