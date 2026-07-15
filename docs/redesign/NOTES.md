@@ -1,12 +1,13 @@
 # FliP Next-Generation Redesign — Working Notes
 
 Branch: `claude/flip-redesign-architecture-e767df`
-Status: **Phase 1 complete** (2026-07-13, commits `cd2d8b6`…`38adcfd`):
-pinning tests, wind-interpolation + offset-clamp fixes, input validation,
-memoized derive pipeline, Winds → plain WindProfile data, `src/core/`
-extraction, versioned storage schemas. 244 tests, 0 lint errors.
-(Phase 0 done at `e4df103`.) Next: Phase 2 (map layerization) or Phase 3
-(router + modes); see `ARCHITECTURE.md`.
+Status: **Phase 2 complete** (2026-07-14, commits `882f803`…`aa73fe5`):
+`src/map/` adapter (provider-neutral primitives; Google impl quarantined in
+`src/map/google/`), all map features extracted into layers, MapComponent
+down from 1206 to 105 lines, Places autocomplete moved into the adapter.
+247 tests, 0 lint errors / 52 warnings, full browser verification, zero
+behavior change. (Phase 1 at `cd2d8b6`…`38adcfd`, Phase 0 at `e4df103`.)
+Next: Phase 3 (router + modes); see `ARCHITECTURE.md`.
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).

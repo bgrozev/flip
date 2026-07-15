@@ -203,6 +203,18 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   by app code after step 6 — remove once nothing else adopts them.
 - (Same-path nav toggle flakiness — already covered by Phase 3 router work.)
 
+## Phase-2 follow-ups (found during implementation, 2026-07-14)
+
+- ☐ Target-edit handles overlap at mid zoom — heading handle's hit area
+  beats the target handle when ~10px apart; needs separation or
+  hit-priority for the target handle.
+- ☐ `attachPlaceAutocomplete` re-attaches on every callback identity change
+  with no listener cleanup (pre-existing bug, carried over) — effect should
+  return a disposer; ref-stabilize the callback.
+- ☐ Built-in courses are geographically anchored (e.g. Skydive Arizona);
+  selecting one far from target shows nothing — add "jump to course".
+- ☐ Leg tooltip body rows low-contrast over dark map theme — styling pass.
+
 ## Process / engineering health
 
 - ☐ **Improve documentation** — CLAUDE.md is stale (rewrite in Phase 0);
