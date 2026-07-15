@@ -10,10 +10,25 @@ ground wind from dropzones); radiosonde soundings source (IEM RAOB,
 CORS-verified). 331 tests, 0 lint errors / 49 warnings. Independently
 spot-checked in-browser: fetch returns 19 rows with per-row source tags,
 cached elevation, real Date validTime, both aloft sources registered.
-Known gap found during check → see BACKLOG Phase-4 follow-ups.
-(Phase 3 at `eb1aad0`…`340b7ae`, Phase 2 at `882f803`…`aa73fe5`,
-Phase 1 at `cd2d8b6`…`38adcfd`, Phase 0 at `e4df103`.)
-Next: Phase 5 (PWA), 6 (flocking), or 7 (logbook); see `ARCHITECTURE.md`.
+(Past-forecast-time "bug" from the spot check was retracted — clamps
+already handle it; commit `10afc04`.)
+
+**Phase 5 complete** (2026-07-15, commit `3c529d5`): installable PWA via
+vite-plugin-pwa — manifest + icons (any + maskable, upscaled from the
+pixel-art logo; replace with higher-res art when available), service
+worker precaching the app shell with navigateFallback (offline route
+loading), NetworkFirst runtime caching for the weather APIs so the last
+forecast survives offline. Google tiles intentionally uncached (ToS →
+MapLibre item). Verified in production preview: SW active/controlling,
+navigateFallback serves the shell for unknown routes, openmeteo runtime
+cache populates and reads back offline.
+
+(Phase 4 at `0694842`…`59fb9ec`, Phase 3 at `eb1aad0`…`340b7ae`,
+Phase 2 at `882f803`…`aa73fe5`, Phase 1 at `cd2d8b6`…`38adcfd`,
+Phase 0 at `e4df103`.)
+Next: Phase 6 (flocking mode) or 7 (logbook/documents); see
+`ARCHITECTURE.md`. Also pending: replace placeholder PWA icons with
+higher-res brand art (owner input).
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).
