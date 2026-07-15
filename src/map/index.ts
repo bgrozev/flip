@@ -23,4 +23,11 @@ export type {
 } from './MapAdapter';
 
 // Provider binding: the Google Maps implementation of the primitives.
-export { MapCircle, MapContainer, MapDragHandle, MapOverlay, MapPolyline } from './google';
+export {
+  attachPlaceAutocomplete,
+  MapCircle,
+  MapContainer,
+  MapDragHandle,
+  MapOverlay,
+  MapPolyline
+} from './google';
