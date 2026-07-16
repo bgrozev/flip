@@ -115,9 +115,19 @@ export default function MapLibreMapContainer({ center, children }: MapContainerP
 
     instance.on('load', () => {
       applyCursor();
+      // Re-measure now that the style has loaded: inside the flex dashboard
+      // layout the map can be created before the container reaches its final
+      // size, and MapLibre otherwise keeps that stale size until the next
+      // resize event.
+      instance.resize();
       setMap(instance);
-      console.log('Map loaded.');
     });
+
+    // Also resize on later container size changes (e.g. the side panel opening
+    // or closing), matching the Google adapter's automatic reflow.
+    const resizeObserver = new ResizeObserver(() => instance.resize());
+
+    resizeObserver.observe(wrapperRef.current);
 
     instance.on('zoom', () => setZoom(instance.getZoom()));
 
@@ -136,6 +146,7 @@ export default function MapLibreMapContainer({ center, children }: MapContainerP
     });
 
     return () => {
+      resizeObserver.disconnect();
       instance.remove();
       mapRef.current = null;
       setMap(null);

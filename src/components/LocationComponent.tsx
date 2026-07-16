@@ -10,9 +10,9 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useEffect, useRef } from 'react';
 
-import { useTarget } from '../hooks';
+import { useAppState, useTarget } from '../hooks';
 import { attachPlaceAutocomplete } from '../map';
-import { LatLng } from '../types';
+import { LatLng, MapProvider } from '../types';
 
 import { CustomLocationsComponent, DropzonesComponent } from './';
 
@@ -67,11 +67,13 @@ interface MapSearchBoxProps {
 }
 
 function MapSearchBox({ onPlaceSelected }: MapSearchBoxProps) {
+  const { settings } = useAppState();
+  const provider: MapProvider = settings.mapProvider;
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    attachPlaceAutocomplete(inputRef.current!, onPlaceSelected);
-  }, [onPlaceSelected]);
+    attachPlaceAutocomplete(inputRef.current!, onPlaceSelected, provider);
+  }, [onPlaceSelected, provider]);
 
   return (
     <TextField

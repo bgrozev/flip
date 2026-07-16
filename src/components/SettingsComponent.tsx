@@ -14,7 +14,7 @@ import {
 import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
 import React from 'react';
 
-import { Settings } from '../types';
+import { MapProvider, Settings } from '../types';
 import { OPEN_METEO_MODELS } from '../core/wind';
 import {
   ALTITUDE_UNIT_OPTIONS,
@@ -230,6 +230,24 @@ export default function SettingsComponent({
               />
             </SettingRow>
           ))}
+          {group.title === 'Map' && (
+            <Box sx={{ pt: 0.5, width: '100%' }}>
+              <FormControl fullWidth size="small">
+                <InputLabel id="map-provider-label">Map provider</InputLabel>
+                <Select
+                  labelId="map-provider-label"
+                  value={settings.mapProvider}
+                  label="Map provider"
+                  onChange={(e: SelectChangeEvent) =>
+                    setSettings({ ...settings, mapProvider: e.target.value as MapProvider })
+                  }
+                >
+                  <MenuItem value="google">Google Maps</MenuItem>
+                  <MenuItem value="maplibre">MapLibre (satellite)</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          )}
           {group.title === 'Wind' && (
             <Box sx={{ pt: 0.5, width: '100%' }}>
               <NumberInput
