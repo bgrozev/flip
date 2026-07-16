@@ -177,13 +177,19 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Ideas / research (needs design)
 
-- ☐ **MapLibre adapter** — second `MapAdapter` implementation (MapLibre GL +
-  OSM/satellite tile provider). Now structurally cheap after Phase 2
-  (Google confined to `src/map/google/`). Motivations: offline tiles for
-  the PWA (Google ToS forbids tile caching), no API-key cost exposure,
-  map rotation freedom. Needs: tile source choice (satellite imagery is
-  the hard part — MapTiler/ESRI pricing vs Google), feature parity audit
-  of the adapter primitives.
+- ☑ **MapLibre adapter** — DONE (2026-07-15, commits `bb2d5ec`…`b3885cb`).
+  Second provider switchable in Settings; ESRI World Imagery satellite (no
+  key); maplibre-gl confined to `src/map/maplibre/`; primitives are
+  provider dispatchers. Follow-ups below.
+  - ☐ MapLibre interaction spot-check: drag handles, courses render+edit,
+    measure tool, hover tooltips, wind arrows (rendering + switch + no
+    crash were verified; per-interaction sweep on MapLibre was not).
+  - ☐ Offline PWA tiles via MapLibre — the original motivation. ESRI tiles
+    are not currently precached by the service worker; wire runtime tile
+    caching (respecting ESRI terms) so MapLibre works offline.
+  - ☐ Map rotation (MapLibre supports it natively) — wire the rotation
+    control + correct wind-arrow overlay for bearing (see "Allow map
+    rotation" item).
 
 - ☐ **Conditions delta since last jump** — "what changed since you last
   jumped": wind shift, direction change. Needs jump-time snapshots

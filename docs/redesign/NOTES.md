@@ -26,9 +26,29 @@ cache populates and reads back offline.
 (Phase 4 at `0694842`…`59fb9ec`, Phase 3 at `eb1aad0`…`340b7ae`,
 Phase 2 at `882f803`…`aa73fe5`, Phase 1 at `cd2d8b6`…`38adcfd`,
 Phase 0 at `e4df103`.)
+
+**MapLibre provider added** (2026-07-15, commits `bb2d5ec`, `78fc9f0`,
+`c3afff7`, `c0fbcde`, `b3885cb`): second map provider, switchable in
+Settings ("Map provider": Google Maps / MapLibre satellite). maplibre-gl
+confined to `src/map/maplibre/`; the 6 primitives are now provider
+dispatchers keyed on `MapProviderContext`; default stays google.
+Satellite = ESRI World Imagery (no key) with attribution. Place search
+handled per provider (google Places / MapLibre-side geocoder).
+Verified in-browser: both providers render the pattern; MapLibre shows
+ESRI tiles + POM label + attribution, zero console errors; live switch
+works BOTH directions without crashing (the `b3885cb` fix guards MapLibre
+`map.remove()` teardown that previously blanked the tree on switch);
+provider persists.
+NOT yet re-verified on MapLibre specifically: full interaction sweep
+(target/heading drag handles, courses render+edit, measure tool, hover
+tooltips, wind arrows) — recommended spot-check follow-up. The
+implementing agent kept hitting session limits and never delivered its
+final report; the last crash-fix slice was committed and verified by the
+main session.
+
 Next: Phase 6 (flocking mode) or 7 (logbook/documents); see
 `ARCHITECTURE.md`. Also pending: replace placeholder PWA icons with
-higher-res brand art (owner input).
+higher-res brand art (owner input); MapLibre interaction spot-check.
 
 This file is the running log of the redesign effort: current-state survey,
 flaws, owner Q&A. Deliverables live in companion files (see §4).
