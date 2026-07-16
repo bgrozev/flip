@@ -76,7 +76,7 @@ function MapComponent({
   } = settings;
 
   return (
-    <MapContainer center={center}>
+    <MapContainer center={center} provider={settings.mapProvider}>
       {has('flightPaths') && (
         <FlightPathsLayer
           pathA={pathA}
