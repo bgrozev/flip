@@ -223,5 +223,14 @@ export function MapControl({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return createPortal(children, host);
+  // Re-enable pointer events for the control content: some providers (e.g.
+  // MapLibre) make the control host transparent to pointer events so the map
+  // underneath stays draggable, which would otherwise leave buttons here
+  // unclickable. The wrapper generates no box of its own (its children are
+  // absolutely positioned), and controls that must not block the map — such
+  // as the wind arrow — still opt out with their own `pointerEvents: 'none'`.
+  return createPortal(
+    <div style={{ pointerEvents: 'auto' }}>{children}</div>,
+    host
+  );
 }

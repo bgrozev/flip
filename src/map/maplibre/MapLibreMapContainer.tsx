@@ -92,62 +92,82 @@ export default function MapLibreMapContainer({ center, children }: MapContainerP
 
   // Create the map once, on mount.
   useEffect(() => {
-    if (!wrapperRef.current) {
+    const wrap = wrapperRef.current;
+
+    if (!wrap) {
       return undefined;
     }
 
-    const instance = new maplibregl.Map({
-      container: wrapperRef.current,
-      style: DEFAULT_MAPLIBRE_STYLE,
-      center: [centerRef.current.lng, centerRef.current.lat],
-      zoom: DEFAULT_ZOOM,
-      maxZoom: MAX_ZOOM,
-      attributionControl: { compact: true },
-      // Keep parity with the Google adapter's flat, north-up satellite view.
-      dragRotate: false,
-      pitchWithRotate: false,
-      touchZoomRotate: true
-    });
+    let instance: maplibregl.Map | null = null;
+    let reflowObserver: ResizeObserver | null = null;
+    let startObserver: ResizeObserver | null = null;
 
-    instance.touchZoomRotate.disableRotation();
+    const createMap = () => {
+      const map = new maplibregl.Map({
+        container: wrap,
+        style: DEFAULT_MAPLIBRE_STYLE,
+        center: [centerRef.current.lng, centerRef.current.lat],
+        zoom: DEFAULT_ZOOM,
+        maxZoom: MAX_ZOOM,
+        attributionControl: { compact: true },
+        // Keep parity with the Google adapter's flat, north-up satellite view.
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchZoomRotate: true
+      });
 
-    mapRef.current = instance;
+      map.touchZoomRotate.disableRotation();
+      instance = map;
+      mapRef.current = map;
 
-    instance.on('load', () => {
-      applyCursor();
-      // Re-measure now that the style has loaded: inside the flex dashboard
-      // layout the map can be created before the container reaches its final
-      // size, and MapLibre otherwise keeps that stale size until the next
-      // resize event.
-      instance.resize();
-      setMap(instance);
-    });
+      map.on('load', () => {
+        applyCursor();
+        setMap(map);
+      });
 
-    // Also resize on later container size changes (e.g. the side panel opening
-    // or closing), matching the Google adapter's automatic reflow.
-    const resizeObserver = new ResizeObserver(() => instance.resize());
+      map.on('zoom', () => setZoom(map.getZoom()));
 
-    resizeObserver.observe(wrapperRef.current);
+      map.on('click', ev => {
+        const handlers = clickHandlersRef.current;
 
-    instance.on('zoom', () => setZoom(instance.getZoom()));
+        if (handlers.length === 0) {
+          return;
+        }
+        const pos = { lat: ev.lngLat.lat, lng: ev.lngLat.lng };
+        // Highest-priority handler wins; latest registration breaks ties.
+        const top = handlers.reduce((a, b) =>
+          (b.priority > a.priority || (b.priority === a.priority && b.seq > a.seq) ? b : a));
 
-    instance.on('click', ev => {
-      const handlers = clickHandlersRef.current;
+        top.handler(pos);
+      });
 
-      if (handlers.length === 0) {
-        return;
-      }
-      const pos = { lat: ev.lngLat.lat, lng: ev.lngLat.lng };
-      // Highest-priority handler wins; latest registration breaks ties.
-      const top = handlers.reduce((a, b) =>
-        (b.priority > a.priority || (b.priority === a.priority && b.seq > a.seq) ? b : a));
+      // Reflow on later container size changes (e.g. the side panel opening or
+      // closing), matching the Google adapter's automatic reflow.
+      reflowObserver = new ResizeObserver(() => map.resize());
+      reflowObserver.observe(wrap);
+    };
 
-      top.handler(pos);
-    });
+    // A MapLibre map created in a zero-size container never renders — so its
+    // 'load' never fires and no tiles are requested — and it does not recover
+    // on its own. Inside the flex dashboard layout the container can be unsized
+    // for the first frame(s), so defer creation until it has a real size.
+    if (wrap.clientWidth > 0 && wrap.clientHeight > 0) {
+      createMap();
+    } else {
+      startObserver = new ResizeObserver(() => {
+        if (wrap.clientWidth > 0 && wrap.clientHeight > 0) {
+          startObserver?.disconnect();
+          startObserver = null;
+          createMap();
+        }
+      });
+      startObserver.observe(wrap);
+    }
 
     return () => {
-      resizeObserver.disconnect();
-      instance.remove();
+      startObserver?.disconnect();
+      reflowObserver?.disconnect();
+      instance?.remove();
       mapRef.current = null;
       setMap(null);
     };
