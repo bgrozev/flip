@@ -13,7 +13,7 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { LatLng } from '../types';
+import { LatLng, MapProvider } from '../types';
 
 /** Initial zoom level applied when the map loads. */
 export const DEFAULT_ZOOM = 17;
@@ -33,6 +33,16 @@ export interface MapContainerProps {
   /** Map camera center: applied on load and panned to when it changes. */
   center: LatLng;
   children?: React.ReactNode;
+}
+
+/**
+ * Props of the top-level `MapContainer` dispatcher: a `MapContainerProps`
+ * plus the provider to render. Each concrete provider container itself
+ * takes only `MapContainerProps`.
+ */
+export interface MapDispatchContainerProps extends MapContainerProps {
+  /** Which provider implementation to mount. Defaults to `'google'`. */
+  provider?: MapProvider;
 }
 
 /** A polyline on the map. */
@@ -104,6 +114,22 @@ export interface MapDragHandleProps {
   onDrag?: (pos: LatLng) => void;
   /** Fired when the drag ends, with the final position. */
   onDragEnd: (pos: LatLng) => void;
+}
+
+// ---------------------------------------------------------------------------
+// Provider selection
+
+/**
+ * The active map provider for the current map subtree. `MapContainer`
+ * provides this (from the `provider` prop fed by settings) so that the
+ * primitive dispatchers (`MapPolyline`, `MapCircle`, ...) can render the
+ * matching provider implementation. Defaults to `'google'`.
+ */
+export const MapProviderContext = createContext<MapProvider>('google');
+
+/** The active map provider inside a `MapContainer` subtree. */
+export function useMapProvider(): MapProvider {
+  return useContext(MapProviderContext);
 }
 
 // ---------------------------------------------------------------------------

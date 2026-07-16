@@ -191,6 +191,13 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ windModel: 'skynet_9000' }).windModel).toBe('best_match');
     expect(migrateSettings({}).windModel).toBe('best_match');
   });
+
+  it('defaults a missing or invalid map provider to google', () => {
+    expect(migrateSettings({}).mapProvider).toBe('google');
+    expect(migrateSettings({ mapProvider: 'openlayers' }).mapProvider).toBe('google');
+    expect(migrateSettings({ mapProvider: 42 }).mapProvider).toBe('google');
+    expect(migrateSettings({ mapProvider: 'maplibre' }).mapProvider).toBe('maplibre');
+  });
 });
 
 describe('migratePresets', () => {

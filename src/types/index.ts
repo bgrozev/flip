@@ -57,6 +57,11 @@ export interface ManoeuvreParams {
   left: boolean;
 }
 
+// Map providers (see src/map). The active provider renders the map and
+// supplies concrete implementations of the adapter primitives.
+export const MAP_PROVIDERS = ['google', 'maplibre'] as const;
+export type MapProvider = typeof MAP_PROVIDERS[number];
+
 // Settings types
 export interface Settings {
   showPoms: boolean;
@@ -74,6 +79,8 @@ export interface Settings {
   windAloftSource: 'forecast' | 'sounding';
   /** OpenMeteo forecast model id (see core/wind OPEN_METEO_MODELS). */
   windModel: string;
+  /** Which map provider renders the map: Google Maps or MapLibre GL. */
+  mapProvider: MapProvider;
   showPresets: boolean;
   showMeasureTool: boolean;
   highlightCorrespondingPoints: boolean;
