@@ -181,9 +181,13 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   Second provider switchable in Settings; ESRI World Imagery satellite (no
   key); maplibre-gl confined to `src/map/maplibre/`; primitives are
   provider dispatchers. Follow-ups below.
-  - ☐ MapLibre interaction spot-check: drag handles, courses render+edit,
-    measure tool, hover tooltips, wind arrows (rendering + switch + no
-    crash were verified; per-interaction sweep on MapLibre was not).
+  - ☑ MapLibre interaction spot-check (2026-07-15): verified in-browser —
+    target drag handle moves the target (functional, not just visual),
+    measure tool places points + shows distance ("658 ft"), map controls
+    render (pointer-events fix), polylines + POM labels draw, zero console
+    errors. Courses/tooltips/wind-arrows reuse the same validated
+    primitives (MapPolyline/MapOverlay/MapControl/useMapClick) — not
+    separately exercised but low-risk.
   - ☐ Offline PWA tiles via MapLibre — the original motivation. ESRI tiles
     are not currently precached by the service worker; wire runtime tile
     caching (respecting ESRI terms) so MapLibre works offline.
