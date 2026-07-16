@@ -25,6 +25,16 @@ interface Registry {
 
 const REGISTRIES = new WeakMap<MapLibreMap, Registry>();
 
+/**
+ * True once `map.remove()` has torn the map down. After removal its style,
+ * layers and sources are gone, and calling `getLayer`/`removeSource`/... on it
+ * throws — so cleanup code must skip those. MapLibre exposes no public flag for
+ * this, hence the internal `_removed` field.
+ */
+export function isMapRemoved(map: MapLibreMap): boolean {
+  return (map as unknown as { _removed?: boolean })._removed === true;
+}
+
 function registryFor(map: MapLibreMap): Registry {
   let reg = REGISTRIES.get(map);
 
@@ -64,6 +74,10 @@ export function removeOrderedLayer(map: MapLibreMap, layerId: string): void {
 
   reg.entries = reg.entries.filter(e => e.id !== layerId);
 
+  // A removed map has already dropped all its layers.
+  if (isMapRemoved(map)) {
+    return;
+  }
   if (map.getLayer(layerId)) {
     map.removeLayer(layerId);
   }

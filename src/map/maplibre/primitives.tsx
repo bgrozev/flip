@@ -20,7 +20,7 @@ import { LatLng } from '../../types';
 
 import { meterCirclePolygon } from './circle';
 import { useMapLibreMap } from './context';
-import { addOrderedLayer, removeOrderedLayer } from './layerOrder';
+import { addOrderedLayer, isMapRemoved, removeOrderedLayer } from './layerOrder';
 
 function lineFeature(path: LatLng[]): Feature<LineString> {
   return {
@@ -71,7 +71,7 @@ export function MapPolyline({
 
     return () => {
       removeOrderedLayer(map, layerId);
-      if (map.getSource(sourceId)) {
+      if (!isMapRemoved(map) && map.getSource(sourceId)) {
         map.removeSource(sourceId);
       }
     };
@@ -179,14 +179,14 @@ export function MapCircle({
     }
 
     return () => {
-      if (clickable) {
+      if (clickable && !isMapRemoved(map)) {
         map.off('click', fillId, onClickL as () => void);
         map.off('mouseenter', fillId, onEnterL as () => void);
         map.off('mouseleave', fillId, onLeaveL as () => void);
       }
       removeOrderedLayer(map, fillId);
       removeOrderedLayer(map, lineId);
-      if (map.getSource(sourceId)) {
+      if (!isMapRemoved(map) && map.getSource(sourceId)) {
         map.removeSource(sourceId);
       }
     };
