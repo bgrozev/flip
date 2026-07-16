@@ -31,6 +31,7 @@ import {
   SOURCE_OPEN_METEO,
   SOURCE_SOUNDING,
   WindProfile,
+  beaufortColor,
   createWindProfile,
   createWindRow,
   windModelLabel
@@ -333,9 +334,22 @@ export default function WindsComponent({
                       </TableCell>
                       <TableCell>
                         {lock ? (
-                          <Typography variant="body2">
-                            {formatWindSpeed(row.speedKts).value.toFixed(1)}
-                          </Typography>
+                          <Stack direction="row" spacing={0.75} alignItems="center">
+                            <Box
+                              component="span"
+                              sx={{
+                                width: 10,
+                                height: 10,
+                                borderRadius: '50%',
+                                flexShrink: 0,
+                                bgcolor: beaufortColor(row.speedKts),
+                                border: '1px solid rgba(0,0,0,0.25)'
+                              }}
+                            />
+                            <Typography variant="body2">
+                              {formatWindSpeed(row.speedKts).value.toFixed(1)}
+                            </Typography>
+                          </Stack>
                         ) : (
                           <TextField
                             type="number"
