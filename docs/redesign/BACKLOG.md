@@ -31,13 +31,23 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Polish (trivial)
 
-- ☐ Rename "crab angle" → "drift angle" (or similar) everywhere.
+- ☑ Rename "crab angle" → "drift angle" (owner chose this term, 2026-07-15).
+  User-facing strings updated (Settings label/tooltip, map tooltip
+  "Drift angle:"). To avoid a "Drift" collision, the existing wind-drift
+  tooltip line is now "Wind drift:". Internal field/var names kept
+  (`showCrabArrow`, `crabAngle`) to skip a settings migration — minor
+  future cleanup if desired.
 - ☐ Input fields UX — highlight/select content on click (focus behavior).
 - ☐ Link to windy.com (at target/DZ coordinates, matching altitude?).
-- ☐ Attribution for ground wind sources (NWS, CSC, Spaceland) in UI.
+- ◐ Attribution for ground wind sources — observed stations already show
+  the source with a link (e.g. "NWS · 17 min ago") after the Phase-4 wind
+  rework. Forecast/model attribution shown as a source badge. Consider a
+  small persistent credits line if more is wanted.
 - ☐ Default pattern params → student-friendly: 3:1 glide, 8 kts descent
   (current default: 9 mph descent, 3.0 GR — confirm intended units kts vs mph).
-- ☐ Ground speed in point hover popup.
+- ☐ Ground speed in point hover popup. (Deferred during polish batch —
+  needs the user's speed-unit formatter threaded into the map tooltip,
+  which currently only receives an altitude formatter; not a one-liner.)
 - ☐ "Degrees rotated" (cumulative turn) in map hover for manoeuvre points.
 - ☑ Ground wind arrow displays gusts (commit `be587a1`) — verify.
 - ☑ Ground wind arrow Beaufort colors (commit `be587a1`) — verify.

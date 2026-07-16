@@ -1,7 +1,7 @@
 /**
  * Flight paths layer: pre-wind (dashed) and wind-corrected (solid) paths,
  * POM markers, altitude labels, hover tooltips with leg/manoeuvre stats,
- * cross-path point highlighting and crab-angle arrows.
+ * cross-path point highlighting and drift-angle arrows.
  */
 import React, { useMemo, useState } from 'react';
 
@@ -102,14 +102,14 @@ function LegStatsDisplay({ stats, formatAltitude, altitudeLabel, showDrift = tru
       <div>Heading: {formatDegrees(stats.heading)}</div>
       {showBearing && <div>Bearing: {formatDegrees(stats.bearing)}</div>}
       {showBearing && (() => {
-        const crab = Math.abs(((stats.heading - stats.bearing + 180 + 360) % 360) - 180);
-        return crab >= 1 ? <div>Crab: {Math.round(crab)}°</div> : null;
+        const drift = Math.abs(((stats.heading - stats.bearing + 180 + 360) % 360) - 180);
+        return drift >= 1 ? <div>Drift angle: {Math.round(drift)}°</div> : null;
       })()}
       <div>Distance: {formatDistance(stats.distance, altitudeLabel)}</div>
       <div>Glide: {stats.glideRatio.toFixed(1)}</div>
       {showDrift && stats.windDriftDist > 1 && (
         <div>
-          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
+          Wind drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
           <DirectionArrow degrees={stats.windDriftDir} />
         </div>
       )}
@@ -131,7 +131,7 @@ function ManoeuvreStatsDisplay({ stats, altitudeLabel, showDrift = true }: {
       <div>Back: {formatDistance(stats.distanceY, altitudeLabel)}</div>
       {showDrift && stats.windDriftDist > 1 && (
         <div>
-          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
+          Wind drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
           <DirectionArrow degrees={stats.windDriftDir} />
         </div>
       )}
@@ -260,7 +260,7 @@ function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, sty
   const isPom = Boolean(point.pom);
   const enableHover = isPom || showTooltip;
 
-  // Crab angle arrow: shown on leg POMs when crab > 10°
+  // Drift angle arrow: shown on leg POMs when drift angle > 10°
   const segStats = isPom ? getPointSegmentStats(pointIndex, pathStats) : null;
   const legStats = segStats?.type === 'leg' ? segStats.stats : null;
   const crabAngle = legStats
@@ -275,7 +275,7 @@ function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, sty
         center={point}
         {...style}
       />
-      {/* Crab angle heading arrow (40m shaft + arrowhead barbs) */}
+      {/* Drift angle heading arrow (40m shaft + arrowhead barbs) */}
       {renderCrabArrow && (() => {
         const h = legStats!.heading;
         const tip = destinationPoint(point, h, 40);
