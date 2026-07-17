@@ -371,19 +371,19 @@ Ordered by importance.
   (`cf21e1e`). Failed fetch now keeps the previous profile;
   `useFetchForecast` exposes an error state; new `NotificationsProvider`
   (MUI Snackbar) is the app-wide error channel, wired in App.tsx.
-- ☐ **Extract a `useWinds` facade from App.tsx** — App.tsx is still a
-  620-line orchestrator; the wind orchestration (fetch + observed +
-  compose + summary + forecast-time/observed reset coupling, ~lines
-  195–317) belongs in one hook. Also: `windSummary` is built unmemoized
-  in the render body, and `appTitle: () => CustomAppTitle({...})`
-  (App.tsx:470) calls a component as a plain function — breaks the moment
-  it gains a hook.
-- ☐ **Finish the core/ layering** — `util/pathStats.ts`,
-  `util/courses.ts` and the exporters are pure logic still living in
-  util/; move them into core/. Fold in while there: the drift-angle
-  formula is duplicated (FlightPathsLayer.tsx ~105 and ~267) and the
-  `PointData` shape is defined twice (pathStats + FlightPathsLayer).
-  Natural companion to the "degrees rotated" tooltip item.
+- ☑ **Extract a `useWinds` facade from App.tsx** — DONE (`6a88205`).
+  Wind orchestration (fetch + observed + composition + forecast-time/
+  observed-reset coupling + error notification + wind summary, now
+  memoized) lives in `hooks/useWinds.ts`; App.tsx keeps only the
+  path-derived maxAlt plumbing. `CustomAppTitle` rendered as an element
+  instead of a plain function call. Pure refactor.
+- ☑ **Finish the core/ layering** — DONE (`07f6268` pinning tests,
+  `4610819` move, `a15e4a7` dedupe). `pathStats` and `courses` moved to
+  core/ (both were pure); drift-angle formula deduped into
+  `core/pathStats.driftAngle` with wrap tests; `PointData` now exported
+  from core and shared. Exporters deliberately left in util/ — they
+  trigger downloads/DOM; a pure-serialization split wasn't clean enough
+  to pay for itself.
 - ☐ **Component/hook tests** — all 369 tests are pure logic; zero
   coverage of the presets round-trip, the route guard, or wind panel
   state. Add React Testing Library smoke tests before Phases 6/7 add UI
