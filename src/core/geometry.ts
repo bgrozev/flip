@@ -103,6 +103,21 @@ export function destinationPoint(from: LatLng, bearingDeg: number, distanceM: nu
   return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
 }
 
+/** Circumference of the earth at the equator, in meters (Web Mercator). */
+const EQUATOR_M = 156543.03392 * 256;
+
+/**
+ * Ground distance covered by one screen pixel, for a Web Mercator map at the
+ * given latitude and zoom (256px tiles — the convention both Google Maps and
+ * MapLibre use for zoom levels).
+ *
+ * Use this to size things that should stay a constant *screen* distance while
+ * the map zooms; a fixed distance in meters shrinks to nothing when zoomed out.
+ */
+export function metersPerPixel(latDeg: number, zoom: number): number {
+  return (EQUATOR_M * Math.cos((latDeg * Math.PI) / 180)) / 256 / Math.pow(2, zoom);
+}
+
 /**
  * Initial bearing from one LatLng to another, normalized to 0-360.
  */

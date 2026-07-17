@@ -5,9 +5,17 @@
  */
 import React, { useState } from 'react';
 
-import { bearingBetween, destinationPoint } from '../../core/geometry';
+import { bearingBetween, destinationPoint, metersPerPixel } from '../../core/geometry';
 import { LatLng } from '../../types';
-import { MapDragHandle, MapPolyline, useMapClick, useMapCursor } from '..';
+import { MapDragHandle, MapPolyline, useMapClick, useMapCursor, useMapZoom } from '..';
+
+/**
+ * On-screen gap between the target handle and the heading handle. Kept in
+ * pixels (converted to meters for the current zoom) so the two never collide:
+ * a fixed distance in meters shrinks as you zoom out, which used to put the
+ * heading handle on top of the target and steal its drags.
+ */
+const HEADING_HANDLE_OFFSET_PX = 40;
 
 export interface TargetEditTarget {
   target: LatLng;
@@ -29,7 +37,9 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
   useMapCursor('crosshair');
   useMapClick(pos => edit.onMove(pos));
 
-  const headingHandlePos = destinationPoint(edit.target, edit.heading, 15);
+  const zoom = useMapZoom();
+  const offsetM = HEADING_HANDLE_OFFSET_PX * metersPerPixel(edit.target.lat, zoom);
+  const headingHandlePos = destinationPoint(edit.target, edit.heading, offsetM);
   const headingLineEnd = liveHeadingPos ?? headingHandlePos;
 
   return (

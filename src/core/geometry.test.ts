@@ -10,6 +10,7 @@ import {
   distanceFeet,
   hasTargetMovedTooFar,
   initialBearing,
+  metersPerPixel,
   mirror,
   normalizeBearing,
   reposition,
@@ -462,5 +463,29 @@ describe('destinationPoint / bearingBetween', () => {
     const west = destinationPoint(from, 270, 50);
 
     expect(bearingBetween(from, west)).toBeCloseTo(270, 1);
+  });
+});
+
+describe('metersPerPixel', () => {
+  it('is ~156543 m/px at zoom 0 on the equator', () => {
+    expect(metersPerPixel(0, 0)).toBeCloseTo(156543.03392, 2);
+  });
+
+  it('halves with each zoom level', () => {
+    const z10 = metersPerPixel(0, 10);
+
+    expect(metersPerPixel(0, 11)).toBeCloseTo(z10 / 2, 6);
+  });
+
+  it('shrinks with latitude (Mercator cos factor)', () => {
+    expect(metersPerPixel(60, 10)).toBeCloseTo(metersPerPixel(0, 10) * 0.5, 3);
+  });
+
+  it('gives a sane ground distance at typical DZ zoom', () => {
+    // ~1 m/px at zoom 17 near 28°N — a 40px handle offset is then ~40m.
+    const mpp = metersPerPixel(28.2, 17);
+
+    expect(mpp).toBeGreaterThan(0.9);
+    expect(mpp).toBeLessThan(1.2);
   });
 });
