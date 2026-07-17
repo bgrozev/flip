@@ -12,6 +12,7 @@ import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
 import {
   calculatePathStats,
+  cumulativeTurnDeg,
   driftAngle,
   getPointSegmentStats,
   groundSpeedKts,
@@ -63,6 +64,22 @@ const CustomTextOverlay = ({ position, text }: CustomTextOverlayProps) => (
   </MapOverlay>
 );
 
+/**
+ * Cumulative turn ("degrees rotated") per manoeuvre point of a path, keyed
+ * by the point's index in the full path. Manoeuvre points are taken in
+ * flight order (by time) from initiation, so the value at each point is the
+ * rotation accumulated since the manoeuvre started.
+ */
+function manoeuvreTurnByIndex(path: PointData[]): Map<number, number> {
+  const pts = path
+    .map((p, i) => ({ p, i }))
+    .filter(x => x.p.phase === 'manoeuvre')
+    .sort((a, b) => (a.p.time ?? 0) - (b.p.time ?? 0));
+  const turns = cumulativeTurnDeg(pts.map(x => x.p));
+
+  return new Map(pts.map((x, k) => [x.i, turns[k]]));
+}
+
 interface PointTooltipProps {
   point: PointData;
   pointIndex: number;
@@ -74,6 +91,8 @@ interface PointTooltipProps {
   altitudeLabel: string;
   formatWindSpeed: (kts: number) => { value: number; label: string };
   windSpeedLabel: string;
+  /** Cumulative turn since manoeuvre initiation (manoeuvre points only). */
+  turnDeg?: number;
   isPom: boolean;
   showPointInfo: boolean;  // Whether to show point-specific info (the setting)
   showDrift: boolean;      // Whether to show wind drift (false for pre-wind path)
@@ -137,7 +156,7 @@ function ManoeuvreStatsDisplay({ stats, altitudeLabel, showDrift = true }: {
   );
 }
 
-function PointTooltip({ point, pointIndex, path, manoeuvreInitTime, pathStats, formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel, isPom, showPointInfo, showDrift }: PointTooltipProps) {
+function PointTooltip({ point, pointIndex, path, manoeuvreInitTime, pathStats, formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel, turnDeg, isPom, showPointInfo, showDrift }: PointTooltipProps) {
   const alt = formatAltitude(point.alt ?? 0);
   const speedKts = groundSpeedKts(path, pointIndex);
 
@@ -192,6 +211,9 @@ function PointTooltip({ point, pointIndex, path, manoeuvreInitTime, pathStats, f
             {speedKts !== null && (
               <div>Gnd speed: {formatWindSpeed(speedKts).value.toFixed(1)} {windSpeedLabel}</div>
             )}
+            {point.phase === 'manoeuvre' && turnDeg !== undefined && Math.abs(turnDeg) >= 1 && (
+              <div>Rotated: {Math.round(Math.abs(turnDeg))}° {turnDeg < 0 ? 'left' : 'right'}</div>
+            )}
             <div style={TOOLTIP_SECONDARY_STYLE}>
               {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
             </div>
@@ -219,6 +241,7 @@ interface InteractivePointProps {
   altitudeLabel: string;
   formatWindSpeed: (kts: number) => { value: number; label: string };
   windSpeedLabel: string;
+  turnDeg?: number;
 }
 
 const HIGHLIGHT_STYLE: MapCircleStyle = {
@@ -260,7 +283,7 @@ const POM_STYLE: Record<'manoeuvre' | 'pattern', MapCircleStyle> = {
 const HOVER_RADIUS = 15;
 const HOVER_RADIUS_POM_ONLY = 30;
 
-function InteractivePoint({ point, pointIndex, path, manoeuvreInitTime, pathStats, style, showTooltip, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel }: InteractivePointProps) {
+function InteractivePoint({ point, pointIndex, path, manoeuvreInitTime, pathStats, style, showTooltip, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel, turnDeg }: InteractivePointProps) {
   // POMs always have hover/tooltip, non-POMs respect the showTooltip setting
   const isPom = Boolean(point.pom);
   const enableHover = isPom || showTooltip;
@@ -321,6 +344,7 @@ function InteractivePoint({ point, pointIndex, path, manoeuvreInitTime, pathStat
           altitudeLabel={altitudeLabel}
           formatWindSpeed={formatWindSpeed}
           windSpeedLabel={windSpeedLabel}
+          turnDeg={turnDeg}
           isPom={isPom}
           showPointInfo={showTooltip}
           showDrift={showDrift}
@@ -379,6 +403,10 @@ export default function FlightPathsLayer({
     () => calculatePathStats(pathALatLngs, pathALatLngs),
     [pathALatLngs]
   );
+
+  // Cumulative turn since manoeuvre initiation, per manoeuvre point
+  const turnsA = useMemo(() => manoeuvreTurnByIndex(pathALatLngs), [pathALatLngs]);
+  const turnsB = useMemo(() => manoeuvreTurnByIndex(pathBLatLngs), [pathBLatLngs]);
 
   return (
     <>
@@ -442,6 +470,7 @@ export default function FlightPathsLayer({
           altitudeLabel={altitudeLabel}
           formatWindSpeed={formatWindSpeed}
           windSpeedLabel={windSpeedLabel}
+          turnDeg={turnsA.get(i)}
         />
       ))}
       {/* Highlight for corresponding pre-wind point when hovering on wind-adjusted path */}
@@ -483,6 +512,7 @@ export default function FlightPathsLayer({
           altitudeLabel={altitudeLabel}
           formatWindSpeed={formatWindSpeed}
           windSpeedLabel={windSpeedLabel}
+          turnDeg={turnsB.get(i)}
         />
       ))}
       {pathBLatLngs

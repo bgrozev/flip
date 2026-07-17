@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculatePathStats, driftAngle, getPointSegmentStats, groundSpeedKts } from './pathStats';
+import {
+  calculatePathStats,
+  cumulativeTurnDeg,
+  driftAngle,
+  getPointSegmentStats,
+  groundSpeedKts,
+  headingDeltaDeg
+} from './pathStats';
 
 interface P {
   lat: number;
@@ -218,5 +225,94 @@ describe('groundSpeedKts', () => {
       { lat: 0, lng: 0, time: 0 },
       { lat: 0.001, lng: 0, time: 0 }
     ], 0)).toBeNull();
+  });
+});
+
+describe('headingDeltaDeg', () => {
+  it('returns signed shortest-arc deltas', () => {
+    expect(headingDeltaDeg(0, 90)).toBe(90);
+    expect(headingDeltaDeg(90, 0)).toBe(-90);
+    expect(headingDeltaDeg(45, 45)).toBe(0);
+  });
+
+  it('wraps across north', () => {
+    expect(headingDeltaDeg(350, 10)).toBe(20);
+    expect(headingDeltaDeg(10, 350)).toBe(-20);
+  });
+
+  it('treats a 180 flip as -180 (half-open range)', () => {
+    expect(headingDeltaDeg(0, 180)).toBe(-180);
+  });
+});
+
+describe('cumulativeTurnDeg', () => {
+  // Small steps near the equator: bearing math is effectively planar.
+  const D = 0.0001;
+
+  it('is zero along a straight path', () => {
+    const path: P[] = [0, 1, 2, 3].map(i => ({ lat: i * D, lng: 0 }));
+
+    expect(cumulativeTurnDeg(path).map(Math.round)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('accumulates a right-angle turn', () => {
+    // North, then east: +90 at the point ending the second segment
+    const path: P[] = [
+      { lat: 0, lng: 0 },
+      { lat: D, lng: 0 },
+      { lat: D, lng: D }
+    ];
+
+    expect(cumulativeTurnDeg(path).map(Math.round)).toEqual([0, 0, 90]);
+  });
+
+  it('sums past 180 instead of wrapping (270° left turn)', () => {
+    // Nine successive 30° left turns = -270 total; per-step shortest-arc
+    // deltas keep the sum meaningful where a single end-to-start bearing
+    // difference would wrap to +90.
+    const path: P[] = [{ lat: 0, lng: 0 }];
+    let heading = 0;
+
+    for (let i = 0; i < 10; i++) {
+      const last = path[path.length - 1];
+      const rad = heading * Math.PI / 180;
+
+      path.push({ lat: last.lat + D * Math.cos(rad), lng: last.lng + D * Math.sin(rad) });
+      heading -= 30;
+    }
+
+    const turns = cumulativeTurnDeg(path);
+
+    expect(Math.round(turns[turns.length - 1])).toBe(-270);
+  });
+
+  it('crosses north without a spurious jump', () => {
+    // 350° then 10°: +20, not -340
+    const rad = (deg: number) => deg * Math.PI / 180;
+    const path: P[] = [{ lat: 0, lng: 0 }];
+
+    for (const h of [350, 10]) {
+      const last = path[path.length - 1];
+
+      path.push({ lat: last.lat + D * Math.cos(rad(h)), lng: last.lng + D * Math.sin(rad(h)) });
+    }
+
+    expect(cumulativeTurnDeg(path).map(Math.round)).toEqual([0, 0, 20]);
+  });
+
+  it('carries the total across duplicate points', () => {
+    const path: P[] = [
+      { lat: 0, lng: 0 },
+      { lat: D, lng: 0 },
+      { lat: D, lng: 0 },
+      { lat: D, lng: D }
+    ];
+
+    expect(cumulativeTurnDeg(path).map(Math.round)).toEqual([0, 0, 0, 90]);
+  });
+
+  it('handles empty and single-point paths', () => {
+    expect(cumulativeTurnDeg([])).toEqual([]);
+    expect(cumulativeTurnDeg([{ lat: 0, lng: 0 }])).toEqual([0]);
   });
 });

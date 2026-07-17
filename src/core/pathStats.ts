@@ -130,6 +130,51 @@ export function groundSpeedKts(path: PointData[], index: number): number | null 
 }
 
 /**
+ * Signed shortest-arc heading change from `a` to `b`, in [-180, 180).
+ * Positive = clockwise (a right turn in compass terms), so 350°→10° is +20.
+ */
+export function headingDeltaDeg(a: number, b: number): number {
+  return ((b - a) % 360 + 540) % 360 - 180;
+}
+
+/**
+ * Cumulative signed turn along a path, per point, in degrees.
+ *
+ * result[i] is the total rotation accumulated from the path's first segment
+ * to the segment ending at point i: the sum of shortest-arc heading deltas
+ * between consecutive segments, so a full 270° turn reads ~±270 at the end
+ * (not its 360°-wrapped remainder). Points 0 and 1 read 0 — the first
+ * segment defines the reference heading. Positive = right (clockwise).
+ * Duplicate consecutive points contribute nothing (their bearing is
+ * undefined) and simply carry the running total forward.
+ */
+export function cumulativeTurnDeg(path: PointData[]): number[] {
+  const out = path.map(() => 0);
+  let prevBearing: number | null = null;
+  let cum = 0;
+
+  for (let i = 1; i < path.length; i++) {
+    const from = path[i - 1];
+    const to = path[i];
+
+    if (from.lat === to.lat && from.lng === to.lng) {
+      out[i] = cum;
+      continue;
+    }
+
+    const bearing = calcBearing(from, to);
+
+    if (prevBearing !== null) {
+      cum += headingDeltaDeg(prevBearing, bearing);
+    }
+    out[i] = cum;
+    prevBearing = bearing;
+  }
+
+  return out;
+}
+
+/**
  * Calculate statistics for all segments in the path
  */
 export function calculatePathStats(

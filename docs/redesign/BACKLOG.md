@@ -61,7 +61,11 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   path points, single-sided at the ends. Displayed in the point tooltip
   via the user's wind-speed unit formatter (browser-verified: 23.2 kts
   became 11.9 m/s after switching the unit setting).
-- ☐ "Degrees rotated" (cumulative turn) in map hover for manoeuvre points.
+- ☑ "Degrees rotated" (cumulative turn) in map hover for manoeuvre points —
+  DONE. `core/pathStats.cumulativeTurnDeg` (tested, incl. 360°-wrap and
+  >180° sums) + `headingDeltaDeg`; point tooltip shows e.g. "Rotated:
+  87° left" for manoeuvre-phase points. Browser-verified with the
+  Sample 90 manoeuvre (4° right at +2 s, 87° left at the end).
 - ☑ Ground wind arrow displays gusts (commit `be587a1`) — verify.
 - ☑ Ground wind arrow Beaufort colors (commit `be587a1`) — verify.
 - ◐ Beaufort colors elsewhere — wind table rows DONE (`185c2d8`, color dot
