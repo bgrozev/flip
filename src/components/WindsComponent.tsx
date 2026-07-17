@@ -50,6 +50,15 @@ interface WindsComponentProps {
 }
 
 /** Format a Date to the value string required by datetime-local inputs (YYYY-MM-DDTHH:mm) */
+/**
+ * Editable wind rows are cramped: three number fields (each with a spinner)
+ * plus a remove button share the panel's width, and MUI's default cell and
+ * input padding left too little room for e.g. a five-digit altitude. Trim both
+ * so typed values are not clipped.
+ */
+const EDIT_CELL_SX = { px: 0.5 };
+const NUMBER_FIELD_SX = { width: '100%', minWidth: 56, '& input': { px: 0.75 } };
+
 function toDateTimeLocalString(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return (
@@ -300,7 +309,7 @@ export default function WindsComponent({
                       key={`tr-${i}`}
                       sx={i === 0 ? { bgcolor: 'action.selected' } : undefined}
                     >
-                      <TableCell>
+                      <TableCell sx={lock ? undefined : EDIT_CELL_SX}>
                         {lock ? (
                           <Typography variant="body2">
                             {Math.round(formatAltitude(row.altFt).value)}
@@ -311,12 +320,12 @@ export default function WindsComponent({
                             inputProps={{ step: altitudeLabel === 'ft' ? 100 : 30, min: 0 }}
                             value={Math.round(formatAltitude(row.altFt).value)}
                             onChange={e => updateRow(i, 'altFt', parseAltitude(Number(e.target.value)))}
-                            sx={{ width: '100%' }}
+                            sx={NUMBER_FIELD_SX}
                             size="small"
                           />
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={lock ? undefined : EDIT_CELL_SX}>
                         {lock ? (
                           <Typography variant="body2">{row.direction}</Typography>
                         ) : (
@@ -327,12 +336,12 @@ export default function WindsComponent({
                             onChange={e => {
                               updateRow(i, 'direction', Number(e.target.value));
                             }}
-                            sx={{ width: '100%' }}
+                            sx={NUMBER_FIELD_SX}
                             size="small"
                           />
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={lock ? undefined : EDIT_CELL_SX}>
                         {lock ? (
                           <Stack direction="row" spacing={0.75} alignItems="center">
                             <Box
@@ -355,7 +364,7 @@ export default function WindsComponent({
                             type="number"
                             value={formatWindSpeed(row.speedKts).value.toFixed(1)}
                             onChange={e => updateRow(i, 'speedKts', parseWindSpeed(Number(e.target.value)))}
-                            sx={{ width: '100%' }}
+                            sx={NUMBER_FIELD_SX}
                             size="small"
                           />
                         )}
