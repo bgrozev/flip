@@ -11,23 +11,26 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Bugs
 
-- ☐ **Manoeuvre-from-params offset bug** — negative `offsetXFt` broken;
-  code clamps `Math.max(offsetXFt, 3)` (`util/manoeuvre.ts:25`) so 0 and
-  negative silently become 3 ft. Fix geometry so 0 works; support negative
-  (offset to the other side) or validate with explicit UI feedback.
-- ✎ **Initiation altitude not saved?** — `initiationAltitudeOffset` exists in
-  `ManoeuvreConfig` and is persisted via localStorage. May be fixed already,
-  or bug is in a specific mode (track vs samples vs params). Reproduce first.
-- ☐ **No input limits** — absurd values (e.g. huge pattern altitude)
-  effectively break the app. Add validation/clamps on all numeric inputs.
-  (Related: `limitWind` setting exists for wind table only.)
+- ☑ **Manoeuvre-from-params offset bug** — FIXED Phase 1 (`85e967d`).
+  `offsetXFt` = 0 now produces correct geometry (0.01 ft epsilon segment,
+  needed because `setFinalHeading` derives direction from the last two
+  points); negative offsets place the initiation point on the opposite
+  side of the final-approach line. Tests cover positive/zero/negative.
+- ✎ **Initiation altitude not saved?** — could not reproduce. The feature
+  is live (`ManoeuvreAltitudeControl` → `initiationAltitudeOffset`,
+  persisted via the versioned codec, applied in `computeManoeuvre`).
+  Needs a concrete repro (which manoeuvre mode? what steps?) or close.
+- ☑ **No input limits** — FIXED Phase 1 (`12c7dcf`). `core/validation.ts`
+  clamps pattern/manoeuvre/wind/heading inputs; panels show red +
+  helperText while typing and clamp on blur (e.g. 999999 → 3000).
 - ☐ **Wind table number field too narrow** — custom values don't fit.
 - ☐ **Winds tab: read-only first** — in the vast majority of uses the tab is
   read-only; the "unlock" button is used very rarely. Redesign around
   viewing (colors, source badges, summary); editing becomes an explicit,
-  secondary mode.
-- ☐ **Wind direction interpolation wrap bug** (found during code read) —
-  `Winds.getWindAt()` interpolates 350°→10° through 180°. `util/wind.ts:97`.
+  secondary mode. (Partly served: Beaufort dots + source badges landed.)
+- ☑ **Wind direction interpolation wrap bug** — FIXED Phase 1 (`4e76aa4`).
+  `getWindAt` now interpolates the wind vector (u/v components), so
+  350°→10° goes through north and speeds cancel correctly.
 
 ## Polish (trivial)
 
@@ -51,7 +54,9 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ "Degrees rotated" (cumulative turn) in map hover for manoeuvre points.
 - ☑ Ground wind arrow displays gusts (commit `be587a1`) — verify.
 - ☑ Ground wind arrow Beaufort colors (commit `be587a1`) — verify.
-- ◐ Beaufort colors elsewhere — wind table rows, wind summary. Not done.
+- ◐ Beaufort colors elsewhere — wind table rows DONE (`185c2d8`, color dot
+  per speed in the read-only table, shares `core/beaufortColor` with the
+  map arrows). Wind summary (top bar AVG/GND) still uncolored.
 - ☐ Icon next to DZs/locations that have ground wind (observed stations) available.
 
 ## Small features (days)
@@ -64,27 +69,33 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **Distance course: more markers** (120 m etc.) — render only when zoomed in.
 - ☐ **Preset UX** — explicit "none"/default preset, clearer active-preset
   indication, dirty state. ✎ discuss desired behavior.
-- ☐ **Cache elevation** — `fetchElevation()` called on every forecast fetch
-  (`forecast/openmeteo.ts:28`); cache per location (it never changes).
-- ☐ **Prefetch forecast for next few hours** — one API call covers multiple
-  hours; switch hour offset locally without refetch.
-- ☐ **OpenMeteo model info** — display which model (GFS etc.), allow choosing.
+- ☑ **Cache elevation** — DONE Phase 4 (`c7d3776`); cached per rounded
+  location via the versioned codec, no TTL.
+- ☑ **Prefetch forecast for next few hours** — DONE Phase 4 (`99f6313`).
+  One request fetches ≥24h (up to 168h); hour switching is local, cache
+  keyed on location+model with a 30-min TTL; explicit refresh forces.
+- ☑ **OpenMeteo model info** — DONE Phase 4 (`186c555`). Badge shows
+  "OpenMeteo · <model> · valid <time>"; model selectable in Settings
+  (best_match / GFS / ICON / ECMWF, all verified against live responses).
 - ☐ **More pattern legs** (>3).
 - ☐ **Course stats display** — distance to gates, angle vs course direction.
 - ☐ **Measure tool: render line lengths** on the segments.
 - ◐ **Map avg + ground wind arrows** — ground wind arrow near target exists
   (commit `0ea8894`); avg-wind arrow exists as setting. Owner wants both,
   maybe gated on observed wind availability. Review current state vs wish. ✎
-- ☐ **De-couple ground wind from dropzones** — observed-wind lookup should
-  take a location, not a DZ entry. (NWS provider may already be
-  location-based; CSC/Spaceland are inherently DZ-specific.)
+- ☑ **De-couple ground wind from dropzones** — DONE Phase 4 (`0694842`).
+  `fetchObservedStations(location)` resolves stations from coordinates via
+  NWS gridpoint discovery; dropzone `nearbyStations` remains only as an
+  AWOS supplement (e.g. KM08, which discovery misses), deduped.
 
 ## Medium features (weeks, self-contained)
 
-- ☐ **Soundings as wind source** — fetch real soundings (radiosonde) in
-  addition to model forecast winds; show alongside/instead.
-- ☐ **Weather station auto-discovery** — automatic nearby-station discovery
-  (NWS/METAR/Synoptic/WeatherFlow?) instead of hardcoded per-DZ lists.
+- ☑ **Soundings as wind source** — DONE Phase 4 (`59fb9ec`). Iowa
+  Environmental Mesonet RAOB (CORS-verified); nearest online station +
+  newest-synoptic-with-fallback; selectable as the aloft source.
+- ☑ **Weather station auto-discovery** — DONE Phase 4 (`0694842`). NWS
+  `/points/{lat},{lon}` → gridpoint stations; verified live at a non-DZ
+  location (Denver: 44 stations).
 - ☐ **Improve DZ/target selection UI** — search, favorites, map-pick flow.
 - ☐ **Expected GR & ground speed up high** — e.g. "at 4000 ft heading south
   expect GR 1.5" for comparison against wrist GPS in flight. Table/overlay
@@ -105,8 +116,11 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Large features (architecture-relevant)
 
-- ☐ **Modes** (from NOTES.md): Swooper / Pattern (student) / Flocking /
-  Demo / Explore — gate tabs, map layers, defaults per mode.
+- ☑ **Modes** — DONE Phase 3 (`d018bfe`, `340b7ae`). `src/modes/` declares
+  modes as data (nav / mapLayers / defaults / features). `pattern` and
+  `swoop` live; `flocking` + `explore` are disabled stubs. First-run
+  picker, toolbar switcher, `?mode=` links, route guard, persisted via the
+  versioned codec; user config survives mode switches.
   **Not a mode: coaching.** Owner (2026-07-13): a coach is just a user who
   switches between many setups (students, swoopers, flocking groups) —
   that's presets/plans, not a separate UI profile. Requirements instead:
@@ -125,8 +139,12 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     (or both: preview → apply)?
   - Winds: share the snapshot, or refetch live at open time? (Probably
     both, labeled.)
-- ☐ **Phone app = PWA** — installable, offline-capable (cache app shell,
-  tiles?, last forecast).
+- ☑ **Phone app = PWA** — DONE Phase 5 (`3c529d5`). vite-plugin-pwa:
+  manifest + icons (any/maskable), service worker precaching the app shell
+  with navigateFallback (offline route loading), NetworkFirst runtime
+  caching for OpenMeteo/NWS/IEM so the last forecast survives offline.
+  Google tiles intentionally uncached (ToS) — see MapLibre offline-tiles
+  follow-up. Pending: higher-res brand icons (owner art).
 - ☐ **Flocking mode** — beyond a port of flocking-wind-calculator.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
