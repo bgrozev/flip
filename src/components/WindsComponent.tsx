@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  Link,
   Paper,
   Stack,
   Table,
@@ -24,7 +25,7 @@ import {
 import React, { useCallback } from 'react';
 
 import { useAppState, useUnits } from '../hooks';
-import { ObservedWindStation } from '../types';
+import { LatLng, ObservedWindStation } from '../types';
 import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
 import {
   SOURCE_MANUAL,
@@ -58,6 +59,11 @@ interface WindsComponentProps {
  */
 const EDIT_CELL_SX = { px: 0.5 };
 const NUMBER_FIELD_SX = { width: '100%', minWidth: 56, '& input': { px: 0.75 } };
+
+/** Windy deep link for a location: `?lat,lng,zoom`. */
+function windyUrl({ lat, lng }: LatLng): string {
+  return `https://www.windy.com/?${lat.toFixed(4)},${lng.toFixed(4)},11`;
+}
 
 function toDateTimeLocalString(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -100,7 +106,7 @@ export default function WindsComponent({
     formatPressure
   } = useUnits();
 
-  const { settings } = useAppState();
+  const { settings, target } = useAppState();
   // Keyed off the *selected* source, not the fetched profile's, so the picker
   // disappears as soon as soundings are chosen — before any fetch.
   const soundingSelected = settings.windAloftSource === 'sounding';
@@ -249,7 +255,7 @@ export default function WindsComponent({
         </Box>}
 
         {/* Action buttons */}
-        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
           <Button variant="outlined" size="small" onClick={() => fetch(undefined, { force: true })}>
               Fetch forecast
           </Button>
@@ -257,6 +263,17 @@ export default function WindsComponent({
               Reset
           </Button>
         </Stack>
+
+        {/* Second opinion: the same spot on Windy's own maps. */}
+        <Link
+          href={windyUrl(target.target)}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="caption"
+          sx={{ mb: 2, textAlign: 'left', width: 'fit-content' }}
+        >
+          Open this location in Windy
+        </Link>
 
         {fetching ? (
           <Box sx={{ mt: 2 }}>
