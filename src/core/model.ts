@@ -257,6 +257,35 @@ export function migrateSettings(raw: unknown): Settings {
   };
 }
 
+/**
+ * The list of Settings keys the user has explicitly changed ("touched").
+ * Touched keys always keep the user's stored value; untouched keys may be
+ * overridden by mode defaults (see modes/applyModeDefaults).
+ */
+export function migrateTouchedSettings(raw: unknown): (keyof Settings)[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const valid = Object.keys(DEFAULT_SETTINGS);
+
+  return raw.filter(
+    (key): key is keyof Settings => typeof key === 'string' && valid.includes(key)
+  );
+}
+
+/**
+ * Seed the touched list for users from before touch tracking existed: any
+ * key whose stored value differs from the global default was necessarily
+ * changed by the user. Preserves the pre-tracking resolution behavior
+ * exactly.
+ */
+export function seedTouchedSettings(settings: Settings): (keyof Settings)[] {
+  return (Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]).filter(
+    key => JSON.stringify(settings[key]) !== JSON.stringify(DEFAULT_SETTINGS[key])
+  );
+}
+
 export function migratePresets(raw: unknown): Preset[] {
   if (!Array.isArray(raw)) {
     return [];

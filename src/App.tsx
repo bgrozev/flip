@@ -152,6 +152,7 @@ function DashboardContent() {
     setPatternParams,
     settings,
     setSettings,
+    touchedSettings,
     selectedCourseId,
     setSelectedCourseId
   } = useAppState();
@@ -188,9 +189,12 @@ function DashboardContent() {
     }
   }, [router.pathname, mode, navigate]);
 
-  // Effective settings: mode defaults fill in where the user is at the
-  // global default; the Settings panel still edits the stored values.
-  const modeSettings = useMemo(() => applyModeDefaults(settings, mode), [settings, mode]);
+  // Effective settings: mode defaults fill in the settings the user never
+  // touched; the Settings panel still edits the stored values.
+  const modeSettings = useMemo(
+    () => applyModeDefaults(settings, mode, touchedSettings),
+    [settings, mode, touchedSettings]
+  );
 
   const {
     effectiveWinds,

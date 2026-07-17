@@ -5,7 +5,6 @@
  * coarse features are on, and which setting defaults apply. Switching
  * modes never touches stored user config; it only changes exposure.
  */
-import { DEFAULT_SETTINGS } from '../core/model';
 import { MapLayerId, PanelId, Settings } from '../types';
 
 export type ModeId = 'pattern' | 'swoop' | 'flocking' | 'explore';
@@ -119,24 +118,22 @@ export function migrateModeId(raw: unknown): ModeId | null {
 }
 
 /**
- * Resolves effective settings for a mode: each mode default applies only
- * when the user's stored value still equals the global default, so user
- * customizations survive mode switches untouched.
- *
- * Known limitation (accepted for now): while a mode overrides a setting,
- * storing the global-default value for it re-applies the mode default —
- * e.g. in pattern mode the wind arrow cannot be turned back off via
- * Settings, because "off" is the global default. Kept deliberately
- * simple; revisit if mode defaults grow.
+ * Resolves effective settings for a mode from explicit touch tracking:
+ * a mode default applies only to settings the user has never changed
+ * ("touched" keys always keep the user's stored value). Unlike the old
+ * equals-global-default heuristic, this lets the user force a
+ * mode-overridden setting back to the global default — setting it at all
+ * marks it touched, so the mode stops overriding it.
  */
-export function applyModeDefaults(settings: Settings, mode: Mode): Settings {
+export function applyModeDefaults(
+  settings: Settings,
+  mode: Mode,
+  touched: readonly (keyof Settings)[]
+): Settings {
   const resolved: Settings = { ...settings };
 
   for (const key of Object.keys(mode.defaults) as (keyof Settings)[]) {
-    const stored = settings[key];
-    const globalDefault = DEFAULT_SETTINGS[key];
-
-    if (JSON.stringify(stored) === JSON.stringify(globalDefault)) {
+    if (!touched.includes(key)) {
       (resolved as Record<keyof Settings, unknown>)[key] = mode.defaults[key];
     }
   }

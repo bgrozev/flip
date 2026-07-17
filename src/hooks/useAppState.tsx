@@ -10,7 +10,9 @@ import {
   migrateManoeuvreConfig,
   migratePatternParams,
   migrateSettings,
-  migrateTarget
+  migrateTarget,
+  migrateTouchedSettings,
+  seedTouchedSettings
 } from '../core/model';
 import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
 import { createVersionedCodec } from '../util/storage';
@@ -21,6 +23,16 @@ import { samples } from '../samples';
 
 // Canonical defaults live in core/model; re-exported here for existing users
 export { DEFAULT_PATTERN_PARAMS, DEFAULT_MANOEUVRE_CONFIG };
+
+/** The settings keys the user has explicitly changed. */
+type TouchedSettings = (keyof Settings)[];
+
+// The codec's type is widened to include null (the "never stored" state the
+// initializer provides); parsing stored data still always yields a list.
+const TOUCHED_SETTINGS_CODEC = createVersionedCodec<TouchedSettings | null>(
+  SCHEMA_VERSION,
+  migrateTouchedSettings
+);
 
 function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
   let path: FlightPath;
@@ -55,6 +67,8 @@ interface AppStateContextValue {
   patternParams: PatternParams;
   target: Target;
   settings: Settings;
+  /** Settings keys the user has explicitly changed (mode defaults skip these). */
+  touchedSettings: readonly (keyof Settings)[];
   selectedCourseId: string | null;
 
   // Setters
@@ -114,6 +128,20 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
   const settings = storedSettings ?? DEFAULT_SETTINGS;
 
+  // Which settings the user has explicitly changed. Pre-tracking users have
+  // no stored list (null); their list is seeded from every key whose stored
+  // value differs from the global default, which reproduces the old
+  // equals-global-default resolution exactly.
+  const [storedTouched, setStoredTouched] = useLocalStorageState<TouchedSettings | null>(
+    'flip.settings.touched',
+    null,
+    { codec: TOUCHED_SETTINGS_CODEC }
+  );
+  const touchedSettings = useMemo(
+    () => storedTouched ?? seedTouchedSettings(settings),
+    [storedTouched, settings]
+  );
+
   // Selected course
   const [storedSelectedCourseId, setStoredSelectedCourseId] = useLocalStorageState<string | null>(
     'flip.courses.selected',
@@ -140,9 +168,21 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     [setStoredTarget]
   );
 
+  // Persist the new settings and mark every key whose value changed as
+  // touched — the only writer is the Settings panel, so a changed key is
+  // an explicit user choice.
   const setSettings = useCallback(
-    (value: Settings) => setStoredSettings(value),
-    [setStoredSettings]
+    (value: Settings) => {
+      const changed = (Object.keys(value) as (keyof Settings)[]).filter(
+        key => JSON.stringify(value[key]) !== JSON.stringify(settings[key])
+      );
+
+      if (changed.length > 0) {
+        setStoredTouched([...new Set([...touchedSettings, ...changed])]);
+      }
+      setStoredSettings(value);
+    },
+    [setStoredSettings, setStoredTouched, settings, touchedSettings]
   );
 
   const setSelectedCourseId = useCallback(
@@ -155,8 +195,9 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     setStoredTarget(DEFAULT_TARGET);
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
+    setStoredTouched([]);
     setStoredSelectedCourseId(null);
-  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredSettings, setStoredSelectedCourseId]);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -166,6 +207,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       patternParams,
       target,
       settings,
+      touchedSettings,
       selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
@@ -181,6 +223,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       patternParams,
       target,
       settings,
+      touchedSettings,
       selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,

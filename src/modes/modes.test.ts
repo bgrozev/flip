@@ -119,28 +119,38 @@ describe('applyModeDefaults', () => {
   // Synthetic mode exercising both a boolean and a numeric default
   const testMode = { ...pattern, defaults: { displayWindArrow: true, limitWind: 500 } };
 
-  it('applies mode defaults where the user is at the global default', () => {
+  it('applies mode defaults to untouched settings', () => {
     expect(DEFAULT_SETTINGS.displayWindArrow).toBe(false); // sanity: they differ
-    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode);
+    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, []);
 
     expect(resolved.displayWindArrow).toBe(true);
     expect(resolved.limitWind).toBe(500);
   });
 
-  it('preserves user-customized values', () => {
+  it('preserves touched values', () => {
     const custom: Settings = {
       ...DEFAULT_SETTINGS,
       limitWind: 1234 // user-set, differs from global default and mode default
     };
-    const resolved = applyModeDefaults(custom, testMode);
+    const resolved = applyModeDefaults(custom, testMode, ['limitWind']);
 
     expect(resolved.limitWind).toBe(1234);
     expect(resolved.displayWindArrow).toBe(true); // untouched setting still gets mode default
   });
 
+  it('lets a touched setting hold the global default against a mode default', () => {
+    // The trap the old equals-global-default heuristic could not handle:
+    // the user explicitly turns the wind arrow off (the global default)
+    // in a mode whose default is on — their choice must win.
+    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, ['displayWindArrow']);
+
+    expect(resolved.displayWindArrow).toBe(false);
+    expect(resolved.limitWind).toBe(500); // untouched key still overridden
+  });
+
   it('leaves settings without a mode default alone', () => {
     const custom: Settings = { ...DEFAULT_SETTINGS, showPoms: false };
-    const resolved = applyModeDefaults(custom, testMode);
+    const resolved = applyModeDefaults(custom, testMode, []);
 
     expect(resolved.showPoms).toBe(false);
   });
@@ -149,13 +159,13 @@ describe('applyModeDefaults', () => {
     const swoop = getMode('swoop');
     const custom: Settings = { ...DEFAULT_SETTINGS, showPoms: false };
 
-    expect(applyModeDefaults(custom, swoop)).toEqual(custom);
+    expect(applyModeDefaults(custom, swoop, [])).toEqual(custom);
   });
 
   it('does not mutate the input', () => {
     const input: Settings = { ...DEFAULT_SETTINGS };
 
-    applyModeDefaults(input, pattern);
+    applyModeDefaults(input, pattern, []);
     expect(input).toEqual(DEFAULT_SETTINGS);
   });
 });

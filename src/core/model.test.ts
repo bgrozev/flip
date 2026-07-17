@@ -19,7 +19,9 @@ import {
   migratePresets,
   migrateSettings,
   migrateStoredTracks,
-  migrateTarget
+  migrateTarget,
+  migrateTouchedSettings,
+  seedTouchedSettings
 } from './model';
 
 const GARBAGE: unknown[] = [
@@ -202,6 +204,48 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ mapProvider: 'openlayers' }).mapProvider).toBe('google');
     expect(migrateSettings({ mapProvider: 42 }).mapProvider).toBe('google');
     expect(migrateSettings({ mapProvider: 'maplibre' }).mapProvider).toBe('maplibre');
+  });
+});
+
+describe('migrateTouchedSettings', () => {
+  it('keeps valid setting keys and drops unknown or non-string entries', () => {
+    expect(
+      migrateTouchedSettings(['limitWind', 'bogus', 42, null, 'displayWindArrow'])
+    ).toEqual(['limitWind', 'displayWindArrow']);
+  });
+
+  it('returns an empty list for garbage', () => {
+    expect(migrateTouchedSettings(undefined)).toEqual([]);
+    expect(migrateTouchedSettings('limitWind')).toEqual([]);
+    expect(migrateTouchedSettings({ limitWind: true })).toEqual([]);
+  });
+});
+
+describe('seedTouchedSettings', () => {
+  it('returns no keys for pristine default settings', () => {
+    expect(seedTouchedSettings(DEFAULT_SETTINGS)).toEqual([]);
+  });
+
+  it('returns exactly the keys that differ from the global default', () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      limitWind: 1234,
+      showPoms: !DEFAULT_SETTINGS.showPoms
+    };
+
+    expect(seedTouchedSettings(settings).sort()).toEqual(['limitWind', 'showPoms']);
+  });
+
+  it('compares nested objects by value', () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      units: { ...DEFAULT_SETTINGS.units }
+    };
+
+    expect(seedTouchedSettings(settings)).toEqual([]);
+
+    settings.units.altitude = settings.units.altitude === 'ft' ? 'm' : 'ft';
+    expect(seedTouchedSettings(settings)).toEqual(['units']);
   });
 });
 
