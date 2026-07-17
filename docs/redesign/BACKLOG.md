@@ -305,9 +305,7 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☑ `createSafeCodec`/`createSimpleCodec` — DONE (`db814f8`), after the
   versioned-codec migration above unblocked them. `deepMerge` went too
   (it was `createSafeCodec`'s private helper). `createVersionedCodec` kept.
-- ☐ `CODEC_JSON` in `src/util/storage.ts` is **also dead** — its only
-  references are its own tests. It survived the cleanup only because the
-  task scope said to keep it; remove it (and its tests) as a follow-up.
+- ☑ `CODEC_JSON` — removed with its tests (`8a9f2f5`, 2026-07-16).
 - ☐ A stale `flip.courses.selected` id renders the raw id in the Courses
   Select (`renderValue` falls through to the id) instead of "None".
   Cosmetic and pre-existing; not fixable by a codec — needs the course list
@@ -328,10 +326,9 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Phase-3 follow-ups (found during implementation, 2026-07-14)
 
-- ☐ Mode defaults resolution uses equals-global-default heuristic — a
-  user can't Settings-force a mode-overridden value back to the global
-  default (it re-applies the mode default). Replace with explicit
-  "touched settings" tracking or per-mode overlays when defaults grow.
+- ☑ Mode defaults resolution — FIXED (`0e8f6da`, 2026-07-16) with explicit
+  touched-settings tracking; see "Settings layering" in the
+  architecture-review section.
 - ☐ Settings panel shows stored (not effective) values — add "set by
   mode" indicators; consider hiding swoop-only settings in pattern mode.
 - ☐ `SECONDARY_PANELS` (Settings/About) split hardcoded in App.tsx —
@@ -352,8 +349,8 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   (`next < minDate → null`, WindsComponent.tsx) clamp past times to "now",
   and fetch populates normally. Verified in-browser: table fills, source
   badge "OpenMeteo · Best match · valid …", NWS station discovery live.
-- ☐ Remove now-redundant `KZPH` from ZHills `nearbyStations` (gridpoint
-  discovery covers it; `KM08` still needs its supplement).
+- ☑ Remove now-redundant `KZPH` from ZHills `nearbyStations` — already
+  done in `eb56277`; verified gone 2026-07-16 (`KM08` supplement kept).
 - ☐ Forecast-time picker is shown but inert for soundings (they ignore
   `hourOffset`) — hide or repurpose it in sounding mode.
 - ☐ Elevation cache eviction is insertion-order, not true LRU — fine at
@@ -390,11 +387,14 @@ Ordered by importance.
   clamping covered. Route guard was already covered in
   app/routing.test.ts. Suite now 390 tests. Growing this further stays
   under the standing "grow test coverage" item.
-- ☐ **Settings layering** — replace the `applyModeDefaults`
-  equals-global-default heuristic with explicit touched-settings tracking
-  or a layered resolution (global default < mode default < user value).
-  Same issue as the Phase-3 follow-up below; it gets worse with every
-  mode that adds defaults (flocking will).
+- ☑ **Settings layering** — DONE (`0e8f6da`). Explicit touch tracking:
+  `flip.settings.touched` (versioned doc) lists keys the user changed;
+  `setSettings` marks changed keys; resolution is touched-always-wins /
+  untouched-takes-mode-default; `resetAll` clears. Pre-tracking users
+  seeded from every key whose stored value differs from the global
+  default (old behavior preserved until their next change). The trap is
+  fixed: a mode-overridden setting can now be forced back to the global
+  default. Closes the matching Phase-3 follow-up.
 - ☐ **Path rendering won't scale to tracks** — every path point renders
   2–3 MapCircles (FlightPathsLayer). Fine at ~100 pattern points; will
   not survive multi-thousand-point GPS tracks (multi-plot, logbook).
@@ -402,7 +402,8 @@ Ordered by importance.
 - ☐ Minor: `openmeteo.ts` module-level `prefetched` singleton (acceptable;
   has a test reset). `fetchWinds` filters rows above the altitude limit
   at set time, so raising the limit needs a refetch (the prefetch cache
-  mostly hides it).
+  mostly hides it). Both accepted as-is 2026-07-16; dead `CODEC_JSON`
+  removed (`8a9f2f5`).
 
 ## Process / engineering health
 
