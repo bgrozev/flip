@@ -208,6 +208,7 @@ function DashboardContent() {
     nearestStation,
     stationsFetched,
     fetchingObserved,
+    scrubHours,
     makeWindSummary
   } = useWinds({
     target: target.target,
@@ -336,6 +337,7 @@ function DashboardContent() {
         stations={stations}
         stationsFetched={stationsFetched}
         fetchingObserved={fetchingObserved}
+        scrubHours={scrubHours}
       />
     );
   } else if (activePanel === 'courses') {

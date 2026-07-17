@@ -14,6 +14,7 @@ import {
   IconButton,
   Link,
   Paper,
+  Slider,
   Stack,
   Table,
   TableBody,
@@ -53,6 +54,8 @@ interface WindsComponentProps {
   stations?: ObservedWindStation[];
   stationsFetched?: boolean;
   fetchingObserved?: boolean;
+  /** Hours from now covered by the local forecast cache (scrubber range). */
+  scrubHours?: number | null;
 }
 
 /** Format a Date to the value string required by datetime-local inputs (YYYY-MM-DDTHH:mm) */
@@ -190,7 +193,8 @@ export default function WindsComponent({
   onForecastTimeChange,
   stations = [],
   stationsFetched = false,
-  fetchingObserved = false
+  fetchingObserved = false,
+  scrubHours = null
 }: WindsComponentProps) {
   const {
     formatAltitude,
@@ -222,6 +226,11 @@ export default function WindsComponent({
   const forecastInputValue = forecastTime
     ? toDateTimeLocalString(forecastTime)
     : toDateTimeLocalString(minDate);
+
+  // Scrubber position: the currently selected hour offset from now
+  const scrubValue = forecastTime
+    ? Math.max(0, Math.round((forecastTime.getTime() - Date.now()) / 3600000))
+    : 0;
 
   const adjustForecastHour = (delta: number) => {
     const base = forecastTime ?? minDate;
@@ -349,6 +358,32 @@ export default function WindsComponent({
               </IconButton>
             </Tooltip>
           </Stack>
+          {/* Time scrubber: drag through the locally cached forecast hours.
+              Each step re-selects the hour from the prefetched window (no
+              network fetch), so the table and the map paths morph live. The
+              fast path to the picker's precise path; hidden until a fetch
+              has filled the cache. */}
+          {scrubHours !== null && scrubHours > 1 && (
+            <Box sx={{ px: 1 }}>
+              <Slider
+                size="small"
+                aria-label="Scrub forecast hour"
+                min={0}
+                max={scrubHours - 1}
+                step={1}
+                value={Math.min(scrubValue, scrubHours - 1)}
+                onChange={(_e, v) => {
+                  const h = v as number;
+                  const newTime = h === 0 ? null : new Date(Date.now() + h * 3600000);
+
+                  onForecastTimeChange(newTime);
+                  fetch(newTime);
+                }}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(h: number) => (h === 0 ? 'now' : `+${h}h`)}
+              />
+            </Box>
+          )}
         </Box>}
 
         {/* Action buttons */}

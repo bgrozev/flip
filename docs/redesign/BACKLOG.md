@@ -94,10 +94,16 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **More pattern legs** (>3).
 - ☐ **Course stats display** — distance to gates, angle vs course direction.
 - ☐ **Measure tool: render line lengths** on the segments.
-- ☐ **Wind time scrubber** — horizontal hour slider over the prefetched
-  forecast window (24–168h already in memory); scrubbing is a local index
-  change, the pattern morphs live. Strong teaching tool; the cheapest
-  high-value item on this list. (2026-07-16 review; UIUX #16.)
+- ☑ **Wind time scrubber** — DONE. MUI Slider under the forecast-time
+  picker; range = hours the prefetch cache covers from now
+  (`openmeteo.prefetchedWindowHours`, tested — mirrors the fetch's own
+  freshness rules), exposed via `useWinds.scrubHours`. Scrubbing sets the
+  forecast time + refetches, which the cache serves locally; scrubbing to
+  a non-now hour clears observed injection exactly like the picker.
+  Hidden for soundings (with the picker) and until a fetch fills the
+  cache. Browser-verified: dragging 0→+12h swung the table/profile with
+  zero fetch() calls (instrumented); back to "now" refired only NWS
+  station discovery, as the picker does.
 - ☑ **Persist last winds + staleness banner** — DONE. The wind profile
   (fetched or manual) persists under versioned key `flip.winds`
   (`core/model.migrateStoredWinds`, tested: revives Dates from JSON,
@@ -375,8 +381,10 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   badge "OpenMeteo · Best match · valid …", NWS station discovery live.
 - ☑ Remove now-redundant `KZPH` from ZHills `nearbyStations` — already
   done in `eb56277`; verified gone 2026-07-16 (`KM08` supplement kept).
-- ☐ Forecast-time picker is shown but inert for soundings (they ignore
-  `hourOffset`) — hide or repurpose it in sounding mode.
+- ☑ Forecast-time picker is shown but inert for soundings — the picker is
+  hidden when the sounding source is selected (was already in place;
+  verified), and the new time scrubber lives inside the same conditional
+  so it hides too.
 - ☐ Elevation cache eviction is insertion-order, not true LRU — fine at
   500 entries; revisit only if it grows.
 - ☐ Soundings can be dense in the low-altitude band — consider thinning

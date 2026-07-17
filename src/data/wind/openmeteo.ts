@@ -63,6 +63,27 @@ export function resetOpenMeteoPrefetch(): void {
 }
 
 /**
+ * How many hours from "now" the prefetched window still covers for this
+ * location and model — scrubbing within them is served locally, without a
+ * network request. Null when the cache is empty, expired, or was fetched
+ * for a different location/model. Drives the wind time scrubber's range.
+ */
+export function prefetchedWindowHours(point: LatLng, model: string): number | null {
+  if (
+    !prefetched ||
+    prefetched.model !== model ||
+    Date.now() - prefetched.fetchedAt >= PREFETCH_TTL_MS ||
+    hasTargetMovedTooFar(prefetched.location, point)
+  ) {
+    return null;
+  }
+
+  const nowIndex = prefetchedIndexFor(prefetched, 0);
+
+  return nowIndex === null ? null : prefetched.hourly.time.length - nowIndex;
+}
+
+/**
  * Index of the requested hour in a prefetched window, or null when the
  * window doesn't cover it. Computed from timestamps, not the raw offset:
  * a window fetched an hour ago is still valid, just shifted.

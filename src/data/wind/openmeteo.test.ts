@@ -2,7 +2,12 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 
 import { SOURCE_OPEN_METEO } from '../../core/wind';
-import { fetchOpenMeteo, openMeteoSource, resetOpenMeteoPrefetch } from './openmeteo';
+import {
+  fetchOpenMeteo,
+  openMeteoSource,
+  prefetchedWindowHours,
+  resetOpenMeteoPrefetch
+} from './openmeteo';
 
 const HPAS = [
   1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 675, 650, 625, 600
@@ -231,6 +236,45 @@ describe('fetchOpenMeteo', () => {
       await fetchOpenMeteo(POINT, { forceRefresh: true });
 
       expect(gfsCalls(fetchSpy)).toHaveLength(2);
+    });
+  });
+
+  describe('prefetchedWindowHours', () => {
+    it('is null before any fetch and after a reset', async () => {
+      expect(prefetchedWindowHours(POINT, 'best_match')).toBeNull();
+
+      await fetchOpenMeteo(POINT);
+      resetOpenMeteoPrefetch();
+      expect(prefetchedWindowHours(POINT, 'best_match')).toBeNull();
+    });
+
+    it('reports the hours covered from now', async () => {
+      await fetchOpenMeteo(POINT);
+
+      // Window starts at 00:00Z, now is 00:50Z → all 24 hours still covered
+      expect(prefetchedWindowHours(POINT, 'best_match')).toBe(24);
+    });
+
+    it('shrinks as the clock advances into the window', async () => {
+      await fetchOpenMeteo(POINT);
+
+      vi.setSystemTime(new Date('2026-07-14T02:10:00Z'));
+      // Wait: the TTL (30 min) would have expired the *fetch*, but this
+      // helper mirrors the fetch's own freshness rules, so it must be
+      // null too — the scrubber must not promise local hours a real
+      // fetch would re-request.
+      expect(prefetchedWindowHours(POINT, 'best_match')).toBeNull();
+
+      vi.setSystemTime(new Date('2026-07-14T01:15:00Z'));
+      expect(prefetchedWindowHours(POINT, 'best_match')).toBe(23);
+    });
+
+    it('is null for a different model or a distant location', async () => {
+      await fetchOpenMeteo(POINT);
+
+      expect(prefetchedWindowHours(POINT, 'gfs_seamless')).toBeNull();
+      expect(prefetchedWindowHours({ lat: POINT.lat + 0.1, lng: POINT.lng }, 'best_match')).toBeNull();
+      expect(prefetchedWindowHours({ lat: POINT.lat + 0.0005, lng: POINT.lng }, 'best_match')).toBe(24);
     });
   });
 

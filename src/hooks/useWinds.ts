@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { composeWithObservedGround } from '../data/wind';
+import { prefetchedWindowHours } from '../data/wind/openmeteo';
 import { LatLng, ObservedWindStation, Settings, WindSummaryData } from '../types';
 import { SOURCE_DZ, SOURCE_MANUAL, WindProfile, WindRow } from '../core/wind';
 import { useFetchForecast } from './useFetchForecast';
@@ -47,6 +48,12 @@ interface UseWindsResult {
   stationsFetched: boolean;
   /** Whether station discovery is in progress */
   fetchingObserved: boolean;
+  /**
+   * Hours from now covered by the local forecast cache (drives the time
+   * scrubber's range); null when nothing is cached or the source is not
+   * an hourly model forecast.
+   */
+  scrubHours: number | null;
   /** Build the toolbar wind summary from the flight paths' average wind */
   makeWindSummary: (
     averageWind: { speedKts?: number; direction?: number }
@@ -112,6 +119,18 @@ export function useWinds({ target, settings }: UseWindsOptions): UseWindsResult 
     [forecastTime, fetchWinds, settings.useDzGroundWind, target, fetchObserved, resetObserved]
   );
 
+  // Local-cache coverage for the time scrubber. The prefetch cache is
+  // module state (not reactive), but every fetch updates `winds`, so keying
+  // the memo on the profile re-reads coverage exactly when it can change.
+  const scrubHours = useMemo(() => {
+    void winds; // dependency: re-check the cache after each fetch
+    if (!target || settings.windAloftSource === 'sounding') {
+      return null;
+    }
+
+    return prefetchedWindowHours(target, settings.windModel);
+  }, [winds, target, settings.windAloftSource, settings.windModel]);
+
   const onForecastTimeChange = useCallback((newTime: Date | null) => {
     setForecastTime(newTime);
     if (newTime !== null) resetObserved();
@@ -157,6 +176,7 @@ export function useWinds({ target, settings }: UseWindsOptions): UseWindsResult 
     nearestStation,
     stationsFetched,
     fetchingObserved,
+    scrubHours,
     makeWindSummary
   };
 }
