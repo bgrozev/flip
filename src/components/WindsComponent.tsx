@@ -257,6 +257,15 @@ export default function WindsComponent({
           </Box>
         ) : (
           <>
+            {winds.aloftSource === SOURCE_MANUAL && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mb: 0.5, textAlign: 'left' }}
+              >
+                {'Manually entered'}
+              </Typography>
+            )}
             {winds.aloftSource === SOURCE_OPEN_METEO && (
               <Typography
                 variant="caption"
@@ -279,7 +288,10 @@ export default function WindsComponent({
                 sx={{ mb: 0.5, textAlign: 'left' }}
               >
                 {'Sounding'}
-                {winds.meta?.station ? ` · ${winds.meta.station}` : ''}
+                {/* Prefer the human-readable station name; fall back to its id. */}
+                {winds.meta?.stationName || winds.meta?.station
+                  ? ` · ${winds.meta.stationName ?? winds.meta.station}`
+                  : ''}
                 {winds.meta?.stationDistanceFt !== undefined
                   ? ` (${(winds.meta.stationDistanceFt / 5280).toFixed(0)} mi)`
                   : ''}
