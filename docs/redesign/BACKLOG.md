@@ -80,6 +80,21 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **More pattern legs** (>3).
 - ☐ **Course stats display** — distance to gates, angle vs course direction.
 - ☐ **Measure tool: render line lengths** on the segments.
+- ☐ **Wind time scrubber** — horizontal hour slider over the prefetched
+  forecast window (24–168h already in memory); scrubbing is a local index
+  change, the pattern morphs live. Strong teaching tool; the cheapest
+  high-value item on this list. (2026-07-16 review; UIUX #16.)
+- ☐ **Persist last winds + staleness banner** — winds are useState-only:
+  a reload loses manual edits and the fetched forecast. Persist the last
+  profile + fetchedAt, show "fetched N min ago / refresh?" staleness
+  nudge. Interim until Plan documents (Phase 7); accepted 2026-07-16.
+- ☐ **Replay animation** — animate a dot along the plan (later: a recorded
+  track) over time. Teaching/demo value; cheap over the memoized paths.
+  (2026-07-16 review.)
+- ✎ **Side profile view** — altitude-vs-distance elevation plot of the
+  plan below the map (pure SVG from existing path data; no map provider
+  involved). Explains descent/glide better than top-down. Owner wants to
+  understand the concept better first — sketch/demo before building.
 - ◐ **Map avg + ground wind arrows** — ground wind arrow near target exists
   (commit `0ea8894`); avg-wind arrow exists as setting. Owner wants both,
   maybe gated on observed wind availability. Review current state vs wish. ✎
@@ -110,9 +125,18 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   and still make it back: glide from exit alt vs winds. Related to wind cones.
 - ☐ **Wind cones** — area reachable from current altitude flying in any
   direction given winds. Big safety/teaching value. Related: long spot.
+  (2026-07-16: build the shared `core/reach/` primitive *before* Phase 6 —
+  flocking's reachability zones want the same math.)
 - ☐ **Direction overlays** — average-wind arrow overlay, degree-circle
   (compass rose) around target.
 - ☐ **Turn drift calculation** — drift accumulated during the turn itself.
+- ☐ **Model/sounding comparison view** — better visualization of the
+  differences between forecast models (GFS/ICON/ECMWF spread) and between
+  model and sounding. Both sources already exist; needs a "compare
+  profiles" UI — overlay rows, highlight disagreement. Disagreement = low
+  confidence, plan conservatively. (Accepted 2026-07-16; merges the UIUX
+  "winds ensemble view", owner-endorsed. Owner: "I want a better way to
+  visualize the differences between different models and sounding.")
 
 ## Large features (architecture-relevant)
 
@@ -139,6 +163,10 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     (or both: preview → apply)?
   - Winds: share the snapshot, or refetch live at open time? (Probably
     both, labeled.)
+  - 2026-07-16 proposal as design-session input: compressed Plan in the
+    URL fragment (lz-string; ~500 bytes without tracks), permanent, no
+    server; receiver gets a preview → "apply" flow; hosted snapshots
+    deferred until the Phase-8 backend exists anyway.
 - ☑ **Phone app = PWA** — DONE Phase 5 (`3c529d5`). vite-plugin-pwa:
   manifest + icons (any/maskable), service worker precaching the app shell
   with navigateFallback (offline route loading), NetworkFirst runtime
@@ -146,6 +174,7 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   Google tiles intentionally uncached (ToS) — see MapLibre offline-tiles
   follow-up. Pending: higher-res brand icons (owner art).
 - ☐ **Flocking mode** — beyond a port of flocking-wind-calculator.
+  (2026-07-16: parked — needs owner input and owner has no time now.)
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)
@@ -165,6 +194,10 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **XRW planning** — similar to flocking (wingsuit + canopy flying
   together); differences: may want a **90° jumprun** option, different
   speed/glide envelope. Design alongside flocking mode.
+- ☐ **Live GPS mode** — the PWA on a phone uses device GPS: current
+  position vs plan in the aircraft, spot indicator. Safety-sensitive —
+  presentation needs care (this is the feature that makes the PWA
+  matter). ✎ design. (Accepted 2026-07-16 — "interesting one".)
 - ☐ **Logbook** — save complete plans (winds, time, settings, equipment),
   attach actual jump tracks later, compare plan vs jump. Foundation for
   scoring + analysis features.
@@ -232,6 +265,15 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   official-style scores (gates, window, etc.).
 - ☐ **"Wind code" above pattern** — fuzzy pattern-entry indication instead of
   a precise point. ✎ clarify concept.
+- ☐ **DZ wind climatology** — OpenMeteo historical API: typical winds by
+  month/hour at a DZ, "is today unusual?". For demos and traveling
+  jumpers. (2026-07-16 review.)
+- ✎ **METAR/TAF display** — nearest airport METAR + TAF. Observation side
+  overlaps the existing observed stations (NWS stations are largely the
+  same airport METAR reporters); the genuinely new part is **TAF** — a
+  human-written short-term airport forecast, nothing in the app covers
+  that. Verify CORS on aviationweather.gov before building; scope vs
+  existing stations to be decided.
 
 ---
 
@@ -318,6 +360,50 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   500 entries; revisit only if it grows.
 - ☐ Soundings can be dense in the low-altitude band — consider thinning
   levels for the table if it feels noisy.
+
+## Architecture-review follow-ups (2026-07-16)
+
+Weak spots from a full-code review of the redesigned branch (Phases 0–5
+done). Fix opportunistically or as prerequisites for the features above.
+Ordered by importance.
+
+- ☐ **Error surface + don't wipe winds on failed fetch** — a failed
+  forecast fetch resets the table to an empty profile with only a
+  console.log (`useFetchForecast` catch); the user sees the table go
+  blank with no reason given. Keep the previous profile, mark it stale,
+  surface the error. The app has no user-visible error channel anywhere —
+  add one (snackbar context). Prerequisite for doing the scrubber and
+  comparison-view work right.
+- ☐ **Extract a `useWinds` facade from App.tsx** — App.tsx is still a
+  620-line orchestrator; the wind orchestration (fetch + observed +
+  compose + summary + forecast-time/observed reset coupling, ~lines
+  195–317) belongs in one hook. Also: `windSummary` is built unmemoized
+  in the render body, and `appTitle: () => CustomAppTitle({...})`
+  (App.tsx:470) calls a component as a plain function — breaks the moment
+  it gains a hook.
+- ☐ **Finish the core/ layering** — `util/pathStats.ts`,
+  `util/courses.ts` and the exporters are pure logic still living in
+  util/; move them into core/. Fold in while there: the drift-angle
+  formula is duplicated (FlightPathsLayer.tsx ~105 and ~267) and the
+  `PointData` shape is defined twice (pathStats + FlightPathsLayer).
+  Natural companion to the "degrees rotated" tooltip item.
+- ☐ **Component/hook tests** — all 369 tests are pure logic; zero
+  coverage of the presets round-trip, the route guard, or wind panel
+  state. Add React Testing Library smoke tests before Phases 6/7 add UI
+  mass. (Extends the standing "grow test coverage" item.)
+- ☐ **Settings layering** — replace the `applyModeDefaults`
+  equals-global-default heuristic with explicit touched-settings tracking
+  or a layered resolution (global default < mode default < user value).
+  Same issue as the Phase-3 follow-up below; it gets worse with every
+  mode that adds defaults (flocking will).
+- ☐ **Path rendering won't scale to tracks** — every path point renders
+  2–3 MapCircles (FlightPathsLayer). Fine at ~100 pattern points; will
+  not survive multi-thousand-point GPS tracks (multi-plot, logbook).
+  Decimation or a canvas layer; flag for Phase 7.
+- ☐ Minor: `openmeteo.ts` module-level `prefetched` singleton (acceptable;
+  has a test reset). `fetchWinds` filters rows above the altitude limit
+  at set time, so raising the limit needs a refetch (the prefetch cache
+  mostly hides it).
 
 ## Process / engineering health
 
