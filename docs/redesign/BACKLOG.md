@@ -384,10 +384,12 @@ Ordered by importance.
   from core and shared. Exporters deliberately left in util/ — they
   trigger downloads/DOM; a pure-serialization split wasn't clean enough
   to pay for itself.
-- ☐ **Component/hook tests** — all 369 tests are pure logic; zero
-  coverage of the presets round-trip, the route guard, or wind panel
-  state. Add React Testing Library smoke tests before Phases 6/7 add UI
-  mass. (Extends the standing "grow test coverage" item.)
+- ☑ **Component/hook tests** — DONE (`19bf4f5`). RTL + jsdom added as
+  devDependencies (jsdom opt-in per test file); usePresets round-trip
+  (incl. persistence across remount) and PatternComponent render +
+  clamping covered. Route guard was already covered in
+  app/routing.test.ts. Suite now 390 tests. Growing this further stays
+  under the standing "grow test coverage" item.
 - ☐ **Settings layering** — replace the `applyModeDefaults`
   equals-global-default heuristic with explicit touched-settings tracking
   or a layered resolution (global default < mode default < user value).
