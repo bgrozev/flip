@@ -16,12 +16,30 @@ import { LatLng, MapProvider } from '../types';
 
 import { CustomLocationsComponent, DropzonesComponent } from './';
 
+const LOCATION_TABS = ['dropzones', 'custom', 'search'] as const;
+type LocationTab = typeof LOCATION_TABS[number];
+
+const DEFAULT_LOCATION_TAB: LocationTab = 'dropzones';
+
+/**
+ * Which tab is showing is UI ephemera, not a document: it stays a plain
+ * string (Toolpad's default codec), so no envelope and no reset for stored
+ * values. A stored value we don't recognize would leave every tab
+ * unselected and the panel empty, so it falls back to the default instead.
+ */
+function toLocationTab(value: string | null): LocationTab {
+  return LOCATION_TABS.includes(value as LocationTab)
+    ? (value as LocationTab)
+    : DEFAULT_LOCATION_TAB;
+}
+
 export default function LocationComponent() {
   const { selectLocation } = useTarget();
-  const [selectedTab, setSelectedTab] = useLocalStorageState<string>(
+  const [storedTab, setSelectedTab] = useLocalStorageState<string>(
     'flip.location.tab',
-    'dropzones'
+    DEFAULT_LOCATION_TAB
   );
+  const selectedTab = toLocationTab(storedTab);
 
   const handleTabChange = (_event: React.SyntheticEvent, newTab: string) => {
     setSelectedTab(newTab);
