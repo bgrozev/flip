@@ -33,6 +33,11 @@ export default function ModePicker({ open, onSelect }: ModePickerProps) {
               <CardActionArea
                 disabled={!mode.enabled}
                 onClick={() => onSelect(mode.id)}
+                // The card's text is laid out as separate nodes, so without
+                // this the button has no accessible name.
+                aria-label={mode.enabled
+                  ? `${mode.label}: ${mode.description}`
+                  : `${mode.label} (coming soon): ${mode.description}`}
               >
                 <CardContent>
                   <Stack direction="row" spacing={1} alignItems="center">
