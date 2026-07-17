@@ -2,8 +2,11 @@
 
 A flight planning tool for skydivers that calculates wind-corrected landing patterns. It takes user input for pattern parameters and target location, fetches wind forecasts at multiple altitudes, and displays the flight plan on a map showing both the ideal path and wind-adjusted path.
 
-A redesign toward a "next generation" architecture is in progress — see
-`docs/redesign/` (NOTES.md, ARCHITECTURE.md, BACKLOG.md, UIUX.md).
+A redesign toward a "next generation" architecture is in progress.
+**Start at `docs/redesign/HANDOFF.md`** — it says where things stand, what's
+next, the hard rules, and the environment gotchas. It points on to
+ARCHITECTURE.md (target design + phase plan), BACKLOG.md (outstanding work),
+NOTES.md (running log / why), and UIUX.md.
 
 ## Project Structure
 

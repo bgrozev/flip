@@ -1,6 +1,13 @@
 # FliP Next-Generation Redesign — Working Notes
 
+> **New session? Read `HANDOFF.md` first.** This file is the running log —
+> per-phase history and owner Q&A, kept for "why is it like this". It is
+> append-only and the status blocks below are historical, newest last.
+
 Branch: `claude/flip-redesign-architecture-e767df`
+
+## History
+
 Status: **Phase 4 complete** (2026-07-15, commits `0694842`, `c7d3776`,
 `99f6313`, `186c555`, `59fb9ec`): `src/data/wind/` WindSource plugin layer
 replaces `src/forecast/`; elevation cache; multi-hour prefetch with local
@@ -186,3 +193,33 @@ text. Core math is ~100 lines — straightforward TS port + tests.
 - **Architecture + migration plan** → `ARCHITECTURE.md`
 - **Backlog** (owner's list, organized by scope) → `BACKLOG.md`
 - **UI/UX improvements + new feature ideas** → `UIUX.md`
+
+---
+
+## Session end — 2026-07-16
+
+Final state of the session that ran Phases 0–5: **369 tests, 0 lint errors
+/ ~50 warnings, build green, tree clean.** Nothing merged, nothing deployed.
+
+After MapLibre, the owner asked for a sweep of self-contained backlog items.
+Landed (`591b059`…`37dfd91`): backlog hygiene (marked ~12 items Phases 1–5
+had silently delivered); place-autocomplete listener/DOM leak; target/heading
+handle overlap (via a new tested `core/geometry.metersPerPixel`); wind-table
+field clipping; redundant KZPH supplement (verified against the live NWS
+API — KM08 genuinely still needs its supplement); select-on-focus; Windy
+link; mode-picker a11y names; forecast-time picker hidden for soundings;
+sounding station named + linked to its IEM page (URL verified — three
+earlier candidates 404'd); "Manually entered" badge; dead
+`setManoeuvreAltitude` removed and its live replacement (offset + ±15% clamp)
+moved out of `useAppState` into `core/manoeuvre.applyInitiationAltitudeOffset`;
+versioned codecs for the last unversioned storage keys, then removal of the
+now-dead `createSafeCodec`/`createSimpleCodec`/`deepMerge`.
+
+Corrections worth remembering: the backlog's claim that both storage codecs
+were unused was **wrong** (`createSimpleCodec` had two live callers), and its
+key names were wrong (`flip.custom_locations`, `flip.manoeuvre.track.tracks`).
+A "past forecast time" bug was **retracted** — it was a probe bypassing the
+app's own clamps.
+
+Outstanding work, hard rules, environment gotchas and settled decisions are
+all in `HANDOFF.md`.
