@@ -19,6 +19,7 @@ import {
   migratePresets,
   migrateSettings,
   migrateStoredTracks,
+  migrateStoredWinds,
   migrateTarget,
   migrateTouchedSettings,
   seedTouchedSettings
@@ -460,5 +461,118 @@ describe('migrateStoredTracks', () => {
     expect(codec.parse('garbage')).toEqual([]);
     expect(codec.parse('{"doc":123}')).toEqual([]);
     expect(codec.parse('null')).toEqual([]);
+  });
+});
+
+describe('migrateStoredWinds', () => {
+  const fetchedIso = '2026-07-16T15:00:00.000Z';
+  const validIso = '2026-07-16T18:00:00.000Z';
+
+  it('round-trips a fetched profile, reviving Dates from ISO strings', () => {
+    const stored = JSON.parse(JSON.stringify({
+      winds: [
+        { altFt: 0, direction: 260, speedKts: 4.1, source: 'KZPH', validTime: validIso },
+        { altFt: 1000, direction: 280, speedKts: 12.5, tempC: 21, source: 'open-meteo' }
+      ],
+      groundSource: 'dropzone-specific',
+      aloftSource: 'open-meteo',
+      validTime: validIso,
+      center: { lat: 28.2, lng: -82.1 },
+      meta: {
+        model: 'best_match',
+        fetchedAt: fetchedIso,
+        location: { lat: 28.2, lng: -82.1 },
+        elevationFt: 90
+      }
+    }));
+
+    const profile = migrateStoredWinds(stored);
+
+    expect(profile).not.toBeNull();
+    expect(profile!.winds).toHaveLength(2);
+    expect(profile!.winds[0].source).toBe('KZPH');
+    expect(profile!.winds[0].validTime).toBeInstanceOf(Date);
+    expect(profile!.winds[0].validTime!.toISOString()).toBe(validIso);
+    expect(profile!.winds[1].tempC).toBe(21);
+    expect(profile!.groundSource).toBe('dropzone-specific');
+    expect(profile!.aloftSource).toBe('open-meteo');
+    expect(profile!.validTime).toBeInstanceOf(Date);
+    expect(profile!.meta?.fetchedAt).toBeInstanceOf(Date);
+    expect(profile!.meta?.fetchedAt!.toISOString()).toBe(fetchedIso);
+    expect(profile!.meta?.model).toBe('best_match');
+    expect(profile!.meta?.elevationFt).toBe(90);
+    expect(profile!.center).toEqual({ lat: 28.2, lng: -82.1 });
+  });
+
+  it('round-trips a manual profile', () => {
+    const stored = JSON.parse(JSON.stringify({
+      winds: [{ altFt: 0, direction: 90, speedKts: 10 }],
+      groundSource: 'manual',
+      aloftSource: 'manual'
+    }));
+    const profile = migrateStoredWinds(stored);
+
+    expect(profile).toEqual({
+      winds: [{ altFt: 0, direction: 90, speedKts: 10 }],
+      groundSource: 'manual',
+      aloftSource: 'manual'
+    });
+  });
+
+  it('returns null for garbage and empty input', () => {
+    expect(migrateStoredWinds(undefined)).toBeNull();
+    expect(migrateStoredWinds(null)).toBeNull();
+    expect(migrateStoredWinds('gibberish')).toBeNull();
+    expect(migrateStoredWinds(42)).toBeNull();
+    expect(migrateStoredWinds({})).toBeNull();
+    expect(migrateStoredWinds({ winds: 'nope' })).toBeNull();
+    expect(migrateStoredWinds({ winds: [] })).toBeNull();
+    expect(migrateStoredWinds({ winds: [1, 'two', null] })).toBeNull();
+  });
+
+  it('degrades invalid fields without throwing', () => {
+    const profile = migrateStoredWinds({
+      winds: [
+        { altFt: 'high', direction: 725, speedKts: 1e9 },
+        null,
+        { altFt: 500, direction: 90, speedKts: 8, validTime: 'not-a-date' }
+      ],
+      groundSource: 'mystery-source',
+      aloftSource: 7,
+      validTime: 'also-not-a-date',
+      center: { lat: 'x', lng: 0 },
+      meta: { fetchedAt: {}, model: 5 }
+    });
+
+    expect(profile).not.toBeNull();
+    expect(profile!.winds).toHaveLength(2);
+    expect(profile!.winds[0].altFt).toBe(0);
+    expect(profile!.winds[0].direction).toBe(5); // 725 normalized
+    expect(profile!.winds[1].validTime).toBeUndefined();
+    expect(profile!.groundSource).toBe('manual');
+    expect(profile!.aloftSource).toBe('manual');
+    expect(profile!.validTime).toBeUndefined();
+    expect(profile!.center).toBeUndefined();
+    expect(profile!.meta?.fetchedAt).toBeUndefined();
+    expect(profile!.meta?.model).toBeUndefined();
+  });
+
+  it('works through the versioned codec (parse of stringified envelope)', () => {
+    const codec = createVersionedCodec<ReturnType<typeof migrateStoredWinds>>(
+      SCHEMA_VERSION, migrateStoredWinds
+    );
+    const profile = migrateStoredWinds({
+      winds: [{ altFt: 0, direction: 180, speedKts: 6, validTime: validIso }],
+      groundSource: 'manual',
+      aloftSource: 'open-meteo',
+      meta: { fetchedAt: fetchedIso }
+    });
+
+    const restored = codec.parse(codec.stringify(profile));
+
+    expect(restored).toEqual(profile);
+    expect(restored!.winds[0].validTime).toBeInstanceOf(Date);
+    expect(codec.parse('garbage')).toBeNull();
+    expect(codec.parse('{"schemaVersion":1,"doc":{"winds":[]}}')).toBeNull();
   });
 });

@@ -1,8 +1,21 @@
-import { useCallback, useRef, useState } from 'react';
+import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { fetchForecast } from '../data/wind';
 import { LatLng, Settings } from '../types';
+import { SCHEMA_VERSION, migrateStoredWinds } from '../core/model';
 import { WindProfile, createWindProfile } from '../core/wind';
+import { createVersionedCodec } from '../util/storage';
+
+/**
+ * Persisted wind profile (fetched or manual) — a reload must not lose
+ * manual edits or the last forecast. The migrate function revives the
+ * profile's Dates from their JSON string form; null = nothing usable stored.
+ */
+const WINDS_CODEC = createVersionedCodec<WindProfile | null>(
+  SCHEMA_VERSION,
+  migrateStoredWinds
+);
 
 interface UseFetchForecastOptions {
   /** Current target location */
@@ -43,14 +56,24 @@ export function useFetchForecast({
   target,
   settings
 }: UseFetchForecastOptions): UseFetchForecastResult {
-  const [winds, setWinds] = useState<WindProfile>(createWindProfile);
+  // Winds survive reloads: persisted under a versioned key, restored on load
+  const [storedWinds, setStoredWinds] = useLocalStorageState<WindProfile | null>(
+    'flip.winds',
+    null,
+    { codec: WINDS_CODEC }
+  );
+  const winds = useMemo(() => storedWinds ?? createWindProfile(), [storedWinds]);
+  const setWinds = useCallback(
+    (profile: WindProfile) => setStoredWinds(profile),
+    [setStoredWinds]
+  );
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<FetchWindsError | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const resetWinds = useCallback(() => {
-    setWinds(createWindProfile());
-  }, []);
+    setStoredWinds(null);
+  }, [setStoredWinds]);
 
   const fetchWinds = useCallback((maxPathAltitude?: number, forecastTime?: Date | null, opts?: { force?: boolean }) => {
     if (!target) {

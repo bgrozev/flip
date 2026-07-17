@@ -98,10 +98,13 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   forecast window (24–168h already in memory); scrubbing is a local index
   change, the pattern morphs live. Strong teaching tool; the cheapest
   high-value item on this list. (2026-07-16 review; UIUX #16.)
-- ☐ **Persist last winds + staleness banner** — winds are useState-only:
-  a reload loses manual edits and the fetched forecast. Persist the last
-  profile + fetchedAt, show "fetched N min ago / refresh?" staleness
-  nudge. Interim until Plan documents (Phase 7); accepted 2026-07-16.
+- ☑ **Persist last winds + staleness banner** — DONE. The wind profile
+  (fetched or manual) persists under versioned key `flip.winds`
+  (`core/model.migrateStoredWinds`, tested: revives Dates from JSON,
+  tolerates garbage). The source badge shows "· fetched N min ago";
+  past 30 min it turns warning-colored and grows a "refresh" link.
+  Browser-verified: fetched table and manual edits both survive reload.
+  Interim until Plan documents (Phase 7).
 - ☐ **Replay animation** — animate a dot along the plan (later: a recorded
   track) over time. Teaching/demo value; cheap over the memoized paths.
   (2026-07-16 review.)

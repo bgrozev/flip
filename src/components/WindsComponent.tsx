@@ -25,7 +25,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useAppState, useUnits } from '../hooks';
 import { LatLng, ObservedWindStation } from '../types';
@@ -123,6 +123,50 @@ function RowSourceIndicator({ row }: { row: WindRow }) {
     <Tooltip title={kind === 'sounding' ? 'Sounding' : 'OpenMeteo forecast'}>
       <CloudOutlinedIcon sx={mutedSx} />
     </Tooltip>
+  );
+}
+
+/** Age beyond which fetched winds are flagged as stale (with a refresh nudge). */
+const STALE_AFTER_MS = 30 * 60_000;
+
+/**
+ * "· fetched N min ago" staleness suffix for the source badge of a fetched
+ * profile (restored ones included — winds persist across reloads). Re-renders
+ * itself once a minute; past the staleness threshold the age turns into a
+ * warning and grows a refresh link.
+ */
+function FetchedAgo({ fetchedAt, onRefresh }: { fetchedAt: Date; onRefresh: () => void }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000);
+
+    return () => clearInterval(id);
+  }, []);
+
+  const stale = Date.now() - fetchedAt.getTime() > STALE_AFTER_MS;
+
+  return (
+    <>
+      {' · '}
+      <Box component="span" sx={stale ? { color: 'warning.main' } : undefined}>
+        fetched {stationAge(fetchedAt)}
+      </Box>
+      {stale && (
+        <>
+          {' '}
+          <Link
+            component="button"
+            type="button"
+            variant="caption"
+            onClick={onRefresh}
+            sx={{ verticalAlign: 'baseline' }}
+          >
+            refresh
+          </Link>
+        </>
+      )}
+    </>
   );
 }
 
@@ -356,6 +400,12 @@ export default function WindsComponent({
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                   })}`
                   : ''}
+                {winds.meta?.fetchedAt && (
+                  <FetchedAgo
+                    fetchedAt={winds.meta.fetchedAt}
+                    onRefresh={() => fetch(undefined, { force: true })}
+                  />
+                )}
               </Typography>
             )}
             {winds.aloftSource === SOURCE_SOUNDING && (
@@ -392,6 +442,12 @@ export default function WindsComponent({
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                   })}`
                   : ''}
+                {winds.meta?.fetchedAt && (
+                  <FetchedAgo
+                    fetchedAt={winds.meta.fetchedAt}
+                    onRefresh={() => fetch(undefined, { force: true })}
+                  />
+                )}
               </Typography>
             )}
             <TableContainer

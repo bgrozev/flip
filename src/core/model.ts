@@ -35,7 +35,18 @@ import {
   WindSpeedUnit
 } from './units';
 import { LIMITS, NumericLimits, clampNumber, normalizeDirection } from './validation';
-import { DEFAULT_WIND_MODEL, OPEN_METEO_MODELS } from './wind';
+import {
+  DEFAULT_WIND_MODEL,
+  ForecastSource,
+  OPEN_METEO_MODELS,
+  SOURCE_DZ,
+  SOURCE_MANUAL,
+  SOURCE_OPEN_METEO,
+  SOURCE_SOUNDING,
+  WindProfile,
+  WindProfileMeta,
+  WindRow
+} from './wind';
 
 /** Schema version written with every persisted document. */
 export const SCHEMA_VERSION = 1;
@@ -412,5 +423,133 @@ export function migrateStoredTracks(raw: unknown): StoredTrack[] {
   });
 
   return tracks;
+}
+
+// ---------------------------------------------------------------------------
+// Persisted wind profile
+// ---------------------------------------------------------------------------
+
+/** Revive a JSON-round-tripped Date (ISO string / epoch ms); undefined if unusable. */
+function dateOr(value: unknown): Date | undefined {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value;
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+
+  return undefined;
+}
+
+const FORECAST_SOURCES: readonly ForecastSource[] =
+  [SOURCE_MANUAL, SOURCE_DZ, SOURCE_OPEN_METEO, SOURCE_SOUNDING];
+
+/**
+ * Validating loader for the persisted wind profile (`flip.winds`).
+ *
+ * Returns null (nothing usable stored) rather than an empty default, so the
+ * consumer can distinguish "no persisted winds" from a real profile. Dates
+ * (validTime, per-row validTime, meta.fetchedAt) round-trip through JSON as
+ * ISO strings and are revived here; unusable values degrade to undefined,
+ * unusable rows are dropped, and garbage input never throws.
+ */
+export function migrateStoredWinds(raw: unknown): WindProfile | null {
+  if (!isRecord(raw) || !Array.isArray(raw.winds)) {
+    return null;
+  }
+
+  const winds: WindRow[] = [];
+
+  raw.winds.forEach(entry => {
+    if (!isRecord(entry)) {
+      return;
+    }
+
+    const row: WindRow = {
+      altFt: limitedNumber(entry.altFt, 0, LIMITS.windAltFt),
+      direction: normalizeDirection(finiteNumber(entry.direction, 0)),
+      speedKts: limitedNumber(entry.speedKts, 0, LIMITS.windSpeedKts)
+    };
+
+    if (typeof entry.tempC === 'number' && Number.isFinite(entry.tempC)) {
+      row.tempC = entry.tempC;
+    }
+    if (typeof entry.source === 'string' && entry.source !== '') {
+      row.source = entry.source;
+    }
+    const rowValidTime = dateOr(entry.validTime);
+
+    if (rowValidTime) {
+      row.validTime = rowValidTime;
+    }
+
+    winds.push(row);
+  });
+
+  if (winds.length === 0) {
+    return null;
+  }
+
+  const profile: WindProfile = {
+    winds,
+    groundSource: oneOf(raw.groundSource, FORECAST_SOURCES, SOURCE_MANUAL),
+    aloftSource: oneOf(raw.aloftSource, FORECAST_SOURCES, SOURCE_MANUAL)
+  };
+
+  if (isRecord(raw.center) &&
+      typeof raw.center.lat === 'number' && Number.isFinite(raw.center.lat) &&
+      typeof raw.center.lng === 'number' && Number.isFinite(raw.center.lng)) {
+    profile.center = {
+      lat: clampNumber(raw.center.lat, -90, 90),
+      lng: clampNumber(raw.center.lng, -180, 180)
+    };
+  }
+
+  const validTime = dateOr(raw.validTime);
+
+  if (validTime) {
+    profile.validTime = validTime;
+  }
+
+  if (isRecord(raw.meta)) {
+    const m = raw.meta;
+    const meta: WindProfileMeta = {};
+
+    if (typeof m.model === 'string' && m.model !== '') {
+      meta.model = m.model;
+    }
+    const fetchedAt = dateOr(m.fetchedAt);
+
+    if (fetchedAt) {
+      meta.fetchedAt = fetchedAt;
+    }
+    if (isRecord(m.location) &&
+        typeof m.location.lat === 'number' && Number.isFinite(m.location.lat) &&
+        typeof m.location.lng === 'number' && Number.isFinite(m.location.lng)) {
+      meta.location = {
+        lat: clampNumber(m.location.lat, -90, 90),
+        lng: clampNumber(m.location.lng, -180, 180)
+      };
+    }
+    if (typeof m.elevationFt === 'number' && Number.isFinite(m.elevationFt)) {
+      meta.elevationFt = m.elevationFt;
+    }
+    if (typeof m.station === 'string' && m.station !== '') {
+      meta.station = m.station;
+    }
+    if (typeof m.stationName === 'string' && m.stationName !== '') {
+      meta.stationName = m.stationName;
+    }
+    if (typeof m.stationDistanceFt === 'number' && Number.isFinite(m.stationDistanceFt)) {
+      meta.stationDistanceFt = m.stationDistanceFt;
+    }
+
+    profile.meta = meta;
+  }
+
+  return profile;
 }
 
