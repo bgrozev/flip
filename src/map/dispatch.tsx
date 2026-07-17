@@ -82,15 +82,33 @@ export function MapDragHandle(props: MapDragHandleProps) {
  * geocoder (Google Places or, for MapLibre, key-free Photon). Not a component,
  * so the provider is passed explicitly rather than read from context; the
  * MapLibre geocoder is loaded lazily from the shared MapLibre chunk.
+ *
+ * Returns a disposer; call it when the input goes away or before re-attaching.
+ * It is safe to dispose before the lazy MapLibre chunk has loaded — the attach
+ * is then skipped entirely.
  */
 export function attachPlaceAutocomplete(
   input: HTMLInputElement,
   onPlace: (pos: LatLng) => void,
   provider: MapProvider = 'google'
-): void {
-  if (provider === 'maplibre') {
-    import('./maplibre').then(m => m.attachPlaceAutocomplete(input, onPlace));
-  } else {
-    google.attachPlaceAutocomplete(input, onPlace);
+): () => void {
+  if (provider !== 'maplibre') {
+    return google.attachPlaceAutocomplete(input, onPlace);
   }
+
+  // Lazy chunk: it may resolve after the caller has already disposed.
+  let disposed = false;
+  let dispose: (() => void) | null = null;
+
+  import('./maplibre').then(m => {
+    if (disposed) {
+      return;
+    }
+    dispose = m.attachPlaceAutocomplete(input, onPlace);
+  });
+
+  return () => {
+    disposed = true;
+    dispose?.();
+  };
 }

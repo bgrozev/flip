@@ -38,17 +38,21 @@ function labelFor(f: PhotonFeature): string {
 /**
  * Attach a Photon-backed autocomplete to a text input. As the user types, a
  * suggestion dropdown is shown beneath the input; picking one calls `onPlace`
- * with its coordinates. Safe to call once per input (idempotent-ish: it wires
- * listeners and owns a single dropdown element).
+ * with its coordinates.
+ *
+ * Returns a disposer that removes the dropdown, its listeners and any pending
+ * timers. Callers must invoke it when the input goes away (or before
+ * re-attaching) — this function owns DOM it appends, so attaching twice
+ * without disposing would stack up dropdowns.
  */
 export function attachPlaceAutocomplete(
   input: HTMLInputElement,
   onPlace: (pos: LatLng) => void
-): void {
+): () => void {
   const container = input.parentElement;
 
   if (!container) {
-    return;
+    return () => { /* nothing was attached */ };
   }
   // The dropdown is positioned relative to the input's wrapper.
   if (getComputedStyle(container).position === 'static') {
@@ -137,7 +141,9 @@ export function attachPlaceAutocomplete(
       });
   };
 
-  input.addEventListener('input', () => {
+  let blurTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const onInput = () => {
     const query = input.value.trim();
 
     if (debounce) {
@@ -149,10 +155,27 @@ export function attachPlaceAutocomplete(
       return;
     }
     debounce = setTimeout(() => search(query), DEBOUNCE_MS);
-  });
+  };
 
-  input.addEventListener('blur', () => {
+  const onBlur = () => {
     // Delay so a suggestion's mousedown can complete first.
-    setTimeout(hide, 150);
-  });
+    blurTimer = setTimeout(hide, 150);
+  };
+
+  input.addEventListener('input', onInput);
+  input.addEventListener('blur', onBlur);
+
+  return () => {
+    input.removeEventListener('input', onInput);
+    input.removeEventListener('blur', onBlur);
+    if (debounce) {
+      clearTimeout(debounce);
+    }
+    if (blurTimer) {
+      clearTimeout(blurTimer);
+    }
+    // Ignore any in-flight response and drop the dropdown we created.
+    seq++;
+    menu.remove();
+  };
 }

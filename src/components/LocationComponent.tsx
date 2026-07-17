@@ -71,9 +71,24 @@ function MapSearchBox({ onPlaceSelected }: MapSearchBoxProps) {
   const provider: MapProvider = settings.mapProvider;
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Keep the latest callback in a ref so re-attaching depends only on the
+  // provider: `onPlaceSelected` is not memoized by its callers, so depending
+  // on it directly would re-attach the autocomplete on every render.
+  const onPlaceRef = useRef(onPlaceSelected);
+
   useEffect(() => {
-    attachPlaceAutocomplete(inputRef.current!, onPlaceSelected, provider);
-  }, [onPlaceSelected, provider]);
+    onPlaceRef.current = onPlaceSelected;
+  });
+
+  useEffect(() => {
+    const dispose = attachPlaceAutocomplete(
+      inputRef.current!,
+      pos => onPlaceRef.current(pos),
+      provider
+    );
+
+    return dispose;
+  }, [provider]);
 
   return (
     <TextField
