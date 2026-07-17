@@ -69,15 +69,3 @@ export function createVersionedCodec<T>(
     stringify: (value: T): string => JSON.stringify({ schemaVersion, doc: value })
   };
 }
-
-// Re-export for backwards compatibility during migration
-export const CODEC_JSON = {
-  parse: (value: string) => {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return { _error: 'parse failed' };
-    }
-  },
-  stringify: (value: unknown) => JSON.stringify(value)
-};
