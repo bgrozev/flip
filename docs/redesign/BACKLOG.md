@@ -326,7 +326,10 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   target; the camera is not re-anchored (free drag still works). App.tsx
   derives a `mapCenter`; MapComponent gained a `cameraCenter` prop so the
   stations layer stays anchored at the target. Verified in-browser.
-- ☐ Leg tooltip body rows low-contrast over dark map theme — styling pass.
+- ☑ Leg tooltip body rows low-contrast over dark map theme — FIXED:
+  shared TOOLTIP_STYLE now near-opaque with a hairline border and 12px
+  full-white body text; secondary (coords) line brightened. Applies to
+  point/leg/manoeuvre and station tooltips alike.
 
 ## Phase-3 follow-ups (found during implementation, 2026-07-14)
 

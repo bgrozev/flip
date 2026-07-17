@@ -21,7 +21,7 @@ import {
 } from '../../core/pathStats';
 import { MapCircle, MapCircleStyle, MapOverlay, MapPolyline } from '..';
 
-import { DirectionArrow, formatDistance, SECTION_STYLE, TOOLTIP_STYLE } from './tooltip';
+import { DirectionArrow, formatDistance, SECTION_STYLE, TOOLTIP_SECONDARY_STYLE, TOOLTIP_STYLE } from './tooltip';
 
 // Colors for flight path visualization
 export const PATH_COLORS = {
@@ -183,7 +183,7 @@ function PointTooltip({ point, pointIndex, manoeuvreInitTime, pathStats, formatA
           <>
             <div>Altitude: {Math.round(alt.value)} {altitudeLabel}</div>
             <div>Time: {timeSign}{timeSinceInitSec.toFixed(1)}s</div>
-            <div style={{ fontSize: '10px', color: '#aaa' }}>
+            <div style={TOOLTIP_SECONDARY_STYLE}>
               {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
             </div>
           </>
