@@ -26,7 +26,14 @@ import WindDirectionArrow from './WindDirectionArrow';
 interface MapComponentProps {
   windSpeed: number;
   windDirection: number;
+  /** Reference location (the target): anchors the stations/ground-wind layer. */
   center: LatLng;
+  /**
+   * Camera center for the map view; the map pans when it changes. Defaults to
+   * `center`. Kept separate so e.g. "jump to course" can move the camera
+   * without re-anchoring target-relative overlays.
+   */
+  cameraCenter?: LatLng;
   pathA: FlightPath;
   pathB: FlightPath;
   settings: Settings;
@@ -50,6 +57,7 @@ function MapComponent({
   windSpeed,
   windDirection,
   center,
+  cameraCenter,
   pathA,
   pathB,
   settings,
@@ -76,7 +84,7 @@ function MapComponent({
   } = settings;
 
   return (
-    <MapContainer center={center} provider={settings.mapProvider}>
+    <MapContainer center={cameraCenter ?? center} provider={settings.mapProvider}>
       {has('flightPaths') && (
         <FlightPathsLayer
           pathA={pathA}

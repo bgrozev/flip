@@ -320,8 +320,12 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ `attachPlaceAutocomplete` re-attaches on every callback identity change
   with no listener cleanup (pre-existing bug, carried over) — effect should
   return a disposer; ref-stabilize the callback.
-- ☐ Built-in courses are geographically anchored (e.g. Skydive Arizona);
-  selecting one far from target shows nothing — add "jump to course".
+- ☑ Built-in courses are geographically anchored (e.g. Skydive Arizona);
+  selecting one far from target shows nothing — FIXED ("jump to course"):
+  selecting a course pans the map to it, deselecting pans back to the
+  target; the camera is not re-anchored (free drag still works). App.tsx
+  derives a `mapCenter`; MapComponent gained a `cameraCenter` prop so the
+  stations layer stays anchored at the target. Verified in-browser.
 - ☐ Leg tooltip body rows low-contrast over dark map theme — styling pass.
 
 ## Phase-3 follow-ups (found during implementation, 2026-07-14)
@@ -335,8 +339,8 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   fold into the Mode shape as nav groups.
 - ☐ Presets don't carry their mode yet (ARCHITECTURE: Plan carries mode)
   — part of the Phase-7 Plan document work.
-- ☐ Selecting a course doesn't pan the map to it (pre-existing; more
-  visible now) — same as the "jump to course" Phase-2 item.
+- ☑ Selecting a course doesn't pan the map to it — FIXED with the
+  "jump to course" Phase-2 item (see there for the commit).
 - ☐ Mode picker cards are unnamed buttons (no accessible name) — a11y
   fix: aria-label per card.
 

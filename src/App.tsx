@@ -22,7 +22,7 @@ import {
 import { createTheme } from '@mui/material/styles';
 import { AppProvider, Navigation, Router } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import {
@@ -379,6 +379,36 @@ function DashboardContent() {
   const selectedCourse = selectedCourseId ? allCourses.find(c => c.id === selectedCourseId) : undefined;
   const enabledCourses: Course[] = hasFeature(mode, 'courses') && selectedCourse ? [selectedCourse] : [];
 
+  // Map camera: follows the target, but jumps to a course when one is
+  // selected — built-in courses are geographically anchored (e.g. Skydive
+  // Arizona) and would otherwise be invisible from a distant target. This is
+  // a one-time pan per change (the map providers only pan when the camera
+  // center *changes*), so the user can still drag freely afterwards.
+  const [mapCenter, setMapCenter] = useState<LatLng>(target.target);
+  const { lat: targetLat, lng: targetLng } = target.target;
+
+  useEffect(() => {
+    setMapCenter({ lat: targetLat, lng: targetLng });
+  }, [targetLat, targetLng]);
+
+  // Pan on course selection *changes* only (not on load with a persisted
+  // selection — the map should keep opening at the target). Deselecting
+  // pans back to the target.
+  const prevCourseIdRef = useRef(selectedCourseId);
+  const courseCenter = selectedCourse?.center;
+
+  useEffect(() => {
+    if (selectedCourseId === prevCourseIdRef.current) {
+      return;
+    }
+    prevCourseIdRef.current = selectedCourseId;
+    if (courseCenter) {
+      setMapCenter({ lat: courseCenter.lat, lng: courseCenter.lng });
+    } else if (!selectedCourseId) {
+      setMapCenter({ lat: targetLat, lng: targetLng });
+    }
+  }, [selectedCourseId, courseCenter, targetLat, targetLng]);
+
   const selectedCustomParam = customParams.find(c => c.id === selectedCourseId) ?? null;
   const courseEditTarget: CourseEditTarget | undefined =
     courseEditOpen && selectedCustomParam && activePanel === 'courses'
@@ -402,6 +432,7 @@ function DashboardContent() {
   const map = (
     <MapComponent
       center={target.target}
+      cameraCenter={mapCenter}
       pathA={paths.ideal}
       pathB={paths.display}
       settings={modeSettings}
