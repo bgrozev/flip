@@ -56,9 +56,11 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   small persistent credits line if more is wanted.
 - ☐ Default pattern params → student-friendly: 3:1 glide, 8 kts descent
   (current default: 9 mph descent, 3.0 GR — confirm intended units kts vs mph).
-- ☐ Ground speed in point hover popup. (Deferred during polish batch —
-  needs the user's speed-unit formatter threaded into the map tooltip,
-  which currently only receives an altitude formatter; not a one-liner.)
+- ☑ Ground speed in point hover popup — DONE. `core/pathStats.
+  groundSpeedKts` (tested): centered difference over the two adjacent
+  path points, single-sided at the ends. Displayed in the point tooltip
+  via the user's wind-speed unit formatter (browser-verified: 23.2 kts
+  became 11.9 m/s after switching the unit setting).
 - ☐ "Degrees rotated" (cumulative turn) in map hover for manoeuvre points.
 - ☑ Ground wind arrow displays gusts (commit `be587a1`) — verify.
 - ☑ Ground wind arrow Beaufort colors (commit `be587a1`) — verify.

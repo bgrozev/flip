@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculatePathStats, driftAngle, getPointSegmentStats } from './pathStats';
+import { calculatePathStats, driftAngle, getPointSegmentStats, groundSpeedKts } from './pathStats';
 
 interface P {
   lat: number;
@@ -182,5 +182,41 @@ describe('getPointSegmentStats', () => {
 
   it('returns null for unknown point indices', () => {
     expect(getPointSegmentStats(99, stats)).toBeNull();
+  });
+});
+
+describe('groundSpeedKts', () => {
+  // 0.001° of latitude ≈ 111.195 m; with a 10 s time delta that is
+  // 11.1195 m/s ≈ 21.615 kts (1 kt = 0.514444 m/s).
+  const KTS_001_DEG_PER_10S = 111.195 / 10 / 0.514444;
+
+  const path: P[] = [
+    { lat: 0, lng: 0, time: 0 },
+    { lat: 0.001, lng: 0, time: 10_000 },
+    { lat: 0.002, lng: 0, time: 20_000 }
+  ];
+
+  it('uses a centered difference for interior points', () => {
+    // prev→next spans 0.002° in 20 s: same speed as each segment
+    expect(groundSpeedKts(path, 1)).toBeCloseTo(KTS_001_DEG_PER_10S, 1);
+  });
+
+  it('falls back to the single neighbor at the ends', () => {
+    expect(groundSpeedKts(path, 0)).toBeCloseTo(KTS_001_DEG_PER_10S, 1);
+    expect(groundSpeedKts(path, 2)).toBeCloseTo(KTS_001_DEG_PER_10S, 1);
+  });
+
+  it('is direction-agnostic (uses absolute time deltas)', () => {
+    const reversed = [...path].reverse().map((p, i) => ({ ...p, time: i * 10_000 }));
+
+    expect(groundSpeedKts(reversed, 1)).toBeCloseTo(KTS_001_DEG_PER_10S, 1);
+  });
+
+  it('returns null for a single point or zero time delta', () => {
+    expect(groundSpeedKts([{ lat: 0, lng: 0, time: 0 }], 0)).toBeNull();
+    expect(groundSpeedKts([
+      { lat: 0, lng: 0, time: 0 },
+      { lat: 0.001, lng: 0, time: 0 }
+    ], 0)).toBeNull();
   });
 });

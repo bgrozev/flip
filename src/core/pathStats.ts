@@ -101,6 +101,34 @@ function calcWindDrift(
   return { distance, direction };
 }
 
+/** 1 ft/s in knots (0.3048 m/s ÷ 0.514444 m/s). */
+const FT_PER_SEC_TO_KTS = 0.3048 / 0.514444;
+
+/**
+ * Ground speed at a path point, in knots, or null when it cannot be
+ * computed (single point, or missing/zero time deltas).
+ *
+ * Uses a centered difference over the two adjacent path points (the
+ * segment from the previous to the next point), falling back to the single
+ * available neighbor at the path ends. Point times are in milliseconds.
+ */
+export function groundSpeedKts(path: PointData[], index: number): number | null {
+  const a = path[index - 1] ?? path[index];
+  const b = path[index + 1] ?? path[index];
+
+  if (!a || !b || a === b) {
+    return null;
+  }
+
+  const dtMs = Math.abs((b.time ?? 0) - (a.time ?? 0));
+
+  if (dtMs <= 0) {
+    return null;
+  }
+
+  return calcDistance(a, b) / (dtMs / 1000) * FT_PER_SEC_TO_KTS;
+}
+
 /**
  * Calculate statistics for all segments in the path
  */
