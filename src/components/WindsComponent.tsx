@@ -70,6 +70,14 @@ function windyUrl({ lat, lng }: LatLng): string {
   return `https://www.windy.com/?${lat.toFixed(4)},${lng.toFixed(4)},11`;
 }
 
+/**
+ * IEM's page for a RAOB station (metadata + archive links), keyed on the same
+ * station id our sounding source already carries.
+ */
+function soundingStationUrl(station: string): string {
+  return `https://mesonet.agron.iastate.edu/sites/networks.php?station=${encodeURIComponent(station)}&network=RAOB`;
+}
+
 function toDateTimeLocalString(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return (
@@ -317,9 +325,24 @@ export default function WindsComponent({
                 sx={{ mb: 0.5, textAlign: 'left' }}
               >
                 {'Sounding'}
-                {/* Prefer the human-readable station name; fall back to its id. */}
+                {/* Prefer the human-readable station name; fall back to its id.
+                    Linked to IEM's page for that station when we know the id. */}
                 {winds.meta?.stationName || winds.meta?.station
-                  ? ` · ${winds.meta.stationName ?? winds.meta.station}`
+                  ? <>
+                    {' · '}
+                    {winds.meta.station
+                      ? (
+                        <Link
+                          href={soundingStationUrl(winds.meta.station)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          color="inherit"
+                        >
+                          {winds.meta.stationName ?? winds.meta.station}
+                        </Link>
+                      )
+                      : winds.meta.stationName}
+                  </>
                   : ''}
                 {winds.meta?.stationDistanceFt !== undefined
                   ? ` (${(winds.meta.stationDistanceFt / 5280).toFixed(0)} mi)`
