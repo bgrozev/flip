@@ -27,7 +27,15 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **Winds tab: read-only first** — in the vast majority of uses the tab is
   read-only; the "unlock" button is used very rarely. Redesign around
   viewing (colors, source badges, summary); editing becomes an explicit,
-  secondary mode. (Partly served: Beaufort dots + source badges landed.)
+  secondary mode. (Partly served: Beaufort dots + source badges landed;
+  per-row source indicators landed too — see below.)
+- ☑ **Per-row source indication in the wind table** — DONE. Read-only rows
+  show a muted provenance icon (cloud = forecast/sounding, pencil =
+  manually entered) and the observed-station ground row a green sensors
+  icon, with detail (station id, age) in the tooltip.
+  `core/wind.windRowSourceKind` classifies row provenance, with tests.
+  Closes the ARCHITECTURE §2 ask; browser-verified (NWS ground row
+  distinct from OpenMeteo rows).
 - ☑ **Wind direction interpolation wrap bug** — FIXED Phase 1 (`4e76aa4`).
   `getWindAt` now interpolates the wind vector (u/v components), so
   350°→10° goes through north and speeds cancel correctly.

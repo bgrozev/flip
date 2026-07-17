@@ -10,7 +10,8 @@ import {
   createWindRow,
   getWindAt,
   prepWind,
-  setGroundWind
+  setGroundWind,
+  windRowSourceKind
 } from './wind';
 
 describe('createWindRow', () => {
@@ -318,5 +319,35 @@ describe('beaufortColor', () => {
     expect(beaufortColor(25)).toBe('#ff4400');
     expect(beaufortColor(30)).toBe('#cc0000');
     expect(beaufortColor(40)).toBe('#880000');
+  });
+});
+
+describe('windRowSourceKind', () => {
+  it('classifies the known source constants', () => {
+    expect(windRowSourceKind('open-meteo')).toBe('open-meteo');
+    expect(windRowSourceKind('sounding')).toBe('sounding');
+    expect(windRowSourceKind('manual')).toBe('manual');
+  });
+
+  it('treats a missing source as manual', () => {
+    expect(windRowSourceKind(undefined)).toBe('manual');
+    expect(windRowSourceKind('')).toBe('manual');
+  });
+
+  it('treats any other id as an observed station', () => {
+    expect(windRowSourceKind('KZPH')).toBe('station');
+    expect(windRowSourceKind('csc-wx')).toBe('station');
+  });
+
+  it('classifies rows produced by the composition helpers', () => {
+    const composed = composeWinds(
+      createWindProfile([createWindRow(0, 90, 5, { source: 'open-meteo' })]),
+      createWindRow(0, 180, 8, { source: 'KABC' })
+    );
+
+    expect(windRowSourceKind(composed.winds[0].source)).toBe('station');
+    // A manually edited row loses its provenance (createWindRow without
+    // extras), which is exactly what marks it as manual in the UI.
+    expect(windRowSourceKind(createWindRow(0, 0, 0).source)).toBe('manual');
   });
 });

@@ -99,6 +99,27 @@ export function forecastSourceLabel(source: ForecastSource): string {
 }
 
 /**
+ * Per-row provenance classes, derived from `WindRow.source`: the known
+ * source constants map to themselves, anything else is assumed to be an
+ * observed-station id, and a missing source means the row was entered or
+ * edited by hand (manual edits create rows without provenance).
+ */
+export type WindRowSourceKind = 'manual' | 'open-meteo' | 'sounding' | 'station';
+
+/** Classify a wind row's provenance from its `source` field. */
+export function windRowSourceKind(source?: string): WindRowSourceKind {
+  if (!source || source === SOURCE_MANUAL) {
+    return 'manual';
+  } else if (source === SOURCE_OPEN_METEO) {
+    return 'open-meteo';
+  } else if (source === SOURCE_SOUNDING) {
+    return 'sounding';
+  }
+
+  return 'station';
+}
+
+/**
  * Beaufort-scale fill color for a wind speed in knots.
  * Used for wind arrows on the map (and, later, wind table rows).
  */

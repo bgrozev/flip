@@ -1,7 +1,10 @@
 import {
   Add as AddIcon,
   Close as CloseIcon,
-  Remove as RemoveIcon
+  CloudOutlined as CloudOutlinedIcon,
+  EditOutlined as EditOutlinedIcon,
+  Remove as RemoveIcon,
+  Sensors as SensorsIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -32,10 +35,12 @@ import {
   SOURCE_OPEN_METEO,
   SOURCE_SOUNDING,
   WindProfile,
+  WindRow,
   beaufortColor,
   createWindProfile,
   createWindRow,
-  windModelLabel
+  windModelLabel,
+  windRowSourceKind
 } from '../core/wind';
 
 interface WindsComponentProps {
@@ -83,6 +88,41 @@ function toDateTimeLocalString(date: Date): string {
   return (
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
     `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+/**
+ * Subtle per-row provenance indicator for the read-only wind table: an
+ * observed-station row stands out (it is real, current data injected among
+ * forecast rows); forecast and manual rows get a muted icon. Detail lives
+ * in the tooltip so the table itself stays quiet.
+ */
+function RowSourceIndicator({ row }: { row: WindRow }) {
+  const kind = windRowSourceKind(row.source);
+  const mutedSx = { fontSize: 14, color: 'text.disabled', display: 'block' } as const;
+
+  if (kind === 'station') {
+    const age = row.validTime ? ` · ${stationAge(row.validTime)}` : '';
+
+    return (
+      <Tooltip title={`Observed · ${row.source}${age}`}>
+        <SensorsIcon sx={{ ...mutedSx, color: 'success.main' }} />
+      </Tooltip>
+    );
+  }
+
+  if (kind === 'manual') {
+    return (
+      <Tooltip title="Manually entered">
+        <EditOutlinedIcon sx={mutedSx} />
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip title={kind === 'sounding' ? 'Sounding' : 'OpenMeteo forecast'}>
+      <CloudOutlinedIcon sx={mutedSx} />
+    </Tooltip>
   );
 }
 
@@ -361,6 +401,7 @@ export default function WindsComponent({
               <Table size="small">
                 <TableHead>
                   <TableRow>
+                    {lock && <TableCell padding="none" sx={{ width: 24 }} />}
                     <TableCell sx={{ width: '38%' }}>Altitude ({altitudeLabel})</TableCell>
                     <TableCell sx={{ width: '31%' }}>Direction</TableCell>
                     <TableCell sx={{ width: '31%' }}>Speed ({windSpeedLabel})</TableCell>
@@ -373,6 +414,11 @@ export default function WindsComponent({
                       key={`tr-${i}`}
                       sx={i === 0 ? { bgcolor: 'action.selected' } : undefined}
                     >
+                      {lock && (
+                        <TableCell padding="none" sx={{ pl: 1 }}>
+                          <RowSourceIndicator row={row} />
+                        </TableCell>
+                      )}
                       <TableCell sx={lock ? undefined : EDIT_CELL_SX}>
                         {lock ? (
                           <Typography variant="body2">
