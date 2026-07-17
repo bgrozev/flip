@@ -20,16 +20,13 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';
 import React, { useEffect, useState } from 'react';
 
-import { CsvRow, FlightPath } from '../types';
+import { CsvRow, FlightPath, StoredTrack } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
 import { mirror as mirrorPath } from '../core/geometry';
-import { createSimpleCodec } from '../util/storage';
+import { SCHEMA_VERSION, migrateStoredTracks } from '../core/model';
+import { createVersionedCodec } from '../util/storage';
 
-interface Track {
-  name: string;
-  description: string;
-  track: FlightPath;
-}
+const codec = createVersionedCodec(SCHEMA_VERSION, migrateStoredTracks);
 
 interface ManoeuvreTrackComponentProps {
   manoeuvreToSave: FlightPath;
@@ -44,10 +41,10 @@ export default function ManoeuvreTrackComponent({
   selectedTrackData,
   onTrackChange
 }: ManoeuvreTrackComponentProps) {
-  const [storedTracks, setTracks] = useLocalStorageState<Track[]>(
+  const [storedTracks, setTracks] = useLocalStorageState<StoredTrack[]>(
     'flip.manoeuvre.track.tracks',
     [],
-    { codec: createSimpleCodec<Track[]>([]) }
+    { codec }
   );
   const tracks = storedTracks ?? [];
   const [name, setName] = useState('');
@@ -85,7 +82,7 @@ export default function ManoeuvreTrackComponent({
   const save = (ev: React.FormEvent) => {
     ev.preventDefault();
 
-    const newTrack: Track = { name, description, track: manoeuvreToSave };
+    const newTrack: StoredTrack = { name, description, track: manoeuvreToSave };
     setTracks([...tracks.filter(t => t.name !== name), newTrack]);
   };
 

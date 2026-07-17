@@ -3,17 +3,22 @@
  * The requirement is graceful degradation — old or corrupt localStorage
  * data must never crash the app.
  */
+import { createVersionedCodec } from '../util/storage';
+
 import {
   DEFAULT_MANOEUVRE_PARAMS,
   DEFAULT_PATTERN_PARAMS,
   DEFAULT_SETTINGS,
   DEFAULT_TARGET,
+  SCHEMA_VERSION,
   migrateCustomCourses,
+  migrateCustomLocations,
   migrateManoeuvreConfig,
   migrateManoeuvreParams,
   migratePatternParams,
   migratePresets,
   migrateSettings,
+  migrateStoredTracks,
   migrateTarget
 } from './model';
 
@@ -283,5 +288,133 @@ describe('migrateManoeuvreParams', () => {
   it('allows zero and negative depth offsets', () => {
     expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetXFt: 0 }).offsetXFt).toBe(0);
     expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetXFt: -500 }).offsetXFt).toBe(-500);
+  });
+});
+
+describe('migrateCustomLocations', () => {
+  it.each(GARBAGE.filter(g => !Array.isArray(g)).map(g => [g]))('returns [] for %j', raw => {
+    expect(migrateCustomLocations(raw)).toEqual([]);
+  });
+
+  it('drops non-object entries', () => {
+    expect(migrateCustomLocations([1, 2, 3])).toEqual([]);
+  });
+
+  it('keeps valid locations and drops entries without a name or location', () => {
+    const valid = { name: 'Home DZ', lat: 28.2, lng: -82.1, direction: 270 };
+
+    const result = migrateCustomLocations([
+      valid,
+      { name: 'no location', direction: 90 },
+      { name: 'bad location', lat: 'x', lng: null },
+      { lat: 1, lng: 2, direction: 0 },
+      { name: '', lat: 1, lng: 2 },
+      'garbage',
+      null
+    ]);
+
+    expect(result).toEqual([valid]);
+  });
+
+  it('clamps coordinates, normalizes direction and defaults a missing one', () => {
+    const result = migrateCustomLocations([
+      { name: 'clamp', lat: 1234, lng: -999, direction: -90 },
+      { name: 'no direction', lat: 10, lng: 20 }
+    ]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ name: 'clamp', lat: 90, lng: -180, direction: 270 });
+    expect(result[1].direction).toBe(0);
+  });
+
+  it('migrates a legacy bare array through the versioned codec', () => {
+    const codec = createVersionedCodec(SCHEMA_VERSION, migrateCustomLocations);
+    const legacy = [{ name: 'Legacy', lat: 28.2, lng: -82.1, direction: 270 }];
+
+    expect(codec.parse(JSON.stringify(legacy))).toEqual(legacy);
+    expect(codec.parse(codec.stringify(legacy))).toEqual(legacy);
+    expect(JSON.parse(codec.stringify(legacy))).toEqual({
+      schemaVersion: SCHEMA_VERSION,
+      doc: legacy
+    });
+  });
+
+  it('never throws on corrupt stored values', () => {
+    const codec = createVersionedCodec(SCHEMA_VERSION, migrateCustomLocations);
+
+    expect(codec.parse('garbage')).toEqual([]);
+    expect(codec.parse('{"doc":123}')).toEqual([]);
+    expect(codec.parse('null')).toEqual([]);
+  });
+});
+
+describe('migrateStoredTracks', () => {
+  const point = { lat: 28.2, lng: -82.1, alt: 500, time: 0, pom: 0 };
+
+  it.each(GARBAGE.filter(g => !Array.isArray(g)).map(g => [g]))('returns [] for %j', raw => {
+    expect(migrateStoredTracks(raw)).toEqual([]);
+  });
+
+  it('drops non-object entries', () => {
+    expect(migrateStoredTracks([1, 2, 3])).toEqual([]);
+  });
+
+  it('keeps a valid track and converts a legacy point array', () => {
+    const result = migrateStoredTracks([
+      { name: 'My swoop', description: 'left 270', track: [point] }
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('My swoop');
+    expect(result[0].description).toBe('left 270');
+    expect(result[0].track).toHaveLength(1);
+    expect(result[0].track[0].geometry.coordinates).toEqual([point.lng, point.lat]);
+    expect(result[0].track[0].properties.alt).toBe(point.alt);
+  });
+
+  it('round-trips a track already in FlightPath form', () => {
+    const path = migrateStoredTracks([{ name: 'a', description: '', track: [point] }])[0].track;
+    const result = migrateStoredTracks([{ name: 'a', description: '', track: path }]);
+
+    expect(result).toEqual([{ name: 'a', description: '', track: path }]);
+  });
+
+  it('drops nameless and empty tracks, keeps the good ones', () => {
+    const result = migrateStoredTracks([
+      { name: 'good', description: '', track: [point] },
+      { name: 'no track', description: 'x' },
+      { name: 'empty track', track: [] },
+      { name: 'junk track', track: 'nonsense' },
+      { name: '', track: [point] },
+      { description: 'no name', track: [point] },
+      'garbage'
+    ]);
+
+    expect(result.map(t => t.name)).toEqual(['good']);
+  });
+
+  it('defaults a missing or wrong-typed description', () => {
+    const result = migrateStoredTracks([{ name: 'a', description: 42, track: [point] }]);
+
+    expect(result[0].description).toBe('');
+  });
+
+  it('migrates a legacy bare array through the versioned codec', () => {
+    const codec = createVersionedCodec(SCHEMA_VERSION, migrateStoredTracks);
+    const legacy = [{ name: 'Legacy', description: 'd', track: [point] }];
+    const migrated = codec.parse(JSON.stringify(legacy));
+
+    expect(migrated).toHaveLength(1);
+    expect(migrated[0].track[0].geometry.coordinates).toEqual([point.lng, point.lat]);
+    expect(codec.parse(codec.stringify(migrated))).toEqual(migrated);
+    expect(JSON.parse(codec.stringify(migrated)).schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('never throws on corrupt stored values', () => {
+    const codec = createVersionedCodec(SCHEMA_VERSION, migrateStoredTracks);
+
+    expect(codec.parse('garbage')).toEqual([]);
+    expect(codec.parse('{"doc":123}')).toEqual([]);
+    expect(codec.parse('null')).toEqual([]);
   });
 });

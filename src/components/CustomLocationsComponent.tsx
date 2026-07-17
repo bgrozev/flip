@@ -15,15 +15,12 @@ import {
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { useState } from 'react';
 
+import { SCHEMA_VERSION, migrateCustomLocations } from '../core/model';
 import { useTarget } from '../hooks';
-import { createSimpleCodec } from '../util/storage';
+import { CustomLocation } from '../types';
+import { createVersionedCodec } from '../util/storage';
 
-interface CustomLocation {
-  name: string;
-  lat: number;
-  lng: number;
-  direction: number;
-}
+const codec = createVersionedCodec(SCHEMA_VERSION, migrateCustomLocations);
 
 export default function CustomLocationsComponent() {
   const { target, selectLocation } = useTarget();
@@ -33,7 +30,7 @@ export default function CustomLocationsComponent() {
   const [customLocations, setCustomLocations] = useLocalStorageState<CustomLocation[]>(
     'flip.custom_locations',
     [],
-    { codec: createSimpleCodec<CustomLocation[]>([]) }
+    { codec }
   );
 
   const save = (ev: React.FormEvent) => {

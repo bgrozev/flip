@@ -1,7 +1,7 @@
 /**
  * Versioned document schemas: defaults + validating loaders for the
  * persisted documents (target, pattern params, manoeuvre config, settings,
- * presets, custom courses).
+ * presets, custom courses, custom locations, stored tracks).
  *
  * Every migrate*() function accepts unknown JSON and returns a valid
  * document, defaulting missing or invalid fields and clamping numeric
@@ -11,6 +11,7 @@
 import {
   CourseParams,
   CourseType,
+  CustomLocation,
   ManoeuvreConfig,
   ManoeuvreParams,
   ManoeuvreType,
@@ -20,6 +21,7 @@ import {
   PatternType,
   Preset,
   Settings,
+  StoredTrack,
   Target
 } from '../types';
 import { migrateToFlightPath } from './migration';
@@ -318,5 +320,68 @@ export function migrateCustomCourses(raw: unknown): CourseParams[] {
   });
 
   return courses;
+}
+
+export function migrateCustomLocations(raw: unknown): CustomLocation[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const locations: CustomLocation[] = [];
+
+  raw.forEach(entry => {
+    // The name is the identity: the UI keys and selects locations by it, so a
+    // nameless entry can never be picked — drop it
+    if (!isRecord(entry) || typeof entry.name !== 'string' || entry.name === '') {
+      return;
+    }
+
+    // A location without a valid position is meaningless — drop it
+    if (typeof entry.lat !== 'number' || !Number.isFinite(entry.lat) ||
+        typeof entry.lng !== 'number' || !Number.isFinite(entry.lng)) {
+      return;
+    }
+
+    locations.push({
+      name: entry.name,
+      lat: clampNumber(entry.lat, -90, 90),
+      lng: clampNumber(entry.lng, -180, 180),
+      direction: normalizeDirection(finiteNumber(entry.direction, 0))
+    });
+  });
+
+  return locations;
+}
+
+export function migrateStoredTracks(raw: unknown): StoredTrack[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const tracks: StoredTrack[] = [];
+
+  raw.forEach(entry => {
+    // The name is the identity, as for custom locations — drop nameless entries
+    if (!isRecord(entry) || typeof entry.name !== 'string' || entry.name === '') {
+      return;
+    }
+
+    // Accepts current FlightPath or the legacy {lat, lng, ...} point format.
+    // A track with no points draws nothing — drop it rather than keep a
+    // selectable entry that silently does nothing.
+    const track = migrateToFlightPath(entry.track);
+
+    if (track.length === 0) {
+      return;
+    }
+
+    tracks.push({
+      name: entry.name,
+      description: stringOr(entry.description, ''),
+      track
+    });
+  });
+
+  return tracks;
 }
 

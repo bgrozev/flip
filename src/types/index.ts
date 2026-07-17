@@ -137,6 +137,21 @@ export interface Dropzone {
   nearbyStations?: string[]; // ICAO station IDs not in NWS gridpoints (e.g. AWOS at small airports)
 }
 
+/** A landing location saved by the user ("My Locations"); keyed by name. */
+export interface CustomLocation {
+  name: string;
+  lat: number;
+  lng: number;
+  direction: number;
+}
+
+/** A manoeuvre track saved by the user ("My tracks"); keyed by name. */
+export interface StoredTrack {
+  name: string;
+  description: string;
+  track: FlightPath;
+}
+
 // Course types
 export type CourseType = 'distance' | 'zone-accuracy' | 'speed';
 
