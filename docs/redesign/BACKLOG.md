@@ -237,11 +237,21 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ## Phase-1 follow-ups (found during implementation, 2026-07-13)
 
-- ☐ Extend versioned codecs to remaining unversioned storage:
-  `flip.locations.custom` (CustomLocationsComponent), stored tracks
-  (ManoeuvreTrackComponent), simple string keys.
-  **Do this before the codec cleanup below** — these two components are
-  `createSimpleCodec`'s only remaining callers.
+- ☑ Extend versioned codecs to remaining unversioned storage — DONE
+  (`7f2de97`, `94db1b8`). `flip.custom_locations` and
+  `flip.manoeuvre.track.tracks` (note: the real key names, not the ones
+  this list guessed) now use `createVersionedCodec` with
+  `migrateCustomLocations` / `migrateStoredTracks` in `core/model.ts`;
+  their element types moved to `types/index.ts` so core owns the loaders
+  without depending on components. Legacy bare arrays and corrupt values
+  verified in-browser: good entries survive, unusable ones are dropped, no
+  crashes. Simple string keys audited: `flip.location.tab` stays a plain
+  string with a validating fallback (wrapping it would reset every existing
+  user's tab, and the fallback fixed a real bug — an unrecognized value
+  rendered an empty panel); `flip.courses.selected` / `flip.presets.active`
+  left alone (ids whose validity depends on a separate user-mutable list,
+  consumers already fall back gracefully); `flip.mode` was already
+  versioned.
 - ☑ `setManoeuvreAltitude` — confirmed dead and removed (`f885113`). The
   feature it once served is alive via a different path; that logic (offset
   + ±15% clamp) moved out of `useAppState` into
@@ -250,12 +260,16 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ Manoeuvre param naming: `offsetXFt` is labeled "Back" (depth),
   `offsetYFt` "Offset" (lateral) — rename fields in a future schema
   version to match the labels.
-- ◐ `createSafeCodec`/`createSimpleCodec` in `src/util/storage.ts`:
-  **the note that both were unused was wrong.** `createSafeCodec` is dead
-  (only its own doc comment references it) and can go now;
-  `createSimpleCodec` is still used by CustomLocationsComponent and
-  ManoeuvreTrackComponent, so it only becomes removable once those move to
-  versioned codecs (Phase-1 item above). Blocked on that, deliberately.
+- ☑ `createSafeCodec`/`createSimpleCodec` — DONE (`db814f8`), after the
+  versioned-codec migration above unblocked them. `deepMerge` went too
+  (it was `createSafeCodec`'s private helper). `createVersionedCodec` kept.
+- ☐ `CODEC_JSON` in `src/util/storage.ts` is **also dead** — its only
+  references are its own tests. It survived the cleanup only because the
+  task scope said to keep it; remove it (and its tests) as a follow-up.
+- ☐ A stale `flip.courses.selected` id renders the raw id in the Courses
+  Select (`renderValue` falls through to the id) instead of "None".
+  Cosmetic and pre-existing; not fixable by a codec — needs the course list
+  cross-referenced at load time.
 - (Same-path nav toggle flakiness — already covered by Phase 3 router work.)
 
 ## Phase-2 follow-ups (found during implementation, 2026-07-14)
