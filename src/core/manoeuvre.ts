@@ -50,16 +50,41 @@ export function createManoeuvrePath({
 }
 
 /**
- * Scale the altitude of all points in a manoeuvre.
+ * How far the initiation altitude may be moved from the recorded one, as a
+ * fraction of it. A track or sample describes one particular turn; rescaling
+ * it far beyond what was flown would not describe that turn any more.
  */
-export function setManoeuvreAltitude(points: FlightPath, newAlt: number): void {
-  if (!points.length) {
-    return;
+export const MAX_INITIATION_OFFSET_FRACTION = 0.15;
+
+/**
+ * Shift a manoeuvre's initiation altitude by `offsetFt`, scaling every point's
+ * altitude proportionally (the turn keeps its shape, just entered higher or
+ * lower). The offset is clamped to ±15% of the recorded initiation altitude.
+ *
+ * The initiation point is the last point — these paths run backwards in time
+ * from the landing. Returns a new path; the input is not mutated.
+ */
+export function applyInitiationAltitudeOffset(path: FlightPath, offsetFt: number): FlightPath {
+  if (!offsetFt || path.length === 0) {
+    return path;
   }
 
-  const scale = newAlt / points[points.length - 1].properties.alt;
+  const originalInitAlt = path[path.length - 1].properties.alt;
 
-  for (let i = 0; i < points.length; i++) {
-    points[i].properties.alt *= scale;
+  if (originalInitAlt === 0) {
+    return path;
   }
+
+  const maxDelta = originalInitAlt * MAX_INITIATION_OFFSET_FRACTION;
+  const clampedNewAlt = Math.min(
+    Math.max(originalInitAlt + offsetFt, originalInitAlt - maxDelta),
+    originalInitAlt + maxDelta
+  );
+  const scale = clampedNewAlt / originalInitAlt;
+
+  return path.map(p => ({
+    ...p,
+    geometry: { ...p.geometry },
+    properties: { ...p.properties, alt: p.properties.alt * scale }
+  }));
 }

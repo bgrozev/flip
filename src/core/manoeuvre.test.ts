@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 
-import { createManoeuvrePath, setManoeuvreAltitude } from './manoeuvre';
+import { applyInitiationAltitudeOffset, createManoeuvrePath } from './manoeuvre';
 import { FlightPath, FlightPoint } from '../types';
 
 // Helper to create a turf point with properties
@@ -236,38 +236,53 @@ describe('createManoeuvrePath', () => {
   });
 });
 
-describe('setManoeuvreAltitude', () => {
-  it('scales all altitudes proportionally', () => {
-    const points: FlightPath = [
-      createPoint(0, 0, { alt: 0 }),
-      createPoint(0, 0, { alt: 250 }),
-      createPoint(0, 0, { alt: 500 })
-    ];
+describe('applyInitiationAltitudeOffset', () => {
+  // Manoeuvre paths run backwards in time: the last point is the initiation.
+  const path = (): FlightPath => [
+    createPoint(0, 0, { alt: 0 }),
+    createPoint(0, 0, { alt: 500 }),
+    createPoint(0, 0, { alt: 1000 })
+  ];
 
-    setManoeuvreAltitude(points, 1000);
+  it('scales every altitude proportionally when raising initiation', () => {
+    const out = applyInitiationAltitudeOffset(path(), 100);
 
-    expect(points[0].properties.alt).toBe(0);
-    expect(points[1].properties.alt).toBe(500);
-    expect(points[2].properties.alt).toBe(1000);
+    expect(out[2].properties.alt).toBe(1100);
+    expect(out[1].properties.alt).toBe(550);
+    expect(out[0].properties.alt).toBe(0);
   });
 
-  it('handles empty array', () => {
-    const points: FlightPath = [];
-    setManoeuvreAltitude(points, 1000);
-    expect(points).toEqual([]);
+  it('scales down when lowering initiation', () => {
+    const out = applyInitiationAltitudeOffset(path(), -100);
+
+    expect(out[2].properties.alt).toBe(900);
+    expect(out[1].properties.alt).toBe(450);
   });
 
-  it('handles scaling down', () => {
-    const points: FlightPath = [
-      createPoint(0, 0, { alt: 0 }),
-      createPoint(0, 0, { alt: 500 }),
-      createPoint(0, 0, { alt: 1000 })
-    ];
+  it('clamps the offset to +/-15% of the recorded initiation altitude', () => {
+    expect(applyInitiationAltitudeOffset(path(), 5000)[2].properties.alt).toBe(1150);
+    expect(applyInitiationAltitudeOffset(path(), -5000)[2].properties.alt).toBe(850);
+  });
 
-    setManoeuvreAltitude(points, 500);
+  it('does not mutate the input path', () => {
+    const original = path();
+    const out = applyInitiationAltitudeOffset(original, 100);
 
-    expect(points[0].properties.alt).toBe(0);
-    expect(points[1].properties.alt).toBe(250);
-    expect(points[2].properties.alt).toBe(500);
+    expect(original[2].properties.alt).toBe(1000);
+    expect(out).not.toBe(original);
+  });
+
+  it('is a no-op for zero offset or an empty path', () => {
+    const original = path();
+
+    expect(applyInitiationAltitudeOffset(original, 0)).toBe(original);
+    expect(applyInitiationAltitudeOffset([], 100)).toEqual([]);
+  });
+
+  it('leaves a zero-altitude path alone rather than dividing by zero', () => {
+    const flat: FlightPath = [createPoint(0, 0, { alt: 0 }), createPoint(0, 0, { alt: 0 })];
+    const out = applyInitiationAltitudeOffset(flat, 100);
+
+    expect(out[1].properties.alt).toBe(0);
   });
 });

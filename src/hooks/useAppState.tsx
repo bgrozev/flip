@@ -15,7 +15,7 @@ import {
 import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
 import { createVersionedCodec } from '../util/storage';
 import { makePatternByType } from '../core/pattern';
-import { createManoeuvrePath } from '../core/manoeuvre';
+import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
 import { samples } from '../samples';
 
@@ -41,25 +41,7 @@ function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
       return [];
   }
 
-  const offset = config.initiationAltitudeOffset;
-
-  if (offset && offset !== 0 && path.length > 0) {
-    const originalInitAlt = path[path.length - 1].properties.alt;
-    const maxDelta = originalInitAlt * 0.15;
-    const clampedNewAlt = Math.min(
-      Math.max(originalInitAlt + offset, originalInitAlt - maxDelta),
-      originalInitAlt + maxDelta
-    );
-    const scale = clampedNewAlt / originalInitAlt;
-
-    path = path.map(p => ({
-      ...p,
-      geometry: { ...p.geometry },
-      properties: { ...p.properties, alt: p.properties.alt * scale }
-    }));
-  }
-
-  return path;
+  return applyInitiationAltitudeOffset(path, config.initiationAltitudeOffset ?? 0);
 }
 
 // Context value type
