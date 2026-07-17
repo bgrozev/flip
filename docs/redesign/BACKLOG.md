@@ -240,13 +240,22 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ Extend versioned codecs to remaining unversioned storage:
   `flip.locations.custom` (CustomLocationsComponent), stored tracks
   (ManoeuvreTrackComponent), simple string keys.
-- ☐ `setManoeuvreAltitude` (`src/core/manoeuvre.ts`) appears dead outside
-  tests — confirm and remove.
+  **Do this before the codec cleanup below** — these two components are
+  `createSimpleCodec`'s only remaining callers.
+- ☑ `setManoeuvreAltitude` — confirmed dead and removed (`f885113`). The
+  feature it once served is alive via a different path; that logic (offset
+  + ±15% clamp) moved out of `useAppState` into
+  `core/manoeuvre.applyInitiationAltitudeOffset` with tests, fixing a
+  core-dependency-rule violation.
 - ☐ Manoeuvre param naming: `offsetXFt` is labeled "Back" (depth),
   `offsetYFt` "Offset" (lateral) — rename fields in a future schema
   version to match the labels.
-- ☐ `createSafeCodec`/`createSimpleCodec` in `src/util/storage.ts` unused
-  by app code after step 6 — remove once nothing else adopts them.
+- ◐ `createSafeCodec`/`createSimpleCodec` in `src/util/storage.ts`:
+  **the note that both were unused was wrong.** `createSafeCodec` is dead
+  (only its own doc comment references it) and can go now;
+  `createSimpleCodec` is still used by CustomLocationsComponent and
+  ManoeuvreTrackComponent, so it only becomes removable once those move to
+  versioned codecs (Phase-1 item above). Blocked on that, deliberately.
 - (Same-path nav toggle flakiness — already covered by Phase 3 router work.)
 
 ## Phase-2 follow-ups (found during implementation, 2026-07-14)
