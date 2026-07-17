@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculatePathStats, getPointSegmentStats } from './pathStats';
+import { calculatePathStats, driftAngle, getPointSegmentStats } from './pathStats';
 
 interface P {
   lat: number;
@@ -144,6 +144,20 @@ describe('calculatePathStats', () => {
     const stats = calculatePathStats(path, path);
 
     expect(stats.manoeuvre).toBeNull();
+  });
+});
+
+describe('driftAngle', () => {
+  it('is the absolute heading/bearing difference folded into 0-180', () => {
+    expect(driftAngle(90, 90)).toBe(0);
+    expect(driftAngle(90, 100)).toBe(10);
+    expect(driftAngle(100, 90)).toBe(10);
+    expect(driftAngle(0, 180)).toBe(180);
+  });
+
+  it('takes the short way across north', () => {
+    expect(driftAngle(350, 10)).toBe(20);
+    expect(driftAngle(10, 350)).toBe(20);
   });
 });
 

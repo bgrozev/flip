@@ -1,12 +1,20 @@
 import * as turf from '@turf/turf';
 
-interface PointData {
+export interface PointData {
   lat: number;
   lng: number;
   alt?: number;
   time?: number;
   phase?: string;
   pom?: number | boolean;
+}
+
+/**
+ * Drift angle: the absolute difference between canopy heading and actual
+ * track (bearing), folded into 0–180°.
+ */
+export function driftAngle(heading: number, bearing: number): number {
+  return Math.abs(((heading - bearing + 180 + 360) % 360) - 180);
 }
 
 export interface LegStats {

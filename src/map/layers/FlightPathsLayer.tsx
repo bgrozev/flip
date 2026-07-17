@@ -12,10 +12,12 @@ import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
 import {
   calculatePathStats,
+  driftAngle,
   getPointSegmentStats,
   LegStats,
   ManoeuvreStats,
-  PathStats
+  PathStats,
+  PointData
 } from '../../core/pathStats';
 import { MapCircle, MapCircleStyle, MapOverlay, MapPolyline } from '..';
 
@@ -60,15 +62,6 @@ const CustomTextOverlay = ({ position, text }: CustomTextOverlayProps) => (
   </MapOverlay>
 );
 
-interface PointData {
-  lat: number;
-  lng: number;
-  alt?: number;
-  time?: number;
-  phase?: string;
-  pom?: number | boolean;
-}
-
 interface PointTooltipProps {
   point: PointData;
   pointIndex: number;
@@ -102,7 +95,7 @@ function LegStatsDisplay({ stats, formatAltitude, altitudeLabel, showDrift = tru
       <div>Heading: {formatDegrees(stats.heading)}</div>
       {showBearing && <div>Bearing: {formatDegrees(stats.bearing)}</div>}
       {showBearing && (() => {
-        const drift = Math.abs(((stats.heading - stats.bearing + 180 + 360) % 360) - 180);
+        const drift = driftAngle(stats.heading, stats.bearing);
         return drift >= 1 ? <div>Drift angle: {Math.round(drift)}°</div> : null;
       })()}
       <div>Distance: {formatDistance(stats.distance, altitudeLabel)}</div>
@@ -263,9 +256,7 @@ function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, sty
   // Drift angle arrow: shown on leg POMs when drift angle > 10°
   const segStats = isPom ? getPointSegmentStats(pointIndex, pathStats) : null;
   const legStats = segStats?.type === 'leg' ? segStats.stats : null;
-  const crabAngle = legStats
-    ? Math.abs(((legStats.heading - legStats.bearing + 180 + 360) % 360) - 180)
-    : 0;
+  const crabAngle = legStats ? driftAngle(legStats.heading, legStats.bearing) : 0;
   const renderCrabArrow = showCrabArrow && crabAngle > 10 && legStats != null;
 
   return (
