@@ -50,6 +50,13 @@ export default function NumberInput({
     }
   };
 
+  // These fields are almost always retyped wholesale rather than edited in
+  // place, so select the current value on focus: one keystroke replaces it
+  // instead of appending to it.
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
+
   // Out-of-range entries are never propagated raw; on blur they are clamped
   // into range, shown, and propagated.
   const handleBlur = () => {
@@ -79,6 +86,7 @@ export default function NumberInput({
           aria-describedby={`${label}-helper-text`}
           value={typeof value === 'number' ? value : Number(value) || 0}
           onChange={handleChange}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           type="number"
           error={!valid}

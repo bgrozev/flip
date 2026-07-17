@@ -60,6 +60,11 @@ interface WindsComponentProps {
 const EDIT_CELL_SX = { px: 0.5 };
 const NUMBER_FIELD_SX = { width: '100%', minWidth: 56, '& input': { px: 0.75 } };
 
+/** Select a field's value on focus: these are retyped, not edited in place. */
+function selectOnFocus(e: React.FocusEvent<HTMLInputElement>): void {
+  e.target.select();
+}
+
 /** Windy deep link for a location: `?lat,lng,zoom`. */
 function windyUrl({ lat, lng }: LatLng): string {
   return `https://www.windy.com/?${lat.toFixed(4)},${lng.toFixed(4)},11`;
@@ -356,6 +361,7 @@ export default function WindsComponent({
                             inputProps={{ step: altitudeLabel === 'ft' ? 100 : 30, min: 0 }}
                             value={Math.round(formatAltitude(row.altFt).value)}
                             onChange={e => updateRow(i, 'altFt', parseAltitude(Number(e.target.value)))}
+                            onFocus={selectOnFocus}
                             sx={NUMBER_FIELD_SX}
                             size="small"
                           />
@@ -372,6 +378,7 @@ export default function WindsComponent({
                             onChange={e => {
                               updateRow(i, 'direction', Number(e.target.value));
                             }}
+                            onFocus={selectOnFocus}
                             sx={NUMBER_FIELD_SX}
                             size="small"
                           />
@@ -400,6 +407,7 @@ export default function WindsComponent({
                             type="number"
                             value={formatWindSpeed(row.speedKts).value.toFixed(1)}
                             onChange={e => updateRow(i, 'speedKts', parseWindSpeed(Number(e.target.value)))}
+                            onFocus={selectOnFocus}
                             sx={NUMBER_FIELD_SX}
                             size="small"
                           />
