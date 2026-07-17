@@ -56,9 +56,11 @@ import {
   DEFAULT_TARGET,
   useAppState,
   useCustomCourses,
+  NotificationsProvider,
   useFetchForecast,
   useFlightPaths,
   useMode,
+  useNotifications,
   useObservedWind,
   usePresets
 } from './hooks';
@@ -133,7 +135,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppStateProvider>
-        <DashboardContent />
+        <NotificationsProvider>
+          <DashboardContent />
+        </NotificationsProvider>
       </AppStateProvider>
     </BrowserRouter>
   );
@@ -192,10 +196,19 @@ function DashboardContent() {
   // global default; the Settings panel still edits the stored values.
   const modeSettings = useMemo(() => applyModeDefaults(settings, mode), [settings, mode]);
 
-  const { winds, fetching, fetchWinds, setWinds, resetWinds } = useFetchForecast({
+  const { winds, fetching, error: windsError, fetchWinds, setWinds, resetWinds } = useFetchForecast({
     target: target.target,
     settings: modeSettings
   });
+
+  // Surface wind-fetch failures; the table keeps the previous profile.
+  const { notify } = useNotifications();
+
+  useEffect(() => {
+    if (windsError) {
+      notify(`Failed to fetch winds: ${windsError.message}`);
+    }
+  }, [windsError, notify]);
 
   const { stations, nearestStation, stationsFetched, fetchingObserved, fetchObserved, resetObserved } = useObservedWind();
 

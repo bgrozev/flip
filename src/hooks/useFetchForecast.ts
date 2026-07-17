@@ -11,11 +11,19 @@ interface UseFetchForecastOptions {
   settings: Pick<Settings, 'limitWind' | 'windModel' | 'windAloftSource'>;
 }
 
+/** Error from the most recent failed fetch. A fresh object per failure so
+ *  consumers can react to consecutive identical failures. */
+export interface FetchWindsError {
+  message: string;
+}
+
 interface UseFetchForecastResult {
   /** Current wind data */
   winds: WindProfile;
   /** Whether a fetch is in progress */
   fetching: boolean;
+  /** Set when the last fetch failed; cleared when a fetch succeeds. */
+  error: FetchWindsError | null;
   /**
    * Fetch winds for the current target. Pass maxPathAltitude to extend limit
    * if path goes higher; force bypasses the prefetch cache (explicit refresh).
@@ -37,6 +45,7 @@ export function useFetchForecast({
 }: UseFetchForecastOptions): UseFetchForecastResult {
   const [winds, setWinds] = useState<WindProfile>(createWindProfile);
   const [fetching, setFetching] = useState(false);
+  const [error, setError] = useState<FetchWindsError | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const resetWinds = useCallback(() => {
@@ -81,6 +90,7 @@ export function useFetchForecast({
           ...fetchedWinds,
           winds: fetchedWinds.winds.filter(w => w.altFt <= limit)
         });
+        setError(null);
         setFetching(false);
       })
       .catch(err => {
@@ -89,14 +99,16 @@ export function useFetchForecast({
           return;
         }
         console.log(`Failed to fetch winds: ${err}`);
+        // Keep the previous profile — do not wipe the table on a failed fetch
+        setError({ message: err instanceof Error ? err.message : String(err) });
         setFetching(false);
-        setWinds(createWindProfile());
       });
   }, [target, settings.limitWind, settings.windModel, settings.windAloftSource]);
 
   return {
     winds,
     fetching,
+    error,
     fetchWinds,
     setWinds,
     resetWinds
