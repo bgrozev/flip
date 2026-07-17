@@ -8,7 +8,11 @@ import {
 } from './index';
 import { fetchNwsStationById } from './nws';
 
-// ZHills — the dropzone with a supplemental station list (KZPH)
+// West Tennessee Skydiving (Bolivar) — a dropzone with a supplemental station
+// list: KM08's AWOS is not returned by NWS gridpoint discovery, so it has to be
+// fetched by id. (ZHills used to serve this role, but KZPH *is* discovered.)
+const BOLIVAR = { lat: 35.22037, lng: -89.18982 };
+// ZHills — a dropzone with no supplement (KZPH comes from discovery)
 const ZHILLS = { lat: 28.2192, lng: -82.1509 };
 // Middle of the Gulf — no DZ, no site feeds
 const NOWHERE = { lat: 27.0, lng: -88.0 };
@@ -82,16 +86,26 @@ describe('fetchObservedStations', () => {
 
   it('adds supplemental DZ-listed stations and dedupes against discovery', async () => {
     nwsFetchMock().mockResolvedValue([
-      station('nws-KZPH', 3000),
-      station('nws-KBKV', 40000)
+      station('nws-KM08', 3000),
+      station('nws-KMKL', 40000)
     ]);
-    (fetchNwsStationById as ReturnType<typeof vi.fn>).mockResolvedValue(station('nws-KZPH', 3000));
+    (fetchNwsStationById as ReturnType<typeof vi.fn>).mockResolvedValue(station('nws-KM08', 3000));
+
+    const stations = await fetchObservedStations(BOLIVAR);
+
+    // KM08 appears once even though both the supplement and discovery found it
+    expect(stations.filter(s => s.id === 'nws-KM08')).toHaveLength(1);
+    expect(fetchNwsStationById).toHaveBeenCalledWith('KM08', BOLIVAR.lat, BOLIVAR.lng);
+  });
+
+  it('does not look up supplements for a dropzone that lists none', async () => {
+    nwsFetchMock().mockResolvedValue([station('nws-KZPH', 3000)]);
 
     const stations = await fetchObservedStations(ZHILLS);
 
-    // KZPH appears once even though both the supplement and discovery found it
-    expect(stations.filter(s => s.id === 'nws-KZPH')).toHaveLength(1);
-    expect(fetchNwsStationById).toHaveBeenCalledWith('KZPH', ZHILLS.lat, ZHILLS.lng);
+    // ZHills relies purely on discovery — no by-id supplement fetch
+    expect(stations.map(s => s.id)).toEqual(['nws-KZPH']);
+    expect(fetchNwsStationById).not.toHaveBeenCalled();
   });
 
   it('sorts merged results by distance', async () => {
@@ -99,11 +113,11 @@ describe('fetchObservedStations', () => {
       station('nws-KFAR', 50000),
       station('nws-KNEAR', 1000)
     ]);
-    (fetchNwsStationById as ReturnType<typeof vi.fn>).mockResolvedValue(station('nws-KZPH', 2000));
+    (fetchNwsStationById as ReturnType<typeof vi.fn>).mockResolvedValue(station('nws-KM08', 2000));
 
-    const stations = await fetchObservedStations(ZHILLS);
+    const stations = await fetchObservedStations(BOLIVAR);
 
-    expect(stations.map(s => s.id)).toEqual(['nws-KNEAR', 'nws-KZPH', 'nws-KFAR']);
+    expect(stations.map(s => s.id)).toEqual(['nws-KNEAR', 'nws-KM08', 'nws-KFAR']);
   });
 
   it('survives individual source failures', async () => {

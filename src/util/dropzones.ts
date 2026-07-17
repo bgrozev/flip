@@ -24,8 +24,10 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive City (ZHills)',
     lat: 28.21887,
     lng: -82.15122,
-    direction: 270,
-    nearbyStations: ['KZPH'] // Zephyrhills Municipal Airport AWOS — not in NWS gridpoints
+    direction: 270
+    // No nearbyStations supplement needed: KZPH (Zephyrhills Municipal AWOS)
+    // is returned by NWS gridpoint discovery for this location — verified
+    // against gridpoints/TBW/82,110/stations, where it is the nearest of 51.
   },
   {
     name: 'Skydive DeLand',
