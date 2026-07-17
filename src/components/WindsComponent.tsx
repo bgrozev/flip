@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import React, { useCallback } from 'react';
 
-import { useUnits } from '../hooks';
+import { useAppState, useUnits } from '../hooks';
 import { ObservedWindStation } from '../types';
 import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
 import {
@@ -100,6 +100,11 @@ export default function WindsComponent({
     formatPressure
   } = useUnits();
 
+  const { settings } = useAppState();
+  // Keyed off the *selected* source, not the fetched profile's, so the picker
+  // disappears as soon as soundings are chosen — before any fetch.
+  const soundingSelected = settings.windAloftSource === 'sounding';
+
   const lock =
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
 
@@ -172,8 +177,10 @@ export default function WindsComponent({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', paddingLeft: 0 }}>
       <>
-        {/* Forecast time picker */}
-        <Box sx={{ mb: 1.5 }}>
+        {/* Forecast time picker. Hidden for soundings: a radiosonde profile is
+            whatever was last launched, so the source ignores hourOffset and a
+            time control here would be inert. */}
+        {!soundingSelected && <Box sx={{ mb: 1.5 }}>
           <Stack direction="row" alignItems="center" sx={{ mb: 0.5 }}>
             <Typography variant="caption" color="text.secondary">
                 Forecast time
@@ -239,7 +246,7 @@ export default function WindsComponent({
               </IconButton>
             </Tooltip>
           </Stack>
-        </Box>
+        </Box>}
 
         {/* Action buttons */}
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
