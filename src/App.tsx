@@ -50,24 +50,21 @@ import {
   WindsComponent
 } from './components';
 import { CourseEditTarget, TargetEditTarget } from './map/layers';
-import { composeWithObservedGround } from './data/wind';
 import {
   AppStateProvider,
   DEFAULT_TARGET,
   useAppState,
   useCustomCourses,
   NotificationsProvider,
-  useFetchForecast,
   useFlightPaths,
   useMode,
-  useNotifications,
-  useObservedWind,
-  usePresets
+  usePresets,
+  useWinds
 } from './hooks';
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './core/geometry';
 import { COURSES } from './util/courses';
-import { SOURCE_DZ, SOURCE_MANUAL, WindRow } from './core/wind';
+import { SOURCE_DZ, SOURCE_MANUAL } from './core/wind';
 
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
@@ -159,7 +156,6 @@ function DashboardContent() {
     setSelectedCourseId
   } = useAppState();
 
-  const [forecastTime, setForecastTime] = useState<Date | null>(null);
   const [courseEditOpen, setCourseEditOpen] = useState(false);
   const [targetEditOpen, setTargetEditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -196,41 +192,34 @@ function DashboardContent() {
   // global default; the Settings panel still edits the stored values.
   const modeSettings = useMemo(() => applyModeDefaults(settings, mode), [settings, mode]);
 
-  const { winds, fetching, error: windsError, fetchWinds, setWinds, resetWinds } = useFetchForecast({
+  const {
+    effectiveWinds,
+    fetching,
+    setWinds,
+    invalidateWinds,
+    forecastTime,
+    onForecastTimeChange,
+    handleFetchWinds: fetchWindsWithMaxAlt,
+    stations,
+    nearestStation,
+    stationsFetched,
+    fetchingObserved,
+    makeWindSummary
+  } = useWinds({
     target: target.target,
     settings: modeSettings
   });
-
-  // Surface wind-fetch failures; the table keeps the previous profile.
-  const { notify } = useNotifications();
-
-  useEffect(() => {
-    if (windsError) {
-      notify(`Failed to fetch winds: ${windsError.message}`);
-    }
-  }, [windsError, notify]);
-
-  const { stations, nearestStation, stationsFetched, fetchingObserved, fetchObserved, resetObserved } = useObservedWind();
-
-  // Inject nearest observed station as ground wind (when enabled and forecast has been fetched)
-  const effectiveWinds = useMemo(() => {
-    if (!modeSettings.useDzGroundWind || !nearestStation || winds.aloftSource === SOURCE_MANUAL) {
-      return winds;
-    }
-    return composeWithObservedGround(winds, nearestStation);
-  }, [winds, nearestStation, modeSettings.useDzGroundWind]);
 
   // Wrap setTarget to invalidate winds when target moves too far
   const setTarget = useCallback(
     (newTarget: Target) => {
       if (hasTargetMovedTooFar(target.target, newTarget.target)) {
         console.log('Moved too far, invalidating winds');
-        resetWinds();
-        resetObserved();
+        invalidateWinds();
       }
       setTargetBase(newTarget);
     },
-    [target.target, setTargetBase, resetWinds, resetObserved]
+    [target.target, setTargetBase, invalidateWinds]
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -279,43 +268,17 @@ function DashboardContent() {
   });
   const averageWind_ = paths.averageWind;
 
-  let windSummary: WindSummaryData | undefined;
-
-  if (
-    modeSettings.displayWindSummary &&
-    (effectiveWinds.groundSource !== SOURCE_MANUAL || effectiveWinds.aloftSource !== SOURCE_MANUAL) &&
-    typeof averageWind_.speedKts === 'number'
-  ) {
-    windSummary = { average: averageWind_ };
-    if (effectiveWinds.groundSource !== SOURCE_MANUAL && effectiveWinds.winds && effectiveWinds.winds.length > 0) {
-      const groundWind: WindRow & { observed?: boolean } = { ...effectiveWinds.winds[0] };
-
-      if (effectiveWinds.groundSource === SOURCE_DZ) {
-        groundWind.observed = true;
-      }
-      windSummary.ground = groundWind;
-    }
-    if (effectiveWinds.validTime) {
-      windSummary.forecastTime = effectiveWinds.validTime;
-    }
-  }
+  const windSummary = useMemo(
+    () => makeWindSummary(averageWind_),
+    [makeWindSummary, averageWind_]
+  );
 
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
     const maxAlt = paths.corrected.length > 0
       ? paths.corrected[paths.corrected.length - 1].properties.alt
       : undefined;
-    const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
-    fetchWinds(maxAlt, ft, opts);
-    if (modeSettings.useDzGroundWind && target && ft === null) {
-      fetchObserved(target.target);
-    } else if (ft !== null) {
-      resetObserved();
-    }
-  };
 
-  const handleForecastTimeChange = (newTime: Date | null) => {
-    setForecastTime(newTime);
-    if (newTime !== null) resetObserved();
+    fetchWindsWithMaxAlt(maxAlt, overrideForecastTime, opts);
   };
 
   function onUpwindClick() {
@@ -365,7 +328,7 @@ function DashboardContent() {
         fetching={fetching}
         fetch={handleFetchWinds}
         forecastTime={forecastTime}
-        onForecastTimeChange={handleForecastTimeChange}
+        onForecastTimeChange={onForecastTimeChange}
         stations={stations}
         stationsFetched={stationsFetched}
         fetchingObserved={fetchingObserved}
@@ -480,7 +443,9 @@ function DashboardContent() {
           />
         ),
         sidebarFooter: SidebarFooter,
-        appTitle: () => CustomAppTitle({ wind: windSummary, forecastTime: windSummary?.forecastTime })
+        appTitle: () => (
+          <CustomAppTitle wind={windSummary} forecastTime={windSummary?.forecastTime} />
+        )
       }}
     >
       <LayoutWithSidebar box={sidebar} map={map} />
