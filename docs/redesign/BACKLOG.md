@@ -367,13 +367,10 @@ Weak spots from a full-code review of the redesigned branch (Phases 0–5
 done). Fix opportunistically or as prerequisites for the features above.
 Ordered by importance.
 
-- ☐ **Error surface + don't wipe winds on failed fetch** — a failed
-  forecast fetch resets the table to an empty profile with only a
-  console.log (`useFetchForecast` catch); the user sees the table go
-  blank with no reason given. Keep the previous profile, mark it stale,
-  surface the error. The app has no user-visible error channel anywhere —
-  add one (snackbar context). Prerequisite for doing the scrubber and
-  comparison-view work right.
+- ☑ **Error surface + don't wipe winds on failed fetch** — DONE
+  (`cf21e1e`). Failed fetch now keeps the previous profile;
+  `useFetchForecast` exposes an error state; new `NotificationsProvider`
+  (MUI Snackbar) is the app-wide error channel, wired in App.tsx.
 - ☐ **Extract a `useWinds` facade from App.tsx** — App.tsx is still a
   620-line orchestrator; the wind orchestration (fetch + observed +
   compose + summary + forecast-time/observed reset coupling, ~lines
