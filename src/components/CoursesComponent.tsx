@@ -29,7 +29,7 @@ import React, { useEffect, useState } from 'react';
 
 import { useCustomCourses } from '../hooks';
 import { CourseParams, CourseType, LatLng, Target } from '../types';
-import { BUILT_IN_PARAMS, buildCourse, fromCourseRelative, getTargetRelativeToCourse } from '../util/courses';
+import { BUILT_IN_PARAMS, buildCourse, fromCourseRelative, getTargetRelativeToCourse } from '../core/courses';
 import { downloadCourseKmz } from '../util/exportKmz';
 import { AltitudeUnit } from '../core/units';
 

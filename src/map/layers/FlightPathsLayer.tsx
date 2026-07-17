@@ -16,7 +16,7 @@ import {
   LegStats,
   ManoeuvreStats,
   PathStats
-} from '../../util/pathStats';
+} from '../../core/pathStats';
 import { MapCircle, MapCircleStyle, MapOverlay, MapPolyline } from '..';
 
 import { DirectionArrow, formatDistance, SECTION_STYLE, TOOLTIP_STYLE } from './tooltip';

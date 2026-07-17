@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import { SCHEMA_VERSION, migrateCustomCourses } from '../core/model';
 import { CourseParams } from '../types';
-import { buildCourse } from '../util/courses';
+import { buildCourse } from '../core/courses';
 import { createVersionedCodec } from '../util/storage';
 
 const EMPTY: CourseParams[] = [];

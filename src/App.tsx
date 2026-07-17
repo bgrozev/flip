@@ -63,7 +63,7 @@ import {
 } from './hooks';
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './core/geometry';
-import { COURSES } from './util/courses';
+import { COURSES } from './core/courses';
 import { SOURCE_DZ, SOURCE_MANUAL } from './core/wind';
 
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
