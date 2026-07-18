@@ -284,14 +284,14 @@ export interface SpotDescription {
  * Describe the exit spot relative to a reference point, FWC-style:
  * "<along> mi prior/PAST" and "Offset <offset> mi left/right".
  *
- * Matches Drift.kt exactly: the displacement vector c = exit → reference
- * is projected onto the jumprun direction; `prior` when the along-jumprun
- * component is positive. The left/right flag reproduces FWC's
- * `(combined - proj) · (combined.y, -combined.x) > 0` — for a "prior"
- * exit this reads as the geometric side of the exit relative to the
- * jumprun line through the reference (exit left of track = "left"); for
- * a "PAST" exit FWC's convention inverts the geometric side, and we
- * follow it for parity.
+ * The displacement vector c = exit → reference is projected onto the
+ * jumprun direction; `prior` when the along-jumprun component is
+ * positive. Left/right is the geometric side of the exit relative to the
+ * jumprun line, as seen flying the jumprun — deliberately NOT FWC's
+ * `(combined − proj) · (combined.y, −combined.x) > 0`, which inverts the
+ * side for "PAST" exits (confirmed FWC bug, 2026-07-17: that dot product
+ * equals −along·side, so its sign flips with prior/past even though the
+ * exit never changes sides of the line).
  */
 export function spotDescription(
   exit: LatLng,
@@ -322,7 +322,9 @@ export function spotDescription(
     alongMi: Math.abs(along),
     prior: along > 0,
     offsetMi: Math.hypot(rejX, rejY),
-    // FWC Drift.kt line-for-line: (c − proj) · (c.second, −c.first) > 0
-    offsetLeft: rejX * cy - rejY * cx > 0
+    // Geometric side of the exit vs the jumprun heading: cross(b, exit−ref).
+    // FWC's formula expands to along·(this) — same when prior, flipped when
+    // PAST; see the doc comment.
+    offsetLeft: by * cx - bx * cy > 0
   };
 }

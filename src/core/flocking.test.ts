@@ -291,16 +291,18 @@ describe('spotDescription sign conventions (FWC Drift.kt parity)', () => {
     expect(spot.offsetLeft).toBe(true);
   });
 
-  it('PAST + offset: FWC inverts the geometric side (kept for parity)', () => {
-    // exit 2 mi north (past) and 0.5 mi east; FWC's convention flips the
-    // side flag when past, so east reads "left" here.
+  it('PAST + offset: side stays geometric (deliberate FWC bug fix)', () => {
+    // exit 2 mi north (past) and 0.5 mi east of a northbound jumprun. The
+    // exit is right of the track; FWC's formula would report "left" for
+    // PAST exits (its dot product = along·side, so the sign flips with
+    // prior/past) — confirmed a bug 2026-07-17 and fixed here.
     const north = destinationPoint(ref, 0, 2 * 1609.34);
     const exit = destinationPoint(north, 90, 0.5 * 1609.34);
     const spot = spotDescription(exit, ref, 0);
 
     expect(spot.prior).toBe(false);
     expect(spot.offsetMi).toBeCloseTo(0.5, 2);
-    expect(spot.offsetLeft).toBe(true);
+    expect(spot.offsetLeft).toBe(false);
   });
 
   it('handles exit exactly at the reference', () => {
