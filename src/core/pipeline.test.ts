@@ -128,6 +128,38 @@ describe('reposition (golden values)', () => {
 });
 
 describe('addWind (golden values)', () => {
+  // Goldens regenerated 2026-07-17 when addWind switched from polar drift
+  // accumulation (distance + re-derived spherical bearing) to a flat
+  // east/north vector sum: the old form's wandering bearing curved paths
+  // whose drift nearly cancels the flown line (visible in flocking mode).
+  // Coordinate deltas from the old goldens are sub-foot.
+
+  it('keeps a uniform-wind corrected path exactly collinear', () => {
+    // Regression for the flocking curve bug: flight almost straight into a
+    // strong uniform wind — corrected segments are the small difference of
+    // two large vectors, which amplified any drift-bearing wobble.
+    const path = makePattern({
+      descentRateMph: 21,
+      glideRatio: 3.5,
+      legs: [{ altitude: 8000, direction: 0 }]
+    });
+    const placed = reposition([], path, { ...TARGET, finalHeading: 190 }, false);
+    const wind = createWindProfile([createWindRow(0, 10, 40), createWindRow(15000, 10, 40)]);
+    const corrected = addWind(placed, wind, true);
+
+    const bearings: number[] = [];
+
+    for (let i = 1; i < corrected.length; i++) {
+      const dLng = corrected[i].geometry.coordinates[0] - corrected[i - 1].geometry.coordinates[0];
+      const dLat = corrected[i].geometry.coordinates[1] - corrected[i - 1].geometry.coordinates[1];
+
+      bearings.push((Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360);
+    }
+    const spread = Math.max(...bearings) - Math.min(...bearings);
+
+    expect(spread).toBeLessThan(0.05);
+  });
+
   it('applies varied multi-row winds without interpolation', () => {
     const c = reposition(makeManoeuvre(), makeThreeLegPattern(), TARGET, true);
     const c2 = addWind(c, makeVariedWinds(), false);
@@ -140,8 +172,8 @@ describe('addWind (golden values)', () => {
     expectCoords(c2, 1, -82.15028674189784, 28.218721948708673);
     expectCoords(c2, 2, -82.15028673806438, 28.218985069841274);
     expectCoords(c2, 3, -82.15028673806438, 28.218985069841274);
-    expectCoords(c2, 71, -82.15072051896288, 28.215963128006358);
-    expectCoords(c2, 72, -82.15078007217761, 28.215853951722192);
+    expectCoords(c2, 71, -82.15071951646979, 28.215962536483392);
+    expectCoords(c2, 72, -82.15077901732377, 28.215853320771032);
   });
 
   it('applies uniform-direction winds with interpolation', () => {
@@ -150,11 +182,11 @@ describe('addWind (golden values)', () => {
 
     expect(c2).toHaveLength(73);
     expectCoords(c2, 0, -82.15121999999997, 28.21887);
-    expectCoords(c2, 1, -82.15040554811412, 28.218765311051737);
-    expectCoords(c2, 2, -82.15060454597494, 28.21900113190615);
-    expectCoords(c2, 3, -82.15060454639172, 28.219001132273373);
-    expectCoords(c2, 71, -82.15250545429979, 28.214942305167266);
-    expectCoords(c2, 72, -82.15255953822532, 28.214815887595005);
+    expectCoords(c2, 1, -82.15040554805586, 28.218765311000418);
+    expectCoords(c2, 2, -82.1506045454999, 28.219001131487605);
+    expectCoords(c2, 3, -82.1506045454999, 28.219001131487605);
+    expectCoords(c2, 71, -82.15250301012401, 28.214940150249422);
+    expectCoords(c2, 72, -82.15255698798637, 28.21481363912674);
   });
 
   it('preserves point properties (alt, time, pom, phase) from the input path', () => {
@@ -180,13 +212,13 @@ describe('straightenLegs (golden values)', () => {
 
     // Leg boundaries (POMs) are unchanged
     expectCoords(s, 3, -82.15028673806438, 28.218985069841274);
-    expectCoords(s, 72, -82.15078007217761, 28.215853951722192);
+    expectCoords(s, 72, -82.15077901732377, 28.215853320771032);
 
     // Intermediate points moved onto the straight line between boundaries
-    expectCoords(s, 4, -82.1503178698368, 28.21904482271342);
-    expectCoords(s, 5, -82.1503490016092, 28.21910457558557);
-    expectCoords(s, 10, -82.15050466047127, 28.2194033399463);
-    expectCoords(s, 71, -82.15069916339202, 28.216002335322695);
+    expectCoords(s, 4, -82.15031786802659, 28.21904482203695);
+    expectCoords(s, 5, -82.15034899798879, 28.219104574232627);
+    expectCoords(s, 10, -82.1505046477998, 28.21940333521101);
+    expectCoords(s, 71, -82.1506981422586, 28.21600172662013);
   });
 
   it('does not modify the input path', () => {
@@ -204,12 +236,12 @@ describe('averageWind (golden values)', () => {
     const c = reposition(makeManoeuvre(), makeThreeLegPattern(), TARGET, true);
 
     const varied = averageWind(c, addWind(c, makeVariedWinds(), false));
-    expect(varied.speedKts).toBeCloseTo(12.741202709283954, 9);
-    expect(varied.direction).toBeCloseTo(220.25476692178407, 9);
+    expect(varied.speedKts).toBeCloseTo(12.740865247793002, 9);
+    expect(varied.direction).toBeCloseTo(220.2405136361529, 9);
 
     const uniform = averageWind(c, addWind(c, makeUniformDirectionWinds(), true));
-    expect(uniform.speedKts).toBeCloseTo(17.925966023219022, 9);
-    expect(uniform.direction).toBeCloseTo(225.03002711916156, 9);
+    expect(uniform.speedKts).toBeCloseTo(17.925966441804857, 9);
+    expect(uniform.direction).toBeCloseTo(225.0011986267305, 9);
   });
 });
 

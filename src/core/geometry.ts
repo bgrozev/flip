@@ -170,10 +170,18 @@ export function addWind(
   }
 
   const preppedWinds = prepWind(wind);
-  const start = points[0];
-  const ret: FlightPath = [turf.clone(start) as FlightPoint];
-  let offsetFt = 0;
-  let offsetB = 0;
+  const ret: FlightPath = [turf.clone(points[0]) as FlightPoint];
+
+  // Cumulative drift as a flat east/north vector in feet. The previous
+  // polar accumulation (distance + initial bearing from the fixed start,
+  // re-derived spherically every step) injected a slowly wandering bearing;
+  // when the drift nearly cancels the flown path (e.g. flocking straight
+  // into a strong wind) the corrected segments are the small difference of
+  // two large vectors and that wobble amplified into a visibly curved line.
+  // A flat-vector sum keeps uniform wind exactly collinear.
+  let eastFt = 0;
+  let northFt = 0;
+  const DEG = Math.PI / 180;
 
   for (let i = 1; i < points.length; i++) {
     // path is backwards in time...
@@ -181,19 +189,16 @@ export function addWind(
 
     const windAtAlt = getWindAt(preppedWinds, points[i - 1].properties.alt, interpolate);
     const dOffsetFt = (ms / 1000) * windAtAlt.speedKts * ktsToFps;
-    const dOffsetB = windAtAlt.direction;
 
-    let offsetPoint = turf.clone(start) as FlightPoint;
+    // windAtAlt.direction is the FROM direction; the correction offsets the
+    // path upwind, i.e. exactly toward it
+    eastFt += dOffsetFt * Math.sin(windAtAlt.direction * DEG);
+    northFt += dOffsetFt * Math.cos(windAtAlt.direction * DEG);
 
-    offsetPoint = turf.transformTranslate(offsetPoint, offsetFt, offsetB, {
-      units: 'feet'
-    }) as FlightPoint;
-    offsetPoint = turf.transformTranslate(offsetPoint, dOffsetFt, dOffsetB, {
-      units: 'feet'
-    }) as FlightPoint;
-
-    offsetFt = turf.distance(start, offsetPoint, { units: 'feet' });
-    offsetB = normalizeBearing(turf.bearing(start, offsetPoint));
+    const offsetFt = Math.hypot(eastFt, northFt);
+    const offsetB = offsetFt > 1e-9
+      ? normalizeBearing(Math.atan2(eastFt, northFt) / DEG)
+      : 0;
 
     ret.push(
       turf.transformTranslate(points[i], offsetFt, offsetB, {
