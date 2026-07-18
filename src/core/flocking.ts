@@ -14,13 +14,14 @@
 import * as turf from '@turf/turf';
 
 import { FlightPath, FlightPoint, LatLng } from '../types';
-import { addWind, normalizeBearing } from './geometry';
+import { addWind, destinationPoint, normalizeBearing } from './geometry';
 import { mphToFps } from './units';
 import { WindProfile } from './wind';
 
 const DEG_TO_RAD = Math.PI / 180;
 const MI_PER_NM = 1.15078; // FWC's miToNm constant
 const KM_PER_MI = 1.60934;
+const METERS_PER_MILE = 1609.344;
 
 // ---------------------------------------------------------------------------
 // Distance units (FWC has a mi/nm toggle; FliP adds km)
@@ -298,15 +299,8 @@ export function spotDescription(
   reference: LatLng,
   jumprunDeg: number
 ): SpotDescription {
-  const from = [exit.lng, exit.lat] as [number, number];
-  const to = [reference.lng, reference.lat] as [number, number];
-  const dMi = turf.distance(from, to, { units: 'miles' });
-  const bearingCardinal = normalizeBearing(turf.bearing(from, to));
-
   // c = exit → reference in math coordinates (x east, y north), miles
-  const phi = cardinalToDeg(bearingCardinal) * DEG_TO_RAD;
-  const cx = dMi * Math.cos(phi);
-  const cy = dMi * Math.sin(phi);
+  const { eastMi: cx, northMi: cy } = localMilesEN(exit, reference);
 
   // b = unit vector along the jumprun
   const psi = cardinalToDeg(jumprunDeg) * DEG_TO_RAD;
@@ -327,4 +321,250 @@ export function spotDescription(
     // PAST; see the doc comment.
     offsetLeft: by * cx - bx * cy > 0
   };
+}
+
+// ---------------------------------------------------------------------------
+// Pinned jumprun: decoupling the jumprun line from the canopy flight.
+//
+// Key fact: the wind drift W over the altitude window is a flat east/north
+// vector INDEPENDENT of the canopy flight direction (it depends only on the
+// winds, the window and the descent rate). Flying for T = window/descentRate
+// at horizontal speed ≤ s therefore reaches, from an exit E, any point in
+// the DISK centered E + W with radius s·T. With the exit constrained to a
+// pinned jumprun line, the canopy heading becomes the free variable and
+// reachability is a circle/line intersection. All math here is flat local
+// miles around the points involved (distances are a few miles; same
+// approximation spotDescription uses).
+// ---------------------------------------------------------------------------
+
+/** A flat local vector in miles: east and north components. */
+export interface VectorEN {
+  eastMi: number;
+  northMi: number;
+}
+
+/** Displacement from → to as a flat east/north vector in miles. */
+export function localMilesEN(from: LatLng, to: LatLng): VectorEN {
+  const f = [from.lng, from.lat] as [number, number];
+  const t = [to.lng, to.lat] as [number, number];
+  const dMi = turf.distance(f, t, { units: 'miles' });
+
+  if (dMi < 1e-12) {
+    return { eastMi: 0, northMi: 0 };
+  }
+
+  const phi = cardinalToDeg(normalizeBearing(turf.bearing(f, t))) * DEG_TO_RAD;
+
+  return { eastMi: dMi * Math.cos(phi), northMi: dMi * Math.sin(phi) };
+}
+
+/** A flat EN vector as a length + cardinal travel direction. */
+export function enToDriftVector(v: VectorEN): DriftVector {
+  const lengthMi = Math.hypot(v.eastMi, v.northMi);
+
+  return {
+    lengthMi,
+    directionDeg: lengthMi > 1e-12 ? vectorCardinalDirection(v.eastMi, v.northMi) : 0
+  };
+}
+
+/** Flight duration through the altitude window, seconds (0 if empty). */
+export function flockingDurationS(
+  windowTopFt: number,
+  windowBottomFt: number,
+  descentRateMph: number
+): number {
+  if (!(descentRateMph > 0) || !(windowTopFt > windowBottomFt)) {
+    return 0;
+  }
+
+  return (windowTopFt - windowBottomFt) / (descentRateMph * mphToFps);
+}
+
+/**
+ * Total downwind drift over the altitude window as a flat east/north vector
+ * in miles. Independent of the canopy flight direction. Computed through
+ * the same pipeline the rendered path uses (makeFlockingPath at zero
+ * horizontal speed + addWind, 1-second steps, same getWindAt sampling), so
+ * it agrees with the map exactly rather than within integration error.
+ */
+export function windDriftVector(
+  wind: WindProfile,
+  windowTopFt: number,
+  windowBottomFt: number,
+  descentRateMph: number,
+  interpolate?: boolean
+): VectorEN {
+  const path = makeFlockingPath({
+    windowTopFt,
+    windowBottomFt,
+    descentRateMph,
+    horizontalSpeedMph: 0,
+    directionDeg: 0
+  });
+
+  if (path.length < 2) {
+    return { eastMi: 0, northMi: 0 };
+  }
+
+  const corrected = addWind(path, wind, interpolate);
+  const end = corrected[0];
+  const exit = corrected[corrected.length - 1];
+
+  // addWind holds the end fixed and moves the exit upwind; the downwind
+  // drift the jumper experiences is therefore exit → end.
+  return localMilesEN(
+    { lat: exit.geometry.coordinates[1], lng: exit.geometry.coordinates[0] },
+    { lat: end.geometry.coordinates[1], lng: end.geometry.coordinates[0] }
+  );
+}
+
+/** The canopy-flight solution for a fixed exit (see solveCanopyFlight). */
+export interface CanopySolution {
+  /** Required flight direction over ground, cardinal degrees. */
+  headingDeg: number;
+  /** Speed needed to end exactly at the target center, mph. */
+  requiredSpeedMph: number;
+  /** Whether the target circle is reachable at maxSpeedMph. */
+  reachable: boolean;
+  /** Distance short of the target circle at max speed, miles (0 if reachable). */
+  shortfallMi: number;
+  /** |target − exit − W|: distance to cover through the air-mass, miles. */
+  distanceMi: number;
+}
+
+/**
+ * Solve the canopy flight from a fixed exit: the wind contributes the fixed
+ * drift W, so the flight must cover D = target − exit − W over the duration.
+ * requiredSpeedMph targets the circle CENTER; `reachable` allows ending
+ * anywhere within targetRadiusMi of it.
+ */
+export function solveCanopyFlight(
+  exit: LatLng,
+  target: LatLng,
+  driftMi: VectorEN,
+  durationS: number,
+  maxSpeedMph: number,
+  targetRadiusMi = 0
+): CanopySolution {
+  const toTarget = localMilesEN(exit, target);
+  const dx = toTarget.eastMi - driftMi.eastMi;
+  const dy = toTarget.northMi - driftMi.northMi;
+  const distanceMi = Math.hypot(dx, dy);
+  const durationH = durationS / 3600;
+
+  const requiredSpeedMph = durationH > 0
+    ? distanceMi / durationH
+    : distanceMi > 0 ? Infinity : 0;
+  const reachMi = Math.max(maxSpeedMph, 0) * durationH + Math.max(targetRadiusMi, 0);
+
+  return {
+    headingDeg: distanceMi > 1e-9 ? vectorCardinalDirection(dx, dy) : 0,
+    requiredSpeedMph,
+    reachable: distanceMi <= reachMi + 1e-9,
+    shortfallMi: Math.max(0, distanceMi - reachMi),
+    distanceMi
+  };
+}
+
+/** A pinned jumprun line: a point on it plus its cardinal direction. */
+export interface JumprunLine {
+  origin: LatLng;
+  directionDeg: number;
+}
+
+/**
+ * The origin of a pinned jumprun line: the Spot Reference offset laterally
+ * by offsetMi (positive = right of the run direction, looking along it).
+ */
+export function jumprunLineOrigin(
+  reference: LatLng,
+  directionDeg: number,
+  offsetMi: number
+): LatLng {
+  if (offsetMi === 0) {
+    return reference;
+  }
+
+  return destinationPoint(
+    reference,
+    normalizeBearing(directionDeg + 90),
+    offsetMi * METERS_PER_MILE
+  );
+}
+
+/** The point at signed distance tMi (miles) along the line from its origin. */
+export function pointAlongJumprun(line: JumprunLine, tMi: number): LatLng {
+  if (tMi === 0) {
+    return line.origin;
+  }
+
+  const bearing = tMi >= 0
+    ? line.directionDeg
+    : normalizeBearing(line.directionDeg + 180);
+
+  return destinationPoint(line.origin, bearing, Math.abs(tMi) * METERS_PER_MILE);
+}
+
+/**
+ * Signed distance (miles from the line origin, positive along the run
+ * direction) of the projection of a point onto the jumprun line.
+ */
+export function projectOntoJumprunMi(line: JumprunLine, point: LatLng): number {
+  const d = localMilesEN(line.origin, point);
+  const psi = cardinalToDeg(line.directionDeg) * DEG_TO_RAD;
+
+  return d.eastMi * Math.cos(psi) + d.northMi * Math.sin(psi);
+}
+
+/**
+ * The best exit position along the line: the projection of C = target − W
+ * onto it (the exit minimizing the required canopy speed). When a reachable
+ * segment exists this is always its midpoint, so no clamping is needed.
+ */
+export function bestExitAlongMi(
+  line: JumprunLine,
+  target: LatLng,
+  driftMi: VectorEN
+): number {
+  const d = localMilesEN(line.origin, target);
+  const psi = cardinalToDeg(line.directionDeg) * DEG_TO_RAD;
+
+  return (d.eastMi - driftMi.eastMi) * Math.cos(psi) +
+    (d.northMi - driftMi.northMi) * Math.sin(psi);
+}
+
+/**
+ * The interval of exit positions along the jumprun line from which the
+ * target circle is reachable: solve |C − P(t)| ≤ s·T + R with C = target −
+ * W. Returns signed miles from the line origin, or null when the line
+ * misses the reachable disk entirely. A tangent line yields a zero-length
+ * interval.
+ */
+export function reachableJumprunSegment(
+  line: JumprunLine,
+  target: LatLng,
+  driftMi: VectorEN,
+  durationS: number,
+  maxSpeedMph: number,
+  targetRadiusMi: number
+): { tMinMi: number; tMaxMi: number } | null {
+  const rho = Math.max(maxSpeedMph, 0) * (durationS / 3600) + Math.max(targetRadiusMi, 0);
+  const d = localMilesEN(line.origin, target);
+  const cx = d.eastMi - driftMi.eastMi;
+  const cy = d.northMi - driftMi.northMi;
+  const psi = cardinalToDeg(line.directionDeg) * DEG_TO_RAD;
+  const ux = Math.cos(psi);
+  const uy = Math.sin(psi);
+  const along = cx * ux + cy * uy;
+  const perp2 = Math.max(0, cx * cx + cy * cy - along * along);
+  const h2 = rho * rho - perp2;
+
+  if (h2 < 0) {
+    return null;
+  }
+
+  const h = Math.sqrt(h2);
+
+  return { tMinMi: along - h, tMaxMi: along + h };
 }
