@@ -223,3 +223,44 @@ app's own clamps.
 
 Outstanding work, hard rules, environment gotchas and settled decisions are
 all in `HANDOFF.md`.
+
+---
+
+## Phase 6 — Flocking mode (2026-07-17)
+
+Ported the owner's Flocking Wind Calculator (FWC,
+`/Users/boris/git/flocking-wind-drift`, read-only reference) into a live
+FliP mode. Commits `8e67e98` (core math + tests), `85f6c81` (params doc +
+migration), `5d9acd8` (mode wiring + panel), `be85cee` (map layer),
+`244e567` (reference point C). State after: **474 tests, 0 lint errors /
+50 known warnings, build green.**
+
+Shape: `core/flocking.ts` (path construction, into-wind resolution, FWC
+drift vectors + spot description — Drift.kt parity-tested, incl. FWC's
+odd PAST-side flip in the left/right flag, kept deliberately),
+`FlockingParams` persisted at `flip.flocking.params`, `useFlockingPath`
+derive hook, `FlockingComponent` panel (FWC presets + text shape),
+`map/layers/FlockingLayer.tsx` (descent line #29b6f6, no-wind ghost,
+round-altitude POMs, 3 nm jumprun ending at the exit, distance markers
+anchored to the reference projection, spot label, pinned reference C).
+
+Deliberate deviations from FWC (owner wanted these reported):
+- Wind application is FliP's `addWind` (vector interpolation, 1 s steps),
+  not FWC's per-level stepwise sum — parity test asserts agreement within
+  a few percent on a uniform-wind closed form.
+- 'into-wind' replaces FWC's -1 sentinel; resolved degrees shown live.
+- Distance units labeled "mi"/"nm" (FWC spells "miles"), km added.
+- POM points inserted exactly at round altitudes so labels read clean.
+
+Verification notes: browser automation cannot zoom/pan the Google map
+(wheel scroll timed out, synthetic drags and +/- keys ignored) — the map
+picture was verified by temporarily lowering DEFAULT_ZOOM (reverted
+before commit) plus DOM checks of overlay labels. Clicking two MUI
+toggle buttons in one synchronous JS call loses the first update to a
+stale props closure — an automation artifact that looked like a bug.
+
+Open for owner iteration ✎: POM altitude labels overlap at low zoom on
+the long flocking path; spot-label/exit-label overlap; whether FWC's
+PAST-side left/right flip should be fixed in both apps; the rest of the
+flocking wishlist (reverse build, jump profiles, groups/separation,
+handoff to landing pattern, reachability zones) is untouched.

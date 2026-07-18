@@ -212,8 +212,13 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   Google tiles intentionally uncached (ToS) — see MapLibre offline-tiles
   follow-up. Pending: higher-res brand icons (owner art).
 - ◐ **Flocking mode** — beyond a port of flocking-wind-calculator.
-  (2026-07-17: FWC port IN PROGRESS on this branch.) What landed:
-  - ◐ core math `src/core/flocking.ts` (tested, DriftTest.kt parity +
+  (2026-07-17: the FWC port itself is DONE — commits `8e67e98`,
+  `85f6c81`, `5d9acd8`, `be85cee`, `244e567`; see NOTES.md Phase 6.
+  FWC parity checklist: display drift ☑ · display average wind ☑
+  (toolbar avg over the window + per-POM wind in hover) · rotate into
+  wind ☑ (Into-wind toggle with live resolved degrees). The wishlist
+  below remains open.) What landed:
+  - ☑ core math `src/core/flocking.ts` (tested, DriftTest.kt parity +
     closed-form uniform-wind pipeline check): `makeFlockingPath` (1 s
     steps, POMs inserted exactly at round altitude multiples, interval
     parameterized for metric), `intoWindDirection`, `flockingVectors`
@@ -221,12 +226,12 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     left/right conventions line-for-line, incl. FWC's PAST side flip).
     Wind application deviates from FWC deliberately: FliP's `addWind`
     (vector interpolation) instead of the per-level stepwise sum.
-  - ◐ params document: `FlockingParams` (window top/bottom ft, descent +
+  - ☑ params document: `FlockingParams` (window top/bottom ft, descent +
     horizontal mph, direction number | 'into-wind', distance unit
     mi/nm/km, optional reference point) with FWC defaults, LIMITS
     clamps, `migrateFlockingParams` + tests (versioned key
     `flip.flocking.params` wired with the mode).
-  - ◐ mode enabled + panel: flocking selectable in picker/switcher/?mode=;
+  - ☑ mode enabled + panel: flocking selectable in picker/switcher/?mode=;
     nav [flocking, target, wind, settings, about]; `useFlockingPath` hook
     (derivation only runs in flocking mode; pattern/manoeuvre derivation
     skipped there); wind fetch limit extends to windowTopFt;
@@ -235,7 +240,7 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     shown live), mi/nm/km toggle, FWC-shape results text. Browser-
     verified at ZHills: into-wind resolution, preset/cardinal quick-sets,
     prior + offset signs, fetch to 12k ft.
-  - ◐ map layer `src/map/layers/FlockingLayer.tsx` (adapter primitives
+  - ☑ map layer `src/map/layers/FlockingLayer.tsx` (adapter primitives
     only): cyan (#29b6f6) corrected descent line + dashed white no-wind
     ghost; POMs at round altitudes with labels + hover tooltips (alt,
     time since exit, wind at altitude); 3 nm jumprun line ENDING at the
@@ -247,7 +252,7 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     4/5/6 behind the 3.16-mi-prior exit. Known polish item ✎: POM
     altitude labels overlap at low zoom (same as pattern's, but the
     flocking path is longer).
-  - ◐ reference point C (owner design): "Pin reference" in the panel
+  - ☑ reference point C (owner design): "Pin reference" in the panel
     pins C at the current target B; spot text/label/markers stay
     relative to C while B remains free to move; amber ring+dot "C"
     marker on the map; Unpin reverts to C = B. Browser-verified: pinned
