@@ -6,6 +6,8 @@ import {
   CourseEditTarget,
   CourseLayer,
   FlightPathsLayer,
+  FlockingLayer,
+  FlockingLayerProps,
   MeasureLayer,
   StationsLayer,
   TargetEditLayer,
@@ -45,6 +47,8 @@ interface MapComponentProps {
   forecastGroundWind?: { direction: number; speedKts: number };
   forecastValidTime?: Date;
   finalHeading?: number;
+  /** Flocking layer data (only provided in flocking mode). */
+  flocking?: Omit<FlockingLayerProps, 'showPreWind' | 'showPoms' | 'showPomAltitudes'>;
   /** Which layers may render (from the active mode); defaults to all. */
   layers?: readonly MapLayerId[];
 }
@@ -69,6 +73,7 @@ function MapComponent({
   forecastGroundWind,
   forecastValidTime,
   finalHeading = 0,
+  flocking,
   layers = MAP_LAYER_IDS
 }: MapComponentProps) {
   const has = (layer: MapLayerId) => layers.includes(layer);
@@ -95,6 +100,15 @@ function MapComponent({
           showPomTooltips={showPomTooltips}
           highlightCorrespondingPoints={highlightCorrespondingPoints}
           showCrabArrow={showCrabArrow}
+        />
+      )}
+
+      {has('flocking') && flocking && (
+        <FlockingLayer
+          {...flocking}
+          showPreWind={showPreWind}
+          showPoms={showPoms}
+          showPomAltitudes={showPomAltitudes}
         />
       )}
 

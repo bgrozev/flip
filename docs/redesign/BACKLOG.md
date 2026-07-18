@@ -235,6 +235,18 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     shown live), mi/nm/km toggle, FWC-shape results text. Browser-
     verified at ZHills: into-wind resolution, preset/cardinal quick-sets,
     prior + offset signs, fetch to 12k ft.
+  - ◐ map layer `src/map/layers/FlockingLayer.tsx` (adapter primitives
+    only): cyan (#29b6f6) corrected descent line + dashed white no-wind
+    ghost; POMs at round altitudes with labels + hover tooltips (alt,
+    time since exit, wind at altitude); 3 nm jumprun line ENDING at the
+    exit with arrowhead barbs; distance markers at round mi/nm/km
+    *prior* distances relative to the reference projection (marker "2"
+    = where the spot text would read "2.00 prior"); spot one-liner
+    label at the exit. Browser-verified: full picture at zoom 12,
+    POM hover tooltip (260 s since exit matches hand calc), markers
+    4/5/6 behind the 3.16-mi-prior exit. Known polish item ✎: POM
+    altitude labels overlap at low zoom (same as pattern's, but the
+    flocking path is longer).
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)

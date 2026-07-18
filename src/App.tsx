@@ -486,6 +486,15 @@ function DashboardContent() {
         : undefined}
       forecastValidTime={effectiveWinds.validTime}
       finalHeading={target.finalHeading}
+      flocking={isFlocking ? {
+        ideal: flocking.ideal,
+        corrected: flocking.corrected,
+        exit: flocking.exit,
+        jumprunDeg: flocking.jumprunDeg,
+        spot: flocking.spot,
+        distanceUnit: flockingParams.distanceUnit,
+        winds: effectiveWinds
+      } : undefined}
     />
   );
   const dashboard = (
