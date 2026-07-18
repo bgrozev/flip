@@ -30,6 +30,12 @@ export const LIMITS = {
   flockingDescentRateMph: { min: 1, max: 100 },
   /** Flocking horizontal speed (mph); XRW reaches 70 */
   flockingHorizontalSpeedMph: { min: 0, max: 150 },
+  /** Flocking end-of-jump target area radius (mi) */
+  flockingTargetRadiusMi: { min: 0.05, max: 2 },
+  /** Pinned jumprun lateral offset from the Spot Reference (mi, +right) */
+  flockingJumprunOffsetMi: { min: -10, max: 10 },
+  /** Pinned exit position along the jumprun line (signed mi) */
+  flockingExitAlongMi: { min: -20, max: 20 },
   /** Wind row altitude (ft) */
   windAltFt: { min: 0, max: 60000 },
   /** Wind speed (kts) */

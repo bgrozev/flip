@@ -52,6 +52,26 @@ export function milesToDisplay(miles: number, unit: DistanceUnit): number {
 // Params document (persisted under flip.flocking.params; see core/model)
 // ---------------------------------------------------------------------------
 
+/**
+ * Jumprun configuration.
+ *
+ * - auto: today's behavior — the jumprun is the canopy flight direction
+ *   (`FlockingParams.direction`) and the exit is the computed spot.
+ * - pinned: the jumprun is a fixed LINE (along directionDeg, offset
+ *   laterally offsetMi from the Spot Reference, positive = right of the
+ *   run direction); the exit is a chosen POSITION on it (exitAlongMi =
+ *   signed miles from the offset point, null = auto-pick the best point)
+ *   and the canopy heading/speed are solved from the winds.
+ */
+export type JumprunConfig =
+  | { mode: 'auto' }
+  | {
+    mode: 'pinned';
+    directionDeg: number;
+    offsetMi: number;
+    exitAlongMi: number | null;
+  };
+
 export interface FlockingParams {
   /** Exit altitude (top of the flown window), ft. */
   windowTopFt: number;
@@ -70,6 +90,12 @@ export interface FlockingParams {
    * null means the spot is relative to the target itself.
    */
   referencePoint: LatLng | null;
+  /** Jumprun mode: auto (follow the canopy flight) or a pinned line. */
+  jumprun: JumprunConfig;
+  /** Radius of the end-of-jump target area around B, miles. */
+  targetRadiusMi: number;
+  /** Show the jumprun-aligned distance grid around the Spot Reference. */
+  showGrid: boolean;
 }
 
 // ---------------------------------------------------------------------------

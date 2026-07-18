@@ -24,7 +24,7 @@ import {
   StoredTrack,
   Target
 } from '../types';
-import { DISTANCE_UNITS, FlockingParams } from './flocking';
+import { DISTANCE_UNITS, FlockingParams, JumprunConfig } from './flocking';
 import { migrateToFlightPath } from './migration';
 import {
   AltitudeUnit,
@@ -93,7 +93,10 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   horizontalSpeedMph: 50,
   direction: 'into-wind',
   distanceUnit: 'mi',
-  referencePoint: null
+  referencePoint: null,
+  jumprun: { mode: 'auto' },
+  targetRadiusMi: 0.25,
+  showGrid: false
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -268,7 +271,30 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
       limitedNumber(r.horizontalSpeedMph, d.horizontalSpeedMph, LIMITS.flockingHorizontalSpeedMph),
     direction,
     distanceUnit: oneOf(r.distanceUnit, DISTANCE_UNITS, d.distanceUnit),
-    referencePoint
+    referencePoint,
+    jumprun: migrateJumprunConfig(r.jumprun),
+    targetRadiusMi: limitedNumber(r.targetRadiusMi, d.targetRadiusMi, LIMITS.flockingTargetRadiusMi),
+    showGrid: booleanOr(r.showGrid, d.showGrid)
+  };
+}
+
+function migrateJumprunConfig(raw: unknown): JumprunConfig {
+  const r = isRecord(raw) ? raw : {};
+
+  if (r.mode !== 'pinned') {
+    return { mode: 'auto' };
+  }
+
+  const exitAlongMi =
+    typeof r.exitAlongMi === 'number' && Number.isFinite(r.exitAlongMi)
+      ? clampNumber(r.exitAlongMi, LIMITS.flockingExitAlongMi.min, LIMITS.flockingExitAlongMi.max)
+      : null;
+
+  return {
+    mode: 'pinned',
+    directionDeg: normalizeDirection(finiteNumber(r.directionDeg, 0)),
+    offsetMi: limitedNumber(r.offsetMi, 0, LIMITS.flockingJumprunOffsetMi),
+    exitAlongMi
   };
 }
 
