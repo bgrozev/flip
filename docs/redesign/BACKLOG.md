@@ -153,13 +153,28 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **Direction overlays** — average-wind arrow overlay, degree-circle
   (compass rose) around target.
 - ☐ **Turn drift calculation** — drift accumulated during the turn itself.
-- ☐ **Model/sounding comparison view** — better visualization of the
-  differences between forecast models (GFS/ICON/ECMWF spread) and between
-  model and sounding. Both sources already exist; needs a "compare
-  profiles" UI — overlay rows, highlight disagreement. Disagreement = low
-  confidence, plan conservatively. (Accepted 2026-07-16; merges the UIUX
-  "winds ensemble view", owner-endorsed. Owner: "I want a better way to
-  visualize the differences between different models and sounding.")
+- ◐ **Model/sounding comparison view** — FIRST PASS DONE; visualization
+  design open for owner iteration. What landed:
+  - Data: `openmeteo.fetchOpenMeteoComparison` (tested) fetches any model
+    read-only w.r.t. the prefetch cache — serves from it when the model
+    matches, never stores, so a comparison sweep can't evict the window
+    behind the scrubber. `useWindComparison` fetches all 4 models + the
+    nearest sounding concurrently; per-source failures degrade to a note.
+  - Math: `core/windCompare` (tested): profiles sampled on a 0..limit
+    500 ft ladder with the app's own vector interpolation; no upward
+    extrapolation (sparse sources like ECMWF show "—" above their top
+    row); named thresholds DIRECTION_DISAGREEMENT_DEG=15,
+    SPEED_DISAGREEMENT_KTS=5, and DIRECTION_MIN_SPEED_KTS=3 (directions
+    of near-calm winds are noise, not disagreement).
+  - UI: "Compare sources" toggle in the wind panel → read-only table,
+    one column per source (Best/GFS/ICON/ECMWF/station id), per-cell
+    direction arrow + speed in the user's unit, disagreeing bands
+    highlighted, spread in the row tooltip. Active profile untouched.
+  - Live-verified at ZHills: 4 models + _TBW sounding side by side;
+    ECMWF's 5-level coverage interpolates cleanly; ground band flagged.
+  Open for iteration ✎: visual form (arrows vs barbs vs mini-hodograph),
+  compare at the selected forecast hour instead of "now", per-cell
+  outlier emphasis, showing sounding age more prominently.
 
 ## Large features (architecture-relevant)
 

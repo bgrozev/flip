@@ -201,6 +201,49 @@ export async function fetchOpenMeteo(
   return buildProfile(prefetched, index);
 }
 
+/**
+ * Comparison fetch: read-only with respect to the prefetch cache. The
+ * cache is deliberately keyed to ONE model at a time (the selected one) —
+ * it backs hour switching and the time scrubber. Fetching several models
+ * side by side therefore serves from the cached window when it happens to
+ * match (same model, location, fresh) but NEVER stores its response, so a
+ * comparison sweep cannot evict the window the rest of the app relies on.
+ *
+ * Always samples the current hour (hourOffset 0): the comparison view
+ * answers "what do the sources say about now".
+ */
+export async function fetchOpenMeteoComparison(
+  point: LatLng,
+  model: string,
+  signal?: AbortSignal
+): Promise<WindProfile> {
+  if (
+    prefetched &&
+    prefetched.model === model &&
+    Date.now() - prefetched.fetchedAt < PREFETCH_TTL_MS &&
+    !hasTargetMovedTooFar(prefetched.location, point)
+  ) {
+    const index = prefetchedIndexFor(prefetched, 0);
+
+    if (index !== null) {
+      return buildProfile(prefetched, index);
+    }
+  }
+
+  const elevationFt = await fetchElevationFt(point, signal);
+  const response = await fetchWindow(point, MIN_PREFETCH_HOURS, model, signal);
+  const window: PrefetchedWindow = {
+    location: point,
+    model,
+    fetchedAt: Date.now(),
+    elevationFt,
+    hourly: response.hourly
+  };
+  const index = prefetchedIndexFor(window, 0) ?? 0;
+
+  return buildProfile(window, index);
+}
+
 function fetchWindow(
   point: LatLng,
   forecastHours: number,

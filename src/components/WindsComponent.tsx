@@ -29,6 +29,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { useAppState, useUnits } from '../hooks';
+import WindComparison from './WindComparison';
 import { LatLng, ObservedWindStation } from '../types';
 import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
 import {
@@ -608,6 +609,11 @@ export default function WindsComponent({
             )}
           </>
         )}
+
+        {/* Read-only model/sounding comparison, behind its own toggle.
+            Outside the fetching branch so a main-profile fetch does not
+            unmount it (which would silently close an open comparison). */}
+        <WindComparison />
 
         {forecastTime === null && (fetchingObserved || stationsFetched) && (
           <>

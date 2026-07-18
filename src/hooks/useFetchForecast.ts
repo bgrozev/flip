@@ -126,7 +126,7 @@ export function useFetchForecast({
         setError({ message: err instanceof Error ? err.message : String(err) });
         setFetching(false);
       });
-  }, [target, settings.limitWind, settings.windModel, settings.windAloftSource]);
+  }, [target, settings.limitWind, settings.windModel, settings.windAloftSource, setWinds]);
 
   return {
     winds,

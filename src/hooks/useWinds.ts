@@ -123,8 +123,9 @@ export function useWinds({ target, settings }: UseWindsOptions): UseWindsResult 
   // module state (not reactive), but every fetch updates `winds`, so keying
   // the memo on the profile re-reads coverage exactly when it can change.
   const scrubHours = useMemo(() => {
-    void winds; // dependency: re-check the cache after each fetch
-    if (!target || settings.windAloftSource === 'sounding') {
+    // `!winds` is never true — it exists to reference the dependency that
+    // makes this memo re-run after each fetch
+    if (!winds || !target || settings.windAloftSource === 'sounding') {
       return null;
     }
 

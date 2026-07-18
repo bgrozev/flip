@@ -9,3 +9,5 @@ export { usePresets } from './usePresets';
 export { TargetProvider, useTarget } from './useTargetContext';
 export { useUnits } from './useUnits';
 export { useWinds } from './useWinds';
+export { useWindComparison } from './useWindComparison';
+export type { ComparisonSourceResult } from './useWindComparison';

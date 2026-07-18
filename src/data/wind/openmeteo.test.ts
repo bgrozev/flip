@@ -4,6 +4,7 @@ import { afterEach, beforeEach, vi } from 'vitest';
 import { SOURCE_OPEN_METEO } from '../../core/wind';
 import {
   fetchOpenMeteo,
+  fetchOpenMeteoComparison,
   openMeteoSource,
   prefetchedWindowHours,
   resetOpenMeteoPrefetch
@@ -236,6 +237,43 @@ describe('fetchOpenMeteo', () => {
       await fetchOpenMeteo(POINT, { forceRefresh: true });
 
       expect(gfsCalls(fetchSpy)).toHaveLength(2);
+    });
+  });
+
+  describe('fetchOpenMeteoComparison', () => {
+    it('never stores into the prefetch cache', async () => {
+      await fetchOpenMeteo(POINT, { model: 'best_match' });
+      await fetchOpenMeteoComparison(POINT, 'gfs_seamless');
+
+      // The best_match window must still be intact: an hour switch on the
+      // selected model stays local instead of refetching
+      await fetchOpenMeteo(POINT, { model: 'best_match', hourOffset: 4 });
+
+      const urls = gfsCalls(fetchSpy);
+
+      expect(urls).toHaveLength(2);
+      expect(urls[0]).toContain('models=best_match');
+      expect(urls[1]).toContain('models=gfs_seamless');
+      expect(prefetchedWindowHours(POINT, 'best_match')).toBe(24);
+      expect(prefetchedWindowHours(POINT, 'gfs_seamless')).toBeNull();
+    });
+
+    it('serves from the cache when the model matches', async () => {
+      await fetchOpenMeteo(POINT, { model: 'best_match' });
+
+      const profile = await fetchOpenMeteoComparison(POINT, 'best_match');
+
+      expect(gfsCalls(fetchSpy)).toHaveLength(1);
+      expect(profile.meta?.model).toBe('best_match');
+    });
+
+    it('samples the current hour', async () => {
+      vi.setSystemTime(new Date('2026-07-14T03:20:00Z'));
+
+      const profile = await fetchOpenMeteoComparison(POINT, 'gfs_seamless');
+
+      expect(profile.validTime).toEqual(new Date('2026-07-14T03:00Z'));
+      expect(profile.winds[0].speedKts).toBe(8); // 10m speed at hour 3
     });
   });
 
