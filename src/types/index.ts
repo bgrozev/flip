@@ -95,6 +95,7 @@ export const PANEL_IDS = [
   'target',
   'wind',
   'courses',
+  'flocking',
   'settings',
   'about'
 ] as const;
@@ -108,7 +109,8 @@ export const MAP_LAYER_IDS = [
   'stations',
   'targetEdit',
   'courseEdit',
-  'windArrow'
+  'windArrow',
+  'flocking'
 ] as const;
 export type MapLayerId = typeof MAP_LAYER_IDS[number];
 

@@ -56,10 +56,20 @@ describe('mode definitions integrity', () => {
     }
   });
 
-  it('ships pattern and swoop enabled; flocking and explore as stubs', () => {
-    expect(ENABLED_MODES.map(m => m.id)).toEqual(['pattern', 'swoop']);
-    expect(getMode('flocking').enabled).toBe(false);
+  it('ships pattern, swoop and flocking enabled; explore as a stub', () => {
+    expect(ENABLED_MODES.map(m => m.id)).toEqual(['pattern', 'swoop', 'flocking']);
     expect(getMode('explore').enabled).toBe(false);
+  });
+
+  it('flocking mode exposes its panel and layer, no pattern/manoeuvre', () => {
+    const flocking = getMode('flocking');
+
+    expect(flocking.nav).toContain('flocking');
+    expect(flocking.nav).not.toContain('pattern');
+    expect(flocking.nav).not.toContain('manoeuvre');
+    expect(hasLayer(flocking, 'flocking')).toBe(true);
+    expect(hasLayer(flocking, 'flightPaths')).toBe(false);
+    expect(hasFeature(flocking, 'manoeuvre')).toBe(false);
   });
 
   it('pattern mode hides manoeuvre and courses; swoop has everything', () => {
@@ -74,8 +84,9 @@ describe('mode definitions integrity', () => {
 
     const swoop = getMode('swoop');
 
-    expect([...swoop.nav].sort()).toEqual([...PANEL_IDS].sort());
-    expect([...swoop.mapLayers].sort()).toEqual([...MAP_LAYER_IDS].sort());
+    // swoop is "everything" except the flocking-specific panel/layer
+    expect([...swoop.nav].sort()).toEqual(PANEL_IDS.filter(p => p !== 'flocking').sort());
+    expect([...swoop.mapLayers].sort()).toEqual(MAP_LAYER_IDS.filter(l => l !== 'flocking').sort());
     expect(hasFeature(swoop, 'manoeuvre')).toBe(true);
     expect(hasFeature(swoop, 'courses')).toBe(true);
   });
@@ -96,10 +107,10 @@ describe('migrateModeId (mode persistence codec)', () => {
   it('accepts enabled mode ids', () => {
     expect(migrateModeId('pattern')).toBe('pattern');
     expect(migrateModeId('swoop')).toBe('swoop');
+    expect(migrateModeId('flocking')).toBe('flocking');
   });
 
   it('rejects disabled (stub) mode ids', () => {
-    expect(migrateModeId('flocking')).toBeNull();
     expect(migrateModeId('explore')).toBeNull();
   });
 

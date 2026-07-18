@@ -2,11 +2,13 @@ import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import React, { createContext, useContext, useCallback, ReactNode, useMemo } from 'react';
 
 import {
+  DEFAULT_FLOCKING_PARAMS,
   DEFAULT_MANOEUVRE_CONFIG,
   DEFAULT_PATTERN_PARAMS,
   DEFAULT_SETTINGS,
   DEFAULT_TARGET,
   SCHEMA_VERSION,
+  migrateFlockingParams,
   migrateManoeuvreConfig,
   migratePatternParams,
   migrateSettings,
@@ -14,6 +16,7 @@ import {
   migrateTouchedSettings,
   seedTouchedSettings
 } from '../core/model';
+import { FlockingParams } from '../core/flocking';
 import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
 import { createVersionedCodec } from '../util/storage';
 import { makePatternByType } from '../core/pattern';
@@ -65,6 +68,7 @@ interface AppStateContextValue {
   // Config state (source of truth for presets)
   manoeuvreConfig: ManoeuvreConfig;
   patternParams: PatternParams;
+  flockingParams: FlockingParams;
   target: Target;
   settings: Settings;
   /** Settings keys the user has explicitly changed (mode defaults skip these). */
@@ -74,6 +78,7 @@ interface AppStateContextValue {
   // Setters
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
   setPatternParams: (params: PatternParams) => void;
+  setFlockingParams: (params: FlockingParams) => void;
   setTarget: (target: Target) => void;
   setSettings: (settings: Settings) => void;
   setSelectedCourseId: (id: string | null) => void;
@@ -120,6 +125,14 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
   const patternParams = storedPatternParams ?? DEFAULT_PATTERN_PARAMS;
 
+  // Flocking params — source of truth for the flocking mode's math
+  const [storedFlockingParams, setStoredFlockingParams] = useLocalStorageState<FlockingParams>(
+    'flip.flocking.params',
+    DEFAULT_FLOCKING_PARAMS,
+    { codec: createVersionedCodec(SCHEMA_VERSION, migrateFlockingParams) }
+  );
+  const flockingParams = storedFlockingParams ?? DEFAULT_FLOCKING_PARAMS;
+
   // Settings
   const [storedSettings, setStoredSettings] = useLocalStorageState<Settings>(
     'flip.settings',
@@ -163,6 +176,11 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     [setStoredPatternParams]
   );
 
+  const setFlockingParams = useCallback(
+    (value: FlockingParams) => setStoredFlockingParams(value),
+    [setStoredFlockingParams]
+  );
+
   const setTarget = useCallback(
     (value: Target) => setStoredTarget(value),
     [setStoredTarget]
@@ -194,10 +212,11 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     setStoredManoeuvreConfig(DEFAULT_MANOEUVRE_CONFIG);
     setStoredTarget(DEFAULT_TARGET);
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
+    setStoredFlockingParams(DEFAULT_FLOCKING_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
     setStoredTouched([]);
     setStoredSelectedCourseId(null);
-  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -205,12 +224,14 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       pattern,
       manoeuvreConfig,
       patternParams,
+      flockingParams,
       target,
       settings,
       touchedSettings,
       selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
+      setFlockingParams,
       setTarget,
       setSettings,
       setSelectedCourseId,
@@ -221,12 +242,14 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       pattern,
       manoeuvreConfig,
       patternParams,
+      flockingParams,
       target,
       settings,
       touchedSettings,
       selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
+      setFlockingParams,
       setTarget,
       setSettings,
       setSelectedCourseId,

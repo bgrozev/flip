@@ -61,17 +61,17 @@ export const MODES: readonly Mode[] = [
     defaults: {},
     features: ['manoeuvre', 'courses', 'presets', 'export']
   },
-  // Stubs: defined to prove the shape; not yet selectable.
   {
     id: 'flocking',
     label: 'Flocking',
     description: 'Wind drift and jump run for flocks',
-    enabled: false,
-    nav: ['target', 'wind', 'settings', 'about'],
-    mapLayers: ['stations', 'targetEdit', 'windArrow'],
+    enabled: true,
+    nav: ['flocking', 'target', 'wind', 'settings', 'about'],
+    mapLayers: ['flocking', 'stations', 'targetEdit', 'windArrow'],
     defaults: {},
     features: ['export']
   },
+  // Stub: defined to prove the shape; not yet selectable.
   {
     id: 'explore',
     label: 'Explore',

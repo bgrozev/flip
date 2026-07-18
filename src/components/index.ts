@@ -5,6 +5,7 @@ export { default as CustomLocationsComponent } from './CustomLocationsComponent'
 export { default as DirectionSwitch } from './DirectionSwitch';
 export { default as DropzonesComponent } from './DropzonesComponent';
 export { default as FlipIcon } from './FlipIcon';
+export { default as FlockingComponent } from './FlockingComponent';
 export { default as LocationComponent } from './LocationComponent';
 export { default as ManoeuvreComponent } from './ManoeuvreComponent';
 export { default as ManoeuvreParametersComponent } from './ManoeuvreParametersComponent';

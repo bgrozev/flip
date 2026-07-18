@@ -226,6 +226,15 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     mi/nm/km, optional reference point) with FWC defaults, LIMITS
     clamps, `migrateFlockingParams` + tests (versioned key
     `flip.flocking.params` wired with the mode).
+  - ◐ mode enabled + panel: flocking selectable in picker/switcher/?mode=;
+    nav [flocking, target, wind, settings, about]; `useFlockingPath` hook
+    (derivation only runs in flocking mode; pattern/manoeuvre derivation
+    skipped there); wind fetch limit extends to windowTopFt;
+    FlockingComponent with FWC presets (Flow/Float/XRW/CRW), window +
+    speed inputs in user units, N/E/S/W + Into-wind (resolved degrees
+    shown live), mi/nm/km toggle, FWC-shape results text. Browser-
+    verified at ZHills: into-wind resolution, preset/cardinal quick-sets,
+    prior + offset signs, fetch to 12k ft.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)

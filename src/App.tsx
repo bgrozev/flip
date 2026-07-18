@@ -5,6 +5,7 @@ import {
   Crop as CropIcon,
   FavoriteSharp as FavoriteIcon,
   Flag as FlagIcon,
+  Groups as GroupsIcon,
   Info as InfoIcon,
   RotateLeft as RotateLeftIcon,
   Settings as SettingsIcon
@@ -39,6 +40,7 @@ import {
   CoursesComponent,
   ExportDialog,
   FlipIcon,
+  FlockingComponent,
   ManoeuvreComponent,
   MapComponent,
   ModePicker,
@@ -57,6 +59,7 @@ import {
   useCustomCourses,
   NotificationsProvider,
   useFlightPaths,
+  useFlockingPath,
   useMode,
   usePresets,
   useWinds
@@ -72,6 +75,7 @@ const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = 
   target: { title: 'Target', icon: <AdjustIcon /> },
   wind: { title: 'Wind', icon: <AirIcon /> },
   courses: { title: 'Courses', icon: <FlagIcon /> },
+  flocking: { title: 'Flocking', icon: <GroupsIcon /> },
   settings: { title: 'Settings', icon: <SettingsIcon /> },
   about: { title: 'About', icon: <InfoIcon /> }
 };
@@ -150,6 +154,8 @@ function DashboardContent() {
     pattern,
     patternParams,
     setPatternParams,
+    flockingParams,
+    setFlockingParams,
     settings,
     setSettings,
     touchedSettings,
@@ -262,16 +268,30 @@ function DashboardContent() {
     }
   };
 
+  // Flocking mode replaces the pattern/manoeuvre derivation with its own
+  // descent-path pipeline; each derivation only runs in its own mode.
+  const isFlocking = mode.id === 'flocking';
+
   const paths = useFlightPaths({
-    manoeuvre: hasFeature(mode, 'manoeuvre') ? manoeuvre ?? [] : [],
-    pattern: pattern ?? [],
+    manoeuvre: !isFlocking && hasFeature(mode, 'manoeuvre') ? manoeuvre ?? [] : [],
+    pattern: !isFlocking ? pattern ?? [] : [],
     target: target ?? DEFAULT_TARGET,
     winds: effectiveWinds,
     correctPatternHeading: modeSettings.correctPatternHeading,
     interpolateWind: modeSettings.interpolateWind,
     straightenLegsEnabled: modeSettings.straightenLegs
   });
-  const averageWind_ = paths.averageWind;
+
+  const flocking = useFlockingPath({
+    active: isFlocking,
+    params: flockingParams,
+    target: target ?? DEFAULT_TARGET,
+    winds: effectiveWinds,
+    interpolateWind: modeSettings.interpolateWind,
+    altitudeUnit: modeSettings.units.altitude
+  });
+
+  const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
   const windSummary = useMemo(
     () => makeWindSummary(averageWind_),
@@ -279,9 +299,13 @@ function DashboardContent() {
   );
 
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
-    const maxAlt = paths.corrected.length > 0
-      ? paths.corrected[paths.corrected.length - 1].properties.alt
-      : undefined;
+    // The fetch limit must reach the top of what is flown: the corrected
+    // path's exit altitude, or the flocking window top.
+    const maxAlt = isFlocking
+      ? flockingParams.windowTopFt
+      : paths.corrected.length > 0
+        ? paths.corrected[paths.corrected.length - 1].properties.alt
+        : undefined;
 
     fetchWindsWithMaxAlt(maxAlt, overrideForecastTime, opts);
   };
@@ -312,6 +336,17 @@ function DashboardContent() {
     );
   } else if (activePanel === 'pattern') {
     p = <PatternComponent params={patternParams} onParamsChange={setPatternParams} />;
+  } else if (activePanel === 'flocking') {
+    p = (
+      <FlockingComponent
+        params={flockingParams}
+        onParamsChange={setFlockingParams}
+        jumprunDeg={flocking.jumprunDeg}
+        vectors={flocking.vectors}
+        spot={flocking.spot}
+        hasWind={flocking.hasWind}
+      />
+    );
   } else if (activePanel === 'target') {
     p = (
       <TargetComponent
@@ -503,7 +538,7 @@ function DashboardContent() {
       <ExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        path={paths.display}
+        path={isFlocking ? flocking.corrected : paths.display}
         target={target.target}
         presetName={activePresetName}
       />

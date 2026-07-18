@@ -2,6 +2,8 @@ export { AppStateProvider, useAppState, DEFAULT_TARGET, DEFAULT_SETTINGS } from 
 export { useCustomCourses } from './useCustomCourses';
 export { useFetchForecast } from './useFetchForecast';
 export { useFlightPaths } from './useFlightPaths';
+export { useFlockingPath } from './useFlockingPath';
+export type { FlockingDerived } from './useFlockingPath';
 export { useMode } from './useMode';
 export { NotificationsProvider, useNotifications } from './useNotifications';
 export { useObservedWind } from './useObservedWind';
