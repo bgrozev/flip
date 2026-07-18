@@ -471,6 +471,7 @@ function DashboardContent() {
     <MapComponent
       center={target.target}
       cameraCenter={mapCenter}
+      initialZoom={mode.defaultZoom}
       pathA={paths.ideal}
       pathB={paths.display}
       settings={modeSettings}

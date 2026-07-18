@@ -36,6 +36,8 @@ interface MapComponentProps {
    * without re-anchoring target-relative overlays.
    */
   cameraCenter?: LatLng;
+  /** Initial/mode-default zoom; re-applied when it changes (mode switch). */
+  initialZoom?: number;
   pathA: FlightPath;
   pathB: FlightPath;
   settings: Settings;
@@ -62,6 +64,7 @@ function MapComponent({
   windDirection,
   center,
   cameraCenter,
+  initialZoom,
   pathA,
   pathB,
   settings,
@@ -89,7 +92,7 @@ function MapComponent({
   } = settings;
 
   return (
-    <MapContainer center={cameraCenter ?? center} provider={settings.mapProvider}>
+    <MapContainer center={cameraCenter ?? center} initialZoom={initialZoom} provider={settings.mapProvider}>
       {has('flightPaths') && (
         <FlightPathsLayer
           pathA={pathA}

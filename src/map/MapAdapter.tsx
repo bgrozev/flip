@@ -32,6 +32,12 @@ export const DEFAULT_CURSOR = 'grab';
 export interface MapContainerProps {
   /** Map camera center: applied on load and panned to when it changes. */
   center: LatLng;
+  /**
+   * Initial zoom level: applied on load and re-applied when the value
+   * changes (e.g. a mode switch wanting a wider view). User zooming in
+   * between is left alone.
+   */
+  initialZoom?: number;
   children?: React.ReactNode;
 }
 

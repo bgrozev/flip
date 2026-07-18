@@ -30,6 +30,12 @@ export interface Mode {
    */
   defaults: Partial<Settings>;
   features: readonly FeatureId[];
+  /**
+   * Initial map zoom for this mode; omitted = the map's own default.
+   * Applied on load and on mode switch (flocking spans miles, patterns
+   * span hundreds of feet).
+   */
+  defaultZoom?: number;
 }
 
 const ALL_PANELS: readonly PanelId[] = [
@@ -69,7 +75,9 @@ export const MODES: readonly Mode[] = [
     nav: ['flocking', 'target', 'wind', 'settings', 'about'],
     mapLayers: ['flocking', 'stations', 'targetEdit', 'windArrow'],
     defaults: {},
-    features: ['export']
+    features: ['export'],
+    // The flocking picture (descent + 3 nm jumprun) spans several miles
+    defaultZoom: 12
   },
   // Stub: defined to prove the shape; not yet selectable.
   {

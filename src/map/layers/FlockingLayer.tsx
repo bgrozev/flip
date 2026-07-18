@@ -21,7 +21,10 @@ import { MapCircle, MapOverlay, MapPolyline } from '..';
 import { DirectionArrow, TOOLTIP_STYLE } from './tooltip';
 
 // Flocking path color — distinct from pattern green and manoeuvre red
-export const FLOCKING_COLOR = '#29b6f6';
+// Magenta: pops on satellite imagery where the previous cyan washed out,
+// and collides with nothing else on the map (pattern green, manoeuvre red,
+// pre-wind white, reference amber).
+export const FLOCKING_COLOR = '#ff40ff';
 const GHOST_COLOR = '#ffffff';
 const JUMPRUN_COLOR = '#e0e0e0';
 
@@ -328,7 +331,7 @@ export default function FlockingLayer({
             clickable={false}
           />
           <MapOverlay position={reference}>
-            <div style={REFERENCE_LABEL_STYLE}>C</div>
+            <div style={REFERENCE_LABEL_STYLE}>Spot Reference</div>
           </MapOverlay>
         </>
       )}

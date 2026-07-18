@@ -26,9 +26,9 @@ interface ClickEntry {
  * JS API, renders the map, provides the adapter contexts (interactions,
  * view state, control host) and manages camera centering.
  */
-export default function GoogleMapContainer({ center, children }: MapContainerProps) {
+export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM, children }: MapContainerProps) {
   const mapRef = useRef<google.maps.Map | null>(null);
-  const [zoom, setZoom] = useState<number>(DEFAULT_ZOOM);
+  const [zoom, setZoom] = useState<number>(initialZoom);
   const [controlHost, setControlHost] = useState<HTMLElement | null>(null);
 
   // Interaction registry (clicks + cursor overrides), mutated imperatively
@@ -75,10 +75,16 @@ export default function GoogleMapContainer({ center, children }: MapContainerPro
 
   centerRef.current = center;
 
+  // Latest initial zoom for the load callback (a remount between renders
+  // must not resurrect a stale value).
+  const initialZoomRef = useRef(initialZoom);
+
+  initialZoomRef.current = initialZoom;
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     map.setCenter(centerRef.current);
-    map.setZoom(DEFAULT_ZOOM);
+    map.setZoom(initialZoomRef.current);
     applyCursor();
     console.log('Map loaded.');
   }, [applyCursor]);
@@ -92,6 +98,17 @@ export default function GoogleMapContainer({ center, children }: MapContainerPro
       prevCenterRef.current = center;
     }
   }, [center]);
+
+  // Re-apply when the requested initial zoom changes (e.g. a mode switch);
+  // user zooming in between stays untouched.
+  const prevInitialZoomRef = useRef(initialZoom);
+
+  useEffect(() => {
+    if (mapRef.current && prevInitialZoomRef.current !== initialZoom) {
+      mapRef.current.setZoom(initialZoom);
+      prevInitialZoomRef.current = initialZoom;
+    }
+  }, [initialZoom]);
 
   const onClick = useCallback((ev: google.maps.MapMouseEvent) => {
     if (!ev.latLng) {

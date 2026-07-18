@@ -37,11 +37,11 @@ interface ClickEntry {
  */
 const MAX_ZOOM = 22;
 
-export default function MapLibreMapContainer({ center, children }: MapContainerProps) {
+export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOOM, children }: MapContainerProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [map, setMap] = useState<maplibregl.Map | null>(null);
-  const [zoom, setZoom] = useState<number>(DEFAULT_ZOOM);
+  const [zoom, setZoom] = useState<number>(initialZoom);
   const [controlHost, setControlHost] = useState<HTMLElement | null>(null);
 
   // Interaction registry (clicks + cursor overrides), mutated imperatively
@@ -90,6 +90,11 @@ export default function MapLibreMapContainer({ center, children }: MapContainerP
 
   centerRef.current = center;
 
+  // Latest initial zoom for the (deferred) map creation.
+  const initialZoomRef = useRef(initialZoom);
+
+  initialZoomRef.current = initialZoom;
+
   // Create the map once, on mount.
   useEffect(() => {
     const wrap = wrapperRef.current;
@@ -107,7 +112,7 @@ export default function MapLibreMapContainer({ center, children }: MapContainerP
         container: wrap,
         style: DEFAULT_MAPLIBRE_STYLE,
         center: [centerRef.current.lng, centerRef.current.lat],
-        zoom: DEFAULT_ZOOM,
+        zoom: initialZoomRef.current,
         maxZoom: MAX_ZOOM,
         attributionControl: { compact: true },
         // Keep parity with the Google adapter's flat, north-up satellite view.
@@ -182,6 +187,17 @@ export default function MapLibreMapContainer({ center, children }: MapContainerP
       prevCenterRef.current = center;
     }
   }, [center]);
+
+  // Re-apply when the requested initial zoom changes (e.g. a mode switch);
+  // user zooming in between stays untouched.
+  const prevInitialZoomRef = useRef(initialZoom);
+
+  useEffect(() => {
+    if (mapRef.current && prevInitialZoomRef.current !== initialZoom) {
+      mapRef.current.setZoom(initialZoom);
+      prevInitialZoomRef.current = initialZoom;
+    }
+  }, [initialZoom]);
 
   const viewState = useMemo<MapViewState>(() => ({ zoom }), [zoom]);
 

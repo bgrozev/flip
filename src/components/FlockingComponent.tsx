@@ -65,7 +65,7 @@ interface FlockingComponentProps {
   spot: SpotDescription | null;
   /** Whether any non-calm wind rows are loaded. */
   hasWind: boolean;
-  /** Current target position (B) — where "Pin reference" pins C. */
+  /** Current target position (B) — where "Pin spot reference" pins C. */
   target: LatLng;
 }
 
@@ -259,7 +259,7 @@ export default function FlockingComponent({
             + 'to keep the spot fixed while you move the target around.'}
         >
           <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
-            Reference{' '}
+            Spot Reference{' '}
             {params.referencePoint
               ? `${params.referencePoint.lat.toFixed(4)}, ${params.referencePoint.lng.toFixed(4)}`
               : '· target'}
@@ -274,7 +274,7 @@ export default function FlockingComponent({
             size="small"
             onClick={() => set({ referencePoint: { lat: target.lat, lng: target.lng } })}
           >
-            Pin reference
+            Pin spot reference
           </Button>
         )}
       </Stack>
