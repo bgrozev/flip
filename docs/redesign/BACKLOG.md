@@ -247,6 +247,12 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     4/5/6 behind the 3.16-mi-prior exit. Known polish item ✎: POM
     altitude labels overlap at low zoom (same as pattern's, but the
     flocking path is longer).
+  - ◐ reference point C (owner design): "Pin reference" in the panel
+    pins C at the current target B; spot text/label/markers stay
+    relative to C while B remains free to move; amber ring+dot "C"
+    marker on the map; Unpin reverts to C = B. Browser-verified: pinned
+    C, moved B 1 mi north, spot went 3.16 -> 2.18 mi prior (matches
+    hand calc) with vectors unchanged; unpin restored 3.16.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)

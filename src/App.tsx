@@ -345,6 +345,7 @@ function DashboardContent() {
         vectors={flocking.vectors}
         spot={flocking.spot}
         hasWind={flocking.hasWind}
+        target={target.target}
       />
     );
   } else if (activePanel === 'target') {
@@ -493,7 +494,8 @@ function DashboardContent() {
         jumprunDeg: flocking.jumprunDeg,
         spot: flocking.spot,
         distanceUnit: flockingParams.distanceUnit,
-        winds: effectiveWinds
+        winds: effectiveWinds,
+        reference: flockingParams.referencePoint
       } : undefined}
     />
   );

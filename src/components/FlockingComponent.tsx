@@ -4,6 +4,7 @@
  */
 import {
   Box,
+  Button,
   Divider,
   Stack,
   ToggleButton,
@@ -24,6 +25,7 @@ import {
   milesToDisplay
 } from '../core/flocking';
 import { LIMITS, normalizeDirection } from '../core/validation';
+import { LatLng } from '../types';
 import { useUnits } from '../hooks';
 
 import NumberInput from './NumberInput';
@@ -63,6 +65,8 @@ interface FlockingComponentProps {
   spot: SpotDescription | null;
   /** Whether any non-calm wind rows are loaded. */
   hasWind: boolean;
+  /** Current target position (B) — where "Pin reference" pins C. */
+  target: LatLng;
 }
 
 export default function FlockingComponent({
@@ -71,7 +75,8 @@ export default function FlockingComponent({
   jumprunDeg,
   vectors,
   spot,
-  hasWind
+  hasWind,
+  target
 }: FlockingComponentProps) {
   const {
     formatAltitude,
@@ -246,6 +251,32 @@ export default function FlockingComponent({
             <ToggleButton key={u} value={u}>{DISTANCE_UNIT_LABELS[u]}</ToggleButton>
           ))}
         </ToggleButtonGroup>
+      </Stack>
+
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+        <Tooltip
+          title={'The point the spot is described against. Pin it at the current target '
+            + 'to keep the spot fixed while you move the target around.'}
+        >
+          <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+            Reference{' '}
+            {params.referencePoint
+              ? `${params.referencePoint.lat.toFixed(4)}, ${params.referencePoint.lng.toFixed(4)}`
+              : '· target'}
+          </Typography>
+        </Tooltip>
+        {params.referencePoint ? (
+          <Button size="small" onClick={() => set({ referencePoint: null })}>
+            Unpin
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            onClick={() => set({ referencePoint: { lat: target.lat, lng: target.lng } })}
+          >
+            Pin reference
+          </Button>
+        )}
       </Stack>
 
       {!hasWind && (

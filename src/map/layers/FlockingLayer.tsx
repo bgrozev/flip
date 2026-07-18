@@ -62,6 +62,21 @@ const MARKER_LABEL_STYLE: React.CSSProperties = {
   transform: 'translate(-50%, 8px)'
 };
 
+// Pinned reference point C
+const REFERENCE_COLOR = '#ffc107';
+
+const REFERENCE_LABEL_STYLE: React.CSSProperties = {
+  background: 'rgba(0, 0, 0, 0.75)',
+  padding: '1px 5px',
+  borderRadius: '3px',
+  fontSize: '11px',
+  color: REFERENCE_COLOR,
+  fontWeight: 'bold',
+  display: 'inline-block',
+  whiteSpace: 'nowrap',
+  transform: 'translate(-50%, 12px)'
+};
+
 /** The spot one-liner near the exit. */
 const SPOT_LABEL_STYLE: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.85)',
@@ -86,6 +101,8 @@ export interface FlockingLayerProps {
   distanceUnit: DistanceUnit;
   /** Wind profile for the per-POM tooltip wind line. */
   winds: WindProfile;
+  /** Pinned reference point C, if any (null = spot is relative to target). */
+  reference: LatLng | null;
   showPreWind: boolean;
   showPoms: boolean;
   showPomAltitudes: boolean;
@@ -99,6 +116,7 @@ export default function FlockingLayer({
   spot,
   distanceUnit,
   winds,
+  reference,
   showPreWind,
   showPoms,
   showPomAltitudes
@@ -286,6 +304,34 @@ export default function FlockingLayer({
           </React.Fragment>
         );
       })}
+
+      {/* Pinned reference point C: an anchor-ish ring + dot + label */}
+      {reference && (
+        <>
+          <MapCircle
+            center={reference}
+            radius={12}
+            fillOpacity={0}
+            strokeColor={REFERENCE_COLOR}
+            strokeOpacity={1}
+            strokeWeight={2}
+            zIndex={4}
+            clickable={false}
+          />
+          <MapCircle
+            center={reference}
+            radius={2}
+            fillColor={REFERENCE_COLOR}
+            fillOpacity={1}
+            strokeOpacity={0}
+            zIndex={4}
+            clickable={false}
+          />
+          <MapOverlay position={reference}>
+            <div style={REFERENCE_LABEL_STYLE}>C</div>
+          </MapOverlay>
+        </>
+      )}
 
       {/* Spot label near the exit */}
       {exit && spotText && (
