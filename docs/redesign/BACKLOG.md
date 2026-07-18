@@ -211,8 +211,16 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   caching for OpenMeteo/NWS/IEM so the last forecast survives offline.
   Google tiles intentionally uncached (ToS) — see MapLibre offline-tiles
   follow-up. Pending: higher-res brand icons (owner art).
-- ☐ **Flocking mode** — beyond a port of flocking-wind-calculator.
-  (2026-07-16: parked — needs owner input and owner has no time now.)
+- ◐ **Flocking mode** — beyond a port of flocking-wind-calculator.
+  (2026-07-17: FWC port IN PROGRESS on this branch.) What landed:
+  - ◐ core math `src/core/flocking.ts` (tested, DriftTest.kt parity +
+    closed-form uniform-wind pipeline check): `makeFlockingPath` (1 s
+    steps, POMs inserted exactly at round altitude multiples, interval
+    parameterized for metric), `intoWindDirection`, `flockingVectors`
+    (wind/canopy/combined), `spotDescription` (FWC prior/PAST +
+    left/right conventions line-for-line, incl. FWC's PAST side flip).
+    Wind application deviates from FWC deliberately: FliP's `addWind`
+    (vector interpolation) instead of the per-level stepwise sum.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)
