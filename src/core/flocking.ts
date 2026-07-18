@@ -48,6 +48,30 @@ export function milesToDisplay(miles: number, unit: DistanceUnit): number {
 }
 
 // ---------------------------------------------------------------------------
+// Params document (persisted under flip.flocking.params; see core/model)
+// ---------------------------------------------------------------------------
+
+export interface FlockingParams {
+  /** Exit altitude (top of the flown window), ft. */
+  windowTopFt: number;
+  /** End-of-jump altitude (bottom of the flown window), ft. */
+  windowBottomFt: number;
+  /** Vertical speed, mph (FWC's unit). */
+  descentRateMph: number;
+  /** Horizontal speed over ground, mph (FWC's unit). */
+  horizontalSpeedMph: number;
+  /** Jumprun direction: cardinal degrees, or resolved from the winds. */
+  direction: number | 'into-wind';
+  /** Display unit for drift/spot distances. */
+  distanceUnit: DistanceUnit;
+  /**
+   * Optional pinned reference point ("C") the spot is described against;
+   * null means the spot is relative to the target itself.
+   */
+  referencePoint: LatLng | null;
+}
+
+// ---------------------------------------------------------------------------
 // Direction conversions (mirroring FWC's Drift.kt exactly)
 // ---------------------------------------------------------------------------
 

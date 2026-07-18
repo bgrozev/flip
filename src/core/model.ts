@@ -24,6 +24,7 @@ import {
   StoredTrack,
   Target
 } from '../types';
+import { DISTANCE_UNITS, FlockingParams } from './flocking';
 import { migrateToFlightPath } from './migration';
 import {
   AltitudeUnit,
@@ -82,6 +83,17 @@ export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
   altitudeFt: 900,
   duration: 8,
   left: true
+};
+
+// FWC's defaults: 12k -> 4k ft, the "Flow" preset, jumprun into wind
+export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
+  windowTopFt: 12000,
+  windowBottomFt: 4000,
+  descentRateMph: 21,
+  horizontalSpeedMph: 50,
+  direction: 'into-wind',
+  distanceUnit: 'mi',
+  referencePoint: null
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -221,6 +233,43 @@ export function migrateManoeuvreConfig(raw: unknown): ManoeuvreConfig {
   }
 
   return config;
+}
+
+export function migrateFlockingParams(raw: unknown): FlockingParams {
+  const r = isRecord(raw) ? raw : {};
+  const d = DEFAULT_FLOCKING_PARAMS;
+
+  let direction: FlockingParams['direction'];
+
+  if (r.direction === 'into-wind') {
+    direction = 'into-wind';
+  } else if (typeof r.direction === 'number' && Number.isFinite(r.direction)) {
+    direction = normalizeDirection(r.direction);
+  } else {
+    direction = d.direction;
+  }
+
+  let referencePoint: FlockingParams['referencePoint'] = null;
+
+  if (isRecord(r.referencePoint) &&
+      typeof r.referencePoint.lat === 'number' && Number.isFinite(r.referencePoint.lat) &&
+      typeof r.referencePoint.lng === 'number' && Number.isFinite(r.referencePoint.lng)) {
+    referencePoint = {
+      lat: clampNumber(r.referencePoint.lat, -90, 90),
+      lng: clampNumber(r.referencePoint.lng, -180, 180)
+    };
+  }
+
+  return {
+    windowTopFt: limitedNumber(r.windowTopFt, d.windowTopFt, LIMITS.flockingAltitudeFt),
+    windowBottomFt: limitedNumber(r.windowBottomFt, d.windowBottomFt, LIMITS.flockingAltitudeFt),
+    descentRateMph: limitedNumber(r.descentRateMph, d.descentRateMph, LIMITS.flockingDescentRateMph),
+    horizontalSpeedMph:
+      limitedNumber(r.horizontalSpeedMph, d.horizontalSpeedMph, LIMITS.flockingHorizontalSpeedMph),
+    direction,
+    distanceUnit: oneOf(r.distanceUnit, DISTANCE_UNITS, d.distanceUnit),
+    referencePoint
+  };
 }
 
 const ALTITUDE_UNITS: readonly AltitudeUnit[] = ['ft', 'm'];

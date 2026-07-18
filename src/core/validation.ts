@@ -24,6 +24,12 @@ export const LIMITS = {
   manoeuvreAltitudeFt: { min: 100, max: 5000 },
   /** Manoeuvre duration (s) */
   manoeuvreDurationS: { min: 1, max: 60 },
+  /** Flocking altitude window bounds (ft) */
+  flockingAltitudeFt: { min: 0, max: 30000 },
+  /** Flocking descent rate (mph); XRW reaches 40 */
+  flockingDescentRateMph: { min: 1, max: 100 },
+  /** Flocking horizontal speed (mph); XRW reaches 70 */
+  flockingHorizontalSpeedMph: { min: 0, max: 150 },
   /** Wind row altitude (ft) */
   windAltFt: { min: 0, max: 60000 },
   /** Wind speed (kts) */

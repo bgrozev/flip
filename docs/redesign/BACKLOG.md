@@ -221,6 +221,11 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     left/right conventions line-for-line, incl. FWC's PAST side flip).
     Wind application deviates from FWC deliberately: FliP's `addWind`
     (vector interpolation) instead of the per-level stepwise sum.
+  - ◐ params document: `FlockingParams` (window top/bottom ft, descent +
+    horizontal mph, direction number | 'into-wind', distance unit
+    mi/nm/km, optional reference point) with FWC defaults, LIMITS
+    clamps, `migrateFlockingParams` + tests (versioned key
+    `flip.flocking.params` wired with the mode).
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)

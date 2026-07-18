@@ -6,6 +6,7 @@
 import { createVersionedCodec } from '../util/storage';
 
 import {
+  DEFAULT_FLOCKING_PARAMS,
   DEFAULT_MANOEUVRE_PARAMS,
   DEFAULT_PATTERN_PARAMS,
   DEFAULT_SETTINGS,
@@ -13,6 +14,7 @@ import {
   SCHEMA_VERSION,
   migrateCustomCourses,
   migrateCustomLocations,
+  migrateFlockingParams,
   migrateManoeuvreConfig,
   migrateManoeuvreParams,
   migratePatternParams,
@@ -112,6 +114,59 @@ describe('migratePatternParams', () => {
 
   it('rejects unknown pattern types', () => {
     expect(migratePatternParams({ type: 'five-leg' }).type).toBe('three-leg');
+  });
+});
+
+describe('migrateFlockingParams', () => {
+  it.each(GARBAGE.map(g => [g]))('returns defaults for %j', raw => {
+    expect(migrateFlockingParams(raw)).toEqual(DEFAULT_FLOCKING_PARAMS);
+  });
+
+  it('keeps valid params', () => {
+    const params = {
+      windowTopFt: 14000,
+      windowBottomFt: 5000,
+      descentRateMph: 40,
+      horizontalSpeedMph: 70,
+      direction: 145,
+      distanceUnit: 'nm',
+      referencePoint: { lat: 28.2, lng: -82.15 }
+    };
+
+    expect(migrateFlockingParams(params)).toEqual(params);
+  });
+
+  it('keeps the into-wind direction and normalizes numeric ones', () => {
+    expect(migrateFlockingParams({ direction: 'into-wind' }).direction).toBe('into-wind');
+    expect(migrateFlockingParams({ direction: 370 }).direction).toBe(10);
+    expect(migrateFlockingParams({ direction: -45 }).direction).toBe(315);
+    // unknown strings and non-finite numbers fall back to the default
+    expect(migrateFlockingParams({ direction: 'north' }).direction).toBe('into-wind');
+    expect(migrateFlockingParams({ direction: NaN }).direction).toBe('into-wind');
+  });
+
+  it('clamps absurd window and speed values', () => {
+    const migrated = migrateFlockingParams({
+      windowTopFt: 1e9,
+      windowBottomFt: -500,
+      descentRateMph: 0,
+      horizontalSpeedMph: 100000
+    });
+
+    expect(migrated.windowTopFt).toBe(30000);
+    expect(migrated.windowBottomFt).toBe(0);
+    expect(migrated.descentRateMph).toBe(1);
+    expect(migrated.horizontalSpeedMph).toBe(150);
+  });
+
+  it('drops an invalid reference point and unknown distance units', () => {
+    expect(migrateFlockingParams({ referencePoint: { lat: 'x', lng: 0 } }).referencePoint)
+      .toBeNull();
+    expect(migrateFlockingParams({ referencePoint: 42 }).referencePoint).toBeNull();
+    expect(migrateFlockingParams({ distanceUnit: 'furlong' }).distanceUnit).toBe('mi');
+    // reference point coordinates are clamped
+    expect(migrateFlockingParams({ referencePoint: { lat: 95, lng: -200 } }).referencePoint)
+      .toEqual({ lat: 90, lng: -180 });
   });
 });
 
