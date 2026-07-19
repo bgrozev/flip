@@ -48,6 +48,18 @@ export function milesToDisplay(miles: number, unit: DistanceUnit): number {
   }
 }
 
+/** Convert a distance in the given display unit back to statute miles. */
+export function displayToMiles(value: number, unit: DistanceUnit): number {
+  switch (unit) {
+    case 'mi':
+      return value;
+    case 'nm':
+      return value * MI_PER_NM;
+    case 'km':
+      return value / KM_PER_MI;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Params document (persisted under flip.flocking.params; see core/model)
 // ---------------------------------------------------------------------------

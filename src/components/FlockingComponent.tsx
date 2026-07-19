@@ -6,7 +6,9 @@ import {
   Box,
   Button,
   Divider,
+  FormControlLabel,
   Stack,
+  Switch,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -15,13 +17,16 @@ import {
 import React, { useState } from 'react';
 
 import {
+  CanopySolution,
   DISTANCE_UNITS,
   DISTANCE_UNIT_LABELS,
   DistanceUnit,
   DriftVector,
   FlockingParams,
   FlockingVectors,
+  JumprunConfig,
   SpotDescription,
+  displayToMiles,
   milesToDisplay
 } from '../core/flocking';
 import { LIMITS, normalizeDirection } from '../core/validation';
@@ -61,8 +66,12 @@ interface FlockingComponentProps {
   onParamsChange: (params: FlockingParams) => void;
   /** Resolved jumprun direction (into-wind resolved from the winds). */
   jumprunDeg: number;
+  /** Current into-wind direction (for the pinned quick-set button). */
+  intoWindDeg: number;
   vectors: FlockingVectors | null;
   spot: SpotDescription | null;
+  /** Solved canopy flight for the pinned exit (pinned mode only). */
+  canopy: CanopySolution | null;
   /** Whether any non-calm wind rows are loaded. */
   hasWind: boolean;
   /** Current target position (B) — where "Pin spot reference" pins C. */
@@ -73,8 +82,10 @@ export default function FlockingComponent({
   params,
   onParamsChange,
   jumprunDeg,
+  intoWindDeg,
   vectors,
   spot,
+  canopy,
   hasWind,
   target
 }: FlockingComponentProps) {
@@ -98,6 +109,21 @@ export default function FlockingComponent({
     if (external) {
       setExternalEdit(n => n + 1);
     }
+  };
+
+  const pinned = params.jumprun.mode === 'pinned';
+
+  /** Patch the jumprun config (merging into the pinned shape when partial). */
+  const setJumprun = (patch: Partial<JumprunConfig> & { mode?: JumprunConfig['mode'] }, external = false) => {
+    if (patch.mode === 'auto') {
+      set({ jumprun: { mode: 'auto' } }, external);
+      return;
+    }
+    const base = params.jumprun.mode === 'pinned'
+      ? params.jumprun
+      : { mode: 'pinned' as const, directionDeg: 0, offsetMi: 0, exitAlongMi: null };
+
+    set({ jumprun: { ...base, ...patch, mode: 'pinned' } }, external);
   };
 
   const activePreset = PRESETS.find(
@@ -190,52 +216,177 @@ export default function FlockingComponent({
       </Stack>
 
       <Divider />
-      <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>
-        Flight direction
-      </Typography>
-      <Tooltip title="Direction flown over ground (the jumprun direction).">
-        <ToggleButtonGroup
-          value={directionToggle}
-          exclusive
-          onChange={(_e, name) => {
-            if (name === 'into-wind') {
-              set({ direction: 'into-wind' }, true);
-            } else {
-              const cardinal = CARDINALS.find(c => c.name === name);
-
-              if (cardinal) {
-                set({ direction: cardinal.deg }, true);
-              }
-            }
-          }}
-          fullWidth
-          size="small"
-          color="primary"
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+        <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>
+          Jumprun
+        </Typography>
+        <Tooltip
+          title={'Auto: the jumprun follows the canopy flight direction. Pinned: the '
+            + 'jumprun is a fixed line (e.g. dictated by airspace); the canopy '
+            + 'flight direction is solved to make the target.'}
         >
-          {CARDINALS.map(c => (
-            <ToggleButton key={c.name} value={c.name}>{c.name}</ToggleButton>
-          ))}
-          <ToggleButton value="into-wind">Into wind</ToggleButton>
-        </ToggleButtonGroup>
-      </Tooltip>
-      <Stack direction="row" spacing={2} alignItems="center">
-        <NumberInput
-          key={`dir-${externalEdit}-${intoWind ? roundDeg(jumprunDeg) : 'set'}`}
-          title="Flight direction in degrees. Editing this overrides the into-wind setting."
-          label="Direction"
-          initialValue={intoWind ? roundDeg(jumprunDeg) : params.direction as number}
-          step={5}
-          min={0}
-          max={360}
-          unit="˚"
-          onChange={value => set({ direction: normalizeDirection(value) })}
-        />
-        {intoWind && (
-          <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-            Into wind · {roundDeg(jumprunDeg)}˚
-          </Typography>
-        )}
+          <ToggleButtonGroup
+            value={pinned ? 'pinned' : 'auto'}
+            exclusive
+            onChange={(_e, mode) => {
+              if (mode === 'pinned' && !pinned) {
+                // Seed the pinned line from the current resolved jumprun
+                setJumprun({
+                  mode: 'pinned',
+                  directionDeg: roundDeg(jumprunDeg),
+                  offsetMi: 0,
+                  exitAlongMi: null
+                });
+              } else if (mode === 'auto' && pinned) {
+                setJumprun({ mode: 'auto' });
+              }
+            }}
+            size="small"
+            color="primary"
+          >
+            <ToggleButton value="auto">Auto</ToggleButton>
+            <ToggleButton value="pinned">Pinned</ToggleButton>
+          </ToggleButtonGroup>
+        </Tooltip>
       </Stack>
+
+      {!pinned && (
+        <>
+          <Tooltip title="Direction flown over ground (the jumprun direction).">
+            <ToggleButtonGroup
+              value={directionToggle}
+              exclusive
+              onChange={(_e, name) => {
+                if (name === 'into-wind') {
+                  set({ direction: 'into-wind' }, true);
+                } else {
+                  const cardinal = CARDINALS.find(c => c.name === name);
+
+                  if (cardinal) {
+                    set({ direction: cardinal.deg }, true);
+                  }
+                }
+              }}
+              fullWidth
+              size="small"
+              color="primary"
+            >
+              {CARDINALS.map(c => (
+                <ToggleButton key={c.name} value={c.name}>{c.name}</ToggleButton>
+              ))}
+              <ToggleButton value="into-wind">Into wind</ToggleButton>
+            </ToggleButtonGroup>
+          </Tooltip>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <NumberInput
+              key={`dir-${externalEdit}-${intoWind ? roundDeg(jumprunDeg) : 'set'}`}
+              title="Flight direction in degrees. Editing this overrides the into-wind setting."
+              label="Direction"
+              initialValue={intoWind ? roundDeg(jumprunDeg) : params.direction as number}
+              step={5}
+              min={0}
+              max={360}
+              unit="˚"
+              onChange={value => set({ direction: normalizeDirection(value) })}
+            />
+            {intoWind && (
+              <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                Into wind · {roundDeg(jumprunDeg)}˚
+              </Typography>
+            )}
+          </Stack>
+        </>
+      )}
+
+      {pinned && params.jumprun.mode === 'pinned' && (
+        <>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <NumberInput
+              key={`jr-dir-${externalEdit}`}
+              title="The pinned jumprun direction (e.g. the run the pilots will fly)."
+              label="Jumprun"
+              initialValue={roundDeg(params.jumprun.directionDeg)}
+              step={5}
+              min={0}
+              max={360}
+              unit="˚"
+              onChange={value => setJumprun({ directionDeg: normalizeDirection(value) })}
+            />
+            <ToggleButtonGroup size="small" exclusive value={null}>
+              {CARDINALS.map(c => (
+                <ToggleButton
+                  key={c.name}
+                  value={c.name}
+                  onClick={() => setJumprun({ directionDeg: c.deg }, true)}
+                >
+                  {c.name}
+                </ToggleButton>
+              ))}
+              <ToggleButton
+                value="into-wind"
+                onClick={() => setJumprun({ directionDeg: roundDeg(intoWindDeg) }, true)}
+              >
+                Wind
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+          <Stack direction="row" spacing={2}>
+            <NumberInput
+              key={`jr-offset-${externalEdit}`}
+              title={'Lateral offset of the jumprun line from the Spot Reference '
+                + '(positive = right of the run direction).'}
+              label="Offset"
+              initialValue={Number(milesToDisplay(params.jumprun.offsetMi, params.distanceUnit).toFixed(2))}
+              step={0.1}
+              min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+              unit={unitLabel}
+              onChange={value => setJumprun({ offsetMi: displayToMiles(value, params.distanceUnit) })}
+            />
+            <NumberInput
+              key={`jr-radius-${externalEdit}`}
+              title="Radius of the target area: the jump works if it ends anywhere inside it."
+              label="Target radius"
+              initialValue={Number(milesToDisplay(params.targetRadiusMi, params.distanceUnit).toFixed(2))}
+              step={0.05}
+              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
+              unit={unitLabel}
+              onChange={value => set({ targetRadiusMi: displayToMiles(value, params.distanceUnit) })}
+            />
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+              Exit
+              {params.jumprun.exitAlongMi === null
+                ? ' · best'
+                : ` · ${milesToDisplay(params.jumprun.exitAlongMi, params.distanceUnit).toFixed(2)} ${unitLabel} along`}
+            </Typography>
+            {params.jumprun.exitAlongMi !== null && (
+              <Tooltip title="Back to the best exit (lowest required canopy speed). Drag the exit marker on the map to choose manually.">
+                <Button size="small" onClick={() => setJumprun({ exitAlongMi: null })}>
+                  Best
+                </Button>
+              </Tooltip>
+            )}
+          </Stack>
+          {canopy && (
+            <Box
+              sx={{ textAlign: 'left' }}
+              data-testid="flocking-canopy-solution"
+            >
+              <Typography variant="body1" sx={{ color: canopy.reachable ? 'success.main' : 'error.main' }}>
+                {canopy.reachable
+                  ? `Fly ${roundDeg(canopy.headingDeg)}˚ · needs `
+                    + `${formatDescentRate(canopy.requiredSpeedMph).value} of `
+                    + `${formatDescentRate(params.horizontalSpeedMph).value} ${descentRateLabel}`
+                  : `UNREACHABLE · short ${milesToDisplay(canopy.shortfallMi, params.distanceUnit).toFixed(2)} `
+                    + `${unitLabel} (needs ${formatDescentRate(canopy.requiredSpeedMph).value} ${descentRateLabel})`}
+              </Typography>
+            </Box>
+          )}
+        </>
+      )}
 
       <Divider />
       <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
@@ -252,6 +403,23 @@ export default function FlockingComponent({
           ))}
         </ToggleButtonGroup>
       </Stack>
+
+      <Tooltip
+        title={'Distance grid on the map, centered on the Spot Reference and aligned '
+          + 'with the jumprun, one grid square per distance unit.'}
+      >
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={params.showGrid}
+              onChange={e => set({ showGrid: e.target.checked })}
+            />
+          }
+          label={<Typography variant="body2" sx={{ color: 'text.secondary' }}>Jumprun grid</Typography>}
+          sx={{ alignSelf: 'flex-start', ml: 0 }}
+        />
+      </Tooltip>
 
       <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
         <Tooltip

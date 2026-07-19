@@ -342,8 +342,10 @@ function DashboardContent() {
         params={flockingParams}
         onParamsChange={setFlockingParams}
         jumprunDeg={flocking.jumprunDeg}
+        intoWindDeg={flocking.intoWindDeg}
         vectors={flocking.vectors}
         spot={flocking.spot}
+        canopy={flocking.canopy}
         hasWind={flocking.hasWind}
         target={target.target}
       />

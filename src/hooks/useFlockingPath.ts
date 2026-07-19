@@ -37,6 +37,8 @@ export interface FlockingDerived {
   exit: LatLng | null;
   /** Resolved jumprun direction (into-wind resolved from the winds). */
   jumprunDeg: number;
+  /** The current into-wind direction (for quick-set), always resolved. */
+  intoWindDeg: number;
   /** The FWC drift block: wind drift / canopy flight / combined. */
   vectors: FlockingVectors | null;
   /** FWC spot description relative to `reference`. */
@@ -72,6 +74,7 @@ const EMPTY: FlockingDerived = {
   corrected: [],
   exit: null,
   jumprunDeg: 0,
+  intoWindDeg: 0,
   vectors: null,
   spot: null,
   reference: { lat: 0, lng: 0 },
@@ -133,6 +136,13 @@ export function useFlockingPath({
     const hasWind = winds.winds.some(row => row.speedKts > 0);
     const pomIntervalFt = altitudeUnit === 'm' ? POM_INTERVAL_METRIC_FT : POM_INTERVAL_FT;
     const reference = params.referencePoint ?? target.target;
+    const intoWindDeg = intoWindDirection(
+      winds,
+      params.windowTopFt,
+      params.windowBottomFt,
+      params.descentRateMph,
+      interpolateWind
+    );
 
     if (params.jumprun.mode === 'pinned') {
       return derivePinned({
@@ -143,20 +153,13 @@ export function useFlockingPath({
         winds,
         interpolateWind,
         pomIntervalFt,
-        hasWind
+        hasWind,
+        intoWindDeg
       });
     }
 
     // Auto mode: jumprun == canopy flight direction.
-    const jumprunDeg = params.direction === 'into-wind'
-      ? intoWindDirection(
-        winds,
-        params.windowTopFt,
-        params.windowBottomFt,
-        params.descentRateMph,
-        interpolateWind
-      )
-      : params.direction;
+    const jumprunDeg = params.direction === 'into-wind' ? intoWindDeg : params.direction;
 
     const raw = makeFlockingPath({
       windowTopFt: params.windowTopFt,
@@ -178,6 +181,7 @@ export function useFlockingPath({
       corrected,
       exit,
       jumprunDeg,
+      intoWindDeg,
       vectors: flockingVectors(ideal, corrected),
       spot: exit ? spotDescription(exit, reference, jumprunDeg) : null,
       reference,
@@ -200,10 +204,11 @@ interface DerivePinnedArgs {
   interpolateWind: boolean;
   pomIntervalFt: number;
   hasWind: boolean;
+  intoWindDeg: number;
 }
 
 function derivePinned({
-  params, jumprun, target, reference, winds, interpolateWind, pomIntervalFt, hasWind
+  params, jumprun, target, reference, winds, interpolateWind, pomIntervalFt, hasWind, intoWindDeg
 }: DerivePinnedArgs): FlockingDerived {
   const line: JumprunLine = {
     origin: jumprunLineOrigin(reference, jumprun.directionDeg, jumprun.offsetMi),
@@ -257,6 +262,7 @@ function derivePinned({
     corrected,
     exit,
     jumprunDeg: jumprun.directionDeg,
+    intoWindDeg,
     vectors: flockingVectors(ideal, corrected),
     spot: spotDescription(exit, reference, jumprun.directionDeg),
     reference,
