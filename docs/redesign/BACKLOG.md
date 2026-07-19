@@ -258,6 +258,35 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     marker on the map; Unpin reverts to C = B. Browser-verified: pinned
     C, moved B 1 mi north, spot went 3.16 -> 2.18 mi prior (matches
     hand calc) with vectors unchanged; unpin restored 3.16.
+  - ☑ 2026-07-17/18 iteration round (owner feedback): flocking default
+    zoom 12 via the new Mode.defaultZoom (`d771b73`); descent line cyan
+    -> magenta; "Spot Reference" naming; addWind curve bug fixed
+    (`c95d93b` — polar drift accumulation wobbled the bearing, amplified
+    when drift nearly cancels the flown line; now a flat E/N vector sum,
+    uniform wind exactly collinear); PAST left/right confirmed an FWC
+    bug and fixed geometrically (`ba3b681`).
+  - ☑ **jumprun decoupled from canopy flight** (owner design, v1) —
+    commits `1edc5e5` (core: windDriftVector agreeing with the path
+    pipeline, solveCanopyFlight, reachableJumprunSegment circle/line
+    intersection, line helpers), `4733710` (params: JumprunConfig
+    auto/pinned + targetRadiusMi + showGrid, migration + limits),
+    `8afe7dc` (derivation: pinned exit position on the line, canopy
+    heading/speed SOLVED from the fixed drift, path anchored at the
+    exit; ends in the target circle when reachable, best-effort at max
+    speed when not), `b6132a0` (panel: Auto/Pinned section, direction +
+    offset + target radius in distance units, exit "best"/along readout,
+    "Fly 297˚ · needs 43 of 50 mph" green / "UNREACHABLE · short X" red),
+    `f2d45d1` (map: full pinned line with the reachable interval thick
+    green, exit drag handle constrained to the line, target-area circle,
+    red unreachable state, jumprun-aligned distance grid ±3×±2 units
+    with signed labels). Browser-verified with manual 40 kt @ 10˚:
+    into-wind pinned run puts the best exit at required speed 0 (pure
+    drift-back, 3.32 mi PAST — correct); green window, grid and POM
+    ladder render; zero console errors. Not automation-verified (wheel
+    zoom hangs the tooling): exit-handle dragging — owner, give it a
+    pull. Constraint DESCRIPTIONS (ZHills "1.5 mi max west" searched by
+    a solver) are v2 ✎ — the pinned-run + green-window flow covers the
+    workflow manually.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)
