@@ -298,6 +298,20 @@ function DashboardContent() {
     [makeWindSummary, averageWind_]
   );
 
+  // Drag the pinned-jumprun exit marker: snap to the line by storing the
+  // projected along-line position.
+  const handleExitDrag = useCallback(
+    (exitAlongMi: number) => {
+      if (flockingParams.jumprun.mode === 'pinned') {
+        setFlockingParams({
+          ...flockingParams,
+          jumprun: { ...flockingParams.jumprun, exitAlongMi }
+        });
+      }
+    },
+    [flockingParams, setFlockingParams]
+  );
+
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
     // The fetch limit must reach the top of what is flown: the corrected
     // path's exit altitude, or the flocking window top.
@@ -498,7 +512,15 @@ function DashboardContent() {
         spot: flocking.spot,
         distanceUnit: flockingParams.distanceUnit,
         winds: effectiveWinds,
-        reference: flockingParams.referencePoint
+        reference: flockingParams.referencePoint,
+        target: target.target,
+        targetRadiusMi: flockingParams.targetRadiusMi,
+        jumprunLine: flocking.jumprunLine,
+        reachableSegment: flocking.reachableSegment,
+        canopy: flocking.canopy,
+        exitAlongMi: flocking.exitAlongMi,
+        onExitDrag: handleExitDrag,
+        showGrid: flockingParams.showGrid
       } : undefined}
     />
   );
