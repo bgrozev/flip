@@ -1,14 +1,23 @@
 import { useMemo } from 'react';
 
-import { FlightPath, LatLng, Target } from '../types';
+import { FlightPath, FlightPoint, LatLng, Target } from '../types';
 import {
+  CanopySolution,
   FlockingParams,
   FlockingVectors,
+  JumprunLine,
   SpotDescription,
+  bestExitAlongMi,
+  flockingDurationS,
   flockingVectors,
   intoWindDirection,
+  jumprunLineOrigin,
   makeFlockingPath,
-  spotDescription
+  pointAlongJumprun,
+  reachableJumprunSegment,
+  solveCanopyFlight,
+  spotDescription,
+  windDriftVector
 } from '../core/flocking';
 import { addWind, averageWind, translate } from '../core/geometry';
 import { latLngToPoint } from '../core/coords';
@@ -38,6 +47,14 @@ export interface FlockingDerived {
   hasWind: boolean;
   /** Average wind over the window (for the toolbar summary / wind arrow). */
   averageWind: { speedKts?: number; direction?: number };
+  /** The pinned jumprun line, or null in auto mode. */
+  jumprunLine: JumprunLine | null;
+  /** Reachable exit interval along the pinned line (signed mi), or null. */
+  reachableSegment: { tMinMi: number; tMaxMi: number } | null;
+  /** Solved canopy flight for the chosen exit (pinned mode only). */
+  canopy: CanopySolution | null;
+  /** Resolved exit position along the pinned line (signed mi). */
+  exitAlongMi: number | null;
 }
 
 interface UseFlockingPathParams {
@@ -59,15 +76,46 @@ const EMPTY: FlockingDerived = {
   spot: null,
   reference: { lat: 0, lng: 0 },
   hasWind: false,
-  averageWind: {}
+  averageWind: {},
+  jumprunLine: null,
+  reachableSegment: null,
+  canopy: null,
+  exitAlongMi: null
 };
 
+/** Rigidly shift every point of a path by a flat lng/lat delta. */
+function shiftPath(path: FlightPath, dLng: number, dLat: number): FlightPath {
+  if (dLng === 0 && dLat === 0) {
+    return path;
+  }
+
+  return path.map(p => ({
+    ...p,
+    geometry: {
+      ...p.geometry,
+      coordinates: [p.geometry.coordinates[0] + dLng, p.geometry.coordinates[1] + dLat]
+    }
+  })) as FlightPath;
+}
+
+function pointToLatLng(p: FlightPoint): LatLng {
+  return { lat: p.geometry.coordinates[1], lng: p.geometry.coordinates[0] };
+}
+
 /**
- * The flocking derive pipeline: resolve the jumprun direction (into-wind
- * uses the wind profile), build the descent path, position it at the
- * target, apply wind, and describe the exit spot relative to the pinned
- * reference point (or the target). Memoized on its actual inputs; returns
- * an inert empty result when the mode is not active.
+ * The flocking derive pipeline.
+ *
+ * Auto mode: the jumprun direction is the canopy flight direction
+ * (into-wind resolved from the winds); the descent path is built, positioned
+ * at the target and wind-corrected, and its wind-blown last point is the
+ * exit spot.
+ *
+ * Pinned mode: the jumprun is a fixed line (direction + lateral offset from
+ * the Spot Reference); the exit is a chosen position on it. The wind drift W
+ * over the window is fixed, so the canopy must cover D = target − exit − W
+ * through the air; the required heading/speed and the target's reachability
+ * are solved, and the rendered path is anchored at the pinned exit. Memoized
+ * on its inputs; inert when the mode is not active.
  */
 export function useFlockingPath({
   active,
@@ -83,6 +131,23 @@ export function useFlockingPath({
     }
 
     const hasWind = winds.winds.some(row => row.speedKts > 0);
+    const pomIntervalFt = altitudeUnit === 'm' ? POM_INTERVAL_METRIC_FT : POM_INTERVAL_FT;
+    const reference = params.referencePoint ?? target.target;
+
+    if (params.jumprun.mode === 'pinned') {
+      return derivePinned({
+        params,
+        jumprun: params.jumprun,
+        target: target.target,
+        reference,
+        winds,
+        interpolateWind,
+        pomIntervalFt,
+        hasWind
+      });
+    }
+
+    // Auto mode: jumprun == canopy flight direction.
     const jumprunDeg = params.direction === 'into-wind'
       ? intoWindDirection(
         winds,
@@ -99,18 +164,14 @@ export function useFlockingPath({
       descentRateMph: params.descentRateMph,
       horizontalSpeedMph: params.horizontalSpeedMph,
       directionDeg: jumprunDeg,
-      pomIntervalFt: altitudeUnit === 'm' ? POM_INTERVAL_METRIC_FT : POM_INTERVAL_FT
+      pomIntervalFt
     });
 
     const ideal = translate(raw, latLngToPoint(target.target));
     const corrected = addWind(ideal, winds, interpolateWind);
 
     const exitPoint = corrected.length > 1 ? corrected[corrected.length - 1] : null;
-    const exit: LatLng | null = exitPoint
-      ? { lat: exitPoint.geometry.coordinates[1], lng: exitPoint.geometry.coordinates[0] }
-      : null;
-
-    const reference = params.referencePoint ?? target.target;
+    const exit = exitPoint ? pointToLatLng(exitPoint) : null;
 
     return {
       ideal,
@@ -121,7 +182,89 @@ export function useFlockingPath({
       spot: exit ? spotDescription(exit, reference, jumprunDeg) : null,
       reference,
       hasWind,
-      averageWind: averageWind(ideal, corrected)
+      averageWind: averageWind(ideal, corrected),
+      jumprunLine: null,
+      reachableSegment: null,
+      canopy: null,
+      exitAlongMi: null
     };
   }, [active, params, target.target, winds, interpolateWind, altitudeUnit]);
+}
+
+interface DerivePinnedArgs {
+  params: FlockingParams;
+  jumprun: Extract<FlockingParams['jumprun'], { mode: 'pinned' }>;
+  target: LatLng;
+  reference: LatLng;
+  winds: WindProfile;
+  interpolateWind: boolean;
+  pomIntervalFt: number;
+  hasWind: boolean;
+}
+
+function derivePinned({
+  params, jumprun, target, reference, winds, interpolateWind, pomIntervalFt, hasWind
+}: DerivePinnedArgs): FlockingDerived {
+  const line: JumprunLine = {
+    origin: jumprunLineOrigin(reference, jumprun.directionDeg, jumprun.offsetMi),
+    directionDeg: jumprun.directionDeg
+  };
+
+  const drift = windDriftVector(
+    winds, params.windowTopFt, params.windowBottomFt, params.descentRateMph, interpolateWind
+  );
+  const durationS = flockingDurationS(
+    params.windowTopFt, params.windowBottomFt, params.descentRateMph
+  );
+
+  const reachableSegment = reachableJumprunSegment(
+    line, target, drift, durationS, params.horizontalSpeedMph, params.targetRadiusMi
+  );
+
+  // Chosen exit: the user's position, or the best (min-speed) point.
+  const exitAlongMi = jumprun.exitAlongMi ?? bestExitAlongMi(line, target, drift);
+  const exit = pointAlongJumprun(line, exitAlongMi);
+
+  const canopy = solveCanopyFlight(
+    exit, target, drift, durationS, params.horizontalSpeedMph, params.targetRadiusMi
+  );
+
+  // Render the canopy flight from the exit at the solved heading, using the
+  // required speed when reachable (ends at the target centre) or max speed
+  // when not (falls short). Build at the target, wind-correct, then shift so
+  // the exit lands exactly on the pinned position.
+  const renderSpeed = canopy.reachable ? canopy.requiredSpeedMph : params.horizontalSpeedMph;
+  const raw = makeFlockingPath({
+    windowTopFt: params.windowTopFt,
+    windowBottomFt: params.windowBottomFt,
+    descentRateMph: params.descentRateMph,
+    horizontalSpeedMph: renderSpeed,
+    directionDeg: canopy.headingDeg,
+    pomIntervalFt
+  });
+
+  const idealAtTarget = translate(raw, latLngToPoint(target));
+  const correctedAtTarget = addWind(idealAtTarget, winds, interpolateWind);
+  const last = correctedAtTarget[correctedAtTarget.length - 1];
+  const dLng = last ? exit.lng - last.geometry.coordinates[0] : 0;
+  const dLat = last ? exit.lat - last.geometry.coordinates[1] : 0;
+
+  const ideal = shiftPath(idealAtTarget, dLng, dLat);
+  const corrected = shiftPath(correctedAtTarget, dLng, dLat);
+
+  return {
+    ideal,
+    corrected,
+    exit,
+    jumprunDeg: jumprun.directionDeg,
+    vectors: flockingVectors(ideal, corrected),
+    spot: spotDescription(exit, reference, jumprun.directionDeg),
+    reference,
+    hasWind,
+    averageWind: averageWind(ideal, corrected),
+    jumprunLine: line,
+    reachableSegment,
+    canopy,
+    exitAlongMi
+  };
 }
