@@ -131,7 +131,7 @@ describe('migrateFlockingParams', () => {
       direction: 145,
       distanceUnit: 'nm',
       referencePoint: { lat: 28.2, lng: -82.15 },
-      jumprun: { mode: 'pinned', directionDeg: 180, offsetMi: 1.5, exitAlongMi: -2 },
+      jumprun: { directionDeg: 180, offsetMi: 1.5 },
       targetRadiusMi: 0.5,
       showGrid: true
     };
@@ -139,7 +139,7 @@ describe('migrateFlockingParams', () => {
     expect(migrateFlockingParams(params)).toEqual(params);
   });
 
-  it('defaults the new jumprun/target/grid fields on legacy params', () => {
+  it('defaults the jumprun/target/grid fields on legacy params', () => {
     // A pre-decoupling stored doc has none of the new fields
     const migrated = migrateFlockingParams({
       windowTopFt: 12000,
@@ -151,30 +151,28 @@ describe('migrateFlockingParams', () => {
       referencePoint: null
     });
 
-    expect(migrated.jumprun).toEqual({ mode: 'auto' });
+    expect(migrated.jumprun).toEqual({ directionDeg: 'into-wind', offsetMi: 0 });
     expect(migrated.targetRadiusMi).toBe(0.25);
     expect(migrated.showGrid).toBe(false);
   });
 
-  it('validates and clamps a pinned jumprun config', () => {
-    const migrated = migrateFlockingParams({
-      jumprun: { mode: 'pinned', directionDeg: 400, offsetMi: 99, exitAlongMi: -99 }
-    });
-
-    expect(migrated.jumprun).toEqual({
-      mode: 'pinned',
-      directionDeg: 40,
-      offsetMi: 10,
-      exitAlongMi: -20
-    });
+  it('validates and clamps a jumprun config', () => {
+    expect(migrateFlockingParams({
+      jumprun: { directionDeg: 400, offsetMi: 99 }
+    }).jumprun).toEqual({ directionDeg: 40, offsetMi: 10 });
+    expect(migrateFlockingParams({
+      jumprun: { directionDeg: 'into-wind', offsetMi: -0.5 }
+    }).jumprun).toEqual({ directionDeg: 'into-wind', offsetMi: -0.5 });
   });
 
-  it('treats a garbage or auto jumprun mode as auto, and null exit as null', () => {
-    expect(migrateFlockingParams({ jumprun: 'nonsense' }).jumprun).toEqual({ mode: 'auto' });
-    expect(migrateFlockingParams({ jumprun: { mode: 'auto' } }).jumprun).toEqual({ mode: 'auto' });
-    expect(
-      migrateFlockingParams({ jumprun: { mode: 'pinned', directionDeg: 90 } }).jumprun
-    ).toEqual({ mode: 'pinned', directionDeg: 90, offsetMi: 0, exitAlongMi: null });
+  it('migrates the short-lived auto/pinned jumprun shapes', () => {
+    expect(migrateFlockingParams({ jumprun: { mode: 'auto' } }).jumprun)
+      .toEqual({ directionDeg: 'into-wind', offsetMi: 0 });
+    expect(migrateFlockingParams({
+      jumprun: { mode: 'pinned', directionDeg: 90, offsetMi: 1, exitAlongMi: -2 }
+    }).jumprun).toEqual({ directionDeg: 90, offsetMi: 1 });
+    expect(migrateFlockingParams({ jumprun: 'nonsense' }).jumprun)
+      .toEqual({ directionDeg: 'into-wind', offsetMi: 0 });
   });
 
   it('keeps the into-wind direction and normalizes numeric ones', () => {

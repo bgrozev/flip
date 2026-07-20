@@ -7,7 +7,6 @@ import React, { useMemo, useState } from 'react';
 
 import { pathToLatLngs } from '../../core/coords';
 import {
-  CanopySolution,
   DISTANCE_UNIT_LABELS,
   DistanceUnit,
   JumprunLine,
@@ -20,7 +19,7 @@ import { destinationPoint } from '../../core/geometry';
 import { WindProfile, getWindAt, prepWind } from '../../core/wind';
 import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
-import { MapCircle, MapDragHandle, MapOverlay, MapPolyline } from '..';
+import { MapCircle, MapOverlay, MapPolyline } from '..';
 
 import { DirectionArrow, TOOLTIP_STYLE } from './tooltip';
 
@@ -30,7 +29,9 @@ import { DirectionArrow, TOOLTIP_STYLE } from './tooltip';
 // pre-wind white, reference amber).
 export const FLOCKING_COLOR = '#ff40ff';
 const GHOST_COLOR = '#ffffff';
-const JUMPRUN_COLOR = '#e0e0e0';
+// Green jumprun (owner's pick — it read well as the reachable overlay)
+const JUMPRUN_COLOR = '#00e676';
+const MISS_COLOR = '#ff5252';
 
 const JUMPRUN_LENGTH_M = 3 * 1852; // 3 nm
 const METERS_PER_MILE = 1609.344;
@@ -114,16 +115,14 @@ export interface FlockingLayerProps {
   target: LatLng;
   /** Radius of the target area around B, miles. */
   targetRadiusMi: number;
-  /** Pinned jumprun line, or null in auto mode. */
+  /** The jumprun line. */
   jumprunLine: JumprunLine | null;
-  /** Reachable exit interval along the pinned line (signed mi), or null. */
-  reachableSegment: { tMinMi: number; tMaxMi: number } | null;
-  /** Solved canopy flight for the pinned exit (pinned mode only). */
-  canopy: CanopySolution | null;
-  /** Chosen/resolved exit position along the pinned line (signed mi). */
-  exitAlongMi: number | null;
-  /** Drag the exit along the pinned line (signed mi from its origin). */
-  onExitDrag?: (exitAlongMi: number) => void;
+  /** Where the flight ends. */
+  end: LatLng | null;
+  /** Distance from the end to the target, miles. */
+  missMi: number | null;
+  /** Whether the end lands inside the target area. */
+  onTarget: boolean;
   /** Render the jumprun-aligned distance grid around the Spot Reference. */
   showGrid: boolean;
   showPreWind: boolean;
@@ -143,10 +142,9 @@ export default function FlockingLayer({
   target,
   targetRadiusMi,
   jumprunLine,
-  reachableSegment,
-  canopy,
-  exitAlongMi,
-  onExitDrag,
+  end,
+  missMi,
+  onTarget,
   showGrid,
   showPreWind,
   showPoms,
@@ -178,34 +176,22 @@ export default function FlockingLayer({
     return { start, barbA, barbB };
   }, [exit, jumprunDeg]);
 
-  // Pinned jumprun: the full line (drawn a few nm beyond everything of
-  // interest) with the reachable exit interval overlaid.
-  const pinned = useMemo(() => {
+  // The full jumprun line, drawn 3 nm beyond the exit and the target's
+  // projection on both sides.
+  const runLine = useMemo(() => {
     if (!jumprunLine) {
       return null;
     }
 
     const tTarget = projectOntoJumprunMi(jumprunLine, target);
-    const ts = [
-      tTarget,
-      exitAlongMi ?? tTarget,
-      ...reachableSegment ? [reachableSegment.tMinMi, reachableSegment.tMaxMi] : []
-    ];
+    const tExit = exit ? projectOntoJumprunMi(jumprunLine, exit) : tTarget;
     const extraMi = JUMPRUN_LENGTH_M / METERS_PER_MILE; // 3 nm of context
-    const tMin = Math.min(...ts) - extraMi;
-    const tMax = Math.max(...ts) + extraMi;
 
     return {
-      start: pointAlongJumprun(jumprunLine, tMin),
-      end: pointAlongJumprun(jumprunLine, tMax),
-      reachable: reachableSegment
-        ? {
-          a: pointAlongJumprun(jumprunLine, Math.max(reachableSegment.tMinMi, tMin)),
-          b: pointAlongJumprun(jumprunLine, Math.min(reachableSegment.tMaxMi, tMax))
-        }
-        : null
+      a: pointAlongJumprun(jumprunLine, Math.min(tTarget, tExit) - extraMi),
+      b: pointAlongJumprun(jumprunLine, Math.max(tTarget, tExit) + extraMi)
     };
-  }, [jumprunLine, target, exitAlongMi, reachableSegment]);
+  }, [jumprunLine, target, exit]);
 
   // Jumprun-aligned distance grid around the Spot Reference (or the target
   // when no reference is pinned): thin lines every distance unit, ±3 units
@@ -275,47 +261,32 @@ export default function FlockingLayer({
   }, [exit, spot, jumprunDeg, distanceUnit]);
 
   const unitLabel = DISTANCE_UNIT_LABELS[distanceUnit];
-  const unreachable = canopy !== null && !canopy.reachable;
+  const missed = !onTarget;
   let spotText = spot
     ? `Jumprun ${roundDeg(spot.jumprunDeg)}˚ · ${
       milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} ${unitLabel} ${
       spot.prior ? 'prior' : 'PAST'}`
     : null;
 
-  if (spotText && unreachable && canopy) {
-    spotText += ` · UNREACHABLE (short ${
-      milesToDisplay(canopy.shortfallMi, distanceUnit).toFixed(2)} ${unitLabel})`;
+  if (spotText && missed && missMi !== null) {
+    spotText += ` · MISSES by ${
+      milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`;
   }
 
   const lineProps = { color: JUMPRUN_COLOR, opacity: 0.9, weight: 3, zIndex: 0 };
 
   return (
     <>
-      {/* Auto mode: 3 nm jumprun line ending at the exit. Pinned mode: the
-          full pinned line with the reachable exit window overlaid. The
-          arrowhead at the exit marks the run direction in both. */}
-      {!pinned && jumprun && exit && (
-        <MapPolyline path={[jumprun.start, exit]} {...lineProps} />
-      )}
-      {pinned && (
-        <>
-          <MapPolyline
-            path={[pinned.start, pinned.end]}
-            color={JUMPRUN_COLOR}
-            opacity={0.6}
-            weight={2}
-            zIndex={0}
-          />
-          {pinned.reachable && (
-            <MapPolyline
-              path={[pinned.reachable.a, pinned.reachable.b]}
-              color="#00e676"
-              opacity={0.9}
-              weight={5}
-              zIndex={0}
-            />
-          )}
-        </>
+      {/* The jumprun line (green), with an arrowhead at the exit marking
+          the run direction. */}
+      {runLine && (
+        <MapPolyline
+          path={[runLine.a, runLine.b]}
+          color={JUMPRUN_COLOR}
+          opacity={0.8}
+          weight={3}
+          zIndex={0}
+        />
       )}
       {jumprun && exit && (
         <>
@@ -325,31 +296,51 @@ export default function FlockingLayer({
       )}
 
       {/* Target area: the jump works when it ends anywhere inside */}
-      {pinned && targetRadiusMi > 0 && (
+      {targetRadiusMi > 0 && (
         <MapCircle
           center={target}
           radius={targetRadiusMi * METERS_PER_MILE}
           fillColor="#ffffff"
           fillOpacity={0.08}
-          strokeColor={unreachable ? '#ff5252' : '#ffffff'}
-          strokeOpacity={0.5}
-          strokeWeight={1}
+          strokeColor={missed ? MISS_COLOR : '#ffffff'}
+          strokeOpacity={missed ? 0.9 : 0.5}
+          strokeWeight={missed ? 2 : 1}
           zIndex={0}
           clickable={false}
         />
       )}
 
-      {/* Draggable exit marker on the pinned line */}
-      {pinned && exit && jumprunLine && onExitDrag && (
-        <MapDragHandle
-          position={exit}
-          color={unreachable ? '#ff5252' : '#00e676'}
-          scale={8}
-          cursor="grab"
-          zIndex={110}
-          onDrag={pos => onExitDrag(projectOntoJumprunMi(jumprunLine, pos))}
-          onDragEnd={pos => onExitDrag(projectOntoJumprunMi(jumprunLine, pos))}
-        />
+      {/* The end of the flight; when it misses the target area, a red
+          connector shows the gap. */}
+      {end && missed && (
+        <>
+          <MapPolyline
+            path={[end, target]}
+            color={MISS_COLOR}
+            opacity={0.9}
+            weight={2}
+            zIndex={2}
+            dotted
+          />
+          <MapCircle
+            center={end}
+            radius={4}
+            fillColor={MISS_COLOR}
+            fillOpacity={1}
+            strokeColor="#ffffff"
+            strokeOpacity={1}
+            strokeWeight={1.5}
+            zIndex={4}
+            clickable={false}
+          />
+          {missMi !== null && (
+            <MapOverlay position={end}>
+              <div style={{ ...MARKER_LABEL_STYLE, color: MISS_COLOR }}>
+                {milesToDisplay(missMi, distanceUnit).toFixed(2)} {unitLabel} off
+              </div>
+            </MapOverlay>
+          )}
+        </>
       )}
 
       {/* Distance grid */}
@@ -509,7 +500,7 @@ export default function FlockingLayer({
           <div
             style={{
               ...SPOT_LABEL_STYLE,
-              ...unreachable ? { border: '1px solid #ff5252', color: '#ff8a80' } : {}
+              ...missed ? { border: `1px solid ${MISS_COLOR}`, color: '#ff8a80' } : {}
             }}
           >
             {spotText}

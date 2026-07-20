@@ -94,7 +94,7 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   direction: 'into-wind',
   distanceUnit: 'mi',
   referencePoint: null,
-  jumprun: { mode: 'auto' },
+  jumprun: { directionDeg: 'into-wind', offsetMi: 0 },
   targetRadiusMi: 0.25,
   showGrid: false
 };
@@ -278,23 +278,28 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
   };
 }
 
+/**
+ * Accepts the current shape ({directionDeg, offsetMi}), the short-lived
+ * auto/pinned shape ('auto' -> into-wind; 'pinned' keeps its line, the
+ * manual exit choice is dropped — the exit is solver-picked now), and
+ * garbage (-> into-wind, no offset).
+ */
 function migrateJumprunConfig(raw: unknown): JumprunConfig {
   const r = isRecord(raw) ? raw : {};
 
-  if (r.mode !== 'pinned') {
-    return { mode: 'auto' };
+  if (r.mode === 'auto') {
+    return { directionDeg: 'into-wind', offsetMi: 0 };
   }
 
-  const exitAlongMi =
-    typeof r.exitAlongMi === 'number' && Number.isFinite(r.exitAlongMi)
-      ? clampNumber(r.exitAlongMi, LIMITS.flockingExitAlongMi.min, LIMITS.flockingExitAlongMi.max)
-      : null;
+  const directionDeg =
+    r.directionDeg === 'into-wind' || typeof r.directionDeg !== 'number' ||
+    !Number.isFinite(r.directionDeg)
+      ? 'into-wind' as const
+      : normalizeDirection(r.directionDeg);
 
   return {
-    mode: 'pinned',
-    directionDeg: normalizeDirection(finiteNumber(r.directionDeg, 0)),
-    offsetMi: limitedNumber(r.offsetMi, 0, LIMITS.flockingJumprunOffsetMi),
-    exitAlongMi
+    directionDeg,
+    offsetMi: limitedNumber(r.offsetMi, 0, LIMITS.flockingJumprunOffsetMi)
   };
 }
 

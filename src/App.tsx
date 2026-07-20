@@ -298,20 +298,6 @@ function DashboardContent() {
     [makeWindSummary, averageWind_]
   );
 
-  // Drag the pinned-jumprun exit marker: snap to the line by storing the
-  // projected along-line position.
-  const handleExitDrag = useCallback(
-    (exitAlongMi: number) => {
-      if (flockingParams.jumprun.mode === 'pinned') {
-        setFlockingParams({
-          ...flockingParams,
-          jumprun: { ...flockingParams.jumprun, exitAlongMi }
-        });
-      }
-    },
-    [flockingParams, setFlockingParams]
-  );
-
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
     // The fetch limit must reach the top of what is flown: the corrected
     // path's exit altitude, or the flocking window top.
@@ -356,10 +342,11 @@ function DashboardContent() {
         params={flockingParams}
         onParamsChange={setFlockingParams}
         jumprunDeg={flocking.jumprunDeg}
-        intoWindDeg={flocking.intoWindDeg}
+        canopyDeg={flocking.canopyDeg}
         vectors={flocking.vectors}
         spot={flocking.spot}
-        canopy={flocking.canopy}
+        missMi={flocking.missMi}
+        onTarget={flocking.onTarget}
         hasWind={flocking.hasWind}
         target={target.target}
       />
@@ -516,10 +503,9 @@ function DashboardContent() {
         target: target.target,
         targetRadiusMi: flockingParams.targetRadiusMi,
         jumprunLine: flocking.jumprunLine,
-        reachableSegment: flocking.reachableSegment,
-        canopy: flocking.canopy,
-        exitAlongMi: flocking.exitAlongMi,
-        onExitDrag: handleExitDrag,
+        end: flocking.end,
+        missMi: flocking.missMi,
+        onTarget: flocking.onTarget,
         showGrid: flockingParams.showGrid
       } : undefined}
     />

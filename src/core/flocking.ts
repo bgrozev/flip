@@ -65,24 +65,18 @@ export function displayToMiles(value: number, unit: DistanceUnit): number {
 // ---------------------------------------------------------------------------
 
 /**
- * Jumprun configuration.
+ * Jumprun configuration — independent of the canopy flight.
  *
- * - auto: today's behavior — the jumprun is the canopy flight direction
- *   (`FlockingParams.direction`) and the exit is the computed spot.
- * - pinned: the jumprun is a fixed LINE (along directionDeg, offset
- *   laterally offsetMi from the Spot Reference, positive = right of the
- *   run direction); the exit is a chosen POSITION on it (exitAlongMi =
- *   signed miles from the offset point, null = auto-pick the best point)
- *   and the canopy heading/speed are solved from the winds.
+ * The jumprun is a LINE: along directionDeg ('into-wind' resolves from the
+ * winds), laterally offset offsetMi from the Spot Reference (positive =
+ * right of the run direction). The exit is always the solver's best point
+ * on it: the one bringing the end of the configured canopy flight closest
+ * to the target.
  */
-export type JumprunConfig =
-  | { mode: 'auto' }
-  | {
-    mode: 'pinned';
-    directionDeg: number;
-    offsetMi: number;
-    exitAlongMi: number | null;
-  };
+export interface JumprunConfig {
+  directionDeg: number | 'into-wind';
+  offsetMi: number;
+}
 
 export interface FlockingParams {
   /** Exit altitude (top of the flown window), ft. */
