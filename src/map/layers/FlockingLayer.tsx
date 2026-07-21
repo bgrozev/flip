@@ -35,6 +35,8 @@ const GHOST_COLOR = '#ffffff';
 // Green jumprun (owner's pick — it read well as the reachable overlay)
 const JUMPRUN_COLOR = '#00e676';
 const MISS_COLOR = '#ff5252';
+// Grid mesh — light blue, visible over satellite and plain backgrounds
+const GRID_COLOR = '#40c4ff';
 
 const JUMPRUN_LENGTH_M = 3 * 1852; // 3 nm
 const METERS_PER_MILE = 1609.344;
@@ -462,14 +464,15 @@ export default function FlockingLayer({
         />
       ))}
 
-      {/* Distance grid */}
+      {/* Distance grid: a light-blue mesh that reads over both satellite
+          imagery and the plain map background. */}
       {grid && grid.lines.map(line => (
         <MapPolyline
           key={line.key}
           path={line.path}
-          color="#ffffff"
-          opacity={0.18}
-          weight={1}
+          color={GRID_COLOR}
+          opacity={line.key.startsWith('perp-0') || line.key === 'par-0' ? 0.85 : 0.5}
+          weight={line.key.startsWith('perp-0') || line.key === 'par-0' ? 2 : 1.5}
           zIndex={0}
         />
       ))}
