@@ -24,7 +24,7 @@ import {
   StoredTrack,
   Target
 } from '../types';
-import { DISTANCE_UNITS, FlockingParams, JumprunConfig } from './flocking';
+import { DISTANCE_UNITS, FLOCKING_MODES, FlockingParams, JumprunConfig } from './flocking';
 import { migrateToFlightPath } from './migration';
 import {
   AltitudeUnit,
@@ -85,16 +85,19 @@ export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
   left: true
 };
 
-// FWC's defaults: 12k -> 4k ft, the "Flow" preset, jumprun into wind
+// FWC's defaults: classic mode, 12k -> 4k ft, the "Flow" preset, into wind
 export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
+  mode: 'classic',
   windowTopFt: 12000,
   windowBottomFt: 4000,
   descentRateMph: 21,
   horizontalSpeedMph: 50,
   direction: 'into-wind',
+  canopyDirection: 'follow-jumprun',
   distanceUnit: 'mi',
   referencePoint: null,
   jumprun: { directionDeg: 'into-wind', offsetMi: 0 },
+  exitAlongMi: 0,
   targetRadiusMi: 0.25,
   showGrid: false
 };
@@ -252,6 +255,14 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
     direction = d.direction;
   }
 
+  let canopyDirection: FlockingParams['canopyDirection'];
+
+  if (typeof r.canopyDirection === 'number' && Number.isFinite(r.canopyDirection)) {
+    canopyDirection = normalizeDirection(r.canopyDirection);
+  } else {
+    canopyDirection = 'follow-jumprun';
+  }
+
   let referencePoint: FlockingParams['referencePoint'] = null;
 
   if (isRecord(r.referencePoint) &&
@@ -269,10 +280,13 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
     descentRateMph: limitedNumber(r.descentRateMph, d.descentRateMph, LIMITS.flockingDescentRateMph),
     horizontalSpeedMph:
       limitedNumber(r.horizontalSpeedMph, d.horizontalSpeedMph, LIMITS.flockingHorizontalSpeedMph),
+    mode: oneOf(r.mode, FLOCKING_MODES, d.mode),
     direction,
+    canopyDirection,
     distanceUnit: oneOf(r.distanceUnit, DISTANCE_UNITS, d.distanceUnit),
     referencePoint,
     jumprun: migrateJumprunConfig(r.jumprun),
+    exitAlongMi: limitedNumber(r.exitAlongMi, d.exitAlongMi, LIMITS.flockingExitAlongMi),
     targetRadiusMi: limitedNumber(r.targetRadiusMi, d.targetRadiusMi, LIMITS.flockingTargetRadiusMi),
     showGrid: booleanOr(r.showGrid, d.showGrid)
   };

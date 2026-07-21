@@ -65,13 +65,31 @@ export function displayToMiles(value: number, unit: DistanceUnit): number {
 // ---------------------------------------------------------------------------
 
 /**
- * Jumprun configuration — independent of the canopy flight.
+ * How the flocking spot is worked out (the panel's sub-mode):
  *
- * The jumprun is a LINE: along directionDeg ('into-wind' resolves from the
- * winds), laterally offset offsetMi from the Spot Reference (positive =
- * right of the run direction). The exit is always the solver's best point
- * on it: the one bringing the end of the configured canopy flight closest
- * to the target.
+ * - classic: FWC's model. The user picks the canopy flight direction
+ *   (incl. into-wind); the jumprun IS that direction, which leaves a
+ *   single unique exit solution — the app displays it and describes the
+ *   forecasted spot.
+ * - free: the user owns everything — jumprun line (direction + offset),
+ *   exit position on it, canopy flight direction (defaults to following
+ *   the jumprun; deviating > CANOPY_DEVIATION_WARN_DEG shows a warning).
+ *   The app shows where the flight ends and how far off the target it is.
+ *
+ * (A third mode, solve — minimize the miss over a restricted set of
+ * jumprun configurations — is designed but not built; see BACKLOG.)
+ */
+export const FLOCKING_MODES = ['classic', 'free'] as const;
+export type FlockingMode = typeof FLOCKING_MODES[number];
+
+/** Free mode warns when the canopy flight deviates this much from the run. */
+export const CANOPY_DEVIATION_WARN_DEG = 15;
+
+/**
+ * Jumprun configuration (free mode) — independent of the canopy flight.
+ * A LINE: along directionDeg ('into-wind' resolves from the winds),
+ * laterally offset offsetMi from the Spot Reference (positive = right of
+ * the run direction).
  */
 export interface JumprunConfig {
   directionDeg: number | 'into-wind';
@@ -79,6 +97,8 @@ export interface JumprunConfig {
 }
 
 export interface FlockingParams {
+  /** The panel's sub-mode: classic (FWC) or free. */
+  mode: FlockingMode;
   /** Exit altitude (top of the flown window), ft. */
   windowTopFt: number;
   /** End-of-jump altitude (bottom of the flown window), ft. */
@@ -87,8 +107,17 @@ export interface FlockingParams {
   descentRateMph: number;
   /** Horizontal speed over ground, mph (FWC's unit). */
   horizontalSpeedMph: number;
-  /** Jumprun direction: cardinal degrees, or resolved from the winds. */
+  /**
+   * Canopy flight direction in CLASSIC mode (which is also the jumprun
+   * there): cardinal degrees, or resolved from the winds.
+   */
   direction: number | 'into-wind';
+  /**
+   * Canopy flight direction in FREE mode: degrees, or follow the jumprun
+   * (the default — this is what "canopy flight defaults to jumprun" means;
+   * with profiles this becomes the INITIAL flight direction).
+   */
+  canopyDirection: number | 'follow-jumprun';
   /** Display unit for drift/spot distances. */
   distanceUnit: DistanceUnit;
   /**
@@ -96,8 +125,10 @@ export interface FlockingParams {
    * null means the spot is relative to the target itself.
    */
   referencePoint: LatLng | null;
-  /** Jumprun mode: auto (follow the canopy flight) or a pinned line. */
+  /** The jumprun line (free mode). */
   jumprun: JumprunConfig;
+  /** Exit position along the jumprun line, signed miles (free mode). */
+  exitAlongMi: number;
   /** Radius of the end-of-jump target area around B, miles. */
   targetRadiusMi: number;
   /** Show the jumprun-aligned distance grid around the Spot Reference. */

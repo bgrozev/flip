@@ -124,14 +124,17 @@ describe('migrateFlockingParams', () => {
 
   it('keeps valid params', () => {
     const params = {
+      mode: 'free',
       windowTopFt: 14000,
       windowBottomFt: 5000,
       descentRateMph: 40,
       horizontalSpeedMph: 70,
       direction: 145,
+      canopyDirection: 200,
       distanceUnit: 'nm',
       referencePoint: { lat: 28.2, lng: -82.15 },
       jumprun: { directionDeg: 180, offsetMi: 1.5 },
+      exitAlongMi: -2,
       targetRadiusMi: 0.5,
       showGrid: true
     };
@@ -139,7 +142,7 @@ describe('migrateFlockingParams', () => {
     expect(migrateFlockingParams(params)).toEqual(params);
   });
 
-  it('defaults the jumprun/target/grid fields on legacy params', () => {
+  it('defaults the newer fields on legacy params', () => {
     // A pre-decoupling stored doc has none of the new fields
     const migrated = migrateFlockingParams({
       windowTopFt: 12000,
@@ -151,9 +154,21 @@ describe('migrateFlockingParams', () => {
       referencePoint: null
     });
 
+    expect(migrated.mode).toBe('classic');
+    expect(migrated.canopyDirection).toBe('follow-jumprun');
     expect(migrated.jumprun).toEqual({ directionDeg: 'into-wind', offsetMi: 0 });
+    expect(migrated.exitAlongMi).toBe(0);
     expect(migrated.targetRadiusMi).toBe(0.25);
     expect(migrated.showGrid).toBe(false);
+  });
+
+  it('validates the mode and the free-mode fields', () => {
+    expect(migrateFlockingParams({ mode: 'free' }).mode).toBe('free');
+    expect(migrateFlockingParams({ mode: 'solve' }).mode).toBe('classic');
+    expect(migrateFlockingParams({ canopyDirection: 400 }).canopyDirection).toBe(40);
+    expect(migrateFlockingParams({ canopyDirection: 'weird' }).canopyDirection)
+      .toBe('follow-jumprun');
+    expect(migrateFlockingParams({ exitAlongMi: -99 }).exitAlongMi).toBe(-20);
   });
 
   it('validates and clamps a jumprun config', () => {

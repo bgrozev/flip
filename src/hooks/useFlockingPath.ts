@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 
 import { FlightPath, FlightPoint, LatLng, Target } from '../types';
 import {
+  CANOPY_DEVIATION_WARN_DEG,
   FlockingParams,
   FlockingVectors,
   JumprunLine,
   SpotDescription,
-  bestExitAlongMi,
   flockingVectors,
   intoWindDirection,
   jumprunLineOrigin,
@@ -15,6 +15,7 @@ import {
   pointAlongJumprun,
   spotDescription
 } from '../core/flocking';
+import { driftAngle } from '../core/pathStats';
 import { addWind, averageWind, translate } from '../core/geometry';
 import { latLngToPoint } from '../core/coords';
 import { AltitudeUnit } from '../core/units';
@@ -25,24 +26,26 @@ const POM_INTERVAL_FT = 1000;
 const POM_INTERVAL_METRIC_FT = 820.2; // 250 m
 
 export interface FlockingDerived {
-  /** No-wind descent path (ghost), anchored at the solved exit. */
+  /** No-wind descent path (ghost). */
   ideal: FlightPath;
-  /** Wind-corrected descent path: exit (last point) on the jumprun line. */
+  /** Wind-corrected descent path; last point = exit. */
   corrected: FlightPath;
-  /** The solver's exit: the point on the jumprun line whose flight ends closest to the target. */
+  /** The exit spot. */
   exit: LatLng | null;
   /** Where the flight ends (point[0] of the corrected path). */
   end: LatLng | null;
-  /** Distance from the end to the target, miles. */
+  /** Distance from the end to the target, miles (free mode; null in classic). */
   missMi: number | null;
-  /** Whether the end lands inside the target area. */
+  /** Whether the end lands inside the target area (always true in classic). */
   onTarget: boolean;
-  /** Resolved jumprun direction (into-wind resolved from the winds). */
+  /** Resolved jumprun direction. */
   jumprunDeg: number;
   /** Resolved canopy flight direction. */
   canopyDeg: number;
   /** The current into-wind direction (for quick-set buttons). */
   intoWindDeg: number;
+  /** Free mode: canopy deviates from the jumprun by more than the warn limit. */
+  canopyDeviationWarning: boolean;
   /** The FWC drift block: wind drift / canopy flight / combined. */
   vectors: FlockingVectors | null;
   /** FWC spot description relative to `reference`. */
@@ -53,7 +56,7 @@ export interface FlockingDerived {
   hasWind: boolean;
   /** Average wind over the window (for the toolbar summary / wind arrow). */
   averageWind: { speedKts?: number; direction?: number };
-  /** The jumprun line. */
+  /** The jumprun line (free mode; null in classic — the run ends at the exit). */
   jumprunLine: JumprunLine | null;
 }
 
@@ -77,6 +80,7 @@ const EMPTY: FlockingDerived = {
   jumprunDeg: 0,
   canopyDeg: 0,
   intoWindDeg: 0,
+  canopyDeviationWarning: false,
   vectors: null,
   spot: null,
   reference: { lat: 0, lng: 0 },
@@ -105,20 +109,16 @@ function pointToLatLng(p: FlightPoint): LatLng {
 }
 
 /**
- * The flocking derive pipeline. The canopy flight and the jumprun are
- * independent:
+ * The flocking derive pipeline, per the panel sub-mode:
  *
- * - The canopy flight is exactly what is configured: direction (into-wind
- *   resolves from the winds) at the configured horizontal/vertical speeds,
- *   with the wind applied. Its combined displacement Δ (exit → end) is
- *   therefore fixed.
- * - The jumprun is a line: its own direction + lateral offset from the
- *   Spot Reference. The solver picks the exit ON the line whose flight end
- *   (exit + Δ) lands closest to the target: the projection of (target − Δ)
- *   onto the line.
- * - When the end misses the target area, `onTarget` is false and `missMi`
- *   says by how much — the UI highlights it; the path still renders the
- *   real configured flight.
+ * - classic (FWC): the user picks the canopy flight direction; the jumprun
+ *   IS that direction, leaving a unique exit — the wind-blown last point of
+ *   the path anchored end-at-target. No miss (the end is the target by
+ *   construction).
+ * - free: the user owns the jumprun line (direction + offset), the exit
+ *   position on it and the canopy direction (default: follow the jumprun).
+ *   The configured flight is anchored at the chosen exit; the end, its
+ *   distance to the target and the target-area verdict are reported.
  */
 export function useFlockingPath({
   active,
@@ -144,13 +144,16 @@ export function useFlockingPath({
       interpolateWind
     );
 
-    const canopyDeg = params.direction === 'into-wind' ? intoWindDeg : params.direction;
-    const jumprunDeg = params.jumprun.directionDeg === 'into-wind'
-      ? intoWindDeg
-      : params.jumprun.directionDeg;
+    const free = params.mode === 'free';
+    const jumprunDeg = free
+      ? params.jumprun.directionDeg === 'into-wind'
+        ? intoWindDeg
+        : params.jumprun.directionDeg
+      : params.direction === 'into-wind' ? intoWindDeg : params.direction;
+    const canopyDeg = free
+      ? params.canopyDirection === 'follow-jumprun' ? jumprunDeg : params.canopyDirection
+      : jumprunDeg;
 
-    // The configured flight, first anchored end-at-target to obtain its
-    // fixed combined displacement Δ = end − exit.
     const raw = makeFlockingPath({
       windowTopFt: params.windowTopFt,
       windowBottomFt: params.windowBottomFt,
@@ -167,21 +170,38 @@ export function useFlockingPath({
       return { ...EMPTY, reference, hasWind, jumprunDeg, canopyDeg, intoWindDeg };
     }
 
-    const exitAtTarget = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
-    // Δ as an east/north miles vector: exit → end (the end sat at the target)
-    const delta = localMilesEN(exitAtTarget, target.target);
+    if (!free) {
+      // Classic: unique solution, end at the target, exit wind-blown.
+      const exit = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
 
-    // Best exit on the jumprun line: projection of (target − Δ) onto it
+      return {
+        ideal: idealAtTarget,
+        corrected: correctedAtTarget,
+        exit,
+        end: target.target,
+        missMi: null,
+        onTarget: true,
+        jumprunDeg,
+        canopyDeg,
+        intoWindDeg,
+        canopyDeviationWarning: false,
+        vectors: flockingVectors(idealAtTarget, correctedAtTarget),
+        spot: spotDescription(exit, reference, jumprunDeg),
+        reference,
+        hasWind,
+        averageWind: averageWind(idealAtTarget, correctedAtTarget),
+        jumprunLine: null
+      };
+    }
+
+    // Free: anchor the flight at the chosen exit on the jumprun line.
     const jumprunLine: JumprunLine = {
       origin: jumprunLineOrigin(reference, jumprunDeg, params.jumprun.offsetMi),
       directionDeg: jumprunDeg
     };
-    const exit = pointAlongJumprun(
-      jumprunLine,
-      bestExitAlongMi(jumprunLine, target.target, delta)
-    );
+    const exit = pointAlongJumprun(jumprunLine, params.exitAlongMi);
 
-    // Anchor the flight at the solved exit
+    const exitAtTarget = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
     const dLng = exit.lng - exitAtTarget.lng;
     const dLat = exit.lat - exitAtTarget.lat;
     const ideal = shiftPath(idealAtTarget, dLng, dLat);
@@ -201,6 +221,7 @@ export function useFlockingPath({
       jumprunDeg,
       canopyDeg,
       intoWindDeg,
+      canopyDeviationWarning: driftAngle(canopyDeg, jumprunDeg) > CANOPY_DEVIATION_WARN_DEG,
       vectors: flockingVectors(ideal, corrected),
       spot: spotDescription(exit, reference, jumprunDeg),
       reference,
