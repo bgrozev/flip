@@ -114,8 +114,10 @@ export interface FlockingLayerProps {
   distanceUnit: DistanceUnit;
   /** Wind profile for the per-POM tooltip wind line. */
   winds: WindProfile;
-  /** Pinned reference point C, if any (null = spot is relative to target). */
+  /** Effective Spot Reference position (pinned point, or the target). */
   reference: LatLng | null;
+  /** Drag the Spot Reference on the map (pins it at the dropped point). */
+  onReferenceDrag?: (pos: LatLng) => void;
   /** End-of-jump target B (center of the target area). */
   target: LatLng;
   /** Radius of the target area around B, miles. */
@@ -154,6 +156,7 @@ export default function FlockingLayer({
   distanceUnit,
   winds,
   reference,
+  onReferenceDrag,
   target,
   targetRadiusMi,
   jumprunLine,
@@ -588,7 +591,8 @@ export default function FlockingLayer({
         );
       })}
 
-      {/* Pinned reference point C: an anchor-ish ring + dot + label */}
+      {/* Spot Reference: an amber ring + label, draggable on the map
+          (dragging pins it at the dropped point). */}
       {reference && (
         <>
           <MapCircle
@@ -601,18 +605,30 @@ export default function FlockingLayer({
             zIndex={4}
             clickable={false}
           />
-          <MapCircle
-            center={reference}
-            radius={2}
-            fillColor={REFERENCE_COLOR}
-            fillOpacity={1}
-            strokeOpacity={0}
-            zIndex={4}
-            clickable={false}
-          />
           <MapOverlay position={reference}>
             <div style={REFERENCE_LABEL_STYLE}>Spot Reference</div>
           </MapOverlay>
+          {onReferenceDrag ? (
+            <MapDragHandle
+              position={reference}
+              color={REFERENCE_COLOR}
+              scale={5}
+              cursor="grab"
+              zIndex={106}
+              onDrag={onReferenceDrag}
+              onDragEnd={onReferenceDrag}
+            />
+          ) : (
+            <MapCircle
+              center={reference}
+              radius={2}
+              fillColor={REFERENCE_COLOR}
+              fillOpacity={1}
+              strokeOpacity={0}
+              zIndex={4}
+              clickable={false}
+            />
+          )}
         </>
       )}
 

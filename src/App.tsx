@@ -319,6 +319,10 @@ function DashboardContent() {
   const handleCanopyRotate = useCallback((directionDeg: number) => {
     setFlockingParams({ ...flockingParams, canopyDirection: Math.round(directionDeg) });
   }, [flockingParams, setFlockingParams]);
+  // Dragging the Spot Reference pins it at the dropped point.
+  const handleReferenceDrag = useCallback((pos: LatLng) => {
+    setFlockingParams({ ...flockingParams, referencePoint: pos });
+  }, [flockingParams, setFlockingParams]);
 
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
     // The fetch limit must reach the top of what is flown: the corrected
@@ -524,7 +528,8 @@ function DashboardContent() {
         spot: flocking.spot,
         distanceUnit: modeSettings.units.distance,
         winds: effectiveWinds,
-        reference: flockingParams.referencePoint,
+        reference: flocking.reference,
+        onReferenceDrag: handleReferenceDrag,
         target: target.target,
         targetRadiusMi: flockingParams.targetRadiusMi,
         jumprunLine: flocking.jumprunLine,
