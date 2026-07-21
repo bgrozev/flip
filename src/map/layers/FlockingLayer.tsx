@@ -134,6 +134,8 @@ export interface FlockingLayerProps {
   onJumprunTranslate?: (offsetMi: number) => void;
   /** Free mode: rotate the canopy flight (new direction, cardinal deg). */
   onCanopyRotate?: (directionDeg: number) => void;
+  /** Solve mode: corridor exit-rectangle outlines (closed loops). */
+  corridorOutlines?: LatLng[][];
   /** Render the jumprun-aligned distance grid around the Spot Reference. */
   showGrid: boolean;
   showPreWind: boolean;
@@ -160,6 +162,7 @@ export default function FlockingLayer({
   onJumprunRotate,
   onJumprunTranslate,
   onCanopyRotate,
+  corridorOutlines = [],
   showGrid,
   showPreWind,
   showPoms,
@@ -445,6 +448,19 @@ export default function FlockingLayer({
           )}
         </>
       )}
+
+      {/* Solve mode: allowed-exit rectangles per corridor */}
+      {corridorOutlines.map((loop, i) => (
+        <MapPolyline
+          key={`corridor-${i}`}
+          path={loop}
+          color={JUMPRUN_COLOR}
+          opacity={0.35}
+          weight={1}
+          zIndex={0}
+          dotted
+        />
+      ))}
 
       {/* Distance grid */}
       {grid && grid.lines.map(line => (

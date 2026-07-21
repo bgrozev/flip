@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
+import { SolveResult } from '../core/flockingSolve';
 import {
   CANOPY_DEVIATION_WARN_DEG,
   DISTANCE_UNITS,
@@ -32,6 +33,7 @@ import {
   FlockingParams,
   FlockingVectors,
   JumprunConfig,
+  SolveCorridorParams,
   SpotDescription,
   displayToMiles,
   milesToDisplay
@@ -186,6 +188,8 @@ interface FlockingComponentProps {
   onTarget: boolean;
   /** Free mode: canopy deviates from the jumprun by more than the limit. */
   canopyDeviationWarning: boolean;
+  /** Solve mode: solver result (per-corridor + best). */
+  solve: SolveResult | null;
   /** Whether any non-calm wind rows are loaded. */
   hasWind: boolean;
   /** Current target position (B) — where "Pin spot reference" pins C. */
@@ -202,6 +206,7 @@ export default function FlockingComponent({
   missMi,
   onTarget,
   canopyDeviationWarning,
+  solve,
   hasWind,
   target
 }: FlockingComponentProps) {
@@ -231,6 +236,34 @@ export default function FlockingComponent({
     set({ jumprun: { ...params.jumprun, ...patch } }, external);
   };
 
+  const setCorridor = (i: number, patch: Partial<SolveCorridorParams>) => {
+    set({
+      solveCorridors: params.solveCorridors.map(
+        (c, j) => j === i ? { ...c, ...patch } : c
+      )
+    });
+  };
+
+  const addCorridor = () => {
+    set({
+      solveCorridors: [
+        ...params.solveCorridors,
+        {
+          directionDeg: 0,
+          offsetMinMi: -1,
+          offsetMaxMi: 1,
+          alongMinMi: -5,
+          alongMaxMi: 3,
+          canopyToleranceDeg: 15
+        }
+      ]
+    }, true);
+  };
+
+  const removeCorridor = (i: number) => {
+    set({ solveCorridors: params.solveCorridors.filter((_c, j) => j !== i) }, true);
+  };
+
   const activePreset = PRESETS.find(
     p => p.descentRateMph === params.descentRateMph &&
       p.horizontalSpeedMph === params.horizontalSpeedMph
@@ -245,7 +278,8 @@ export default function FlockingComponent({
         title={'Classic: pick the canopy flight, the jumprun follows it — one unique '
           + 'exit solution (as in the Flocking Wind Calculator). Free: set the '
           + 'jumprun, the exit and the canopy flight yourself and see where the '
-          + 'jump ends up.'}
+          + 'jump ends up. Solve: describe the allowed jumprun corridors and let '
+          + 'the app find the best exit.'}
       >
         <ToggleButtonGroup
           value={params.mode}
@@ -257,6 +291,7 @@ export default function FlockingComponent({
         >
           <ToggleButton value="classic">Classic</ToggleButton>
           <ToggleButton value="free">Free</ToggleButton>
+          <ToggleButton value="solve">Solve</ToggleButton>
         </ToggleButtonGroup>
       </Tooltip>
 
@@ -381,69 +416,71 @@ export default function FlockingComponent({
         </Stack>
       </Section>
 
-      <Section title="Canopy flight" defaultExpanded>
-        {params.mode === 'classic' ? (
-          <DirectionSelector
-            value={params.direction}
-            resolvedDeg={canopyDeg}
-            label="Direction"
-            title="Direction flown over ground during the jump (the jumprun follows it)."
-            editKey={`canopy-${externalEdit}`}
-            onChange={v => set({ direction: v })}
-            onExternalChange={v => set({ direction: v }, true)}
-          />
-        ) : (
-          <>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Tooltip title="Follow the jumprun direction, or set the canopy flight direction explicitly.">
-                <ToggleButtonGroup
-                  value={params.canopyDirection === 'follow-jumprun' ? 'follow' : 'custom'}
-                  exclusive
-                  onChange={(_e, v) => {
-                    if (v === 'follow') {
-                      set({ canopyDirection: 'follow-jumprun' }, true);
-                    } else if (v === 'custom') {
-                      set({ canopyDirection: roundDeg(jumprunDeg) }, true);
-                    }
-                  }}
-                  fullWidth
-                  size="small"
-                  color="primary"
-                >
-                  <ToggleButton value="follow">Follow jumprun</ToggleButton>
-                  <ToggleButton value="custom">Custom</ToggleButton>
-                </ToggleButtonGroup>
-              </Tooltip>
-            </Stack>
-            {params.canopyDirection !== 'follow-jumprun' && (
-              <Stack direction="row" spacing={2} alignItems="center">
-                <NumberInput
-                  key={`canopy-free-${externalEdit}`}
-                  title="Canopy flight direction over ground (with profiles: the initial direction)."
-                  label="Direction"
-                  initialValue={params.canopyDirection}
-                  step={5}
-                  min={0}
-                  max={360}
-                  unit="˚"
-                  onChange={v => set({ canopyDirection: normalizeDirection(v) })}
-                />
+      {params.mode !== 'solve' && (
+        <Section title="Canopy flight" defaultExpanded>
+          {params.mode === 'classic' ? (
+            <DirectionSelector
+              value={params.direction}
+              resolvedDeg={canopyDeg}
+              label="Direction"
+              title="Direction flown over ground during the jump (the jumprun follows it)."
+              editKey={`canopy-${externalEdit}`}
+              onChange={v => set({ direction: v })}
+              onExternalChange={v => set({ direction: v }, true)}
+            />
+          ) : (
+            <>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Tooltip title="Follow the jumprun direction, or set the canopy flight direction explicitly.">
+                  <ToggleButtonGroup
+                    value={params.canopyDirection === 'follow-jumprun' ? 'follow' : 'custom'}
+                    exclusive
+                    onChange={(_e, v) => {
+                      if (v === 'follow') {
+                        set({ canopyDirection: 'follow-jumprun' }, true);
+                      } else if (v === 'custom') {
+                        set({ canopyDirection: roundDeg(jumprunDeg) }, true);
+                      }
+                    }}
+                    fullWidth
+                    size="small"
+                    color="primary"
+                  >
+                    <ToggleButton value="follow">Follow jumprun</ToggleButton>
+                    <ToggleButton value="custom">Custom</ToggleButton>
+                  </ToggleButtonGroup>
+                </Tooltip>
               </Stack>
-            )}
-            {params.canopyDirection === 'follow-jumprun' && (
-              <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+              {params.canopyDirection !== 'follow-jumprun' && (
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <NumberInput
+                    key={`canopy-free-${externalEdit}`}
+                    title="Canopy flight direction over ground (with profiles: the initial direction)."
+                    label="Direction"
+                    initialValue={params.canopyDirection}
+                    step={5}
+                    min={0}
+                    max={360}
+                    unit="˚"
+                    onChange={v => set({ canopyDirection: normalizeDirection(v) })}
+                  />
+                </Stack>
+              )}
+              {params.canopyDirection === 'follow-jumprun' && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
                 Following jumprun · {roundDeg(canopyDeg)}˚
-              </Typography>
-            )}
-            {canopyDeviationWarning && (
-              <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'left' }}>
+                </Typography>
+              )}
+              {canopyDeviationWarning && (
+                <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'left' }}>
                 Canopy flight deviates from the jumprun by more than
-                {' '}{CANOPY_DEVIATION_WARN_DEG}˚
-              </Typography>
-            )}
-          </>
-        )}
-      </Section>
+                  {' '}{CANOPY_DEVIATION_WARN_DEG}˚
+                </Typography>
+              )}
+            </>
+          )}
+        </Section>
+      )}
 
       {params.mode === 'free' && (
         <Section title="Jumprun" defaultExpanded>
@@ -497,6 +534,132 @@ export default function FlockingComponent({
                 set({ exitAlongMi: displayToMiles(v as number, params.distanceUnit) })}
             />
           </Box>
+        </Section>
+      )}
+
+      {params.mode === 'solve' && (
+        <Section title="Corridors" defaultExpanded>
+          {params.solveCorridors.length === 0 && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+              No corridors — add one to describe an allowed jumprun.
+            </Typography>
+          )}
+          {params.solveCorridors.map((c, i) => {
+            const result = solve?.perCorridor[i];
+            const isBest = solve?.best?.corridorIndex === i;
+
+            return (
+              <Box
+                key={i}
+                sx={{
+                  border: 1,
+                  borderColor: isBest ? 'success.main' : 'divider',
+                  borderRadius: 1,
+                  p: 1
+                }}
+              >
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                  <Typography variant="body2" sx={{ color: isBest ? 'success.main' : 'text.secondary' }}>
+                    {`Corridor ${i + 1} · ${roundDeg(c.directionDeg)}˚`}
+                    {result && ` · ${result.missMi <= params.targetRadiusMi ? 'hits' : 'misses by'} ${
+                      result.missMi <= params.targetRadiusMi
+                        ? ''
+                        : `${milesToDisplay(result.missMi, params.distanceUnit).toFixed(2)} ${unitLabel}`}`}
+                    {isBest && ' · best'}
+                  </Typography>
+                  <Button size="small" color="error" onClick={() => removeCorridor(i)}>
+                    Remove
+                  </Button>
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <NumberInput
+                    key={`c${i}-dir-${externalEdit}`}
+                    title="Jumprun direction for this corridor."
+                    label="Direction"
+                    initialValue={roundDeg(c.directionDeg)}
+                    step={5}
+                    min={0}
+                    max={360}
+                    unit="˚"
+                    onChange={v => setCorridor(i, { directionDeg: normalizeDirection(v) })}
+                  />
+                  <NumberInput
+                    key={`c${i}-tol-${externalEdit}`}
+                    title="How far the canopy flight may deviate from the run."
+                    label="Canopy ±"
+                    initialValue={c.canopyToleranceDeg}
+                    step={5}
+                    min={LIMITS.flockingCanopyToleranceDeg.min}
+                    max={LIMITS.flockingCanopyToleranceDeg.max}
+                    unit="˚"
+                    onChange={v => setCorridor(i, { canopyToleranceDeg: v })}
+                  />
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <NumberInput
+                    key={`c${i}-offmin-${externalEdit}`}
+                    title="Left-most allowed lateral offset of the run (negative = left)."
+                    label="Offset min"
+                    initialValue={Number(milesToDisplay(c.offsetMinMi, params.distanceUnit).toFixed(2))}
+                    step={0.25}
+                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+                    unit={unitLabel}
+                    onChange={v => setCorridor(i, { offsetMinMi: displayToMiles(v, params.distanceUnit) })}
+                  />
+                  <NumberInput
+                    key={`c${i}-offmax-${externalEdit}`}
+                    title="Right-most allowed lateral offset of the run."
+                    label="Offset max"
+                    initialValue={Number(milesToDisplay(c.offsetMaxMi, params.distanceUnit).toFixed(2))}
+                    step={0.25}
+                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+                    unit={unitLabel}
+                    onChange={v => setCorridor(i, { offsetMaxMi: displayToMiles(v, params.distanceUnit) })}
+                  />
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <NumberInput
+                    key={`c${i}-alongmin-${externalEdit}`}
+                    title="Earliest allowed exit along the run (signed; negative = before the reference)."
+                    label="Along min"
+                    initialValue={Number(milesToDisplay(c.alongMinMi, params.distanceUnit).toFixed(2))}
+                    step={0.5}
+                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, params.distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, params.distanceUnit)}
+                    unit={unitLabel}
+                    onChange={v => setCorridor(i, { alongMinMi: displayToMiles(v, params.distanceUnit) })}
+                  />
+                  <NumberInput
+                    key={`c${i}-alongmax-${externalEdit}`}
+                    title="Latest allowed exit along the run."
+                    label="Along max"
+                    initialValue={Number(milesToDisplay(c.alongMaxMi, params.distanceUnit).toFixed(2))}
+                    step={0.5}
+                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, params.distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, params.distanceUnit)}
+                    unit={unitLabel}
+                    onChange={v => setCorridor(i, { alongMaxMi: displayToMiles(v, params.distanceUnit) })}
+                  />
+                </Stack>
+              </Box>
+            );
+          })}
+          <Button size="small" onClick={addCorridor} sx={{ alignSelf: 'flex-start' }}>
+            Add corridor
+          </Button>
+          <NumberInput
+            key={`solve-radius-${externalEdit}`}
+            title="Radius of the target area: the jump works if it ends anywhere inside it."
+            label="Target radius"
+            initialValue={Number(milesToDisplay(params.targetRadiusMi, params.distanceUnit).toFixed(2))}
+            step={0.05}
+            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
+            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
+            unit={unitLabel}
+            onChange={value => set({ targetRadiusMi: displayToMiles(value, params.distanceUnit) })}
+          />
         </Section>
       )}
 

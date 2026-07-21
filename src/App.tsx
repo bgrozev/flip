@@ -370,6 +370,7 @@ function DashboardContent() {
         missMi={flocking.missMi}
         onTarget={flocking.onTarget}
         canopyDeviationWarning={flocking.canopyDeviationWarning}
+        solve={flocking.solve}
         hasWind={flocking.hasWind}
         target={target.target}
       />
@@ -529,10 +530,11 @@ function DashboardContent() {
         end: flocking.end,
         missMi: flocking.missMi,
         onTarget: flocking.onTarget,
-        onExitDrag: handleExitDrag,
-        onJumprunRotate: handleJumprunRotate,
-        onJumprunTranslate: handleJumprunTranslate,
-        onCanopyRotate: handleCanopyRotate,
+        onExitDrag: flockingParams.mode === 'free' ? handleExitDrag : undefined,
+        onJumprunRotate: flockingParams.mode === 'free' ? handleJumprunRotate : undefined,
+        onJumprunTranslate: flockingParams.mode === 'free' ? handleJumprunTranslate : undefined,
+        onCanopyRotate: flockingParams.mode === 'free' ? handleCanopyRotate : undefined,
+        corridorOutlines: flocking.corridorOutlines,
         showGrid: flockingParams.showGrid
       } : undefined}
     />
