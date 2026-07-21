@@ -191,22 +191,22 @@ export default function FlockingLayer({
     return { start, barbA, barbB };
   }, [exit, jumprunDeg]);
 
-  // The full jumprun line, drawn 3 nm beyond the exit and the target's
-  // projection on both sides.
+  // The free-mode jumprun: like the classic one, a 3 nm ride ENDING at
+  // the exit (kept short so the handles stay manageable).
   const runLine = useMemo(() => {
-    if (!jumprunLine) {
+    if (!jumprunLine || !exit) {
       return null;
     }
 
-    const tTarget = projectOntoJumprunMi(jumprunLine, target);
-    const tExit = exit ? projectOntoJumprunMi(jumprunLine, exit) : tTarget;
-    const extraMi = JUMPRUN_LENGTH_M / METERS_PER_MILE; // 3 nm of context
+    const tExit = projectOntoJumprunMi(jumprunLine, exit);
+    const lengthMi = JUMPRUN_LENGTH_M / METERS_PER_MILE;
 
     return {
-      a: pointAlongJumprun(jumprunLine, Math.min(tTarget, tExit) - extraMi),
-      b: pointAlongJumprun(jumprunLine, Math.max(tTarget, tExit) + extraMi)
+      a: pointAlongJumprun(jumprunLine, tExit - lengthMi),
+      b: exit,
+      tExit
     };
-  }, [jumprunLine, target, exit]);
+  }, [jumprunLine, exit]);
 
   // Jumprun-aligned distance grid around the Spot Reference (or the target
   // when no reference is pinned): thin lines every distance unit, ±3 units
@@ -331,7 +331,8 @@ export default function FlockingLayer({
       )}
       {jumprunLine && exit && onJumprunRotate && (() => {
         const t = projectOntoJumprunMi(jumprunLine, exit);
-        const handlePos = pointAlongJumprun(jumprunLine, t + 1.15078);
+        // Far end of the 3 nm run: most leverage for rotating
+        const handlePos = pointAlongJumprun(jumprunLine, t - JUMPRUN_LENGTH_M / METERS_PER_MILE);
         const rotate = (pos: LatLng) => {
           const en = localMilesEN(jumprunLine.origin, pos);
 
@@ -352,7 +353,8 @@ export default function FlockingLayer({
       })()}
       {jumprunLine && exit && onJumprunTranslate && (() => {
         const t = projectOntoJumprunMi(jumprunLine, exit);
-        const handlePos = pointAlongJumprun(jumprunLine, t - 1.15078);
+        // Midpoint of the 3 nm run
+        const handlePos = pointAlongJumprun(jumprunLine, t - JUMPRUN_LENGTH_M / METERS_PER_MILE / 2);
         const translate = (pos: LatLng) => {
           // New offset: the perpendicular (right-of-run) component of the
           // dragged position relative to the effective Spot Reference.
