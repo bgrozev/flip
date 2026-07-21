@@ -64,6 +64,11 @@ function roundDeg(deg: number): number {
   return Math.round(deg) % 360;
 }
 
+/** A distance in the display unit, rounded to 0.1 for the input fields. */
+function roundDist(miles: number, unit: DistanceUnit): number {
+  return Math.round(milesToDisplay(miles, unit) * 10) / 10;
+}
+
 /** FWC's vector line: "1.66 mi at 180˚". */
 function vectorText(v: DriftVector, unit: DistanceUnit): string {
   return `${milesToDisplay(v.lengthMi, unit).toFixed(2)} ${DISTANCE_UNIT_LABELS[unit]}` +
@@ -126,8 +131,7 @@ function DirectionSelector({
           label={label}
           initialValue={intoWind ? roundDeg(resolvedDeg) : value as number}
           step={5}
-          min={0}
-          max={360}
+          wrap={360}
           unit="˚"
           onChange={v => onChange(normalizeDirection(v))}
         />
@@ -459,8 +463,7 @@ export default function FlockingComponent({
                     label="Direction"
                     initialValue={params.canopyDirection}
                     step={5}
-                    min={0}
-                    max={360}
+                    wrap={360}
                     unit="˚"
                     onChange={v => set({ canopyDirection: normalizeDirection(v) })}
                   />
@@ -499,7 +502,7 @@ export default function FlockingComponent({
               title={'Lateral offset of the jumprun line from the Spot Reference '
                 + '(positive = right of the run direction).'}
               label="Offset"
-              initialValue={Number(milesToDisplay(params.jumprun.offsetMi, params.distanceUnit).toFixed(2))}
+              initialValue={roundDist(params.jumprun.offsetMi, params.distanceUnit)}
               step={0.1}
               min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
               max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
@@ -510,7 +513,7 @@ export default function FlockingComponent({
               key={`jr-radius-${externalEdit}`}
               title="Radius of the target area: the jump works if it ends anywhere inside it."
               label="Target radius"
-              initialValue={Number(milesToDisplay(params.targetRadiusMi, params.distanceUnit).toFixed(2))}
+              initialValue={roundDist(params.targetRadiusMi, params.distanceUnit)}
               step={0.05}
               min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
               max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
@@ -578,8 +581,7 @@ export default function FlockingComponent({
                     label="Direction"
                     initialValue={roundDeg(c.directionDeg)}
                     step={5}
-                    min={0}
-                    max={360}
+                    wrap={360}
                     unit="˚"
                     onChange={v => setCorridor(i, { directionDeg: normalizeDirection(v) })}
                   />
@@ -600,7 +602,7 @@ export default function FlockingComponent({
                     key={`c${i}-offmin-${externalEdit}`}
                     title="Left-most allowed lateral offset of the run (negative = left)."
                     label="Offset min"
-                    initialValue={Number(milesToDisplay(c.offsetMinMi, params.distanceUnit).toFixed(2))}
+                    initialValue={roundDist(c.offsetMinMi, params.distanceUnit)}
                     step={0.25}
                     min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
                     max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
@@ -611,7 +613,7 @@ export default function FlockingComponent({
                     key={`c${i}-offmax-${externalEdit}`}
                     title="Right-most allowed lateral offset of the run."
                     label="Offset max"
-                    initialValue={Number(milesToDisplay(c.offsetMaxMi, params.distanceUnit).toFixed(2))}
+                    initialValue={roundDist(c.offsetMaxMi, params.distanceUnit)}
                     step={0.25}
                     min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
                     max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
@@ -624,7 +626,7 @@ export default function FlockingComponent({
                     key={`c${i}-alongmin-${externalEdit}`}
                     title="Earliest allowed exit along the run (signed; negative = before the reference)."
                     label="Along min"
-                    initialValue={Number(milesToDisplay(c.alongMinMi, params.distanceUnit).toFixed(2))}
+                    initialValue={roundDist(c.alongMinMi, params.distanceUnit)}
                     step={0.5}
                     min={milesToDisplay(LIMITS.flockingExitAlongMi.min, params.distanceUnit)}
                     max={milesToDisplay(LIMITS.flockingExitAlongMi.max, params.distanceUnit)}
@@ -635,7 +637,7 @@ export default function FlockingComponent({
                     key={`c${i}-alongmax-${externalEdit}`}
                     title="Latest allowed exit along the run."
                     label="Along max"
-                    initialValue={Number(milesToDisplay(c.alongMaxMi, params.distanceUnit).toFixed(2))}
+                    initialValue={roundDist(c.alongMaxMi, params.distanceUnit)}
                     step={0.5}
                     min={milesToDisplay(LIMITS.flockingExitAlongMi.min, params.distanceUnit)}
                     max={milesToDisplay(LIMITS.flockingExitAlongMi.max, params.distanceUnit)}
@@ -653,7 +655,7 @@ export default function FlockingComponent({
             key={`solve-radius-${externalEdit}`}
             title="Radius of the target area: the jump works if it ends anywhere inside it."
             label="Target radius"
-            initialValue={Number(milesToDisplay(params.targetRadiusMi, params.distanceUnit).toFixed(2))}
+            initialValue={roundDist(params.targetRadiusMi, params.distanceUnit)}
             step={0.05}
             min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
             max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}

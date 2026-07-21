@@ -18,6 +18,11 @@ interface NumberInputProps {
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  /**
+   * Cyclic modulus (e.g. 360 for a heading): stepping past the top wraps
+   * to 0 and below 0 wraps to the top. Overrides min/max clamping.
+   */
+  wrap?: number;
 }
 
 export default function NumberInput({
@@ -28,10 +33,13 @@ export default function NumberInput({
   unit,
   onChange,
   min,
-  max
+  max,
+  wrap
 }: NumberInputProps) {
   const [value, setValue] = useState<number | string>(initialValue);
   const [valid, setValid] = useState(isNumberInRange(initialValue, min, max));
+
+  const wrapValue = (num: number) => ((num % wrap!) + wrap!) % wrap!;
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const str = event.target.value;
@@ -40,11 +48,18 @@ export default function NumberInput({
     if (str === '') {
       setValue('');
     } else if (!isNaN(num)) {
-      setValue(num);
-      if (isNumberInRange(num, min, max)) {
+      if (wrap) {
+        const wrapped = wrapValue(num);
+
+        setValue(wrapped);
+        setValid(true);
+        onChange(wrapped);
+      } else if (isNumberInRange(num, min, max)) {
+        setValue(num);
         setValid(true);
         onChange(num);
       } else {
+        setValue(num);
         setValid(false);
       }
     }
@@ -58,15 +73,15 @@ export default function NumberInput({
   };
 
   // Out-of-range entries are never propagated raw; on blur they are clamped
-  // into range, shown, and propagated.
+  // into range (or wrapped, for cyclic fields), shown, and propagated.
   const handleBlur = () => {
     const num = typeof value === 'number' ? value : Number(value);
-    const clamped = clampNumber(num, min, max);
+    const resolved = wrap ? wrapValue(num) : clampNumber(num, min, max);
 
-    if (clamped !== num || !valid) {
-      setValue(clamped);
+    if (resolved !== num || !valid) {
+      setValue(resolved);
       setValid(true);
-      onChange(clamped);
+      onChange(resolved);
     }
   };
 
@@ -90,7 +105,9 @@ export default function NumberInput({
           onBlur={handleBlur}
           type="number"
           error={!valid}
-          inputProps={{ 'aria-label': label, step, min, max }}
+          inputProps={wrap
+            ? { 'aria-label': label, step }
+            : { 'aria-label': label, step, min, max }}
           sx={valid ? {} : { color: 'red' }}
         />
         <FormHelperText id={`${label}-helper-text`} error={!valid}>
