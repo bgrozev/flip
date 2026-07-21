@@ -298,20 +298,25 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     history the same day: exit-solver-only variant (`2fd0225`) replaced
     by this; miss display (red MISSES + connector + distance) kept.
     Browser-verified vs hand calcs; handle DRAGGING needs an owner pass.
-  - ☐ **solve sub-mode (restricted corridors)** — owner-accepted design,
-    deferred. Minimize the miss over a described subset of jumprun
-    configurations. NO brute force needed — the problem collapses:
-    the flight's combined displacement Δ is fixed per canopy direction
-    φ; over exits on a jumprun corridor (along × offset rectangle) the
-    best exit is the clamped projection of (target − Δ) — closed form;
-    over φ ∈ [run ± tol], (target − Δ(φ)) traces an arc — sample at
-    0.5° (61 points); over run directions — iterate the described list
-    or sample a range at 1°. Worst case ≈ 22k closed-form evaluations,
-    microseconds, live re-solve. Test oracle: agreement with a coarse
-    brute force. Corridor schema: {jumprun: heading|range, offsetRange,
-    alongRange, canopyToleranceDeg (default 15)}[]; solver reports the
-    best solution + which corridor. (With profiles, Δ(φ) stays a
-    fixed-length rotating vector, so the whole structure survives.)
+  - ☑ **solve sub-mode (restricted corridors)** — DONE (2026-07-18):
+    `008c68a`/`179060b` (core/flockingSolve: analytic solver — best
+    exit per canopy sample is the clamped projection of target − Δ onto
+    the corridor rectangle, φ sampled 0.5° center-outward with
+    strict-improvement tie-breaks so flat optima resolve to the least
+    canopy deviation; brute-force oracle agreement over seeded random
+    scenarios), `5e0868a` (params: persisted solveCorridors list,
+    default = the ZHills N-or-S pair; solve derivation renders the
+    winner exactly like free mode), `74c02cb` (panel: Corridors section
+    with per-corridor hits/misses verdicts and the best highlighted;
+    map: dotted corridor rectangles). Also `9ca3d30`: free-mode run
+    shortened to 3 nm ending at the exit, rotate handle at the far end,
+    translate at the midpoint. Browser-verified (west wind, N/S
+    corridors): solver picked the north run, offset 0.97 mi left +
+    canopy 11° into wind — exactly cancelling the 1.66 mi drift, 'On
+    target (0.00 mi off)'; both corridor verdicts shown. Direction
+    RANGES per corridor (e.g. 'anything from 250 to 290') are a small
+    follow-up ✎ — the solver structure supports them, the schema stores
+    fixed headings today.
   - ☐ **per-DZ corridor presets** — describe DZ jumprun restrictions
     (e.g. ZHills: N/S free, E limited to ~1.5 mi) as stored corridor
     lists, selectable per dropzone; feeds the solve sub-mode. Ties into
