@@ -13,6 +13,7 @@ import {
   Box,
   Button,
   FormControlLabel,
+  Slider,
   Stack,
   Switch,
   ToggleButton,
@@ -23,6 +24,7 @@ import {
 import React, { useState } from 'react';
 
 import {
+  CANOPY_DEVIATION_WARN_DEG,
   DISTANCE_UNITS,
   DISTANCE_UNIT_LABELS,
   DistanceUnit,
@@ -182,6 +184,8 @@ interface FlockingComponentProps {
   missMi: number | null;
   /** Whether the end lands inside the target area. */
   onTarget: boolean;
+  /** Free mode: canopy deviates from the jumprun by more than the limit. */
+  canopyDeviationWarning: boolean;
   /** Whether any non-calm wind rows are loaded. */
   hasWind: boolean;
   /** Current target position (B) — where "Pin spot reference" pins C. */
@@ -197,6 +201,7 @@ export default function FlockingComponent({
   spot,
   missMi,
   onTarget,
+  canopyDeviationWarning,
   hasWind,
   target
 }: FlockingComponentProps) {
@@ -236,6 +241,25 @@ export default function FlockingComponent({
 
   return (
     <Box display="flex" flexDirection="column" gap={1.5}>
+      <Tooltip
+        title={'Classic: pick the canopy flight, the jumprun follows it — one unique '
+          + 'exit solution (as in the Flocking Wind Calculator). Free: set the '
+          + 'jumprun, the exit and the canopy flight yourself and see where the '
+          + 'jump ends up.'}
+      >
+        <ToggleButtonGroup
+          value={params.mode}
+          exclusive
+          onChange={(_e, m) => m !== null && set({ mode: m }, true)}
+          fullWidth
+          size="small"
+          color="primary"
+        >
+          <ToggleButton value="classic">Classic</ToggleButton>
+          <ToggleButton value="free">Free</ToggleButton>
+        </ToggleButtonGroup>
+      </Tooltip>
+
       {!hasWind && (
         <Typography variant="body2" sx={{ textAlign: 'left', color: 'warning.main' }}>
           No wind data loaded — this is the no-wind spot. Fetch winds in the
@@ -358,53 +382,123 @@ export default function FlockingComponent({
       </Section>
 
       <Section title="Canopy flight" defaultExpanded>
-        <DirectionSelector
-          value={params.direction}
-          resolvedDeg={canopyDeg}
-          label="Direction"
-          title="Direction flown over ground during the jump."
-          editKey={`canopy-${externalEdit}`}
-          onChange={v => set({ direction: v })}
-          onExternalChange={v => set({ direction: v }, true)}
-        />
+        {params.mode === 'classic' ? (
+          <DirectionSelector
+            value={params.direction}
+            resolvedDeg={canopyDeg}
+            label="Direction"
+            title="Direction flown over ground during the jump (the jumprun follows it)."
+            editKey={`canopy-${externalEdit}`}
+            onChange={v => set({ direction: v })}
+            onExternalChange={v => set({ direction: v }, true)}
+          />
+        ) : (
+          <>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Tooltip title="Follow the jumprun direction, or set the canopy flight direction explicitly.">
+                <ToggleButtonGroup
+                  value={params.canopyDirection === 'follow-jumprun' ? 'follow' : 'custom'}
+                  exclusive
+                  onChange={(_e, v) => {
+                    if (v === 'follow') {
+                      set({ canopyDirection: 'follow-jumprun' }, true);
+                    } else if (v === 'custom') {
+                      set({ canopyDirection: roundDeg(jumprunDeg) }, true);
+                    }
+                  }}
+                  fullWidth
+                  size="small"
+                  color="primary"
+                >
+                  <ToggleButton value="follow">Follow jumprun</ToggleButton>
+                  <ToggleButton value="custom">Custom</ToggleButton>
+                </ToggleButtonGroup>
+              </Tooltip>
+            </Stack>
+            {params.canopyDirection !== 'follow-jumprun' && (
+              <Stack direction="row" spacing={2} alignItems="center">
+                <NumberInput
+                  key={`canopy-free-${externalEdit}`}
+                  title="Canopy flight direction over ground (with profiles: the initial direction)."
+                  label="Direction"
+                  initialValue={params.canopyDirection}
+                  step={5}
+                  min={0}
+                  max={360}
+                  unit="˚"
+                  onChange={v => set({ canopyDirection: normalizeDirection(v) })}
+                />
+              </Stack>
+            )}
+            {params.canopyDirection === 'follow-jumprun' && (
+              <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+                Following jumprun · {roundDeg(canopyDeg)}˚
+              </Typography>
+            )}
+            {canopyDeviationWarning && (
+              <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'left' }}>
+                Canopy flight deviates from the jumprun by more than
+                {' '}{CANOPY_DEVIATION_WARN_DEG}˚
+              </Typography>
+            )}
+          </>
+        )}
       </Section>
 
-      <Section title="Jumprun" defaultExpanded>
-        <DirectionSelector
-          value={params.jumprun.directionDeg}
-          resolvedDeg={jumprunDeg}
-          label="Jumprun"
-          title="The jumprun the pilots fly — independent of the canopy flight."
-          editKey={`jr-${externalEdit}`}
-          onChange={v => setJumprun({ directionDeg: v })}
-          onExternalChange={v => setJumprun({ directionDeg: v }, true)}
-        />
-        <Stack direction="row" spacing={2}>
-          <NumberInput
-            key={`jr-offset-${externalEdit}`}
-            title={'Lateral offset of the jumprun line from the Spot Reference '
-              + '(positive = right of the run direction).'}
-            label="Offset"
-            initialValue={Number(milesToDisplay(params.jumprun.offsetMi, params.distanceUnit).toFixed(2))}
-            step={0.1}
-            min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
-            max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
-            unit={unitLabel}
-            onChange={value => setJumprun({ offsetMi: displayToMiles(value, params.distanceUnit) })}
+      {params.mode === 'free' && (
+        <Section title="Jumprun" defaultExpanded>
+          <DirectionSelector
+            value={params.jumprun.directionDeg}
+            resolvedDeg={jumprunDeg}
+            label="Jumprun"
+            title="The jumprun the pilots fly — independent of the canopy flight."
+            editKey={`jr-${externalEdit}`}
+            onChange={v => setJumprun({ directionDeg: v })}
+            onExternalChange={v => setJumprun({ directionDeg: v }, true)}
           />
-          <NumberInput
-            key={`jr-radius-${externalEdit}`}
-            title="Radius of the target area: the jump works if it ends anywhere inside it."
-            label="Target radius"
-            initialValue={Number(milesToDisplay(params.targetRadiusMi, params.distanceUnit).toFixed(2))}
-            step={0.05}
-            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
-            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
-            unit={unitLabel}
-            onChange={value => set({ targetRadiusMi: displayToMiles(value, params.distanceUnit) })}
-          />
-        </Stack>
-      </Section>
+          <Stack direction="row" spacing={2}>
+            <NumberInput
+              key={`jr-offset-${externalEdit}`}
+              title={'Lateral offset of the jumprun line from the Spot Reference '
+                + '(positive = right of the run direction).'}
+              label="Offset"
+              initialValue={Number(milesToDisplay(params.jumprun.offsetMi, params.distanceUnit).toFixed(2))}
+              step={0.1}
+              min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+              unit={unitLabel}
+              onChange={value => setJumprun({ offsetMi: displayToMiles(value, params.distanceUnit) })}
+            />
+            <NumberInput
+              key={`jr-radius-${externalEdit}`}
+              title="Radius of the target area: the jump works if it ends anywhere inside it."
+              label="Target radius"
+              initialValue={Number(milesToDisplay(params.targetRadiusMi, params.distanceUnit).toFixed(2))}
+              step={0.05}
+              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
+              unit={unitLabel}
+              onChange={value => set({ targetRadiusMi: displayToMiles(value, params.distanceUnit) })}
+            />
+          </Stack>
+          <Box sx={{ px: 1 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+              Exit · {milesToDisplay(params.exitAlongMi, params.distanceUnit).toFixed(2)} {unitLabel} along
+            </Typography>
+            <Slider
+              size="small"
+              value={milesToDisplay(params.exitAlongMi, params.distanceUnit)}
+              min={-5}
+              max={5}
+              step={0.05}
+              valueLabelDisplay="auto"
+              valueLabelFormat={v => `${v.toFixed(2)} ${unitLabel}`}
+              onChange={(_e, v) =>
+                set({ exitAlongMi: displayToMiles(v as number, params.distanceUnit) })}
+            />
+          </Box>
+        </Section>
+      )}
 
       <Section title="Display">
         <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">

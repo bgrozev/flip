@@ -11,15 +11,18 @@ import {
   DistanceUnit,
   JumprunLine,
   SpotDescription,
+  cardinalToDeg,
+  localMilesEN,
   milesToDisplay,
   pointAlongJumprun,
-  projectOntoJumprunMi
+  projectOntoJumprunMi,
+  vectorCardinalDirection
 } from '../../core/flocking';
 import { destinationPoint } from '../../core/geometry';
 import { WindProfile, getWindAt, prepWind } from '../../core/wind';
 import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
-import { MapCircle, MapOverlay, MapPolyline } from '..';
+import { MapCircle, MapDragHandle, MapOverlay, MapPolyline } from '..';
 
 import { DirectionArrow, TOOLTIP_STYLE } from './tooltip';
 
@@ -115,14 +118,22 @@ export interface FlockingLayerProps {
   target: LatLng;
   /** Radius of the target area around B, miles. */
   targetRadiusMi: number;
-  /** The jumprun line. */
+  /** The jumprun line (free mode; null = classic, run ends at the exit). */
   jumprunLine: JumprunLine | null;
   /** Where the flight ends. */
   end: LatLng | null;
-  /** Distance from the end to the target, miles. */
+  /** Distance from the end to the target, miles (null in classic). */
   missMi: number | null;
   /** Whether the end lands inside the target area. */
   onTarget: boolean;
+  /** Free mode: drag the exit along the jumprun line (signed mi). */
+  onExitDrag?: (exitAlongMi: number) => void;
+  /** Free mode: rotate the jumprun (new direction, cardinal deg). */
+  onJumprunRotate?: (directionDeg: number) => void;
+  /** Free mode: translate the jumprun (new lateral offset, mi). */
+  onJumprunTranslate?: (offsetMi: number) => void;
+  /** Free mode: rotate the canopy flight (new direction, cardinal deg). */
+  onCanopyRotate?: (directionDeg: number) => void;
   /** Render the jumprun-aligned distance grid around the Spot Reference. */
   showGrid: boolean;
   showPreWind: boolean;
@@ -145,6 +156,10 @@ export default function FlockingLayer({
   end,
   missMi,
   onTarget,
+  onExitDrag,
+  onJumprunRotate,
+  onJumprunTranslate,
+  onCanopyRotate,
   showGrid,
   showPreWind,
   showPoms,
@@ -278,7 +293,11 @@ export default function FlockingLayer({
   return (
     <>
       {/* The jumprun line (green), with an arrowhead at the exit marking
-          the run direction. */}
+          the run direction. Classic: the fixed 3 nm ride to the exit;
+          free: the full line. */}
+      {!jumprunLine && jumprun && exit && (
+        <MapPolyline path={[jumprun.start, exit]} {...lineProps} />
+      )}
       {runLine && (
         <MapPolyline
           path={[runLine.a, runLine.b]}
@@ -294,6 +313,88 @@ export default function FlockingLayer({
           <MapPolyline path={[jumprun.barbB, exit]} {...lineProps} />
         </>
       )}
+
+      {/* Free-mode manipulation handles: drag the exit along the line,
+          rotate the run (handle ahead of the exit, pivot at the line
+          origin), translate the run sideways (handle behind the exit),
+          rotate the canopy flight (handle at the end of the flight). */}
+      {jumprunLine && exit && onExitDrag && (
+        <MapDragHandle
+          position={exit}
+          color={onTarget ? JUMPRUN_COLOR : MISS_COLOR}
+          scale={8}
+          cursor="grab"
+          zIndex={110}
+          onDrag={pos => onExitDrag(projectOntoJumprunMi(jumprunLine, pos))}
+          onDragEnd={pos => onExitDrag(projectOntoJumprunMi(jumprunLine, pos))}
+        />
+      )}
+      {jumprunLine && exit && onJumprunRotate && (() => {
+        const t = projectOntoJumprunMi(jumprunLine, exit);
+        const handlePos = pointAlongJumprun(jumprunLine, t + 1.15078);
+        const rotate = (pos: LatLng) => {
+          const en = localMilesEN(jumprunLine.origin, pos);
+
+          onJumprunRotate(vectorCardinalDirection(en.eastMi, en.northMi));
+        };
+
+        return (
+          <MapDragHandle
+            position={handlePos}
+            color="#ffffff"
+            scale={6}
+            cursor="alias"
+            zIndex={105}
+            onDrag={rotate}
+            onDragEnd={rotate}
+          />
+        );
+      })()}
+      {jumprunLine && exit && onJumprunTranslate && (() => {
+        const t = projectOntoJumprunMi(jumprunLine, exit);
+        const handlePos = pointAlongJumprun(jumprunLine, t - 1.15078);
+        const translate = (pos: LatLng) => {
+          // New offset: the perpendicular (right-of-run) component of the
+          // dragged position relative to the effective Spot Reference.
+          const en = localMilesEN(reference ?? target, pos);
+          const psi = cardinalToDeg(jumprunLine.directionDeg + 90) * (Math.PI / 180);
+
+          onJumprunTranslate(en.eastMi * Math.cos(psi) + en.northMi * Math.sin(psi));
+        };
+
+        return (
+          <MapDragHandle
+            position={handlePos}
+            color="#ffb74d"
+            scale={6}
+            cursor="move"
+            zIndex={105}
+            onDrag={translate}
+            onDragEnd={translate}
+          />
+        );
+      })()}
+      {jumprunLine && exit && end && onCanopyRotate && (() => {
+        const rotate = (pos: LatLng) => {
+          const en = localMilesEN(exit, pos);
+
+          if (Math.hypot(en.eastMi, en.northMi) > 0.02) {
+            onCanopyRotate(vectorCardinalDirection(en.eastMi, en.northMi));
+          }
+        };
+
+        return (
+          <MapDragHandle
+            position={end}
+            color={FLOCKING_COLOR}
+            scale={6}
+            cursor="alias"
+            zIndex={105}
+            onDrag={rotate}
+            onDragEnd={rotate}
+          />
+        );
+      })()}
 
       {/* Target area: the jump works when it ends anywhere inside */}
       {targetRadiusMi > 0 && (

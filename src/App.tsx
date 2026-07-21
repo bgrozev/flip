@@ -298,6 +298,28 @@ function DashboardContent() {
     [makeWindSummary, averageWind_]
   );
 
+  // Free-mode map manipulation: exit slides along the run; the run
+  // rotates/translates; the canopy flight rotates (which switches it to an
+  // explicit direction).
+  const handleExitDrag = useCallback((exitAlongMi: number) => {
+    setFlockingParams({ ...flockingParams, exitAlongMi });
+  }, [flockingParams, setFlockingParams]);
+  const handleJumprunRotate = useCallback((directionDeg: number) => {
+    setFlockingParams({
+      ...flockingParams,
+      jumprun: { ...flockingParams.jumprun, directionDeg: Math.round(directionDeg) }
+    });
+  }, [flockingParams, setFlockingParams]);
+  const handleJumprunTranslate = useCallback((offsetMi: number) => {
+    setFlockingParams({
+      ...flockingParams,
+      jumprun: { ...flockingParams.jumprun, offsetMi }
+    });
+  }, [flockingParams, setFlockingParams]);
+  const handleCanopyRotate = useCallback((directionDeg: number) => {
+    setFlockingParams({ ...flockingParams, canopyDirection: Math.round(directionDeg) });
+  }, [flockingParams, setFlockingParams]);
+
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
     // The fetch limit must reach the top of what is flown: the corrected
     // path's exit altitude, or the flocking window top.
@@ -347,6 +369,7 @@ function DashboardContent() {
         spot={flocking.spot}
         missMi={flocking.missMi}
         onTarget={flocking.onTarget}
+        canopyDeviationWarning={flocking.canopyDeviationWarning}
         hasWind={flocking.hasWind}
         target={target.target}
       />
@@ -506,6 +529,10 @@ function DashboardContent() {
         end: flocking.end,
         missMi: flocking.missMi,
         onTarget: flocking.onTarget,
+        onExitDrag: handleExitDrag,
+        onJumprunRotate: handleJumprunRotate,
+        onJumprunTranslate: handleJumprunTranslate,
+        onCanopyRotate: handleCanopyRotate,
         showGrid: flockingParams.showGrid
       } : undefined}
     />
