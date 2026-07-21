@@ -57,9 +57,7 @@ function bruteForce(
             exitN + endBaseN - targetEN.northMi
           );
 
-          if (miss < best) {
-            best = miss;
-          }
+          best = Math.min(best, miss);
         }
       }
     }
