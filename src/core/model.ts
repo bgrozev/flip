@@ -24,7 +24,13 @@ import {
   StoredTrack,
   Target
 } from '../types';
-import { DISTANCE_UNITS, FLOCKING_MODES, FlockingParams, JumprunConfig } from './flocking';
+import {
+  DISTANCE_UNITS,
+  FLOCKING_MODES,
+  FlockingParams,
+  JumprunConfig,
+  SolveCorridorParams
+} from './flocking';
 import { migrateToFlightPath } from './migration';
 import {
   AltitudeUnit,
@@ -99,6 +105,11 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   jumprun: { directionDeg: 'into-wind', offsetMi: 0 },
   exitAlongMi: 0,
   targetRadiusMi: 0.25,
+  // The ZHills-flavored default: run north or south
+  solveCorridors: [
+    { directionDeg: 0, offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15 },
+    { directionDeg: 180, offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15 }
+  ],
   showGrid: false
 };
 
@@ -288,8 +299,45 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
     jumprun: migrateJumprunConfig(r.jumprun),
     exitAlongMi: limitedNumber(r.exitAlongMi, d.exitAlongMi, LIMITS.flockingExitAlongMi),
     targetRadiusMi: limitedNumber(r.targetRadiusMi, d.targetRadiusMi, LIMITS.flockingTargetRadiusMi),
+    solveCorridors: migrateSolveCorridors(r.solveCorridors),
     showGrid: booleanOr(r.showGrid, d.showGrid)
   };
+}
+
+/**
+ * Corridors: keep valid entries (clamped, ranges normalized so min <= max);
+ * a missing/garbage list falls back to the default N-or-S pair. An
+ * explicitly empty list is kept (the panel invites adding one).
+ */
+function migrateSolveCorridors(raw: unknown): SolveCorridorParams[] {
+  if (!Array.isArray(raw)) {
+    return DEFAULT_FLOCKING_PARAMS.solveCorridors.map(c => ({ ...c }));
+  }
+
+  const corridors: SolveCorridorParams[] = [];
+
+  raw.forEach(entry => {
+    if (!isRecord(entry)) {
+      return;
+    }
+
+    const offA = limitedNumber(entry.offsetMinMi, -1, LIMITS.flockingJumprunOffsetMi);
+    const offB = limitedNumber(entry.offsetMaxMi, 1, LIMITS.flockingJumprunOffsetMi);
+    const alongA = limitedNumber(entry.alongMinMi, -5, LIMITS.flockingExitAlongMi);
+    const alongB = limitedNumber(entry.alongMaxMi, 3, LIMITS.flockingExitAlongMi);
+
+    corridors.push({
+      directionDeg: normalizeDirection(finiteNumber(entry.directionDeg, 0)),
+      offsetMinMi: Math.min(offA, offB),
+      offsetMaxMi: Math.max(offA, offB),
+      alongMinMi: Math.min(alongA, alongB),
+      alongMaxMi: Math.max(alongA, alongB),
+      canopyToleranceDeg:
+        limitedNumber(entry.canopyToleranceDeg, 15, LIMITS.flockingCanopyToleranceDeg)
+    });
+  });
+
+  return corridors;
 }
 
 /**

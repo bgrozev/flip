@@ -7,14 +7,17 @@ import {
   FlockingVectors,
   JumprunLine,
   SpotDescription,
+  flockingDurationS,
   flockingVectors,
   intoWindDirection,
   jumprunLineOrigin,
   localMilesEN,
   makeFlockingPath,
   pointAlongJumprun,
-  spotDescription
+  spotDescription,
+  windDriftVector
 } from '../core/flocking';
+import { SolveResult, solveFlockingSpot } from '../core/flockingSolve';
 import { driftAngle } from '../core/pathStats';
 import { addWind, averageWind, translate } from '../core/geometry';
 import { latLngToPoint } from '../core/coords';
@@ -58,6 +61,10 @@ export interface FlockingDerived {
   averageWind: { speedKts?: number; direction?: number };
   /** The jumprun line (free mode; null in classic — the run ends at the exit). */
   jumprunLine: JumprunLine | null;
+  /** Solve mode: the solver result (per-corridor + best). */
+  solve: SolveResult | null;
+  /** Solve mode: corridor exit-rectangle outlines (closed loops). */
+  corridorOutlines: LatLng[][];
 }
 
 interface UseFlockingPathParams {
@@ -86,7 +93,9 @@ const EMPTY: FlockingDerived = {
   reference: { lat: 0, lng: 0 },
   hasWind: false,
   averageWind: {},
-  jumprunLine: null
+  jumprunLine: null,
+  solve: null,
+  corridorOutlines: []
 };
 
 /** Rigidly shift every point of a path by a flat lng/lat delta. */
@@ -144,6 +153,19 @@ export function useFlockingPath({
       interpolateWind
     );
 
+    if (params.mode === 'solve') {
+      return deriveSolve({
+        params,
+        target: target.target,
+        reference,
+        winds,
+        interpolateWind,
+        pomIntervalFt,
+        hasWind,
+        intoWindDeg
+      });
+    }
+
     const free = params.mode === 'free';
     const jumprunDeg = free
       ? params.jumprun.directionDeg === 'into-wind'
@@ -190,7 +212,9 @@ export function useFlockingPath({
         reference,
         hasWind,
         averageWind: averageWind(idealAtTarget, correctedAtTarget),
-        jumprunLine: null
+        jumprunLine: null,
+        solve: null,
+        corridorOutlines: []
       };
     }
 
@@ -227,7 +251,130 @@ export function useFlockingPath({
       reference,
       hasWind,
       averageWind: averageWind(ideal, corrected),
-      jumprunLine
+      jumprunLine,
+      solve: null,
+      corridorOutlines: []
     };
   }, [active, params, target.target, winds, interpolateWind, altitudeUnit]);
+}
+
+interface DeriveSolveArgs {
+  params: FlockingParams;
+  target: LatLng;
+  reference: LatLng;
+  winds: WindProfile;
+  interpolateWind: boolean;
+  pomIntervalFt: number;
+  hasWind: boolean;
+  intoWindDeg: number;
+}
+
+/** A corridor's exit rectangle as a closed LatLng loop. */
+function corridorOutline(
+  reference: LatLng,
+  corridor: FlockingParams['solveCorridors'][number]
+): LatLng[] {
+  const corner = (tMi: number, dMi: number): LatLng =>
+    pointAlongJumprun(
+      {
+        origin: jumprunLineOrigin(reference, corridor.directionDeg, dMi),
+        directionDeg: corridor.directionDeg
+      },
+      tMi
+    );
+  const a = corner(corridor.alongMinMi, corridor.offsetMinMi);
+  const b = corner(corridor.alongMaxMi, corridor.offsetMinMi);
+  const c = corner(corridor.alongMaxMi, corridor.offsetMaxMi);
+  const d = corner(corridor.alongMinMi, corridor.offsetMaxMi);
+
+  return [a, b, c, d, a];
+}
+
+/**
+ * Solve mode: minimize the miss over the described corridors, then render
+ * the winning configuration exactly like free mode would.
+ */
+function deriveSolve({
+  params, target, reference, winds, interpolateWind, pomIntervalFt, hasWind, intoWindDeg
+}: DeriveSolveArgs): FlockingDerived {
+  const corridorOutlines = params.solveCorridors.map(c => corridorOutline(reference, c));
+
+  const drift = windDriftVector(
+    winds, params.windowTopFt, params.windowBottomFt, params.descentRateMph, interpolateWind
+  );
+  const durationS = flockingDurationS(
+    params.windowTopFt, params.windowBottomFt, params.descentRateMph
+  );
+  const canopyLengthMi = params.horizontalSpeedMph * (durationS / 3600);
+  const targetEN = localMilesEN(reference, target);
+
+  const solve = solveFlockingSpot(params.solveCorridors, targetEN, drift, canopyLengthMi);
+  const best = solve.best;
+
+  if (!best) {
+    return {
+      ...EMPTY,
+      reference,
+      hasWind,
+      intoWindDeg,
+      jumprunDeg: intoWindDeg,
+      canopyDeg: intoWindDeg,
+      solve,
+      corridorOutlines
+    };
+  }
+
+  const jumprunLine: JumprunLine = {
+    origin: jumprunLineOrigin(reference, best.jumprunDeg, best.offsetMi),
+    directionDeg: best.jumprunDeg
+  };
+  const exit = pointAlongJumprun(jumprunLine, best.exitAlongMi);
+
+  const raw = makeFlockingPath({
+    windowTopFt: params.windowTopFt,
+    windowBottomFt: params.windowBottomFt,
+    descentRateMph: params.descentRateMph,
+    horizontalSpeedMph: params.horizontalSpeedMph,
+    directionDeg: best.canopyDeg,
+    pomIntervalFt
+  });
+  const idealAtTarget = translate(raw, latLngToPoint(target));
+  const correctedAtTarget = addWind(idealAtTarget, winds, interpolateWind);
+
+  if (correctedAtTarget.length < 2) {
+    return {
+      ...EMPTY, reference, hasWind, intoWindDeg, solve, corridorOutlines
+    };
+  }
+
+  const exitAtTarget = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
+  const dLng = exit.lng - exitAtTarget.lng;
+  const dLat = exit.lat - exitAtTarget.lat;
+  const ideal = shiftPath(idealAtTarget, dLng, dLat);
+  const corrected = shiftPath(correctedAtTarget, dLng, dLat);
+
+  const end = pointToLatLng(corrected[0]);
+  const missEN = localMilesEN(end, target);
+  const missMi = Math.hypot(missEN.eastMi, missEN.northMi);
+
+  return {
+    ideal,
+    corrected,
+    exit,
+    end,
+    missMi,
+    onTarget: missMi <= params.targetRadiusMi + 1e-9,
+    jumprunDeg: best.jumprunDeg,
+    canopyDeg: best.canopyDeg,
+    intoWindDeg,
+    canopyDeviationWarning: false,
+    vectors: flockingVectors(ideal, corrected),
+    spot: spotDescription(exit, reference, best.jumprunDeg),
+    reference,
+    hasWind,
+    averageWind: averageWind(ideal, corrected),
+    jumprunLine,
+    solve,
+    corridorOutlines
+  };
 }

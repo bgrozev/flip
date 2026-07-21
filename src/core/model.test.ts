@@ -136,6 +136,16 @@ describe('migrateFlockingParams', () => {
       jumprun: { directionDeg: 180, offsetMi: 1.5 },
       exitAlongMi: -2,
       targetRadiusMi: 0.5,
+      solveCorridors: [
+        {
+          directionDeg: 90,
+          offsetMinMi: -0.5,
+          offsetMaxMi: 0.5,
+          alongMinMi: -3,
+          alongMaxMi: 1,
+          canopyToleranceDeg: 10
+        }
+      ],
       showGrid: true
     };
 
@@ -164,7 +174,8 @@ describe('migrateFlockingParams', () => {
 
   it('validates the mode and the free-mode fields', () => {
     expect(migrateFlockingParams({ mode: 'free' }).mode).toBe('free');
-    expect(migrateFlockingParams({ mode: 'solve' }).mode).toBe('classic');
+    expect(migrateFlockingParams({ mode: 'solve' }).mode).toBe('solve');
+    expect(migrateFlockingParams({ mode: 'telepathy' }).mode).toBe('classic');
     expect(migrateFlockingParams({ canopyDirection: 400 }).canopyDirection).toBe(40);
     expect(migrateFlockingParams({ canopyDirection: 'weird' }).canopyDirection)
       .toBe('follow-jumprun');

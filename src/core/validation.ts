@@ -36,6 +36,8 @@ export const LIMITS = {
   flockingJumprunOffsetMi: { min: -10, max: 10 },
   /** Exit position along the jumprun line (signed mi, free mode) */
   flockingExitAlongMi: { min: -20, max: 20 },
+  /** Solve-mode canopy deviation tolerance from the run (deg) */
+  flockingCanopyToleranceDeg: { min: 0, max: 90 },
   /** Wind row altitude (ft) */
   windAltFt: { min: 0, max: 60000 },
   /** Wind speed (kts) */

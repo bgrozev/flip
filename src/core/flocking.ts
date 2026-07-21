@@ -76,10 +76,10 @@ export function displayToMiles(value: number, unit: DistanceUnit): number {
  *   the jumprun; deviating > CANOPY_DEVIATION_WARN_DEG shows a warning).
  *   The app shows where the flight ends and how far off the target it is.
  *
- * (A third mode, solve — minimize the miss over a restricted set of
- * jumprun configurations — is designed but not built; see BACKLOG.)
+ * - solve: minimize the miss over described jumprun corridors (e.g.
+ *   ZHills: "run north or south") — see core/flockingSolve.
  */
-export const FLOCKING_MODES = ['classic', 'free'] as const;
+export const FLOCKING_MODES = ['classic', 'free', 'solve'] as const;
 export type FlockingMode = typeof FLOCKING_MODES[number];
 
 /** Free mode warns when the canopy flight deviates this much from the run. */
@@ -96,8 +96,22 @@ export interface JumprunConfig {
   offsetMi: number;
 }
 
+/**
+ * A persisted solve-mode corridor (mirrors core/flockingSolve's
+ * SolveCorridor; duplicated as a named type here to keep the params
+ * document self-describing).
+ */
+export interface SolveCorridorParams {
+  directionDeg: number;
+  offsetMinMi: number;
+  offsetMaxMi: number;
+  alongMinMi: number;
+  alongMaxMi: number;
+  canopyToleranceDeg: number;
+}
+
 export interface FlockingParams {
-  /** The panel's sub-mode: classic (FWC) or free. */
+  /** The panel's sub-mode: classic (FWC), free or solve. */
   mode: FlockingMode;
   /** Exit altitude (top of the flown window), ft. */
   windowTopFt: number;
@@ -131,9 +145,15 @@ export interface FlockingParams {
   exitAlongMi: number;
   /** Radius of the end-of-jump target area around B, miles. */
   targetRadiusMi: number;
+  /**
+   * Allowed jumprun corridors (solve mode) — see core/flockingSolve.
+   * Kept here so the whole flocking setup persists as one document.
+   */
+  solveCorridors: SolveCorridorParams[];
   /** Show the jumprun-aligned distance grid around the Spot Reference. */
   showGrid: boolean;
 }
+
 
 // ---------------------------------------------------------------------------
 // Direction conversions (mirroring FWC's Drift.kt exactly)

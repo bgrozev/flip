@@ -131,3 +131,35 @@ describe('useFlockingPath — free mode', () => {
     expect(d.onTarget).toBe(false);
   });
 });
+
+describe('useFlockingPath — solve mode', () => {
+  const solveDefaults: FlockingParams = { ...DEFAULT_FLOCKING_PARAMS, mode: 'solve' };
+
+  it('solves the default N-or-S corridors and renders the winner', () => {
+    // West wind: drift is eastward; both N and S runs can absorb it via
+    // offset/tolerance. The best solution must land inside the target area.
+    const d = run(solveDefaults);
+
+    expect(d.solve).not.toBeNull();
+    expect(d.solve!.perCorridor).toHaveLength(2);
+    expect(d.solve!.best).not.toBeNull();
+    expect(d.onTarget).toBe(true);
+    expect(d.corridorOutlines).toHaveLength(2);
+    expect(d.corridorOutlines[0]).toHaveLength(5);
+
+    // The rendered path's exit matches the solver's configuration
+    const exitPt = d.corrected[d.corrected.length - 1].geometry.coordinates as [number, number];
+
+    expect(distMi(exitPt, [d.exit!.lng, d.exit!.lat])).toBeLessThan(0.001);
+    // The rendered miss agrees with the solver's analytic miss
+    expect(Math.abs(d.missMi! - d.solve!.best!.missMi)).toBeLessThan(0.05);
+  });
+
+  it('is inert but informative with no corridors', () => {
+    const d = run({ ...solveDefaults, solveCorridors: [] });
+
+    expect(d.solve!.best).toBeNull();
+    expect(d.corrected).toEqual([]);
+    expect(d.corridorOutlines).toEqual([]);
+  });
+});
