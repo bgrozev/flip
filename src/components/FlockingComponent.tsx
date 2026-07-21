@@ -69,10 +69,29 @@ function roundDist(miles: number, unit: DistanceUnit): number {
   return Math.round(milesToDisplay(miles, unit) * 10) / 10;
 }
 
-/** FWC's vector line: "1.66 mi at 180˚". */
-function vectorText(v: DriftVector, unit: DistanceUnit): string {
-  return `${milesToDisplay(v.lengthMi, unit).toFixed(2)} ${DISTANCE_UNIT_LABELS[unit]}` +
-    ` at ${roundDeg(v.directionDeg)}˚`;
+/** A small arrow pointing toward a cardinal bearing (0˚ = up/north). */
+function BearingArrow({ deg }: { deg: number }) {
+  return (
+    <span
+      style={{ display: 'inline-block', transform: `rotate(${deg}deg)`, fontSize: '0.9em' }}
+      aria-hidden
+    >
+      ↑
+    </span>
+  );
+}
+
+/** One compact vector row: "Wind drift  3.32 mi  190˚ ↑". */
+function VectorRow({ label, v, unit }: { label: string; v: DriftVector; unit: DistanceUnit }) {
+  return (
+    <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={1}>
+      <Typography variant="body2" color="text.secondary">{label}</Typography>
+      <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+        {milesToDisplay(v.lengthMi, unit).toFixed(2)} {DISTANCE_UNIT_LABELS[unit]}
+        {' · '}{roundDeg(v.directionDeg)}˚ <BearingArrow deg={v.directionDeg} />
+      </Typography>
+    </Stack>
+  );
 }
 
 interface DirectionSelectorProps {
@@ -308,12 +327,9 @@ export default function FlockingComponent({
 
       {vectors && (
         <Box sx={{ textAlign: 'left' }} data-testid="flocking-results">
-          <Typography variant="body2" color="text.secondary">Wind drift:</Typography>
-          <Typography variant="body1">{vectorText(vectors.windDrift, params.distanceUnit)}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Canopy flight:</Typography>
-          <Typography variant="body1">{vectorText(vectors.canopyFlight, params.distanceUnit)}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Combined:</Typography>
-          <Typography variant="body1">{vectorText(vectors.combined, params.distanceUnit)}</Typography>
+          <VectorRow label="Wind drift" v={vectors.windDrift} unit={params.distanceUnit} />
+          <VectorRow label="Canopy flight" v={vectors.canopyFlight} unit={params.distanceUnit} />
+          <VectorRow label="Combined" v={vectors.combined} unit={params.distanceUnit} />
         </Box>
       )}
 
