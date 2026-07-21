@@ -20,7 +20,9 @@ import {
   ALTITUDE_UNIT_OPTIONS,
   AltitudeUnit,
   DESCENT_RATE_UNIT_OPTIONS,
+  DISTANCE_UNIT_OPTIONS,
   DescentRateUnit,
+  DistanceUnit,
   PRESSURE_UNIT_OPTIONS,
   PressureUnit,
   TEMPERATURE_UNIT_OPTIONS,
@@ -381,6 +383,24 @@ export default function SettingsComponent({
           }
         >
           {PRESSURE_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small">
+        <InputLabel id="distance-unit-label">Distance</InputLabel>
+        <Select
+          labelId="distance-unit-label"
+          value={settings.units.distance ?? 'mi'}
+          label="Distance"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('distance', e.target.value as DistanceUnit)
+          }
+        >
+          {DISTANCE_UNIT_OPTIONS.map(opt => (
             <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
             </MenuItem>

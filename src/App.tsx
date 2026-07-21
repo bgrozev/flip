@@ -371,6 +371,7 @@ function DashboardContent() {
         onTarget={flocking.onTarget}
         canopyDeviationWarning={flocking.canopyDeviationWarning}
         solve={flocking.solve}
+        distanceUnit={modeSettings.units.distance}
         hasWind={flocking.hasWind}
         target={target.target}
       />
@@ -521,7 +522,7 @@ function DashboardContent() {
         exit: flocking.exit,
         jumprunDeg: flocking.jumprunDeg,
         spot: flocking.spot,
-        distanceUnit: flockingParams.distanceUnit,
+        distanceUnit: modeSettings.units.distance,
         winds: effectiveWinds,
         reference: flockingParams.referencePoint,
         target: target.target,

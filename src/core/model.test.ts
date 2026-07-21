@@ -131,7 +131,6 @@ describe('migrateFlockingParams', () => {
       horizontalSpeedMph: 70,
       direction: 145,
       canopyDirection: 200,
-      distanceUnit: 'nm',
       referencePoint: { lat: 28.2, lng: -82.15 },
       jumprun: { directionDeg: 180, offsetMi: 1.5 },
       exitAlongMi: -2,
@@ -228,7 +227,6 @@ describe('migrateFlockingParams', () => {
     expect(migrateFlockingParams({ referencePoint: { lat: 'x', lng: 0 } }).referencePoint)
       .toBeNull();
     expect(migrateFlockingParams({ referencePoint: 42 }).referencePoint).toBeNull();
-    expect(migrateFlockingParams({ distanceUnit: 'furlong' }).distanceUnit).toBe('mi');
     // reference point coordinates are clamped
     expect(migrateFlockingParams({ referencePoint: { lat: 95, lng: -200 } }).referencePoint)
       .toEqual({ lat: 90, lng: -180 });
@@ -304,7 +302,7 @@ describe('migrateSettings', () => {
       showPoms: false,
       interpolateWind: 'yes', // invalid
       limitWind: 1e12, // clamped
-      units: { altitude: 'm', windSpeed: 'furlongs' } // partly invalid
+      units: { altitude: 'm', windSpeed: 'furlongs', distance: 'nm' } // partly invalid
     });
 
     expect(result.showPoms).toBe(false);
@@ -312,6 +310,7 @@ describe('migrateSettings', () => {
     expect(result.limitWind).toBe(60000);
     expect(result.units.altitude).toBe('m');
     expect(result.units.windSpeed).toBe('kts');
+    expect(result.units.distance).toBe('nm');
   });
 
   it('accepts known wind models and defaults unknown ones', () => {

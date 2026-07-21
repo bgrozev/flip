@@ -26,7 +26,6 @@ import React, { useState } from 'react';
 import { SolveResult } from '../core/flockingSolve';
 import {
   CANOPY_DEVIATION_WARN_DEG,
-  DISTANCE_UNITS,
   DISTANCE_UNIT_LABELS,
   DistanceUnit,
   DriftVector,
@@ -213,6 +212,8 @@ interface FlockingComponentProps {
   canopyDeviationWarning: boolean;
   /** Solve mode: solver result (per-corridor + best). */
   solve: SolveResult | null;
+  /** Ground distance unit (from general Settings). */
+  distanceUnit: DistanceUnit;
   /** Whether any non-calm wind rows are loaded. */
   hasWind: boolean;
   /** Current target position (B) — where "Pin spot reference" pins C. */
@@ -230,6 +231,7 @@ export default function FlockingComponent({
   onTarget,
   canopyDeviationWarning,
   solve,
+  distanceUnit,
   hasWind,
   target
 }: FlockingComponentProps) {
@@ -292,8 +294,8 @@ export default function FlockingComponent({
       p.horizontalSpeedMph === params.horizontalSpeedMph
   );
 
-  const offsetDisplay = spot ? milesToDisplay(spot.offsetMi, params.distanceUnit) : 0;
-  const unitLabel = DISTANCE_UNIT_LABELS[params.distanceUnit];
+  const offsetDisplay = spot ? milesToDisplay(spot.offsetMi, distanceUnit) : 0;
+  const unitLabel = DISTANCE_UNIT_LABELS[distanceUnit];
 
   return (
     <Box display="flex" flexDirection="column" gap={1.5}>
@@ -327,9 +329,9 @@ export default function FlockingComponent({
 
       {vectors && (
         <Box sx={{ textAlign: 'left' }} data-testid="flocking-results">
-          <VectorRow label="Wind drift" v={vectors.windDrift} unit={params.distanceUnit} />
-          <VectorRow label="Canopy flight" v={vectors.canopyFlight} unit={params.distanceUnit} />
-          <VectorRow label="Combined" v={vectors.combined} unit={params.distanceUnit} />
+          <VectorRow label="Wind drift" v={vectors.windDrift} unit={distanceUnit} />
+          <VectorRow label="Canopy flight" v={vectors.canopyFlight} unit={distanceUnit} />
+          <VectorRow label="Combined" v={vectors.combined} unit={distanceUnit} />
         </Box>
       )}
 
@@ -340,7 +342,7 @@ export default function FlockingComponent({
           </Typography>
           <Typography variant="body1">Jumprun {roundDeg(spot.jumprunDeg)}˚</Typography>
           <Typography variant="body1">
-            {milesToDisplay(spot.alongMi, params.distanceUnit).toFixed(2)} {unitLabel}{' '}
+            {milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} {unitLabel}{' '}
             {spot.prior ? 'prior' : <b>PAST</b>}
           </Typography>
           {offsetDisplay > 0.05 && (
@@ -355,8 +357,8 @@ export default function FlockingComponent({
               data-testid="flocking-miss"
             >
               {onTarget
-                ? `On target (${milesToDisplay(missMi, params.distanceUnit).toFixed(2)} ${unitLabel} off)`
-                : `MISSES TARGET by ${milesToDisplay(missMi, params.distanceUnit).toFixed(2)} ${unitLabel}`}
+                ? `On target (${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel} off)`
+                : `MISSES TARGET by ${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`}
             </Typography>
           )}
         </Box>
@@ -518,39 +520,39 @@ export default function FlockingComponent({
               title={'Lateral offset of the jumprun line from the Spot Reference '
                 + '(positive = right of the run direction).'}
               label="Offset"
-              initialValue={roundDist(params.jumprun.offsetMi, params.distanceUnit)}
+              initialValue={roundDist(params.jumprun.offsetMi, distanceUnit)}
               step={0.1}
-              min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
-              max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+              min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
               unit={unitLabel}
-              onChange={value => setJumprun({ offsetMi: displayToMiles(value, params.distanceUnit) })}
+              onChange={value => setJumprun({ offsetMi: displayToMiles(value, distanceUnit) })}
             />
             <NumberInput
               key={`jr-radius-${externalEdit}`}
               title="Radius of the target area: the jump works if it ends anywhere inside it."
               label="Target radius"
-              initialValue={roundDist(params.targetRadiusMi, params.distanceUnit)}
+              initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
               step={0.05}
-              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
-              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
+              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
               unit={unitLabel}
-              onChange={value => set({ targetRadiusMi: displayToMiles(value, params.distanceUnit) })}
+              onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
             />
           </Stack>
           <Box sx={{ px: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
-              Exit · {milesToDisplay(params.exitAlongMi, params.distanceUnit).toFixed(2)} {unitLabel} along
+              Exit · {milesToDisplay(params.exitAlongMi, distanceUnit).toFixed(2)} {unitLabel} along
             </Typography>
             <Slider
               size="small"
-              value={milesToDisplay(params.exitAlongMi, params.distanceUnit)}
+              value={milesToDisplay(params.exitAlongMi, distanceUnit)}
               min={-5}
               max={5}
               step={0.05}
               valueLabelDisplay="auto"
               valueLabelFormat={v => `${v.toFixed(2)} ${unitLabel}`}
               onChange={(_e, v) =>
-                set({ exitAlongMi: displayToMiles(v as number, params.distanceUnit) })}
+                set({ exitAlongMi: displayToMiles(v as number, distanceUnit) })}
             />
           </Box>
         </Section>
@@ -583,7 +585,7 @@ export default function FlockingComponent({
                     {result && ` · ${result.missMi <= params.targetRadiusMi ? 'hits' : 'misses by'} ${
                       result.missMi <= params.targetRadiusMi
                         ? ''
-                        : `${milesToDisplay(result.missMi, params.distanceUnit).toFixed(2)} ${unitLabel}`}`}
+                        : `${milesToDisplay(result.missMi, distanceUnit).toFixed(2)} ${unitLabel}`}`}
                     {isBest && ' · best'}
                   </Typography>
                   <Button size="small" color="error" onClick={() => removeCorridor(i)}>
@@ -618,23 +620,23 @@ export default function FlockingComponent({
                     key={`c${i}-offmin-${externalEdit}`}
                     title="Left-most allowed lateral offset of the run (negative = left)."
                     label="Offset min"
-                    initialValue={roundDist(c.offsetMinMi, params.distanceUnit)}
+                    initialValue={roundDist(c.offsetMinMi, distanceUnit)}
                     step={0.25}
-                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
                     unit={unitLabel}
-                    onChange={v => setCorridor(i, { offsetMinMi: displayToMiles(v, params.distanceUnit) })}
+                    onChange={v => setCorridor(i, { offsetMinMi: displayToMiles(v, distanceUnit) })}
                   />
                   <NumberInput
                     key={`c${i}-offmax-${externalEdit}`}
                     title="Right-most allowed lateral offset of the run."
                     label="Offset max"
-                    initialValue={roundDist(c.offsetMaxMi, params.distanceUnit)}
+                    initialValue={roundDist(c.offsetMaxMi, distanceUnit)}
                     step={0.25}
-                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, params.distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, params.distanceUnit)}
+                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
                     unit={unitLabel}
-                    onChange={v => setCorridor(i, { offsetMaxMi: displayToMiles(v, params.distanceUnit) })}
+                    onChange={v => setCorridor(i, { offsetMaxMi: displayToMiles(v, distanceUnit) })}
                   />
                 </Stack>
                 <Stack direction="row" spacing={1}>
@@ -642,23 +644,23 @@ export default function FlockingComponent({
                     key={`c${i}-alongmin-${externalEdit}`}
                     title="Earliest allowed exit along the run (signed; negative = before the reference)."
                     label="Along min"
-                    initialValue={roundDist(c.alongMinMi, params.distanceUnit)}
+                    initialValue={roundDist(c.alongMinMi, distanceUnit)}
                     step={0.5}
-                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, params.distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, params.distanceUnit)}
+                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
                     unit={unitLabel}
-                    onChange={v => setCorridor(i, { alongMinMi: displayToMiles(v, params.distanceUnit) })}
+                    onChange={v => setCorridor(i, { alongMinMi: displayToMiles(v, distanceUnit) })}
                   />
                   <NumberInput
                     key={`c${i}-alongmax-${externalEdit}`}
                     title="Latest allowed exit along the run."
                     label="Along max"
-                    initialValue={roundDist(c.alongMaxMi, params.distanceUnit)}
+                    initialValue={roundDist(c.alongMaxMi, distanceUnit)}
                     step={0.5}
-                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, params.distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, params.distanceUnit)}
+                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
+                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
                     unit={unitLabel}
-                    onChange={v => setCorridor(i, { alongMaxMi: displayToMiles(v, params.distanceUnit) })}
+                    onChange={v => setCorridor(i, { alongMaxMi: displayToMiles(v, distanceUnit) })}
                   />
                 </Stack>
               </Box>
@@ -671,32 +673,17 @@ export default function FlockingComponent({
             key={`solve-radius-${externalEdit}`}
             title="Radius of the target area: the jump works if it ends anywhere inside it."
             label="Target radius"
-            initialValue={roundDist(params.targetRadiusMi, params.distanceUnit)}
+            initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
             step={0.05}
-            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, params.distanceUnit)}
-            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, params.distanceUnit)}
+            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
+            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
             unit={unitLabel}
-            onChange={value => set({ targetRadiusMi: displayToMiles(value, params.distanceUnit) })}
+            onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
           />
         </Section>
       )}
 
       <Section title="Display">
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>Distances</Typography>
-          <ToggleButtonGroup
-            value={params.distanceUnit}
-            exclusive
-            onChange={(_e, unit) => unit !== null && set({ distanceUnit: unit })}
-            size="small"
-            color="primary"
-          >
-            {DISTANCE_UNITS.map(u => (
-              <ToggleButton key={u} value={u}>{DISTANCE_UNIT_LABELS[u]}</ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-        </Stack>
-
         <Tooltip
           title={'Distance grid on the map, centered on the Spot Reference and aligned '
             + 'with the jumprun, one grid square per distance unit.'}

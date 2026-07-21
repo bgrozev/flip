@@ -25,7 +25,6 @@ import {
   Target
 } from '../types';
 import {
-  DISTANCE_UNITS,
   FLOCKING_MODES,
   FlockingParams,
   JumprunConfig,
@@ -35,6 +34,7 @@ import { migrateToFlightPath } from './migration';
 import {
   AltitudeUnit,
   DEFAULT_UNIT_PREFERENCES,
+  DISTANCE_UNITS,
   DescentRateUnit,
   PressureUnit,
   TemperatureUnit,
@@ -100,7 +100,6 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   horizontalSpeedMph: 50,
   direction: 'into-wind',
   canopyDirection: 'follow-jumprun',
-  distanceUnit: 'mi',
   referencePoint: null,
   jumprun: { directionDeg: 'into-wind', offsetMi: 0 },
   exitAlongMi: 0,
@@ -294,7 +293,6 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
     mode: oneOf(r.mode, FLOCKING_MODES, d.mode),
     direction,
     canopyDirection,
-    distanceUnit: oneOf(r.distanceUnit, DISTANCE_UNITS, d.distanceUnit),
     referencePoint,
     jumprun: migrateJumprunConfig(r.jumprun),
     exitAlongMi: limitedNumber(r.exitAlongMi, d.exitAlongMi, LIMITS.flockingExitAlongMi),
@@ -379,7 +377,8 @@ function migrateUnits(raw: unknown): UnitPreferences {
     windSpeed: oneOf(r.windSpeed, WIND_SPEED_UNITS, DEFAULT_UNIT_PREFERENCES.windSpeed),
     descentRate: oneOf(r.descentRate, DESCENT_RATE_UNITS, DEFAULT_UNIT_PREFERENCES.descentRate),
     temperature: oneOf(r.temperature, TEMPERATURE_UNITS, DEFAULT_UNIT_PREFERENCES.temperature),
-    pressure: oneOf(r.pressure, PRESSURE_UNITS, DEFAULT_UNIT_PREFERENCES.pressure)
+    pressure: oneOf(r.pressure, PRESSURE_UNITS, DEFAULT_UNIT_PREFERENCES.pressure),
+    distance: oneOf(r.distance, DISTANCE_UNITS, DEFAULT_UNIT_PREFERENCES.distance)
   };
 }
 

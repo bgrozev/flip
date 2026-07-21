@@ -14,12 +14,17 @@ export type DescentRateUnit = 'mph' | 'kph' | 'mps';
 export type TemperatureUnit = 'c' | 'f';
 export type PressureUnit = 'hpa' | 'pa' | 'mmhg' | 'inhg';
 
+/** Ground distance unit (flocking drift/spot distances). */
+export const DISTANCE_UNITS = ['mi', 'nm', 'km'] as const;
+export type DistanceUnit = typeof DISTANCE_UNITS[number];
+
 export interface UnitPreferences {
   altitude: AltitudeUnit;
   windSpeed: WindSpeedUnit;
   descentRate: DescentRateUnit;
   temperature: TemperatureUnit;
   pressure: PressureUnit;
+  distance: DistanceUnit;
 }
 
 export const DEFAULT_UNIT_PREFERENCES: UnitPreferences = {
@@ -27,8 +32,42 @@ export const DEFAULT_UNIT_PREFERENCES: UnitPreferences = {
   windSpeed: 'kts',
   descentRate: 'mph',
   temperature: 'c',
-  pressure: 'hpa'
+  pressure: 'hpa',
+  distance: 'mi'
 };
+
+const MI_PER_NM = 1.15078;
+const KM_PER_MI = 1.60934;
+
+export const DISTANCE_UNIT_LABELS: Record<DistanceUnit, string> = {
+  mi: 'mi',
+  nm: 'nm',
+  km: 'km'
+};
+
+/** Convert a distance in statute miles to the given display unit. */
+export function milesToDisplay(miles: number, unit: DistanceUnit): number {
+  switch (unit) {
+    case 'mi':
+      return miles;
+    case 'nm':
+      return miles / MI_PER_NM;
+    case 'km':
+      return miles * KM_PER_MI;
+  }
+}
+
+/** Convert a distance in the given display unit back to statute miles. */
+export function displayToMiles(value: number, unit: DistanceUnit): number {
+  switch (unit) {
+    case 'mi':
+      return value;
+    case 'nm':
+      return value * MI_PER_NM;
+    case 'km':
+      return value / KM_PER_MI;
+  }
+}
 
 // Display labels
 export const UNIT_LABELS: Record<AltitudeUnit | WindSpeedUnit | DescentRateUnit | TemperatureUnit | PressureUnit, string> = {
@@ -74,6 +113,12 @@ export const PRESSURE_UNIT_OPTIONS: { value: PressureUnit; label: string }[] = [
   { value: 'inhg', label: 'Inches of mercury (inHg)' },
   { value: 'mmhg', label: 'Millimeters of mercury (mmHg)' },
   { value: 'pa', label: 'Pascals (Pa)' }
+];
+
+export const DISTANCE_UNIT_OPTIONS: { value: DistanceUnit; label: string }[] = [
+  { value: 'mi', label: 'Statute miles (mi)' },
+  { value: 'nm', label: 'Nautical miles (nm)' },
+  { value: 'km', label: 'Kilometers (km)' }
 ];
 
 // Conversion constants

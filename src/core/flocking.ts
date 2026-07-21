@@ -18,47 +18,18 @@ import { addWind, destinationPoint, normalizeBearing } from './geometry';
 import { mphToFps } from './units';
 import { WindProfile } from './wind';
 
+// Distance units live in core/units now (shared with UnitPreferences);
+// re-exported here so the flocking call sites need no import churn.
+export {
+  DISTANCE_UNITS,
+  DISTANCE_UNIT_LABELS,
+  displayToMiles,
+  milesToDisplay
+} from './units';
+export type { DistanceUnit } from './units';
+
 const DEG_TO_RAD = Math.PI / 180;
-const MI_PER_NM = 1.15078; // FWC's miToNm constant
-const KM_PER_MI = 1.60934;
 const METERS_PER_MILE = 1609.344;
-
-// ---------------------------------------------------------------------------
-// Distance units (FWC has a mi/nm toggle; FliP adds km)
-// ---------------------------------------------------------------------------
-
-export const DISTANCE_UNITS = ['mi', 'nm', 'km'] as const;
-export type DistanceUnit = typeof DISTANCE_UNITS[number];
-
-export const DISTANCE_UNIT_LABELS: Record<DistanceUnit, string> = {
-  mi: 'mi',
-  nm: 'nm',
-  km: 'km'
-};
-
-/** Convert a distance in statute miles to the given display unit. */
-export function milesToDisplay(miles: number, unit: DistanceUnit): number {
-  switch (unit) {
-    case 'mi':
-      return miles;
-    case 'nm':
-      return miles / MI_PER_NM;
-    case 'km':
-      return miles * KM_PER_MI;
-  }
-}
-
-/** Convert a distance in the given display unit back to statute miles. */
-export function displayToMiles(value: number, unit: DistanceUnit): number {
-  switch (unit) {
-    case 'mi':
-      return value;
-    case 'nm':
-      return value * MI_PER_NM;
-    case 'km':
-      return value / KM_PER_MI;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Params document (persisted under flip.flocking.params; see core/model)
@@ -132,8 +103,6 @@ export interface FlockingParams {
    * with profiles this becomes the INITIAL flight direction).
    */
   canopyDirection: number | 'follow-jumprun';
-  /** Display unit for drift/spot distances. */
-  distanceUnit: DistanceUnit;
   /**
    * Optional pinned reference point ("C") the spot is described against;
    * null means the spot is relative to the target itself.
