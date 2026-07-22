@@ -518,7 +518,10 @@ function DashboardContent() {
       heading: target.finalHeading,
       onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
       onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
-      headingEditable: !isFlocking
+      headingEditable: !isFlocking,
+      // Flocking keeps the layer mounted permanently, so a click must not
+      // move the target — only dragging its handle does.
+      clickToMove: !isFlocking
     }
     : undefined;
 

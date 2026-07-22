@@ -27,6 +27,13 @@ export interface TargetEditTarget {
    * target heading (flocking) pass false: only the move handle renders.
    */
   headingEditable?: boolean;
+  /**
+   * Whether a click on the map background jumps the target there. True
+   * for the explicit, temporary "Edit on Map" mode; false where the layer
+   * is permanently mounted (flocking), since there every stray click
+   * would move the target — drag the handle instead.
+   */
+  clickToMove?: boolean;
 }
 
 export interface TargetEditLayerProps {
@@ -37,10 +44,13 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
   // Live position of the heading handle while dragging (for smooth line preview)
   const [liveHeadingPos, setLiveHeadingPos] = useState<LatLng | null>(null);
 
-  // Crosshair cursor while editing; background clicks move the target
-  // (priority 0 — the measure tool takes precedence when active).
-  useMapCursor('crosshair');
-  useMapClick(pos => edit.onMove(pos));
+  // In click-to-move mode the crosshair advertises that a background click
+  // relocates the target (priority 0 — the measure tool wins when active).
+  // Otherwise the target moves by dragging its handle only.
+  const clickToMove = edit.clickToMove !== false;
+
+  useMapCursor(clickToMove ? 'crosshair' : null);
+  useMapClick(pos => edit.onMove(pos), { enabled: clickToMove });
 
   const zoom = useMapZoom();
   const offsetM = HEADING_HANDLE_OFFSET_PX * metersPerPixel(edit.target.lat, zoom);
