@@ -340,6 +340,16 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     hidden, and each mode now stores its own target under
     `flip.targets.byMode` falling back to the shared legacy one
     (`e6744b8`). All browser-verified.
+  - ☑ **owner iteration rounds 3–4 (2026-07-18/19)** — classic/free/solve
+    sub-modes; analytic corridor solver; solver STABILITY via green/yellow
+    tiers + an into-wind preference (`6f1f302` — fixes forecast-scrubber
+    flip-flopping between N/S corridors); Green/Yellow radius renamed,
+    moved to Display and applied in all three modes (`c71aa43`), default
+    0.25 nm / 0.5 nm (`3f237b1`); canopy-vs-jumprun deviation shown on the
+    map, 'Spot' heading (`c77e06a`); corridors nameable + individually
+    enableable (`3526254`); flocking target drags only, never click-moves
+    (`b916cc3`). Still ✎: corridor direction RANGES, per-DZ corridor
+    presets, corridor names on the map.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)

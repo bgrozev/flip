@@ -14,21 +14,34 @@ All source is TypeScript.
 
 ```
 /src/
-├── App.tsx                   # Main orchestrator: routing, path derivation, wiring
+├── App.tsx                   # Main orchestrator: routing, derivation wiring, panels
 ├── index.tsx                 # React DOM entry point
-├── components/               # UI components (panels, map, toolbar)
-├── hooks/                    # State: useAppState (context + localStorage),
-│                             #   useFetchForecast, useObservedWind, usePresets,
-│                             #   useCustomCourses, ...
-├── forecast/                 # Wind forecast + observed-wind station providers
-├── util/                     # Pure-ish logic: geometry, wind, pattern, manoeuvre,
-│                             #   courses, csv, exports, units, validation
+├── core/                     # PURE logic. No React, no DOM, no fetch, no map.
+│                             #   geometry, pattern, manoeuvre, wind, flocking,
+│                             #   flockingSolve, courses, pathStats, units,
+│                             #   validation, model (versioned doc schemas)
+├── data/                     # I/O: data/wind/ (WindSource plugins — openmeteo,
+│                             #   soundings, stations/, compose, elevation)
+├── map/                      # Map abstraction: MapAdapter + dispatch (primitives),
+│                             #   google/, maplibre/ (providers — the ONLY places
+│                             #   google.maps / maplibre-gl may appear),
+│                             #   layers/ (declarative, provider-agnostic)
+├── modes/                    # Declarative mode profiles (pattern/swoop/flocking)
+├── components/               # UI panels, toolbar, map composition
+├── hooks/                    # useAppState (context + localStorage), useWinds,
+│                             #   useFlightPaths, useFlockingPath, useMode,
+│                             #   usePresets, useUnits, useNotifications, ...
+├── app/                      # routing helpers (URL scheme)
 ├── types/                    # Shared type definitions (types/index.ts)
-├── constants/                # Map styles, shared constants
 ├── samples/                  # Sample GPS track files for manoeuvres
 index.html                    # Vite HTML entry (repo root)
 vite.config.ts                # Vite + Vitest configuration
 ```
+
+**Dependency rule** (enforced by review, currently clean):
+`app → components/hooks → { core, data, map, modes }`, `data → core`,
+`map → core`, `core → nothing`. `core/` must never import React, DOM,
+I/O or map code; `map/layers/` must never import a concrete provider.
 
 ## Tech Stack
 
@@ -68,9 +81,16 @@ Deploy: GitHub Pages via `.github/workflows/static.yml` (lint + test + build).
    - Dashed line: Original path without wind
    - Solid line: Wind-corrected path
 
+**Modes** (`src/modes/`) decide which of this is exposed: *Standard
+Pattern*, *High Performance Landing* (adds manoeuvre + CP courses) and
+*Flocking* (its own panel/derivation; see below). A first-run picker
+chooses one; it is remembered per device and switchable from the toolbar.
+Each mode keeps its own target.
+
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
-forecast time selection, KMZ and FlySight 2 export, measure tool.
+forecast time selection + hour scrubber, model/sounding comparison,
+persisted winds with staleness, KMZ and FlySight 2 export, measure tool.
 
 ## Key Components
 
@@ -85,50 +105,76 @@ forecast time selection, KMZ and FlySight 2 export, measure tool.
 | CoursesComponent | `components/CoursesComponent.tsx` | Course selection and editing |
 | SettingsComponent | `components/SettingsComponent.tsx` | App preferences |
 | PresetSelector | `components/PresetSelector.tsx` | Save/load named setups |
+| FlockingComponent | `components/FlockingComponent.tsx` | Flocking panel: classic/free/solve sub-modes |
 
 ## State Management
 
 `hooks/useAppState.tsx` — React context. Configs (patternParams,
-manoeuvreConfig, target, settings) are the source of truth, persisted via
-Toolpad's `useLocalStorageState`; flight paths are derived with `useMemo`.
-Presets snapshot/restore these configs (`hooks/usePresets.ts`).
+manoeuvreConfig, flockingParams, per-mode targets, settings) are the
+source of truth, persisted via Toolpad's `useLocalStorageState` behind
+**versioned codecs** (`util/storage.ts` + `migrate*` in `core/model.ts`,
+which must never throw on bad data); flight paths are derived with
+`useMemo`. Presets snapshot/restore these configs (`hooks/usePresets.ts`).
 
-## Utility Modules
+Settings resolution: mode defaults apply only to settings the user has
+never changed — `flip.settings.touched` records explicit edits, so a
+user can force a mode-overridden setting back to the global default.
+
+## Core Modules (`src/core/`, all pure + unit-tested)
 
 | File | Purpose |
 |------|---------|
-| `util/util.ts` | `reposition()`, `averageWind()`, `straightenLegs()` — core path transformations |
-| `util/geo.ts` | Turf.js wrappers: translation, rotation, mirror, `addWind()` |
-| `util/pattern.ts` | `makePatternByType()` — landing pattern from parameters |
-| `util/manoeuvre.ts` | `createManoeuvrePath()` — manoeuvre path from parameters |
-| `util/wind.ts` | `WindRow` and `Winds` classes with interpolation |
-| `util/courses.ts` | Course geometry (buoys, gates, lines) |
-| `util/pathStats.ts` | Per-leg/manoeuvre stats for map tooltips |
+| `core/geometry.ts` | `translate()`, `reposition()`, `addWind()`, `averageWind()`, `straightenLegs()`, `mirror()` |
+| `core/pattern.ts` | `makePatternByType()` — landing pattern from parameters |
+| `core/manoeuvre.ts` | `createManoeuvrePath()`, initiation-altitude scaling |
+| `core/wind.ts` | `WindProfile` data + pure helpers (`getWindAt`, vector interpolation, Beaufort, row provenance) |
+| `core/flocking.ts` | Flocking math: path, into-wind, drift vectors, FWC spot description, jumprun line helpers |
+| `core/flockingSolve.ts` | Analytic corridor solver: tiers + into-wind preference |
+| `core/courses.ts` | Course geometry (buoys, gates, lines) |
+| `core/pathStats.ts` | Per-leg/manoeuvre stats, `driftAngle`, `groundSpeedKts`, `cumulativeTurnDeg` |
+| `core/units.ts` | Unit conversions + preferences (incl. mi/nm/km distances) |
+| `core/validation.ts` | `LIMITS`, clamping, direction normalization |
+| `core/model.ts` | Versioned document defaults + `migrate*` loaders |
 | `util/dropzones.ts` | Dropzone database with coordinates |
-| `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports |
-| `util/units.ts` | Unit conversions and preferences |
+| `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports (DOM/download side effects, so not in core) |
 
-## Wind System
+## Wind System (`src/data/wind/`)
 
-### Forecast (`/src/forecast/`)
+Sources implement a `WindSource` plugin interface (`source.ts`):
 
-- **OpenMeteo GFS** (`openmeteo.ts`) — winds aloft at 17 pressure levels;
-  `fetchForecast()` in `forecast.ts` is the entry point.
-
-### Observed ground wind stations
-
-- **NWS** (`nwsObserved.ts`) — nearby official stations
-- **CSC** (`csc.ts` / `cscProvider.ts`) — WebSocket GraphQL subscription
-- **Spaceland** (`spaceland.ts` / `spacelandProvider.ts`) — Socket.IO
-- `observedWind.ts` — provider registry; `useObservedWind` hook consumes it.
-  Nearest station can be injected as ground wind (setting `useDzGroundWind`).
+- **OpenMeteo** (`openmeteo.ts`) — winds aloft at 17 pressure levels,
+  selectable model, prefetches a ≥24 h window so hour-switching and the
+  scrubber are local.
+- **Soundings** (`soundings.ts`) — Iowa Environmental Mesonet RAOB.
+- **Observed stations** (`stations/`) — NWS gridpoint discovery, CSC
+  (GraphQL WS), Spaceland (Socket.IO); the nearest can be injected as
+  ground wind (`useDzGroundWind`).
+- `compose.ts` merges aloft + observed ground into the effective profile.
+  `hooks/useWinds.ts` is the app-facing facade over all of it.
 
 ### Wind application algorithm
 
-In `geo.ts` — `addWind()`: path is processed backward from the landing
-point (which stays fixed at the target); each earlier point is offset by
-cumulative wind drift based on time deltas and wind at that altitude
-(optionally interpolated between rows).
+`core/geometry.addWind()`: the path is processed backward from the
+landing point (held fixed); each earlier point is offset by the
+cumulative drift, accumulated as a **flat east/north vector** (a polar
+accumulation used to wander and visibly curved paths whose drift nearly
+cancels the flown line — see NOTES).
+
+## Flocking mode
+
+`core/flocking.ts` + `hooks/useFlockingPath.ts` + `FlockingComponent` +
+`map/layers/FlockingLayer.tsx`. Three sub-modes:
+
+- **classic** — the original Flocking Wind Calculator model: pick the
+  canopy flight direction, the jumprun IS that direction, one unique exit.
+- **free** — you own the jumprun line (direction + lateral offset), the
+  exit on it, and the canopy direction; the app reports where the jump
+  ends and how far off target.
+- **solve** — describe allowed jumprun *corridors* (nameable, individually
+  enabled) and let `core/flockingSolve.ts` pick. Selection is NOT plain
+  miss minimization: misses are tiered by the green/yellow rings and
+  corridors that both reach green are separated by which run is most
+  into the wind, which keeps the answer stable as a forecast drifts.
 
 ## Coordinate Formats
 

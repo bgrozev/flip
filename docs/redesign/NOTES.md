@@ -264,3 +264,101 @@ the long flocking path; spot-label/exit-label overlap; whether FWC's
 PAST-side left/right flip should be fixed in both apps; the rest of the
 flocking wishlist (reverse build, jump profiles, groups/separation,
 handoff to landing pattern, reachability zones) is untouched.
+
+## Session 2026-07-16→19 — review, wind UX, flocking iteration
+
+One long session. Ordered roughly as it happened; commit refs are on the
+branch. End state: **541 tests, 0 lint errors / 50 known warnings, build
+green, tree clean.**
+
+### Architecture review (2026-07-16)
+
+Read the whole branch and recorded the weak spots in BACKLOG under
+"Architecture-review follow-ups", then cleared all but two:
+
+- `cf21e1e` error surface — a failed forecast fetch used to reset the
+  table to an empty profile with only a console.log. It now keeps the
+  previous profile and reports through a new app-wide snackbar.
+- `6a88205` `useWinds` facade out of App.tsx (also fixed `appTitle`
+  calling a component as a plain function).
+- `07f6268`/`4610819`/`a15e4a7` finish the core/ layering: `pathStats`
+  and `courses` moved (behavior pinned by tests *first*), drift-angle
+  formula deduped, `PointData` shared. Exporters deliberately stayed in
+  `util/` — they touch the DOM.
+- `19bf4f5` first RTL tests (usePresets round-trip, PatternComponent).
+- `0e8f6da` settings layering: explicit `flip.settings.touched` replaces
+  the equals-global-default heuristic, fixing a real trap — a user could
+  not force a mode-overridden setting back to the global default.
+  Pre-tracking users are seeded from what differs from the defaults, so
+  behavior is unchanged until their next edit.
+- `8a9f2f5` removed dead `CODEC_JSON`.
+
+Deferred deliberately: track-scale path rendering (every point renders
+2–3 MapCircles — fine at ~100 pattern points, not for GPS tracks; Phase
+7), and the OpenMeteo module-level prefetch singleton (accepted).
+
+### Owner quick items + wind UX
+
+Jump-to-course, map tooltip contrast, per-row wind source badges, ground
+speed in the point hover (threaded through the user's speed formatter),
+cumulative turn in the manoeuvre hover. Then: winds persist across
+reloads with a staleness indicator, an hour scrubber over the prefetched
+window (verified with zero fetch() calls while scrubbing), and a
+first-pass model/sounding comparison view — the comparison fetch
+deliberately never *stores* into the prefetch cache so a sweep cannot
+evict the window the scrubber relies on.
+
+### Phase 6 iteration (see the Phase 6 section above for the port)
+
+The port was followed by several rounds of owner feedback:
+
+1. **Jumprun decoupled from canopy flight**, first as an auto/pinned
+   split, then — after the owner reframed it around how the UI is
+   actually used — as three sub-modes: **classic** (FWC), **free**,
+   **solve**. `fa64105`, `01ea225`.
+2. **Solve mode** `008c68a`/`5e0868a`/`74c02cb`: analytic corridor
+   solver (no brute force — the exit collapses to a clamped projection,
+   the canopy arc is sampled at 0.5°), with a brute-force oracle test.
+3. **Solver stability** `6f1f302`: plain miss-minimization made the
+   forecast scrubber flip between a north and a south corridor on noise.
+   Now misses are tiered by green/yellow rings and corridors that both
+   reach green are separated by *most into the wind*. It only flips when
+   the wind crosses the perpendicular between two runs — a real change.
+   This is the design worth preserving; the rest of solve mode is
+   mechanical.
+4. **UI rounds**: compact vector rows with bearing arrows, wrapping
+   direction fields (`NumberInput` gained a cyclic `wrap`), distance
+   rounding, a visible grid, the distance unit moved into general
+   Settings as a `UnitPreferences` field, draggable Spot Reference, the
+   two 1-D jumprun handles collapsed into one 2-D move handle, per-mode
+   targets (`flip.targets.byMode`, falling back to the shared legacy
+   target), rings renamed Green/Yellow and applied in all three modes,
+   nameable + toggleable corridors.
+
+### Two real bugs (both worth remembering)
+
+- **`addWind` curvature** `c95d93b`. Polar drift accumulation wandered;
+  invisible until the drift nearly cancels the flown line, then ~14° of
+  bogus curvature. Now a flat east/north vector sum. Found by writing
+  the smallest possible repro (uniform wind → assert collinear) rather
+  than by reading the flocking code, which was innocent.
+- **FWC's PAST left/right flip** `ba3b681`. Its formula expands to
+  `along × side`, so the side inverts with prior/past. FliP now reports
+  the geometric side; **FWC itself is still wrong** — open question for
+  the owner.
+
+### Verification lessons (the important one)
+
+A browser check *appeared* to confirm the flocking click-to-move fix.
+The follow-up regression check then showed the same "pass" in a mode
+that should have behaved differently — suspicious. Stashing the change
+and re-running proved the old code behaved identically: automated
+coordinate clicks never reach the Google Maps click handler at all, so
+both results were meaningless and the first was a false positive. The
+fix was verified by a unit test of the actual contract instead
+(`TargetEditLayer.test.tsx`).
+
+Generalization now in HANDOFF: when an automated check passes, ask
+whether it would have *failed* before the change. If not, it proved
+nothing. Automated drags have the same problem — the flocking map
+handles have never been exercised by a real pointer.
