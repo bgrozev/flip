@@ -47,7 +47,9 @@ export interface FlockingDerived {
   canopyDeg: number;
   /** The current into-wind direction (for quick-set buttons). */
   intoWindDeg: number;
-  /** Free mode: canopy deviates from the jumprun by more than the warn limit. */
+  /** Angle between the canopy flight and the jumprun, degrees (0-180). */
+  canopyDeviationDeg: number;
+  /** Whether that deviation exceeds CANOPY_DEVIATION_WARN_DEG. */
   canopyDeviationWarning: boolean;
   /** The FWC drift block: wind drift / canopy flight / combined. */
   vectors: FlockingVectors | null;
@@ -87,6 +89,7 @@ const EMPTY: FlockingDerived = {
   jumprunDeg: 0,
   canopyDeg: 0,
   intoWindDeg: 0,
+  canopyDeviationDeg: 0,
   canopyDeviationWarning: false,
   vectors: null,
   spot: null,
@@ -206,6 +209,7 @@ export function useFlockingPath({
         jumprunDeg,
         canopyDeg,
         intoWindDeg,
+        canopyDeviationDeg: 0,
         canopyDeviationWarning: false,
         vectors: flockingVectors(idealAtTarget, correctedAtTarget),
         spot: spotDescription(exit, reference, jumprunDeg),
@@ -245,6 +249,7 @@ export function useFlockingPath({
       jumprunDeg,
       canopyDeg,
       intoWindDeg,
+      canopyDeviationDeg: driftAngle(canopyDeg, jumprunDeg),
       canopyDeviationWarning: driftAngle(canopyDeg, jumprunDeg) > CANOPY_DEVIATION_WARN_DEG,
       vectors: flockingVectors(ideal, corrected),
       spot: spotDescription(exit, reference, jumprunDeg),
@@ -367,7 +372,9 @@ function deriveSolve({
     jumprunDeg: best.jumprunDeg,
     canopyDeg: best.canopyDeg,
     intoWindDeg,
-    canopyDeviationWarning: false,
+    canopyDeviationDeg: driftAngle(best.canopyDeg, best.jumprunDeg),
+    canopyDeviationWarning:
+      driftAngle(best.canopyDeg, best.jumprunDeg) > CANOPY_DEVIATION_WARN_DEG,
     vectors: flockingVectors(ideal, corrected),
     spot: spotDescription(exit, reference, best.jumprunDeg),
     reference,

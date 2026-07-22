@@ -208,7 +208,9 @@ interface FlockingComponentProps {
   missMi: number | null;
   /** Whether the end lands inside the target area. */
   onTarget: boolean;
-  /** Free mode: canopy deviates from the jumprun by more than the limit. */
+  /** Angle between the canopy flight and the jumprun, degrees. */
+  canopyDeviationDeg: number;
+  /** Whether that deviation exceeds CANOPY_DEVIATION_WARN_DEG. */
   canopyDeviationWarning: boolean;
   /** Solve mode: solver result (per-corridor + best). */
   solve: SolveResult | null;
@@ -229,6 +231,7 @@ export default function FlockingComponent({
   spot,
   missMi,
   onTarget,
+  canopyDeviationDeg,
   canopyDeviationWarning,
   solve,
   distanceUnit,
@@ -338,9 +341,18 @@ export default function FlockingComponent({
       {spot && (
         <Box sx={{ textAlign: 'left' }} data-testid="flocking-spot">
           <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-            {hasWind ? 'Forecasted Spot:' : 'No-wind Spot:'}
+            Spot
           </Typography>
           <Typography variant="body1">Jumprun {roundDeg(spot.jumprunDeg)}˚</Typography>
+          {canopyDeviationDeg >= 0.5 && (
+            <Typography
+              variant="body1"
+              sx={{ color: canopyDeviationWarning ? 'error.main' : 'success.main' }}
+              data-testid="flocking-deviation"
+            >
+              Canopy {Math.round(canopyDeviationDeg)}˚ off jumprun
+            </Typography>
+          )}
           <Typography variant="body1">
             {milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} {unitLabel}{' '}
             {spot.prior ? 'prior' : <b>PAST</b>}

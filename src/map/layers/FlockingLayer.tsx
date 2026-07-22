@@ -129,6 +129,10 @@ export interface FlockingLayerProps {
   missMi: number | null;
   /** Whether the end lands inside the target area. */
   onTarget: boolean;
+  /** Angle between the canopy flight and the jumprun, degrees. */
+  canopyDeviationDeg?: number;
+  /** Whether that deviation exceeds the warn limit (colours it red). */
+  canopyDeviationWarning?: boolean;
   /** Free mode: move the whole jumprun so its exit lands at a dragged point. */
   onJumprunMove?: (exit: LatLng) => void;
   /** Free mode: rotate the jumprun (new direction, cardinal deg). */
@@ -160,6 +164,8 @@ export default function FlockingLayer({
   end,
   missMi,
   onTarget,
+  canopyDeviationDeg = 0,
+  canopyDeviationWarning = false,
   onJumprunMove,
   onJumprunRotate,
   onCanopyRotate,
@@ -607,7 +613,8 @@ export default function FlockingLayer({
         </>
       )}
 
-      {/* Spot label near the exit */}
+      {/* Spot label near the exit, with the canopy-vs-jumprun deviation
+          when the two differ (green within the limit, red beyond it). */}
       {exit && spotText && (
         <MapOverlay position={exit}>
           <div
@@ -616,7 +623,12 @@ export default function FlockingLayer({
               ...missed ? { border: `1px solid ${MISS_COLOR}`, color: '#ff8a80' } : {}
             }}
           >
-            {spotText}
+            <div>{spotText}</div>
+            {canopyDeviationDeg >= 0.5 && (
+              <div style={{ color: canopyDeviationWarning ? MISS_COLOR : JUMPRUN_COLOR }}>
+                Canopy {Math.round(canopyDeviationDeg)}˚ off jumprun
+              </div>
+            )}
           </div>
         </MapOverlay>
       )}

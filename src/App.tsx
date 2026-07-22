@@ -390,6 +390,7 @@ function DashboardContent() {
         spot={flocking.spot}
         missMi={flocking.missMi}
         onTarget={flocking.onTarget}
+        canopyDeviationDeg={flocking.canopyDeviationDeg}
         canopyDeviationWarning={flocking.canopyDeviationWarning}
         solve={flocking.solve}
         distanceUnit={modeSettings.units.distance}
@@ -558,6 +559,8 @@ function DashboardContent() {
         end: flocking.end,
         missMi: flocking.missMi,
         onTarget: flocking.onTarget,
+        canopyDeviationDeg: flocking.canopyDeviationDeg,
+        canopyDeviationWarning: flocking.canopyDeviationWarning,
         onJumprunMove: flockingParams.mode === 'free' ? handleJumprunMove : undefined,
         onJumprunRotate: flockingParams.mode === 'free' ? handleJumprunRotate : undefined,
         onCanopyRotate: flockingParams.mode === 'free' ? handleCanopyRotate : undefined,
