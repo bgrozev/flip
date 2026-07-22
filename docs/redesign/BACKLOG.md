@@ -114,6 +114,12 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☐ **Replay animation** — animate a dot along the plan (later: a recorded
   track) over time. Teaching/demo value; cheap over the memoized paths.
   (2026-07-16 review.)
+- ☐ **Better wind visualization (perhaps windy-like)** — the wind table
+  and the single ground arrow are a poor picture of a wind field. Explore
+  a windy.com-style rendering: animated particle streaks / flow lines
+  over the map, a colour ramp for speed, and the ability to see the
+  profile change with altitude (tie into the altitude band the plan
+  actually uses). ✎ design; owner request 2026-07-19.
 - ✎ **Side profile view** — altitude-vs-distance elevation plot of the
   plan below the map (pure SVG from existing path data; no map provider
   involved). Explains descent/glide better than top-down. Owner wants to
