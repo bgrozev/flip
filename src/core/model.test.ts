@@ -23,6 +23,7 @@ import {
   migrateStoredTracks,
   migrateStoredWinds,
   migrateTarget,
+  migrateTargetsByMode,
   migrateTouchedSettings,
   seedTouchedSettings
 } from './model';
@@ -70,6 +71,27 @@ describe('migrateTarget', () => {
     expect(result.target.lat).toBe(DEFAULT_TARGET.target.lat);
     expect(result.target.lng).toBe(10);
     expect(result.finalHeading).toBe(DEFAULT_TARGET.finalHeading);
+  });
+});
+
+describe('migrateTargetsByMode', () => {
+  it.each(GARBAGE.map(g => [g]))('returns an empty map for %j', raw => {
+    expect(migrateTargetsByMode(raw)).toEqual({});
+  });
+
+  it('validates each mode entry and drops garbage ones', () => {
+    const result = migrateTargetsByMode({
+      pattern: { target: { lat: 40.1, lng: -74.5 }, finalHeading: 135 },
+      flocking: { target: { lat: 1234, lng: -999 }, finalHeading: -90 },
+      swoop: 'nonsense',
+      '': { target: { lat: 1, lng: 2 }, finalHeading: 0 }
+    });
+
+    expect(Object.keys(result).sort()).toEqual(['flocking', 'pattern']);
+    expect(result.pattern.finalHeading).toBe(135);
+    // out-of-range values are clamped/normalized by migrateTarget
+    expect(result.flocking.target.lat).toBe(90);
+    expect(result.flocking.finalHeading).toBe(270);
   });
 });
 

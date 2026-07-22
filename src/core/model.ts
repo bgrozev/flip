@@ -179,6 +179,28 @@ export function migrateTarget(raw: unknown): Target {
   };
 }
 
+/**
+ * Per-mode targets, keyed by mode id. Each mode plans against its own
+ * landing/end point (a swoop target and a flocking target are rarely the
+ * same place). Unknown/garbage entries are dropped; a mode with no entry
+ * falls back to the shared legacy `flip.target` (see useAppState).
+ */
+export function migrateTargetsByMode(raw: unknown): Record<string, Target> {
+  if (!isRecord(raw)) {
+    return {};
+  }
+
+  const targets: Record<string, Target> = {};
+
+  Object.entries(raw).forEach(([modeId, value]) => {
+    if (modeId !== '' && isRecord(value)) {
+      targets[modeId] = migrateTarget(value);
+    }
+  });
+
+  return targets;
+}
+
 const PATTERN_TYPES: readonly PatternType[] = ['none', 'one-leg', 'two-leg', 'three-leg'];
 
 export function migratePatternParams(raw: unknown): PatternParams {

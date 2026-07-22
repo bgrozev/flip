@@ -13,6 +13,7 @@ import {
   migratePatternParams,
   migrateSettings,
   migrateTarget,
+  migrateTargetsByMode,
   migrateTouchedSettings,
   seedTouchedSettings
 } from '../core/model';
@@ -80,6 +81,10 @@ interface AppStateContextValue {
   setPatternParams: (params: PatternParams) => void;
   setFlockingParams: (params: FlockingParams) => void;
   setTarget: (target: Target) => void;
+  /** The target for a given mode (falls back to the shared legacy target). */
+  targetForMode: (modeId: string) => Target;
+  /** Set the target for a given mode only. */
+  setTargetForMode: (modeId: string, target: Target) => void;
   setSettings: (settings: Settings) => void;
   setSelectedCourseId: (id: string | null) => void;
 
@@ -115,6 +120,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     { codec: createVersionedCodec(SCHEMA_VERSION, migrateTarget) }
   );
   const target = storedTarget ?? DEFAULT_TARGET;
+
+  // Per-mode targets. Modes plan against different places (a swoop target
+  // and a flocking end point are rarely the same), so each mode keeps its
+  // own; a mode with no entry yet falls back to the shared legacy target,
+  // which is what every existing user has.
+  const [storedTargetsByMode, setStoredTargetsByMode] =
+    useLocalStorageState<Record<string, Target>>(
+      'flip.targets.byMode',
+      {},
+      { codec: createVersionedCodec(SCHEMA_VERSION, migrateTargetsByMode) }
+    );
+  const targetsByMode = useMemo(() => storedTargetsByMode ?? {}, [storedTargetsByMode]);
 
   // Pattern params — source of truth; path is derived.
   // Uses the same key as the old PatternComponent so existing user data is preserved.
@@ -189,6 +206,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   // Persist the new settings and mark every key whose value changed as
   // touched — the only writer is the Settings panel, so a changed key is
   // an explicit user choice.
+  const targetForMode = useCallback(
+    (modeId: string) => targetsByMode[modeId] ?? target,
+    [targetsByMode, target]
+  );
+
+  const setTargetForMode = useCallback(
+    (modeId: string, value: Target) => {
+      setStoredTargetsByMode({ ...targetsByMode, [modeId]: value });
+    },
+    [targetsByMode, setStoredTargetsByMode]
+  );
+
   const setSettings = useCallback(
     (value: Settings) => {
       const changed = (Object.keys(value) as (keyof Settings)[]).filter(
@@ -211,12 +240,13 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   const resetAll = useCallback(() => {
     setStoredManoeuvreConfig(DEFAULT_MANOEUVRE_CONFIG);
     setStoredTarget(DEFAULT_TARGET);
+    setStoredTargetsByMode({});
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
     setStoredFlockingParams(DEFAULT_FLOCKING_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
     setStoredTouched([]);
     setStoredSelectedCourseId(null);
-  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredPatternParams, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredTargetsByMode, setStoredPatternParams, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -233,6 +263,8 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setPatternParams,
       setFlockingParams,
       setTarget,
+      targetForMode,
+      setTargetForMode,
       setSettings,
       setSelectedCourseId,
       resetAll
@@ -251,6 +283,8 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setPatternParams,
       setFlockingParams,
       setTarget,
+      targetForMode,
+      setTargetForMode,
       setSettings,
       setSelectedCourseId,
       resetAll

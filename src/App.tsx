@@ -150,8 +150,8 @@ function DashboardContent() {
     manoeuvre,
     manoeuvreConfig,
     setManoeuvreConfig,
-    target,
-    setTarget: setTargetBase,
+    targetForMode,
+    setTargetForMode,
     pattern,
     patternParams,
     setPatternParams,
@@ -176,6 +176,10 @@ function DashboardContent() {
   const rawUrlMode = router.searchParams.get('mode');
   const urlModeId = migrateModeId(rawUrlMode);
   const { mode, setModeId, firstRun } = useMode(urlModeId);
+
+  // Each mode plans against its own target; modes with none yet share the
+  // legacy one, so existing setups carry over on first switch.
+  const target = targetForMode(mode.id);
 
   // Persist the link's mode, then strip the param to keep the URL canonical
   useEffect(() => {
@@ -222,16 +226,17 @@ function DashboardContent() {
     settings: modeSettings
   });
 
-  // Wrap setTarget to invalidate winds when target moves too far
+  // Wrap setTarget to invalidate winds when the target moves too far.
+  // Each mode plans against its own target (see useAppState).
   const setTarget = useCallback(
     (newTarget: Target) => {
       if (hasTargetMovedTooFar(target.target, newTarget.target)) {
         console.log('Moved too far, invalidating winds');
         invalidateWinds();
       }
-      setTargetBase(newTarget);
+      setTargetForMode(mode.id, newTarget);
     },
-    [target.target, setTargetBase, invalidateWinds]
+    [target.target, setTargetForMode, mode.id, invalidateWinds]
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -403,6 +408,7 @@ function DashboardContent() {
           if (open && isMobile) router.navigate(MAP_PATH);
         }}
         onUpwindClick={onUpwindClick}
+        headingRelevant={!isFlocking}
       />
     );
   } else if (activePanel === 'wind') {
@@ -502,12 +508,16 @@ function DashboardContent() {
       }
       : undefined;
 
-  const targetEditTarget: TargetEditTarget | undefined = targetEditOpen
+  // Flocking ignores the target heading, so its target is always draggable
+  // and only the move handle renders; other modes keep the explicit
+  // "Edit on Map" toggle with the heading handle.
+  const targetEditTarget: TargetEditTarget | undefined = targetEditOpen || isFlocking
     ? {
       target: target.target,
       heading: target.finalHeading,
       onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
-      onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) })
+      onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
+      headingEditable: !isFlocking
     }
     : undefined;
 
@@ -568,6 +578,7 @@ function DashboardContent() {
             onRefreshWindsClick={() => handleFetchWinds(undefined, { force: true })}
             onExportClick={() => setExportOpen(true)}
             targetEditOpen={targetEditOpen}
+            showTargetEdit={!isFlocking}
             onTargetEditToggle={() => {
               const next = !targetEditOpen;
               setTargetEditOpen(next);

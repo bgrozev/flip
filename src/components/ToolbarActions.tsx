@@ -19,6 +19,8 @@ interface ToolbarActionsProps {
   onExportClick: () => void;
   targetEditOpen: boolean;
   onTargetEditToggle: () => void;
+  /** Hidden when the mode keeps the target permanently draggable (flocking). */
+  showTargetEdit?: boolean;
   fetching: boolean;
   showPresets: boolean;
   presets: Preset[];
@@ -36,6 +38,7 @@ export default function ToolbarActions({
   onExportClick,
   targetEditOpen,
   onTargetEditToggle,
+  showTargetEdit = true,
   fetching,
   showPresets,
   presets,
@@ -49,7 +52,9 @@ export default function ToolbarActions({
     <Stack direction="row" spacing={1} alignItems="center">
       <ModeSwitcher modeId={modeId} onChange={onModeChange} />
       <Divider orientation="vertical" flexItem />
-      <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
+      {showTargetEdit && (
+        <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
+      )}
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <ExportButton onClick={onExportClick} />
       <Divider orientation="vertical" flexItem />

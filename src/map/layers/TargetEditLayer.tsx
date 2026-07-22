@@ -22,6 +22,11 @@ export interface TargetEditTarget {
   heading: number;
   onMove: (pos: LatLng) => void;
   onHeadingChange: (heading: number) => void;
+  /**
+   * Whether the final-heading handle is offered. Modes that ignore the
+   * target heading (flocking) pass false: only the move handle renders.
+   */
+  headingEditable?: boolean;
 }
 
 export interface TargetEditLayerProps {
@@ -41,16 +46,19 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
   const offsetM = HEADING_HANDLE_OFFSET_PX * metersPerPixel(edit.target.lat, zoom);
   const headingHandlePos = destinationPoint(edit.target, edit.heading, offsetM);
   const headingLineEnd = liveHeadingPos ?? headingHandlePos;
+  const headingEditable = edit.headingEditable !== false;
 
   return (
     <>
-      <MapPolyline
-        path={[edit.target, headingLineEnd]}
-        color="#ffaa00"
-        weight={2}
-        opacity={0.9}
-        zIndex={25}
-      />
+      {headingEditable && (
+        <MapPolyline
+          path={[edit.target, headingLineEnd]}
+          color="#ffaa00"
+          weight={2}
+          opacity={0.9}
+          zIndex={25}
+        />
+      )}
       <MapDragHandle
         position={edit.target}
         cursor="move"
@@ -59,18 +67,20 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
         scale={9}
         onDragEnd={pos => edit.onMove(pos)}
       />
-      <MapDragHandle
-        position={headingHandlePos}
-        cursor="pointer"
-        zIndex={27}
-        color="#ffaa00"
-        scale={7}
-        onDrag={pos => setLiveHeadingPos(pos)}
-        onDragEnd={pos => {
-          setLiveHeadingPos(null);
-          edit.onHeadingChange(bearingBetween(edit.target, pos));
-        }}
-      />
+      {headingEditable && (
+        <MapDragHandle
+          position={headingHandlePos}
+          cursor="pointer"
+          zIndex={27}
+          color="#ffaa00"
+          scale={7}
+          onDrag={pos => setLiveHeadingPos(pos)}
+          onDragEnd={pos => {
+            setLiveHeadingPos(null);
+            edit.onHeadingChange(bearingBetween(edit.target, pos));
+          }}
+        />
+      )}
     </>
   );
 }
