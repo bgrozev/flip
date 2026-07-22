@@ -7,7 +7,7 @@
  */
 import { MapLayerId, PanelId, Settings } from '../types';
 
-export type ModeId = 'pattern' | 'swoop' | 'flocking' | 'explore';
+export type ModeId = 'pattern' | 'swoop' | 'flocking';
 
 /** Coarse feature switches for gates that are neither nav nor a map layer. */
 export const FEATURE_IDS = ['manoeuvre', 'courses', 'presets', 'export'] as const;
@@ -48,8 +48,8 @@ const ALL_LAYERS: readonly MapLayerId[] = [
 export const MODES: readonly Mode[] = [
   {
     id: 'pattern',
-    label: 'Pattern',
-    description: 'Landing patterns for skydivers and students',
+    label: 'Standard Pattern',
+    description: 'Standard downwind-base-final pattern',
     enabled: true,
     nav: ['pattern', 'target', 'wind', 'settings', 'about'],
     mapLayers: ['flightPaths', 'measure', 'stations', 'targetEdit', 'windArrow'],
@@ -59,8 +59,8 @@ export const MODES: readonly Mode[] = [
   },
   {
     id: 'swoop',
-    label: 'Swoop',
-    description: 'Patterns plus manoeuvres and canopy-piloting courses',
+    label: 'High Performance Landing',
+    description: 'Include a landing manoeuvre and CP courses',
     enabled: true,
     nav: ALL_PANELS,
     mapLayers: ALL_LAYERS,
@@ -70,7 +70,7 @@ export const MODES: readonly Mode[] = [
   {
     id: 'flocking',
     label: 'Flocking',
-    description: 'Wind drift and jump run for flocks',
+    description: 'Wind drift and spot planning for flocking.',
     enabled: true,
     nav: ['flocking', 'target', 'wind', 'settings', 'about'],
     mapLayers: ['flocking', 'stations', 'targetEdit', 'windArrow'],
@@ -78,17 +78,6 @@ export const MODES: readonly Mode[] = [
     features: ['export'],
     // The flocking picture (descent + 3 nm jumprun) spans several miles
     defaultZoom: 12
-  },
-  // Stub: defined to prove the shape; not yet selectable.
-  {
-    id: 'explore',
-    label: 'Explore',
-    description: 'Everything unlocked, no guardrails',
-    enabled: false,
-    nav: ALL_PANELS,
-    mapLayers: ALL_LAYERS,
-    defaults: {},
-    features: ['manoeuvre', 'courses', 'presets', 'export']
   }
 ];
 

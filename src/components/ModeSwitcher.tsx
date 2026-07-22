@@ -1,6 +1,5 @@
 import {
   Check as CheckIcon,
-  Explore as ExploreIcon,
   Groups as GroupsIcon,
   Route as RouteIcon,
   Speed as SpeedIcon
@@ -20,8 +19,7 @@ import { MODES, ModeId } from '../modes';
 const MODE_ICONS: Record<ModeId, React.ReactNode> = {
   pattern: <RouteIcon />,
   swoop: <SpeedIcon />,
-  flocking: <GroupsIcon />,
-  explore: <ExploreIcon />
+  flocking: <GroupsIcon />
 };
 
 interface ModeSwitcherProps {

@@ -56,9 +56,9 @@ describe('mode definitions integrity', () => {
     }
   });
 
-  it('ships pattern, swoop and flocking enabled; explore as a stub', () => {
+  it('ships pattern, swoop and flocking, all enabled', () => {
     expect(ENABLED_MODES.map(m => m.id)).toEqual(['pattern', 'swoop', 'flocking']);
-    expect(getMode('explore').enabled).toBe(false);
+    expect(MODES.every(m => m.enabled)).toBe(true);
   });
 
   it('flocking mode exposes its panel and layer, no pattern/manoeuvre', () => {
@@ -110,7 +110,8 @@ describe('migrateModeId (mode persistence codec)', () => {
     expect(migrateModeId('flocking')).toBe('flocking');
   });
 
-  it('rejects disabled (stub) mode ids', () => {
+  it('rejects retired mode ids', () => {
+    // 'explore' was a stub that shipped disabled and has since been removed
     expect(migrateModeId('explore')).toBeNull();
   });
 
