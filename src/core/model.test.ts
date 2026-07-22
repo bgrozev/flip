@@ -160,6 +160,8 @@ describe('migrateFlockingParams', () => {
       yellowRadiusMi: 2,
       solveCorridors: [
         {
+          name: 'East',
+          enabled: false,
           directionDeg: 90,
           offsetMinMi: -0.5,
           offsetMaxMi: 0.5,
@@ -194,6 +196,21 @@ describe('migrateFlockingParams', () => {
     expect(migrated.targetRadiusMi).toBeCloseTo(0.2877, 3);
     expect(migrated.yellowRadiusMi).toBeCloseTo(0.5754, 3);
     expect(migrated.showGrid).toBe(false);
+  });
+
+  it('names corridors and defaults them to enabled', () => {
+    const migrated = migrateFlockingParams({
+      solveCorridors: [
+        { directionDeg: 0 },
+        { directionDeg: 90, name: 'East', enabled: false }
+      ]
+    });
+
+    // A corridor with no name/enabled flag is an unnamed, enabled one
+    expect(migrated.solveCorridors[0].name).toBe('');
+    expect(migrated.solveCorridors[0].enabled).toBe(true);
+    expect(migrated.solveCorridors[1].name).toBe('East');
+    expect(migrated.solveCorridors[1].enabled).toBe(false);
   });
 
   it('validates the mode and the free-mode fields', () => {

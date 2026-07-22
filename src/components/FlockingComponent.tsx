@@ -12,10 +12,12 @@ import {
   AccordionSummary,
   Box,
   Button,
+  Checkbox,
   FormControlLabel,
   Slider,
   Stack,
   Switch,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -23,7 +25,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
-import { SolveResult, SolveTier } from '../core/flockingSolve';
+import { SolveResult, SolveSolution, SolveTier } from '../core/flockingSolve';
 import {
   CANOPY_DEVIATION_WARN_DEG,
   DISTANCE_UNIT_LABELS,
@@ -225,8 +227,10 @@ interface FlockingComponentProps {
   canopyDeviationDeg: number;
   /** Whether that deviation exceeds CANOPY_DEVIATION_WARN_DEG. */
   canopyDeviationWarning: boolean;
-  /** Solve mode: solver result (per-corridor + best). */
+  /** Solve mode: solver result (best carries the corridor index). */
   solve: SolveResult | null;
+  /** Solve mode: each corridor's solution, aligned to params.solveCorridors. */
+  corridorSolutions: (SolveSolution | null)[];
   /** Ground distance unit (from general Settings). */
   distanceUnit: DistanceUnit;
   /** Whether any non-calm wind rows are loaded. */
@@ -247,6 +251,7 @@ export default function FlockingComponent({
   canopyDeviationDeg,
   canopyDeviationWarning,
   solve,
+  corridorSolutions,
   distanceUnit,
   hasWind,
   target
@@ -290,6 +295,8 @@ export default function FlockingComponent({
       solveCorridors: [
         ...params.solveCorridors,
         {
+          name: '',
+          enabled: true,
           directionDeg: 0,
           offsetMinMi: -1,
           offsetMaxMi: 1,
@@ -583,8 +590,14 @@ export default function FlockingComponent({
               No corridors — add one to describe an allowed jumprun.
             </Typography>
           )}
+          {params.solveCorridors.length > 0 &&
+            params.solveCorridors.every(c => !c.enabled) && (
+            <Typography variant="body2" sx={{ color: 'warning.main', textAlign: 'left' }}>
+              Every corridor is switched off — tick one to solve.
+            </Typography>
+          )}
           {params.solveCorridors.map((c, i) => {
-            const result = solve?.perCorridor[i];
+            const result = corridorSolutions[i];
             const isBest = solve?.best?.corridorIndex === i;
 
             return (
@@ -594,22 +607,45 @@ export default function FlockingComponent({
                   border: 1,
                   borderColor: isBest ? 'success.main' : 'divider',
                   borderRadius: 1,
-                  p: 1
+                  p: 1,
+                  opacity: c.enabled ? 1 : 0.55
                 }}
               >
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="body2" sx={{ color: isBest ? 'success.main' : 'text.secondary' }}>
-                    {`Corridor ${i + 1} · ${roundDeg(c.directionDeg)}˚`}
-                    {result && ` · ${result.tier === 'green'
-                      ? 'on target'
-                      : `${result.tier === 'yellow' ? 'close' : 'misses'} by ${
-                        milesToDisplay(result.missMi, distanceUnit).toFixed(2)} ${unitLabel}`}`}
-                    {isBest && ' · best'}
-                  </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Tooltip title="Include this corridor in the solve.">
+                    <Checkbox
+                      size="small"
+                      checked={c.enabled}
+                      onChange={e => setCorridor(i, { enabled: e.target.checked })}
+                      sx={{ p: 0.5 }}
+                      inputProps={{ 'aria-label': `Enable corridor ${i + 1}` }}
+                    />
+                  </Tooltip>
+                  <TextField
+                    variant="standard"
+                    size="small"
+                    placeholder={`Corridor ${i + 1}`}
+                    value={c.name}
+                    onChange={e => setCorridor(i, { name: e.target.value })}
+                    inputProps={{ 'aria-label': `Corridor ${i + 1} name` }}
+                    sx={{ flex: 1, minWidth: 0 }}
+                  />
                   <Button size="small" color="error" onClick={() => removeCorridor(i)}>
                     Remove
                   </Button>
                 </Stack>
+                <Typography
+                  variant="body2"
+                  sx={{ color: isBest ? 'success.main' : 'text.secondary', textAlign: 'left' }}
+                >
+                  {`${roundDeg(c.directionDeg)}˚`}
+                  {!c.enabled && ' · off'}
+                  {result && ` · ${result.tier === 'green'
+                    ? 'on target'
+                    : `${result.tier === 'yellow' ? 'close' : 'misses'} by ${
+                      milesToDisplay(result.missMi, distanceUnit).toFixed(2)} ${unitLabel}`}`}
+                  {isBest && ' · best'}
+                </Typography>
                 <Stack direction="row" spacing={1}>
                   <NumberInput
                     key={`c${i}-dir-${externalEdit}`}

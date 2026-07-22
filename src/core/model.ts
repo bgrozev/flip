@@ -110,8 +110,14 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   yellowRadiusMi: displayToMiles(0.5, 'nm'),
   // The ZHills-flavored default: run north or south
   solveCorridors: [
-    { directionDeg: 0, offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15 },
-    { directionDeg: 180, offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15 }
+    {
+      name: 'North', enabled: true, directionDeg: 0,
+      offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15
+    },
+    {
+      name: 'South', enabled: true, directionDeg: 180,
+      offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15
+    }
   ],
   showGrid: false
 };
@@ -352,6 +358,8 @@ function migrateSolveCorridors(raw: unknown): SolveCorridorParams[] {
     const alongB = limitedNumber(entry.alongMaxMi, 3, LIMITS.flockingExitAlongMi);
 
     corridors.push({
+      name: stringOr(entry.name, ''),
+      enabled: booleanOr(entry.enabled, true),
       directionDeg: normalizeDirection(finiteNumber(entry.directionDeg, 0)),
       offsetMinMi: Math.min(offA, offB),
       offsetMaxMi: Math.max(offA, offB),

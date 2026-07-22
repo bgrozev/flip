@@ -17,7 +17,13 @@ import {
   spotDescription,
   windDriftVector
 } from '../core/flocking';
-import { SolveResult, SolveTier, solveFlockingSpot, tierFor } from '../core/flockingSolve';
+import {
+  SolveResult,
+  SolveSolution,
+  SolveTier,
+  solveFlockingSpot,
+  tierFor
+} from '../core/flockingSolve';
 import { driftAngle } from '../core/pathStats';
 import { addWind, averageWind, translate } from '../core/geometry';
 import { latLngToPoint } from '../core/coords';
@@ -68,9 +74,14 @@ export interface FlockingDerived {
   averageWind: { speedKts?: number; direction?: number };
   /** The jumprun line (free mode; null in classic — the run ends at the exit). */
   jumprunLine: JumprunLine | null;
-  /** Solve mode: the solver result (per-corridor + best). */
+  /** Solve mode: the solver result (best carries the ORIGINAL corridor index). */
   solve: SolveResult | null;
-  /** Solve mode: corridor exit-rectangle outlines (closed loops). */
+  /**
+   * Solve mode: each configured corridor's solution, aligned to
+   * params.solveCorridors; null where the corridor is disabled.
+   */
+  corridorSolutions: (SolveSolution | null)[];
+  /** Solve mode: exit-rectangle outlines of the ENABLED corridors. */
   corridorOutlines: LatLng[][];
 }
 
@@ -104,6 +115,7 @@ const EMPTY: FlockingDerived = {
   averageWind: {},
   jumprunLine: null,
   solve: null,
+  corridorSolutions: [],
   corridorOutlines: []
 };
 
@@ -225,6 +237,7 @@ export function useFlockingPath({
         averageWind: averageWind(idealAtTarget, correctedAtTarget),
         jumprunLine: null,
         solve: null,
+        corridorSolutions: [],
         corridorOutlines: []
       };
     }
@@ -269,6 +282,7 @@ export function useFlockingPath({
       averageWind: averageWind(ideal, corrected),
       jumprunLine,
       solve: null,
+      corridorSolutions: [],
       corridorOutlines: []
     };
   }, [active, params, target.target, winds, interpolateWind, altitudeUnit]);
@@ -313,7 +327,13 @@ function corridorOutline(
 function deriveSolve({
   params, target, reference, winds, interpolateWind, pomIntervalFt, hasWind, intoWindDeg
 }: DeriveSolveArgs): FlockingDerived {
-  const corridorOutlines = params.solveCorridors.map(c => corridorOutline(reference, c));
+  // Disabled corridors stay configured but take no part in the solve and
+  // are not drawn; results are remapped back onto the full list so the
+  // panel can line each solution up with its corridor.
+  const enabled = params.solveCorridors
+    .map((corridor, index) => ({ corridor, index }))
+    .filter(entry => entry.corridor.enabled);
+  const corridorOutlines = enabled.map(e => corridorOutline(reference, e.corridor));
 
   const drift = windDriftVector(
     winds, params.windowTopFt, params.windowBottomFt, params.descentRateMph, interpolateWind
@@ -324,10 +344,24 @@ function deriveSolve({
   const canopyLengthMi = params.horizontalSpeedMph * (durationS / 3600);
   const targetEN = localMilesEN(reference, target);
 
-  const solve = solveFlockingSpot(
-    params.solveCorridors, targetEN, drift, canopyLengthMi,
+  const rawSolve = solveFlockingSpot(
+    enabled.map(e => e.corridor), targetEN, drift, canopyLengthMi,
     { greenMi: params.targetRadiusMi, yellowMi: params.yellowRadiusMi }
   );
+
+  // Remap subset indices back to positions in params.solveCorridors
+  const corridorSolutions: (SolveSolution | null)[] = params.solveCorridors.map(() => null);
+
+  rawSolve.perCorridor.forEach((solution, k) => {
+    corridorSolutions[enabled[k].index] = { ...solution, corridorIndex: enabled[k].index };
+  });
+
+  const solve: SolveResult = {
+    ...rawSolve,
+    best: rawSolve.best
+      ? { ...rawSolve.best, corridorIndex: enabled[rawSolve.best.corridorIndex].index }
+      : null
+  };
   const best = solve.best;
 
   if (!best) {
@@ -339,6 +373,7 @@ function deriveSolve({
       jumprunDeg: intoWindDeg,
       canopyDeg: intoWindDeg,
       solve,
+      corridorSolutions,
       corridorOutlines
     };
   }
@@ -362,7 +397,7 @@ function deriveSolve({
 
   if (correctedAtTarget.length < 2) {
     return {
-      ...EMPTY, reference, hasWind, intoWindDeg, solve, corridorOutlines
+      ...EMPTY, reference, hasWind, intoWindDeg, solve, corridorSolutions, corridorOutlines
     };
   }
 
@@ -400,6 +435,7 @@ function deriveSolve({
     averageWind: averageWind(ideal, corrected),
     jumprunLine,
     solve,
+    corridorSolutions,
     corridorOutlines
   };
 }

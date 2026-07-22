@@ -73,6 +73,10 @@ export interface JumprunConfig {
  * document self-describing).
  */
 export interface SolveCorridorParams {
+  /** Free-text label, e.g. "North" or "East (airspace)". */
+  name: string;
+  /** Unchecked corridors stay configured but are left out of the solve. */
+  enabled: boolean;
   directionDeg: number;
   offsetMinMi: number;
   offsetMaxMi: number;

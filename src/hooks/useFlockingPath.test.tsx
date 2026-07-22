@@ -155,6 +155,35 @@ describe('useFlockingPath — solve mode', () => {
     expect(Math.abs(d.missMi! - d.solve!.best!.missMi)).toBeLessThan(0.05);
   });
 
+  it('leaves disabled corridors out of the solve, keeping indices aligned', () => {
+    const corridors = DEFAULT_FLOCKING_PARAMS.solveCorridors;
+    // Disable the FIRST corridor: the surviving one must still report
+    // against its own position in the configured list (index 1, not 0).
+    const d = run({
+      ...solveDefaults,
+      solveCorridors: [{ ...corridors[0], enabled: false }, { ...corridors[1] }]
+    });
+
+    expect(d.corridorSolutions).toHaveLength(2);
+    expect(d.corridorSolutions[0]).toBeNull();
+    expect(d.corridorSolutions[1]).not.toBeNull();
+    expect(d.corridorSolutions[1]!.corridorIndex).toBe(1);
+    expect(d.solve!.best!.corridorIndex).toBe(1);
+    // Only the enabled corridor is drawn
+    expect(d.corridorOutlines).toHaveLength(1);
+  });
+
+  it('solves nothing when every corridor is disabled', () => {
+    const d = run({
+      ...solveDefaults,
+      solveCorridors: DEFAULT_FLOCKING_PARAMS.solveCorridors.map(c => ({ ...c, enabled: false }))
+    });
+
+    expect(d.solve!.best).toBeNull();
+    expect(d.corridorSolutions).toEqual([null, null]);
+    expect(d.corridorOutlines).toEqual([]);
+  });
+
   it('is inert but informative with no corridors', () => {
     const d = run({ ...solveDefaults, solveCorridors: [] });
 

@@ -393,6 +393,7 @@ function DashboardContent() {
         canopyDeviationDeg={flocking.canopyDeviationDeg}
         canopyDeviationWarning={flocking.canopyDeviationWarning}
         solve={flocking.solve}
+        corridorSolutions={flocking.corridorSolutions}
         distanceUnit={modeSettings.units.distance}
         hasWind={flocking.hasWind}
         target={target.target}
