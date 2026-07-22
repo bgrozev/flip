@@ -218,7 +218,8 @@ export function solveFlockingSpot(
   targetEN: VectorEN,
   windDriftEN: VectorEN,
   canopyLengthMi: number,
-  tiers: SolveTiers = { greenMi: 0.25, yellowMi: 1 }
+  // Fallback rings: 0.25 nm / 0.5 nm in statute miles (see model defaults)
+  tiers: SolveTiers = { greenMi: 0.2877, yellowMi: 0.5754 }
 ): SolveResult {
   // Into the wind = the reciprocal of the drift the flock experiences.
   const driftMi = Math.hypot(windDriftEN.eastMi, windDriftEN.northMi);

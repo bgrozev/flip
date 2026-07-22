@@ -70,9 +70,15 @@ const TIER_COLOR: Record<SolveTier, string> = {
   red: 'error.main'
 };
 
-/** A distance in the display unit, rounded to 0.1 for the input fields. */
-function roundDist(miles: number, unit: DistanceUnit): number {
-  return Math.round(milesToDisplay(miles, unit) * 10) / 10;
+/**
+ * A distance in the display unit, rounded for the input fields: 0.1 by
+ * default, finer where the field steps in smaller increments (the ring
+ * radii step by 0.05, so 0.25 nm must not read as 0.3).
+ */
+function roundDist(miles: number, unit: DistanceUnit, decimals = 1): number {
+  const factor = 10 ** decimals;
+
+  return Math.round(milesToDisplay(miles, unit) * factor) / factor;
 }
 
 /** A small arrow pointing toward a cardinal bearing (0˚ = up/north). */
@@ -693,7 +699,7 @@ export default function FlockingComponent({
               + 'mode, corridors that all reach it are chosen by which run is most '
               + 'into the wind rather than by a hair of miss distance.'}
             label="Green radius"
-            initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
+            initialValue={roundDist(params.targetRadiusMi, distanceUnit, 2)}
             step={0.05}
             min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
             max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
@@ -704,8 +710,8 @@ export default function FlockingComponent({
             key={`yellow-radius-${externalEdit}`}
             title="Yellow ring: beyond the green one, but still workable."
             label="Yellow radius"
-            initialValue={roundDist(params.yellowRadiusMi, distanceUnit)}
-            step={0.1}
+            initialValue={roundDist(params.yellowRadiusMi, distanceUnit, 2)}
+            step={0.05}
             min={milesToDisplay(LIMITS.flockingYellowRadiusMi.min, distanceUnit)}
             max={milesToDisplay(LIMITS.flockingYellowRadiusMi.max, distanceUnit)}
             unit={unitLabel}

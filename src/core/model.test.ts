@@ -190,7 +190,9 @@ describe('migrateFlockingParams', () => {
     expect(migrated.canopyDirection).toBe('follow-jumprun');
     expect(migrated.jumprun).toEqual({ directionDeg: 'into-wind', offsetMi: 0 });
     expect(migrated.exitAlongMi).toBe(0);
-    expect(migrated.targetRadiusMi).toBe(0.25);
+    // Rings default to 0.25 nm / 0.5 nm, stored in statute miles
+    expect(migrated.targetRadiusMi).toBeCloseTo(0.2877, 3);
+    expect(migrated.yellowRadiusMi).toBeCloseTo(0.5754, 3);
     expect(migrated.showGrid).toBe(false);
   });
 

@@ -35,6 +35,7 @@ import {
   AltitudeUnit,
   DEFAULT_UNIT_PREFERENCES,
   DISTANCE_UNITS,
+  displayToMiles,
   DescentRateUnit,
   PressureUnit,
   TemperatureUnit,
@@ -103,8 +104,10 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   referencePoint: null,
   jumprun: { directionDeg: 'into-wind', offsetMi: 0 },
   exitAlongMi: 0,
-  targetRadiusMi: 0.25,
-  yellowRadiusMi: 1,
+  // Rings default to 0.25 nm / 0.5 nm (stored, like every distance, in
+  // statute miles)
+  targetRadiusMi: displayToMiles(0.25, 'nm'),
+  yellowRadiusMi: displayToMiles(0.5, 'nm'),
   // The ZHills-flavored default: run north or south
   solveCorridors: [
     { directionDeg: 0, offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15 },
