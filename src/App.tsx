@@ -66,6 +66,7 @@ import {
 } from './hooks';
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar } from './core/geometry';
+import { jumprunFromExit } from './core/flocking';
 import { COURSES } from './core/courses';
 import { SOURCE_DZ, SOURCE_MANUAL } from './core/wind';
 
@@ -298,24 +299,35 @@ function DashboardContent() {
     [makeWindSummary, averageWind_]
   );
 
-  // Free-mode map manipulation: exit slides along the run; the run
-  // rotates/translates; the canopy flight rotates (which switches it to an
-  // explicit direction).
-  const handleExitDrag = useCallback((exitAlongMi: number) => {
-    setFlockingParams({ ...flockingParams, exitAlongMi });
-  }, [flockingParams, setFlockingParams]);
+  // Free-mode map manipulation. Move: drag the exit anywhere — decompose
+  // its position (relative to the reference, in the current run frame) into
+  // offset + along, so the whole run follows in 2D. Rotate: set the run
+  // direction, holding the exit fixed by re-deriving offset + along for it.
+  // Canopy: rotate the canopy flight (switches it to an explicit direction).
+  const handleJumprunMove = useCallback((exit: LatLng) => {
+    const { offsetMi, exitAlongMi } = jumprunFromExit(
+      flocking.reference, flocking.jumprunDeg, exit
+    );
+
+    setFlockingParams({
+      ...flockingParams,
+      jumprun: { ...flockingParams.jumprun, offsetMi },
+      exitAlongMi
+    });
+  }, [flockingParams, setFlockingParams, flocking.reference, flocking.jumprunDeg]);
   const handleJumprunRotate = useCallback((directionDeg: number) => {
-    setFlockingParams({
-      ...flockingParams,
-      jumprun: { ...flockingParams.jumprun, directionDeg: Math.round(directionDeg) }
-    });
-  }, [flockingParams, setFlockingParams]);
-  const handleJumprunTranslate = useCallback((offsetMi: number) => {
-    setFlockingParams({
-      ...flockingParams,
-      jumprun: { ...flockingParams.jumprun, offsetMi }
-    });
-  }, [flockingParams, setFlockingParams]);
+    const dir = Math.round(directionDeg);
+
+    if (flocking.exit) {
+      const { offsetMi, exitAlongMi } = jumprunFromExit(flocking.reference, dir, flocking.exit);
+
+      setFlockingParams({
+        ...flockingParams,
+        jumprun: { ...flockingParams.jumprun, directionDeg: dir, offsetMi },
+        exitAlongMi
+      });
+    }
+  }, [flockingParams, setFlockingParams, flocking.reference, flocking.exit]);
   const handleCanopyRotate = useCallback((directionDeg: number) => {
     setFlockingParams({ ...flockingParams, canopyDirection: Math.round(directionDeg) });
   }, [flockingParams, setFlockingParams]);
@@ -536,9 +548,8 @@ function DashboardContent() {
         end: flocking.end,
         missMi: flocking.missMi,
         onTarget: flocking.onTarget,
-        onExitDrag: flockingParams.mode === 'free' ? handleExitDrag : undefined,
+        onJumprunMove: flockingParams.mode === 'free' ? handleJumprunMove : undefined,
         onJumprunRotate: flockingParams.mode === 'free' ? handleJumprunRotate : undefined,
-        onJumprunTranslate: flockingParams.mode === 'free' ? handleJumprunTranslate : undefined,
         onCanopyRotate: flockingParams.mode === 'free' ? handleCanopyRotate : undefined,
         corridorOutlines: flocking.corridorOutlines,
         showGrid: flockingParams.showGrid

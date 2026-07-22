@@ -570,6 +570,29 @@ export function projectOntoJumprunMi(line: JumprunLine, point: LatLng): number {
 }
 
 /**
+ * Decompose an exit position into the jumprun parameters that place the
+ * line's exit exactly there for a given run direction: the lateral offset
+ * from the Spot Reference (across the run, +right) and the along-run
+ * position of the exit. Inverse of jumprunLineOrigin + pointAlongJumprun;
+ * used to drive the free-mode map handles (move the whole line by dragging
+ * the exit; rotate while holding the exit fixed).
+ */
+export function jumprunFromExit(
+  reference: LatLng,
+  directionDeg: number,
+  exit: LatLng
+): { offsetMi: number; exitAlongMi: number } {
+  const d = localMilesEN(reference, exit);
+  const along = cardinalToDeg(directionDeg) * DEG_TO_RAD;
+  const across = cardinalToDeg(directionDeg + 90) * DEG_TO_RAD;
+
+  return {
+    exitAlongMi: d.eastMi * Math.cos(along) + d.northMi * Math.sin(along),
+    offsetMi: d.eastMi * Math.cos(across) + d.northMi * Math.sin(across)
+  };
+}
+
+/**
  * The best exit position along the line: the projection of C = target − W
  * onto it (the exit minimizing the required canopy speed). When a reachable
  * segment exists this is always its midpoint, so no clamping is needed.

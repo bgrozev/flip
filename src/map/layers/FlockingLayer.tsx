@@ -11,7 +11,6 @@ import {
   DistanceUnit,
   JumprunLine,
   SpotDescription,
-  cardinalToDeg,
   localMilesEN,
   milesToDisplay,
   pointAlongJumprun,
@@ -130,12 +129,10 @@ export interface FlockingLayerProps {
   missMi: number | null;
   /** Whether the end lands inside the target area. */
   onTarget: boolean;
-  /** Free mode: drag the exit along the jumprun line (signed mi). */
-  onExitDrag?: (exitAlongMi: number) => void;
+  /** Free mode: move the whole jumprun so its exit lands at a dragged point. */
+  onJumprunMove?: (exit: LatLng) => void;
   /** Free mode: rotate the jumprun (new direction, cardinal deg). */
   onJumprunRotate?: (directionDeg: number) => void;
-  /** Free mode: translate the jumprun (new lateral offset, mi). */
-  onJumprunTranslate?: (offsetMi: number) => void;
   /** Free mode: rotate the canopy flight (new direction, cardinal deg). */
   onCanopyRotate?: (directionDeg: number) => void;
   /** Solve mode: corridor exit-rectangle outlines (closed loops). */
@@ -163,9 +160,8 @@ export default function FlockingLayer({
   end,
   missMi,
   onTarget,
-  onExitDrag,
+  onJumprunMove,
   onJumprunRotate,
-  onJumprunTranslate,
   onCanopyRotate,
   corridorOutlines = [],
   showGrid,
@@ -322,29 +318,33 @@ export default function FlockingLayer({
         </>
       )}
 
-      {/* Free-mode manipulation handles: drag the exit along the line,
-          rotate the run (handle ahead of the exit, pivot at the line
-          origin), translate the run sideways (handle behind the exit),
-          rotate the canopy flight (handle at the end of the flight). */}
-      {jumprunLine && exit && onExitDrag && (
+      {/* Free-mode handles. Move: drag the exit anywhere — the whole run
+          follows in 2D (keeps its direction). Rotate: a handle 1.5 nm
+          behind the exit; the run points from it toward the (fixed) exit,
+          so it swings about the exit with no 180° flip. Canopy: a handle
+          at the flight's end rotates the canopy direction. */}
+      {jumprunLine && exit && onJumprunMove && (
         <MapDragHandle
           position={exit}
           color={onTarget ? JUMPRUN_COLOR : MISS_COLOR}
           scale={8}
           cursor="grab"
           zIndex={110}
-          onDrag={pos => onExitDrag(projectOntoJumprunMi(jumprunLine, pos))}
-          onDragEnd={pos => onExitDrag(projectOntoJumprunMi(jumprunLine, pos))}
+          onDrag={onJumprunMove}
+          onDragEnd={onJumprunMove}
         />
       )}
       {jumprunLine && exit && onJumprunRotate && (() => {
-        const t = projectOntoJumprunMi(jumprunLine, exit);
-        // Far end of the 3 nm run: most leverage for rotating
-        const handlePos = pointAlongJumprun(jumprunLine, t - JUMPRUN_LENGTH_M / METERS_PER_MILE);
+        const handlePos = destinationPoint(
+          exit, (jumprunLine.directionDeg + 180) % 360, 1.5 * 1852
+        );
         const rotate = (pos: LatLng) => {
-          const en = localMilesEN(jumprunLine.origin, pos);
+          // Direction points from the dragged handle toward the fixed exit.
+          const en = localMilesEN(pos, exit);
 
-          onJumprunRotate(vectorCardinalDirection(en.eastMi, en.northMi));
+          if (Math.hypot(en.eastMi, en.northMi) > 1e-4) {
+            onJumprunRotate(vectorCardinalDirection(en.eastMi, en.northMi));
+          }
         };
 
         return (
@@ -356,31 +356,6 @@ export default function FlockingLayer({
             zIndex={105}
             onDrag={rotate}
             onDragEnd={rotate}
-          />
-        );
-      })()}
-      {jumprunLine && exit && onJumprunTranslate && (() => {
-        const t = projectOntoJumprunMi(jumprunLine, exit);
-        // Midpoint of the 3 nm run
-        const handlePos = pointAlongJumprun(jumprunLine, t - JUMPRUN_LENGTH_M / METERS_PER_MILE / 2);
-        const translate = (pos: LatLng) => {
-          // New offset: the perpendicular (right-of-run) component of the
-          // dragged position relative to the effective Spot Reference.
-          const en = localMilesEN(reference ?? target, pos);
-          const psi = cardinalToDeg(jumprunLine.directionDeg + 90) * (Math.PI / 180);
-
-          onJumprunTranslate(en.eastMi * Math.cos(psi) + en.northMi * Math.sin(psi));
-        };
-
-        return (
-          <MapDragHandle
-            position={handlePos}
-            color="#ffb74d"
-            scale={6}
-            cursor="move"
-            zIndex={105}
-            onDrag={translate}
-            onDragEnd={translate}
           />
         );
       })()}

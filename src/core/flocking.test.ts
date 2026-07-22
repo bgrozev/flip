@@ -12,6 +12,7 @@ import {
   flockingDurationS,
   flockingVectors,
   intoWindDirection,
+  jumprunFromExit,
   jumprunLineOrigin,
   localMilesEN,
   makeFlockingPath,
@@ -513,6 +514,19 @@ describe('jumprun line helpers', () => {
     const point = refPlusMiles(0.5, 2); // 2 mi along, 0.5 mi right
 
     expect(projectOntoJumprunMi(line, point)).toBeCloseTo(2, 3);
+  });
+
+  it('jumprunFromExit inverts jumprunLineOrigin + pointAlongJumprun', () => {
+    for (const dir of [0, 60, 145, 300]) {
+      for (const [offset, along] of [[0, 0], [0.5, 2], [-1.2, -3], [1, -0.7]]) {
+        const line = { origin: jumprunLineOrigin(REF, dir, offset), directionDeg: dir };
+        const exit = pointAlongJumprun(line, along);
+        const back = jumprunFromExit(REF, dir, exit);
+
+        expect(back.offsetMi).toBeCloseTo(offset, 2);
+        expect(back.exitAlongMi).toBeCloseTo(along, 2);
+      }
+    }
   });
 });
 
