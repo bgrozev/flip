@@ -104,6 +104,7 @@ export const DEFAULT_FLOCKING_PARAMS: FlockingParams = {
   jumprun: { directionDeg: 'into-wind', offsetMi: 0 },
   exitAlongMi: 0,
   targetRadiusMi: 0.25,
+  yellowRadiusMi: 1,
   // The ZHills-flavored default: run north or south
   solveCorridors: [
     { directionDeg: 0, offsetMinMi: -1, offsetMaxMi: 1, alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15 },
@@ -319,6 +320,7 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
     jumprun: migrateJumprunConfig(r.jumprun),
     exitAlongMi: limitedNumber(r.exitAlongMi, d.exitAlongMi, LIMITS.flockingExitAlongMi),
     targetRadiusMi: limitedNumber(r.targetRadiusMi, d.targetRadiusMi, LIMITS.flockingTargetRadiusMi),
+    yellowRadiusMi: limitedNumber(r.yellowRadiusMi, d.yellowRadiusMi, LIMITS.flockingYellowRadiusMi),
     solveCorridors: migrateSolveCorridors(r.solveCorridors),
     showGrid: booleanOr(r.showGrid, d.showGrid)
   };

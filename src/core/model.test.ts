@@ -157,6 +157,7 @@ describe('migrateFlockingParams', () => {
       jumprun: { directionDeg: 180, offsetMi: 1.5 },
       exitAlongMi: -2,
       targetRadiusMi: 0.5,
+      yellowRadiusMi: 2,
       solveCorridors: [
         {
           directionDeg: 90,

@@ -555,6 +555,7 @@ function DashboardContent() {
         onReferenceDrag: handleReferenceDrag,
         target: target.target,
         targetRadiusMi: flockingParams.targetRadiusMi,
+        yellowRadiusMi: flockingParams.mode === 'solve' ? flockingParams.yellowRadiusMi : undefined,
         jumprunLine: flocking.jumprunLine,
         end: flocking.end,
         missMi: flocking.missMi,

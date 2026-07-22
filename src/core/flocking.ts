@@ -112,8 +112,15 @@ export interface FlockingParams {
   jumprun: JumprunConfig;
   /** Exit position along the jumprun line, signed miles (free mode). */
   exitAlongMi: number;
-  /** Radius of the end-of-jump target area around B, miles. */
+  /** Radius of the end-of-jump target area around B (green ring), miles. */
   targetRadiusMi: number;
+  /**
+   * Radius of the amber ring (solve mode): beyond the target area but
+   * still workable. Solutions inside the GREEN ring are chosen by which
+   * run is most into the wind rather than by a hair's difference in miss,
+   * which is what keeps the answer stable as a forecast drifts.
+   */
+  yellowRadiusMi: number;
   /**
    * Allowed jumprun corridors (solve mode) — see core/flockingSolve.
    * Kept here so the whole flocking setup persists as one document.

@@ -594,10 +594,10 @@ export default function FlockingComponent({
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                   <Typography variant="body2" sx={{ color: isBest ? 'success.main' : 'text.secondary' }}>
                     {`Corridor ${i + 1} · ${roundDeg(c.directionDeg)}˚`}
-                    {result && ` · ${result.missMi <= params.targetRadiusMi ? 'hits' : 'misses by'} ${
-                      result.missMi <= params.targetRadiusMi
-                        ? ''
-                        : `${milesToDisplay(result.missMi, distanceUnit).toFixed(2)} ${unitLabel}`}`}
+                    {result && ` · ${result.tier === 'green'
+                      ? 'on target'
+                      : `${result.tier === 'yellow' ? 'close' : 'misses'} by ${
+                        milesToDisplay(result.missMi, distanceUnit).toFixed(2)} ${unitLabel}`}`}
                     {isBest && ' · best'}
                   </Typography>
                   <Button size="small" color="error" onClick={() => removeCorridor(i)}>
@@ -681,17 +681,32 @@ export default function FlockingComponent({
           <Button size="small" onClick={addCorridor} sx={{ alignSelf: 'flex-start' }}>
             Add corridor
           </Button>
-          <NumberInput
-            key={`solve-radius-${externalEdit}`}
-            title="Radius of the target area: the jump works if it ends anywhere inside it."
-            label="Target radius"
-            initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
-            step={0.05}
-            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
-            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
-            unit={unitLabel}
-            onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
-          />
+          <Stack direction="row" spacing={2}>
+            <NumberInput
+              key={`solve-radius-${externalEdit}`}
+              title={'Green ring: the jump works if it ends anywhere inside. Corridors '
+                + 'that all reach it are chosen by which run is most into the wind, '
+                + 'not by a hair of miss distance.'}
+              label="Target radius"
+              initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
+              step={0.05}
+              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
+              unit={unitLabel}
+              onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
+            />
+            <NumberInput
+              key={`solve-yellow-${externalEdit}`}
+              title="Amber ring: beyond the target area, but still workable."
+              label="Amber radius"
+              initialValue={roundDist(params.yellowRadiusMi, distanceUnit)}
+              step={0.1}
+              min={milesToDisplay(LIMITS.flockingYellowRadiusMi.min, distanceUnit)}
+              max={milesToDisplay(LIMITS.flockingYellowRadiusMi.max, distanceUnit)}
+              unit={unitLabel}
+              onChange={value => set({ yellowRadiusMi: displayToMiles(value, distanceUnit) })}
+            />
+          </Stack>
         </Section>
       )}
 

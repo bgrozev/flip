@@ -313,7 +313,10 @@ function deriveSolve({
   const canopyLengthMi = params.horizontalSpeedMph * (durationS / 3600);
   const targetEN = localMilesEN(reference, target);
 
-  const solve = solveFlockingSpot(params.solveCorridors, targetEN, drift, canopyLengthMi);
+  const solve = solveFlockingSpot(
+    params.solveCorridors, targetEN, drift, canopyLengthMi,
+    { greenMi: params.targetRadiusMi, yellowMi: params.yellowRadiusMi }
+  );
   const best = solve.best;
 
   if (!best) {

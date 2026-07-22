@@ -119,8 +119,10 @@ export interface FlockingLayerProps {
   onReferenceDrag?: (pos: LatLng) => void;
   /** End-of-jump target B (center of the target area). */
   target: LatLng;
-  /** Radius of the target area around B, miles. */
+  /** Radius of the target area around B (green ring), miles. */
   targetRadiusMi: number;
+  /** Amber-ring radius around B, miles; omitted outside solve mode. */
+  yellowRadiusMi?: number;
   /** The jumprun line (free mode; null = classic, run ends at the exit). */
   jumprunLine: JumprunLine | null;
   /** Where the flight ends. */
@@ -160,6 +162,7 @@ export default function FlockingLayer({
   onReferenceDrag,
   target,
   targetRadiusMi,
+  yellowRadiusMi,
   jumprunLine,
   end,
   missMi,
@@ -386,6 +389,21 @@ export default function FlockingLayer({
           />
         );
       })()}
+
+      {/* Amber ring (solve mode): beyond the target area but workable */}
+      {yellowRadiusMi !== undefined && yellowRadiusMi > targetRadiusMi && (
+        <MapCircle
+          center={target}
+          radius={yellowRadiusMi * METERS_PER_MILE}
+          fillColor="#ffc107"
+          fillOpacity={0.05}
+          strokeColor="#ffc107"
+          strokeOpacity={0.45}
+          strokeWeight={1}
+          zIndex={0}
+          clickable={false}
+        />
+      )}
 
       {/* Target area: the jump works when it ends anywhere inside */}
       {targetRadiusMi > 0 && (
