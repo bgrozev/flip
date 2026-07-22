@@ -23,6 +23,8 @@ import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
 import { MapCircle, MapDragHandle, MapOverlay, MapPolyline } from '..';
 
+import { SolveTier } from '../../core/flockingSolve';
+
 import { DirectionArrow, TOOLTIP_STYLE } from './tooltip';
 
 // Flocking path color — distinct from pattern green and manoeuvre red
@@ -34,6 +36,13 @@ const GHOST_COLOR = '#ffffff';
 // Green jumprun (owner's pick — it read well as the reachable overlay)
 const JUMPRUN_COLOR = '#00e676';
 const MISS_COLOR = '#ff5252';
+const YELLOW_COLOR = '#ffc107';
+/** Ring/label colour per miss tier. */
+const TIER_COLOR: Record<SolveTier, string> = {
+  green: JUMPRUN_COLOR,
+  yellow: YELLOW_COLOR,
+  red: MISS_COLOR
+};
 // Grid mesh — light blue, visible over satellite and plain backgrounds
 const GRID_COLOR = '#40c4ff';
 
@@ -121,7 +130,7 @@ export interface FlockingLayerProps {
   target: LatLng;
   /** Radius of the target area around B (green ring), miles. */
   targetRadiusMi: number;
-  /** Amber-ring radius around B, miles; omitted outside solve mode. */
+  /** Yellow-ring radius around B, miles. */
   yellowRadiusMi?: number;
   /** The jumprun line (free mode; null = classic, run ends at the exit). */
   jumprunLine: JumprunLine | null;
@@ -131,6 +140,8 @@ export interface FlockingLayerProps {
   missMi: number | null;
   /** Whether the end lands inside the target area. */
   onTarget: boolean;
+  /** Which ring the miss falls in; null in classic (no miss). */
+  tier?: SolveTier | null;
   /** Angle between the canopy flight and the jumprun, degrees. */
   canopyDeviationDeg?: number;
   /** Whether that deviation exceeds the warn limit (colours it red). */
@@ -167,6 +178,7 @@ export default function FlockingLayer({
   end,
   missMi,
   onTarget,
+  tier = null,
   canopyDeviationDeg = 0,
   canopyDeviationWarning = false,
   onJumprunMove,
@@ -290,6 +302,7 @@ export default function FlockingLayer({
 
   const unitLabel = DISTANCE_UNIT_LABELS[distanceUnit];
   const missed = !onTarget;
+  const missColor = TIER_COLOR[tier ?? 'red'];
   let spotText = spot
     ? `Jumprun ${roundDeg(spot.jumprunDeg)}˚ · ${
       milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} ${unitLabel} ${
@@ -297,7 +310,7 @@ export default function FlockingLayer({
     : null;
 
   if (spotText && missed && missMi !== null) {
-    spotText += ` · MISSES by ${
+    spotText += `${tier === 'yellow' ? ' · CLOSE by ' : ' · MISSES by '}${
       milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`;
   }
 
@@ -390,31 +403,31 @@ export default function FlockingLayer({
         );
       })()}
 
-      {/* Amber ring (solve mode): beyond the target area but workable */}
+      {/* Yellow ring: beyond the green one, but still workable */}
       {yellowRadiusMi !== undefined && yellowRadiusMi > targetRadiusMi && (
         <MapCircle
           center={target}
           radius={yellowRadiusMi * METERS_PER_MILE}
-          fillColor="#ffc107"
+          fillColor={YELLOW_COLOR}
           fillOpacity={0.05}
-          strokeColor="#ffc107"
-          strokeOpacity={0.45}
-          strokeWeight={1}
+          strokeColor={YELLOW_COLOR}
+          strokeOpacity={tier === 'yellow' ? 0.9 : 0.45}
+          strokeWeight={tier === 'yellow' ? 2 : 1}
           zIndex={0}
           clickable={false}
         />
       )}
 
-      {/* Target area: the jump works when it ends anywhere inside */}
+      {/* Green ring: the jump works when it ends anywhere inside */}
       {targetRadiusMi > 0 && (
         <MapCircle
           center={target}
           radius={targetRadiusMi * METERS_PER_MILE}
-          fillColor="#ffffff"
-          fillOpacity={0.08}
-          strokeColor={missed ? MISS_COLOR : '#ffffff'}
-          strokeOpacity={missed ? 0.9 : 0.5}
-          strokeWeight={missed ? 2 : 1}
+          fillColor={JUMPRUN_COLOR}
+          fillOpacity={0.07}
+          strokeColor={JUMPRUN_COLOR}
+          strokeOpacity={tier === 'green' ? 0.9 : 0.5}
+          strokeWeight={tier === 'green' ? 2 : 1}
           zIndex={0}
           clickable={false}
         />
@@ -426,7 +439,7 @@ export default function FlockingLayer({
         <>
           <MapPolyline
             path={[end, target]}
-            color={MISS_COLOR}
+            color={missColor}
             opacity={0.9}
             weight={2}
             zIndex={2}
@@ -435,7 +448,7 @@ export default function FlockingLayer({
           <MapCircle
             center={end}
             radius={4}
-            fillColor={MISS_COLOR}
+            fillColor={missColor}
             fillOpacity={1}
             strokeColor="#ffffff"
             strokeOpacity={1}
@@ -445,7 +458,7 @@ export default function FlockingLayer({
           />
           {missMi !== null && (
             <MapOverlay position={end}>
-              <div style={{ ...MARKER_LABEL_STYLE, color: MISS_COLOR }}>
+              <div style={{ ...MARKER_LABEL_STYLE, color: missColor }}>
                 {milesToDisplay(missMi, distanceUnit).toFixed(2)} {unitLabel} off
               </div>
             </MapOverlay>
@@ -638,7 +651,7 @@ export default function FlockingLayer({
           <div
             style={{
               ...SPOT_LABEL_STYLE,
-              ...missed ? { border: `1px solid ${MISS_COLOR}`, color: '#ff8a80' } : {}
+              ...missed ? { border: `1px solid ${missColor}`, color: missColor } : {}
             }}
           >
             <div>{spotText}</div>

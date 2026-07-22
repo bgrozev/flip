@@ -86,7 +86,7 @@ function angleDiffDeg(a: number, b: number): number {
   return Math.abs(((a - b + 540) % 360) - 180);
 }
 
-function tierFor(missMi: number, tiers: SolveTiers): SolveTier {
+export function tierFor(missMi: number, tiers: SolveTiers): SolveTier {
   if (missMi <= tiers.greenMi + 1e-9) {
     return 'green';
   }

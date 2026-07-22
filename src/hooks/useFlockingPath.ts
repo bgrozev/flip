@@ -17,7 +17,7 @@ import {
   spotDescription,
   windDriftVector
 } from '../core/flocking';
-import { SolveResult, solveFlockingSpot } from '../core/flockingSolve';
+import { SolveResult, SolveTier, solveFlockingSpot, tierFor } from '../core/flockingSolve';
 import { driftAngle } from '../core/pathStats';
 import { addWind, averageWind, translate } from '../core/geometry';
 import { latLngToPoint } from '../core/coords';
@@ -41,6 +41,11 @@ export interface FlockingDerived {
   missMi: number | null;
   /** Whether the end lands inside the target area (always true in classic). */
   onTarget: boolean;
+  /**
+   * Which ring the miss falls in (green/yellow/red). Null in classic,
+   * where the flight ends on the target by construction.
+   */
+  tier: SolveTier | null;
   /** Resolved jumprun direction. */
   jumprunDeg: number;
   /** Resolved canopy flight direction. */
@@ -86,6 +91,7 @@ const EMPTY: FlockingDerived = {
   end: null,
   missMi: null,
   onTarget: true,
+  tier: null,
   jumprunDeg: 0,
   canopyDeg: 0,
   intoWindDeg: 0,
@@ -206,6 +212,7 @@ export function useFlockingPath({
         end: target.target,
         missMi: null,
         onTarget: true,
+        tier: null,
         jumprunDeg,
         canopyDeg,
         intoWindDeg,
@@ -246,6 +253,10 @@ export function useFlockingPath({
       end,
       missMi,
       onTarget: missMi <= params.targetRadiusMi + 1e-9,
+      tier: tierFor(missMi, {
+        greenMi: params.targetRadiusMi,
+        yellowMi: params.yellowRadiusMi
+      }),
       jumprunDeg,
       canopyDeg,
       intoWindDeg,
@@ -372,6 +383,10 @@ function deriveSolve({
     end,
     missMi,
     onTarget: missMi <= params.targetRadiusMi + 1e-9,
+    tier: tierFor(missMi, {
+      greenMi: params.targetRadiusMi,
+      yellowMi: params.yellowRadiusMi
+    }),
     jumprunDeg: best.jumprunDeg,
     canopyDeg: best.canopyDeg,
     intoWindDeg,

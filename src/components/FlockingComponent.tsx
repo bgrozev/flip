@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
-import { SolveResult } from '../core/flockingSolve';
+import { SolveResult, SolveTier } from '../core/flockingSolve';
 import {
   CANOPY_DEVIATION_WARN_DEG,
   DISTANCE_UNIT_LABELS,
@@ -62,6 +62,13 @@ const CARDINALS = [
 function roundDeg(deg: number): number {
   return Math.round(deg) % 360;
 }
+
+/** Panel colour per miss tier. */
+const TIER_COLOR: Record<SolveTier, string> = {
+  green: 'success.main',
+  yellow: 'warning.main',
+  red: 'error.main'
+};
 
 /** A distance in the display unit, rounded to 0.1 for the input fields. */
 function roundDist(miles: number, unit: DistanceUnit): number {
@@ -206,8 +213,8 @@ interface FlockingComponentProps {
   spot: SpotDescription | null;
   /** Distance from the flight's end to the target, miles. */
   missMi: number | null;
-  /** Whether the end lands inside the target area. */
-  onTarget: boolean;
+  /** Which ring the miss falls in; null in classic (no miss). */
+  tier: SolveTier | null;
   /** Angle between the canopy flight and the jumprun, degrees. */
   canopyDeviationDeg: number;
   /** Whether that deviation exceeds CANOPY_DEVIATION_WARN_DEG. */
@@ -230,7 +237,7 @@ export default function FlockingComponent({
   vectors,
   spot,
   missMi,
-  onTarget,
+  tier,
   canopyDeviationDeg,
   canopyDeviationWarning,
   solve,
@@ -365,12 +372,15 @@ export default function FlockingComponent({
           {missMi !== null && (
             <Typography
               variant="body1"
-              sx={{ color: onTarget ? 'success.main' : 'error.main', mt: 0.5 }}
+              sx={{ color: TIER_COLOR[tier ?? 'green'], mt: 0.5 }}
               data-testid="flocking-miss"
             >
-              {onTarget
-                ? `On target (${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel} off)`
-                : `MISSES TARGET by ${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`}
+              {tier === 'green' &&
+                `On target (${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel} off)`}
+              {tier === 'yellow' &&
+                `Close: ${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel} off`}
+              {tier === 'red' &&
+                `MISSES TARGET by ${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`}
             </Typography>
           )}
         </Box>
@@ -539,17 +549,7 @@ export default function FlockingComponent({
               unit={unitLabel}
               onChange={value => setJumprun({ offsetMi: displayToMiles(value, distanceUnit) })}
             />
-            <NumberInput
-              key={`jr-radius-${externalEdit}`}
-              title="Radius of the target area: the jump works if it ends anywhere inside it."
-              label="Target radius"
-              initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
-              step={0.05}
-              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
-              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
-              unit={unitLabel}
-              onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
-            />
+
           </Stack>
           <Box sx={{ px: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
@@ -681,36 +681,38 @@ export default function FlockingComponent({
           <Button size="small" onClick={addCorridor} sx={{ alignSelf: 'flex-start' }}>
             Add corridor
           </Button>
-          <Stack direction="row" spacing={2}>
-            <NumberInput
-              key={`solve-radius-${externalEdit}`}
-              title={'Green ring: the jump works if it ends anywhere inside. Corridors '
-                + 'that all reach it are chosen by which run is most into the wind, '
-                + 'not by a hair of miss distance.'}
-              label="Target radius"
-              initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
-              step={0.05}
-              min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
-              max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
-              unit={unitLabel}
-              onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
-            />
-            <NumberInput
-              key={`solve-yellow-${externalEdit}`}
-              title="Amber ring: beyond the target area, but still workable."
-              label="Amber radius"
-              initialValue={roundDist(params.yellowRadiusMi, distanceUnit)}
-              step={0.1}
-              min={milesToDisplay(LIMITS.flockingYellowRadiusMi.min, distanceUnit)}
-              max={milesToDisplay(LIMITS.flockingYellowRadiusMi.max, distanceUnit)}
-              unit={unitLabel}
-              onChange={value => set({ yellowRadiusMi: displayToMiles(value, distanceUnit) })}
-            />
-          </Stack>
+
         </Section>
       )}
 
       <Section title="Display">
+        <Stack direction="row" spacing={2}>
+          <NumberInput
+            key={`green-radius-${externalEdit}`}
+            title={'Green ring: the jump works if it ends anywhere inside. In solve '
+              + 'mode, corridors that all reach it are chosen by which run is most '
+              + 'into the wind rather than by a hair of miss distance.'}
+            label="Green radius"
+            initialValue={roundDist(params.targetRadiusMi, distanceUnit)}
+            step={0.05}
+            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
+            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
+            unit={unitLabel}
+            onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
+          />
+          <NumberInput
+            key={`yellow-radius-${externalEdit}`}
+            title="Yellow ring: beyond the green one, but still workable."
+            label="Yellow radius"
+            initialValue={roundDist(params.yellowRadiusMi, distanceUnit)}
+            step={0.1}
+            min={milesToDisplay(LIMITS.flockingYellowRadiusMi.min, distanceUnit)}
+            max={milesToDisplay(LIMITS.flockingYellowRadiusMi.max, distanceUnit)}
+            unit={unitLabel}
+            onChange={value => set({ yellowRadiusMi: displayToMiles(value, distanceUnit) })}
+          />
+        </Stack>
+
         <Tooltip
           title={'Distance grid on the map, centered on the Spot Reference and aligned '
             + 'with the jumprun, one grid square per distance unit.'}

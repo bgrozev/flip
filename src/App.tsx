@@ -389,7 +389,7 @@ function DashboardContent() {
         vectors={flocking.vectors}
         spot={flocking.spot}
         missMi={flocking.missMi}
-        onTarget={flocking.onTarget}
+        tier={flocking.tier}
         canopyDeviationDeg={flocking.canopyDeviationDeg}
         canopyDeviationWarning={flocking.canopyDeviationWarning}
         solve={flocking.solve}
@@ -555,11 +555,12 @@ function DashboardContent() {
         onReferenceDrag: handleReferenceDrag,
         target: target.target,
         targetRadiusMi: flockingParams.targetRadiusMi,
-        yellowRadiusMi: flockingParams.mode === 'solve' ? flockingParams.yellowRadiusMi : undefined,
+        yellowRadiusMi: flockingParams.yellowRadiusMi,
         jumprunLine: flocking.jumprunLine,
         end: flocking.end,
         missMi: flocking.missMi,
         onTarget: flocking.onTarget,
+        tier: flocking.tier,
         canopyDeviationDeg: flocking.canopyDeviationDeg,
         canopyDeviationWarning: flocking.canopyDeviationWarning,
         onJumprunMove: flockingParams.mode === 'free' ? handleJumprunMove : undefined,
