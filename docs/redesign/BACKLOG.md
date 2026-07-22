@@ -321,6 +321,19 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     (e.g. ZHills: N/S free, E limited to ~1.5 mi) as stored corridor
     lists, selectable per dropzone; feeds the solve sub-mode. Ties into
     the dropzone database (util/dropzones.ts).
+  - ☑ **UI iteration round 2** (owner feedback, 2026-07-18/19): compact
+    vector rows with bearing arrows (`b1da95b`); direction fields wrap
+    360->0 via a NumberInput `wrap` modulus and distances display to 0.1
+    (`0c8c721`); grid recoloured light blue with emphasized centre lines
+    (`2794c61`); the mi/nm/km unit moved into general Settings as a
+    UnitPreferences field (`56c7490`); the Spot Reference is draggable on
+    the map, dragging pins it (`15a2c0d`); the two 1-D jumprun handles
+    became one 2-D move handle and the rotate handle no longer flips
+    ~180 degrees or vanishes (`1190656`, core helper `jumprunFromExit`);
+    flocking keeps the target permanently draggable with the heading UI
+    hidden, and each mode now stores its own target under
+    `flip.targets.byMode` falling back to the shared legacy one
+    (`e6744b8`). All browser-verified.
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)
