@@ -68,7 +68,7 @@ import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
 import { jumprunFromExit } from './core/flocking';
 import { COURSES } from './core/courses';
-import { SOURCE_DZ, SOURCE_MANUAL } from './core/wind';
+import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
@@ -304,15 +304,15 @@ function DashboardContent() {
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
-  // Plan-relevant altitudes for the map winds indicator: the flocking window
-  // ends, or the pattern's leg altitudes. Ground is added by the component.
-  const keyWindAltitudesFt = useMemo(
-    () =>
-      isFlocking
-        ? [flockingParams.windowBottomFt, flockingParams.windowTopFt]
-        : patternParams.legs.map(l => l.altitude),
-    [isFlocking, flockingParams.windowBottomFt, flockingParams.windowTopFt, patternParams.legs]
-  );
+  // Altitude bands for the map winds indicator: up to the wind-altitude
+  // limit, extended to the top of the jump in flocking. Ground is added by
+  // the component; the band ceiling matches what the fetch actually covers.
+  const keyWindAltitudesFt = useMemo(() => {
+    const ceilingFt = isFlocking
+      ? Math.max(modeSettings.limitWind, flockingParams.windowTopFt)
+      : modeSettings.limitWind;
+    return windBandAltitudesFt(ceilingFt);
+  }, [isFlocking, modeSettings.limitWind, flockingParams.windowTopFt]);
 
   const windSummary = useMemo(
     () => makeWindSummary(averageWind_),
@@ -557,7 +557,9 @@ function DashboardContent() {
         altitudesFt: keyWindAltitudesFt,
         interpolate: modeSettings.interpolateWind,
         forecastTime: effectiveWinds.validTime,
-        onOpen: () => navigate('/wind')
+        onOpen: () => navigate('/wind'),
+        onRefresh: () => handleFetchWinds(undefined, { force: true }),
+        fetching
       }}
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}

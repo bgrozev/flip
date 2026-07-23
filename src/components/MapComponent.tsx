@@ -62,6 +62,8 @@ interface MapComponentProps {
     interpolate: boolean;
     forecastTime?: Date;
     onOpen: () => void;
+    onRefresh: () => void;
+    fetching: boolean;
   };
 }
 
@@ -159,6 +161,8 @@ function MapComponent({
             interpolate={mapWinds.interpolate}
             forecastTime={mapWinds.forecastTime}
             onOpen={mapWinds.onOpen}
+            onRefresh={mapWinds.onRefresh}
+            fetching={mapWinds.fetching}
           />
         </MapControl>
       )}

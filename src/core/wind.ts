@@ -262,6 +262,32 @@ export function getWindAt(profile: WindProfile, altFt: number, interpolate?: boo
 }
 
 /**
+ * Evenly-spaced altitude bands from a base step up to (and including)
+ * `maxFt`, used by the compact winds indicator. The step is chosen from a
+ * round set so the band count stays around six to eight regardless of the
+ * ceiling: 3000 ft -> every 500, 12000 ft -> every 2000. Ground (0) is not
+ * included — the indicator adds it from the profile's own ground row.
+ */
+export function windBandAltitudesFt(maxFt: number): number[] {
+  if (!Number.isFinite(maxFt) || maxFt <= 0) {
+    return [];
+  }
+
+  const TARGET_BANDS = 8;
+  const STEPS = [500, 1000, 2000, 3000, 5000];
+  const step =
+    STEPS.find(s => maxFt / s <= TARGET_BANDS) ??
+    Math.ceil(maxFt / TARGET_BANDS / 1000) * 1000;
+
+  const out: number[] = [];
+  for (let a = step; a < maxFt - 1; a += step) {
+    out.push(a);
+  }
+  out.push(Math.round(maxFt));
+  return out;
+}
+
+/**
  * Sanitize a profile for wind application: drop rows whose altitude is out
  * of order (e.g. user entered altitudes 0, 1000, 500) or empty rows in the
  * middle.

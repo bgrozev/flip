@@ -142,6 +142,22 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
     libraries: GOOGLE_MAPS_LIBRARIES
   });
 
+  // Move the fullscreen control to the bottom-right so it doesn't collide
+  // with the winds indicator in the top-right corner. ControlPosition is
+  // only available once the API has loaded.
+  const mapOptions = useMemo(
+    () =>
+      isLoaded
+        ? {
+          ...DEFAULT_MAP_OPTIONS,
+          fullscreenControlOptions: {
+            position: google.maps.ControlPosition.BOTTOM_RIGHT
+          }
+        }
+        : DEFAULT_MAP_OPTIONS,
+    [isLoaded]
+  );
+
   return isLoaded ? (
     <div ref={setControlHost} style={{ position: 'relative', width: '100%', height: '100%' }}>
       <MapInteractionsContext.Provider value={interactions}>
@@ -149,7 +165,7 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
           <MapControlHostContext.Provider value={controlHost}>
             <GoogleMap
               mapContainerStyle={MAP_CONTAINER_STYLE}
-              options={DEFAULT_MAP_OPTIONS}
+              options={mapOptions}
               onLoad={onMapLoad}
               onClick={onClick}
               onZoomChanged={onZoomChanged}

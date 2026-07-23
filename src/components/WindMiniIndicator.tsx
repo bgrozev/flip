@@ -1,4 +1,5 @@
-import { Navigation as NavigationIcon } from '@mui/icons-material';
+import { Navigation as NavigationIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { CircularProgress } from '@mui/material';
 import React from 'react';
 
 import { beaufortColor, getWindAt, WindProfile } from '../core/wind';
@@ -15,6 +16,10 @@ interface WindMiniIndicatorProps {
   forecastTime?: Date;
   /** Open the full Wind panel (tap on the card). */
   onOpen: () => void;
+  /** Re-fetch the winds (header refresh button). */
+  onRefresh: () => void;
+  /** Whether a wind fetch is in progress. */
+  fetching: boolean;
 }
 
 interface Row {
@@ -22,6 +27,11 @@ interface Row {
   direction: number;
   speedKts: number;
 }
+
+const ICON_BTN = {
+  color: '#9fb39a',
+  cursor: 'pointer'
+} as const;
 
 const PANEL_BG = 'rgba(20, 28, 20, 0.82)';
 const LABEL_COLOR = '#9fb39a';
@@ -73,7 +83,9 @@ export default function WindMiniIndicator({
   altitudesFt,
   interpolate,
   forecastTime,
-  onOpen
+  onOpen,
+  onRefresh,
+  fetching
 }: WindMiniIndicatorProps) {
   const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel } = useUnits();
   const [collapsed, setCollapsed] = useCollapsed();
@@ -123,8 +135,14 @@ export default function WindMiniIndicator({
     setCollapsed(!collapsed);
   };
 
+  const refresh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!fetching) {
+      onRefresh();
+    }
+  };
+
   const fmtSpeed = (kts: number) => formatWindSpeed(kts).value.toFixed(0);
-  const fmtDir = (deg: number) => `${Math.round(deg) % 360}°`;
 
   if (collapsed) {
     return (
@@ -152,9 +170,7 @@ export default function WindMiniIndicator({
         aria-label="Winds; open the wind panel"
       >
         <WindArrow direction={ground.direction} speedKts={ground.speedKts} />
-        <span style={{ whiteSpace: 'nowrap' }}>
-          {fmtDir(ground.direction)} {fmtSpeed(ground.speedKts)}
-        </span>
+        <span style={{ whiteSpace: 'nowrap' }}>{fmtSpeed(ground.speedKts)}</span>
         <NavigationIcon
           onClick={toggle}
           sx={{ ...chevron }}
@@ -199,8 +215,13 @@ export default function WindMiniIndicator({
         }}
       >
         <span>WINDS · {altitudeLabel}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {forecastLabel && <span>{forecastLabel}</span>}
+          {fetching ? (
+            <CircularProgress size={13} sx={{ color: LABEL_COLOR }} />
+          ) : (
+            <RefreshIcon onClick={refresh} sx={{ fontSize: 15, ...ICON_BTN }} aria-label="Refresh winds" />
+          )}
           <NavigationIcon onClick={toggle} sx={{ ...chevron }} aria-label="Collapse winds" />
         </span>
       </div>
@@ -211,10 +232,9 @@ export default function WindMiniIndicator({
               <td style={{ padding: '1px 8px 1px 0', color: LABEL_COLOR, whiteSpace: 'nowrap' }}>
                 {row.label}
               </td>
-              <td style={{ padding: '1px 4px', lineHeight: 1 }}>
+              <td style={{ padding: '1px 6px', lineHeight: 1 }}>
                 <WindArrow direction={row.direction} speedKts={row.speedKts} size={14} />
               </td>
-              <td style={{ padding: '1px 4px', textAlign: 'right' }}>{fmtDir(row.direction)}</td>
               <td style={{ padding: '1px 0 1px 8px', textAlign: 'right' }}>
                 {fmtSpeed(row.speedKts)}
               </td>

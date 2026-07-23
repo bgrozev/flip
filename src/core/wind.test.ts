@@ -11,6 +11,7 @@ import {
   getWindAt,
   prepWind,
   setGroundWind,
+  windBandAltitudesFt,
   windRowSourceKind
 } from './wind';
 
@@ -349,5 +350,27 @@ describe('windRowSourceKind', () => {
     // A manually edited row loses its provenance (createWindRow without
     // extras), which is exactly what marks it as manual in the UI.
     expect(windRowSourceKind(createWindRow(0, 0, 0).source)).toBe('manual');
+  });
+});
+
+describe('windBandAltitudesFt', () => {
+  it('returns empty for non-positive or non-finite ceilings', () => {
+    expect(windBandAltitudesFt(0)).toEqual([]);
+    expect(windBandAltitudesFt(-100)).toEqual([]);
+    expect(windBandAltitudesFt(NaN)).toEqual([]);
+  });
+
+  it('steps by 500 up to a 3000 ft pattern ceiling', () => {
+    expect(windBandAltitudesFt(3000)).toEqual([500, 1000, 1500, 2000, 2500, 3000]);
+  });
+
+  it('steps by 2000 up to a 12000 ft flocking ceiling', () => {
+    expect(windBandAltitudesFt(12000)).toEqual([2000, 4000, 6000, 8000, 10000, 12000]);
+  });
+
+  it('always includes the exact ceiling as the top band', () => {
+    const bands = windBandAltitudesFt(15000);
+    expect(bands[bands.length - 1]).toBe(15000);
+    expect(bands.length).toBeLessThanOrEqual(9);
   });
 });
