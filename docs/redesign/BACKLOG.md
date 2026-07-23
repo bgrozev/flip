@@ -9,6 +9,94 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 
 ---
 
+## UX analysis (2026-07-22)
+
+From a walkthrough of the running app across all modes, desktop + mobile.
+Full write-ups in `docs/ux/pain-points.md` (Pn items) and
+`docs/ux/roles-and-tasks.md` (role/task inventory, cross-cutting concerns).
+Items below are the *specific* actionable findings; each notes the source
+tag. Some overlap existing entries elsewhere in this file (cross-referenced).
+
+**Top 3 to fix first** (pain-points.md): P1, P6, P2 — in that order.
+
+### Not-intuitive / teaching
+
+- ☐ **P1 · Explain dashed vs solid path** (tasks 13/14; UIUX #6/#7) —
+  the core original-vs-wind-corrected concept has no legend/label/teaching.
+  Biggest reach, cheapest, serves the student mission. **Top priority.**
+- ☐ **P2 / F4 / task 53 · Propagate the "not jump-real" signal to all
+  modes** — flocking already shows an orange "No wind data loaded — no-wind
+  spot" banner; pattern/swoop silently draw a path on 0/0/0.0 wind.
+  Generalise the flocking banner, don't reinvent. Safety-relevant. Seed of
+  the trust-state concern below.
+- ☐ **P9 · Hide the leg-count selector in Standard Pattern** (task 9) —
+  NONE/1/2/3 is a swooper control leaking into the simple mode; a regular
+  jumper should never pick it. Hard-wire 3 legs in `pattern`, keep the
+  selector only in `swoop`.
+- ☐ **P4 / F1 · Mode-filter the Settings panel** — modes gate nav + map
+  layers but not Settings; a Standard-Pattern student sees forecast model,
+  interpolate, drift arrows, map provider, etc. Gate settings rows by
+  mode/feature.
+- ☐ **P3 / F3 · Wind panel read-only-first** — the empty state shows an
+  editable manual row alongside FETCH FORECAST; ambiguous which is intended.
+  Same ask as the existing "Winds tab: read-only first" (Bugs).
+- ☐ **P5 · Surface course Type up front** — "+ NEW" makes a generic course;
+  the Distance/Zone/Speed Type selector is buried two levels into Edit.
+  Type is the first real decision. Also label Depth/Offset/Approach-angle
+  meanings.
+
+### Harder-than-necessary
+
+- ☐ **P6 / F5 · DZ discovery** (tasks 1–3) — the DZ picker is an unfiltered
+  dropdown; the SEARCH tab geocodes locations, it does not filter the DZ
+  list. Regular jumper's *first* mobile action, currently the clunkiest.
+  Add search-in-list, nearest-DZ, and geolocation (task 2 — no geolocation
+  anywhere in code). Extends the existing "Improve DZ/target selection UI".
+  **Top priority.**
+- ☐ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — opening any
+  panel on mobile replaces the map, breaking see-while-editing. (The
+  top-bar + WINDS-indicator refresh already work from the map view.)
+- ☐ **P8 / task 40 · Jumprun handoff copy/share** — the flocking
+  deliverable ("Jumprun 0° · 3.61 mi prior") is read-only text; no way to
+  copy/share to the pilot. The one output flockers exist for isn't
+  exportable.
+- ☐ **F6 · Mobile Wind panel density** — desktop-shaped layout, large empty
+  space below COMPARE SOURCES on a phone.
+- ☐ **task 14 · "Why did the pattern shift" teaching affordance** — the key
+  teaching gap; build in pattern/swoop for everyone (also a coach need).
+
+### Cross-cutting concerns (design-level, architecture-relevant)
+
+- ☐ **Trust / planning-validity state** (task 53; owner requirement) — one
+  prominent "conditions are illustrative, not jump-real" verdict that
+  aggregates: stale forecast, no winds fetched, manual override
+  (`windRowSourceKind`), inverted/synthetic wind, scrubbed forecast time,
+  out-of-bounds manual values. Raw material exists (`forecastTime`, station
+  `observedAt`, `observed?`, provenance); missing is the aggregate signal.
+  Form TBD (map-corner badge on `WindMiniIndicator`, a banner, or both).
+- ☐ **Accounts & sync** (task 38a; owner monetization vector) — sync the
+  persisted documents (presets, custom locations, settings, saved plans)
+  behind an identity; anchor case = swooper's laptop→phone loop. Needs a
+  backend/auth/account model (none exist). Candidate paywall; free/paid line
+  TBD. Ties into share-links (49), saved reports (47), annotations (48).
+- ☐ **"Nerd" mode** (owner-approved, name = **Nerd Mode**) — a data-first
+  mode enabling manual wind selection/invert and export (KMZ + FlySight
+  CSV), and more TBD. Reframes the disabled `explore` stub around
+  winds-aloft + data rather than "swoop-minus"; pairs with the trust
+  indicator. Next step: the concrete `Mode` object + a winds-aloft/data
+  panel. (Coach stays *not* a mode — parked unless a projector layout is
+  wanted.)
+
+### New monetizable/report items (owner interest)
+
+- ☐ **task 47 · Shareable report (PDF / image)** — for demo/coach.
+- ☐ **task 48 · Map hazard drawing / annotations** — for demo.
+- ☐ **Reconcile export paths** — FlySight CSV is the toolbar dialog (whole
+  path); KMZ lives only in the Courses panel (course-scoped). No general
+  path→KMZ from the toolbar (tasks 45/46).
+
+---
+
 ## Bugs
 
 - ☑ **Manoeuvre-from-params offset bug** — FIXED Phase 1 (`85e967d`).
