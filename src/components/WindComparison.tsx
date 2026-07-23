@@ -22,6 +22,7 @@ import React, { useMemo, useState } from 'react';
 
 import { useAppState, useUnits, useWindComparison } from '../hooks';
 import {
+  COMPARISON_CEILING_FT,
   ComparisonBand,
   compareProfiles,
   comparisonAltitudes
@@ -58,7 +59,7 @@ function validTimeLabel(profile: WindProfile): string {
 }
 
 export default function WindComparison() {
-  const { target, settings } = useAppState();
+  const { target } = useAppState();
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const { loading, results, load, clear } = useWindComparison();
   const [open, setOpen] = useState(false);
@@ -76,9 +77,9 @@ export default function WindComparison() {
 
     return compareProfiles(
       sources.map(r => r.profile as WindProfile),
-      comparisonAltitudes(settings.limitWind)
+      comparisonAltitudes(COMPARISON_CEILING_FT)
     );
-  }, [sources, settings.limitWind]);
+  }, [sources]);
 
   const toggle = () => {
     if (open) {

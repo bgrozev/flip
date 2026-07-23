@@ -14,7 +14,7 @@ interface UseWindsOptions {
   /** Effective (mode-resolved) settings */
   settings: Pick<
     Settings,
-    'limitWind' | 'windModel' | 'windAloftSource' | 'useDzGroundWind' | 'displayWindSummary'
+    'windModel' | 'windAloftSource' | 'useDzGroundWind' | 'displayWindSummary'
   >;
 }
 
@@ -36,7 +36,6 @@ interface UseWindsResult {
    * overrideForecastTime: undefined = use the current forecastTime state.
    */
   handleFetchWinds: (
-    maxPathAltitude?: number,
     overrideForecastTime?: Date | null,
     opts?: { force?: boolean }
   ) => void;
@@ -106,10 +105,10 @@ export function useWinds({ target, settings }: UseWindsOptions): UseWindsResult 
   }, [resetWinds, resetObserved]);
 
   const handleFetchWinds = useCallback(
-    (maxPathAltitude?: number, overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
+    (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
       const ft = overrideForecastTime !== undefined ? overrideForecastTime : forecastTime;
 
-      fetchWinds(maxPathAltitude, ft, opts);
+      fetchWinds(ft, opts);
       if (settings.useDzGroundWind && target && ft === null) {
         fetchObserved(target);
       } else if (ft !== null) {

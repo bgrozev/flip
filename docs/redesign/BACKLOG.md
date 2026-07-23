@@ -105,7 +105,11 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
   (best_match / GFS / ICON / ECMWF, all verified against live responses).
 - ☐ **More pattern legs** (>3).
 - ☐ **Course stats display** — distance to gates, angle vs course direction.
-- ☐ **Measure tool: render line lengths** on the segments.
+- ☐ **Measure tool — REMOVED, to be reimplemented.** The old MeasureLayer
+  (ruler button + click-to-add points + cumulative distance) and its
+  `showMeasureTool` setting / `measure` map layer were deleted (owner
+  wants a fresh take later). When rebuilt: also render per-segment line
+  lengths, not just cumulative.
 - ☑ **Wind time scrubber** — DONE. MUI Slider under the forecast-time
   picker; range = hours the prefetch cache covers from now
   (`openmeteo.prefetchedWindowHours`, tested — mirrors the fetch's own

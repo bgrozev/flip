@@ -21,7 +21,7 @@ interface UseFetchForecastOptions {
   /** Current target location */
   target: LatLng | undefined;
   /** Settings for wind fetching */
-  settings: Pick<Settings, 'limitWind' | 'windModel' | 'windAloftSource'>;
+  settings: Pick<Settings, 'windModel' | 'windAloftSource'>;
 }
 
 /** Error from the most recent failed fetch. A fresh object per failure so
@@ -38,10 +38,10 @@ interface UseFetchForecastResult {
   /** Set when the last fetch failed; cleared when a fetch succeeds. */
   error: FetchWindsError | null;
   /**
-   * Fetch winds for the current target. Pass maxPathAltitude to extend limit
-   * if path goes higher; force bypasses the prefetch cache (explicit refresh).
+   * Fetch winds for the current target (all fetched levels, to ~41k ft).
+   * force bypasses the prefetch cache (explicit refresh).
    */
-  fetchWinds: (maxPathAltitude?: number, forecastTime?: Date | null, opts?: { force?: boolean }) => void;
+  fetchWinds: (forecastTime?: Date | null, opts?: { force?: boolean }) => void;
   /** Manually set winds (for manual entry) */
   setWinds: (winds: WindProfile) => void;
   /** Reset winds to empty state */
@@ -75,7 +75,7 @@ export function useFetchForecast({
     setStoredWinds(null);
   }, [setStoredWinds]);
 
-  const fetchWinds = useCallback((maxPathAltitude?: number, forecastTime?: Date | null, opts?: { force?: boolean }) => {
+  const fetchWinds = useCallback((forecastTime?: Date | null, opts?: { force?: boolean }) => {
     if (!target) {
       console.log('Not fetching winds, no target');
       return;
@@ -102,17 +102,9 @@ export function useFetchForecast({
       forceRefresh: opts?.force
     })
       .then(fetchedWinds => {
-        // Determine altitude limit
-        let limit = settings.limitWind;
-        if (maxPathAltitude !== undefined && maxPathAltitude > limit) {
-          limit = maxPathAltitude;
-        }
-
-        // Filter winds to altitude limit
-        setWinds({
-          ...fetchedWinds,
-          winds: fetchedWinds.winds.filter(w => w.altFt <= limit)
-        });
+        // Keep every fetched level (ground to ~41k ft); consumers cap the
+        // display as needed. The wind table shows all of it.
+        setWinds(fetchedWinds);
         setError(null);
         setFetching(false);
       })
@@ -126,7 +118,7 @@ export function useFetchForecast({
         setError({ message: err instanceof Error ? err.message : String(err) });
         setFetching(false);
       });
-  }, [target, settings.limitWind, settings.windModel, settings.windAloftSource, setWinds]);
+  }, [target, settings.windModel, settings.windAloftSource, setWinds]);
 
   return {
     winds,

@@ -12,8 +12,13 @@ import {
 import { fetchElevationFt } from './elevation';
 import { AloftWindSource, WindFetchOpts } from './source';
 
+// Pressure levels fetched, ground to ~41,000 ft. Fine (25 hPa) resolution
+// through the low/mid band where patterns and flocking fly; coarser above,
+// up to 200 hPa (~40,965 ft), matching the Flocking Wind Calculator's reach.
+// All are confirmed available from OpenMeteo's pressure-level API.
 const hPas = [
-  1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 675, 650, 625, 600
+  1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 675, 650, 625, 600,
+  575, 550, 525, 500, 450, 400, 350, 300, 250, 200
 ];
 
 const HOUR_MS = 3600 * 1000;

@@ -75,7 +75,6 @@ export interface Settings {
   correctPatternHeading: boolean;
   straightenLegs: boolean;
   useDzGroundWind: boolean;
-  limitWind: number;
   /** Which winds-aloft source to use: 'forecast' (OpenMeteo) or 'sounding'. */
   windAloftSource: 'forecast' | 'sounding';
   /** OpenMeteo forecast model id (see core/wind OPEN_METEO_MODELS). */
@@ -83,7 +82,6 @@ export interface Settings {
   /** Which map provider renders the map: Google Maps or MapLibre GL. */
   mapProvider: MapProvider;
   showPresets: boolean;
-  showMeasureTool: boolean;
   highlightCorrespondingPoints: boolean;
   showCrabArrow: boolean;
   units: UnitPreferences;
@@ -106,7 +104,6 @@ export type PanelId = typeof PANEL_IDS[number];
 export const MAP_LAYER_IDS = [
   'flightPaths',
   'courses',
-  'measure',
   'stations',
   'targetEdit',
   'courseEdit',

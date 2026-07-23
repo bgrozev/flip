@@ -30,9 +30,12 @@ export const DIRECTION_MIN_SPEED_KTS = 3;
 /** Ladder step for the comparison altitudes (feet). */
 export const COMPARISON_STEP_FT = 500;
 
+/** How high the source-comparison table goes (feet). Covers the flocking
+ *  window without producing an unwieldy row count at 500 ft steps. */
+export const COMPARISON_CEILING_FT = 18000;
+
 /**
- * The default comparison ladder: 0..limit in 500 ft steps (the wind
- * altitude limit setting, by default 3000 ft).
+ * The comparison ladder: 0..limit in 500 ft steps.
  */
 export function comparisonAltitudes(limitFt: number): number[] {
   const steps = Math.max(1, Math.floor(limitFt / COMPARISON_STEP_FT));

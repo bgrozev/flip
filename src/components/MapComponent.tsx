@@ -8,7 +8,6 @@ import {
   FlightPathsLayer,
   FlockingLayer,
   FlockingLayerProps,
-  MeasureLayer,
   StationsLayer,
   TargetEditLayer,
   TargetEditTarget
@@ -94,7 +93,6 @@ function MapComponent({
     showPomTooltips,
     showPreWind,
     highlightCorrespondingPoints,
-    showMeasureTool,
     showCrabArrow
   } = settings;
 
@@ -123,8 +121,6 @@ function MapComponent({
       )}
 
       {has('courses') && <CourseLayer courses={courses} />}
-
-      {has('measure') && <MeasureLayer enabled={showMeasureTool} />}
 
       {has('stations') && (
         <StationsLayer

@@ -42,7 +42,7 @@ const ALL_PANELS: readonly PanelId[] = [
   'pattern', 'manoeuvre', 'target', 'wind', 'courses', 'settings', 'about'
 ];
 const ALL_LAYERS: readonly MapLayerId[] = [
-  'flightPaths', 'courses', 'measure', 'stations', 'targetEdit', 'courseEdit'
+  'flightPaths', 'courses', 'stations', 'targetEdit', 'courseEdit'
 ];
 
 export const MODES: readonly Mode[] = [
@@ -52,7 +52,7 @@ export const MODES: readonly Mode[] = [
     description: 'Standard downwind-base-final pattern',
     enabled: true,
     nav: ['pattern', 'target', 'wind', 'settings', 'about'],
-    mapLayers: ['flightPaths', 'measure', 'stations', 'targetEdit'],
+    mapLayers: ['flightPaths', 'stations', 'targetEdit'],
     defaults: {},
     features: ['presets', 'export']
   },

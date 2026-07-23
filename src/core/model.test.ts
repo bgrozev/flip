@@ -343,13 +343,11 @@ describe('migrateSettings', () => {
     const result = migrateSettings({
       showPoms: false,
       interpolateWind: 'yes', // invalid
-      limitWind: 1e12, // clamped
       units: { altitude: 'm', windSpeed: 'furlongs', distance: 'nm' } // partly invalid
     });
 
     expect(result.showPoms).toBe(false);
     expect(result.interpolateWind).toBe(DEFAULT_SETTINGS.interpolateWind);
-    expect(result.limitWind).toBe(60000);
     expect(result.units.altitude).toBe('m');
     expect(result.units.windSpeed).toBe('kts');
     expect(result.units.distance).toBe('nm');
@@ -372,14 +370,14 @@ describe('migrateSettings', () => {
 describe('migrateTouchedSettings', () => {
   it('keeps valid setting keys and drops unknown or non-string entries', () => {
     expect(
-      migrateTouchedSettings(['limitWind', 'bogus', 42, null, 'displayMapWinds'])
-    ).toEqual(['limitWind', 'displayMapWinds']);
+      migrateTouchedSettings(['showPoms', 'bogus', 42, null, 'displayMapWinds'])
+    ).toEqual(['showPoms', 'displayMapWinds']);
   });
 
   it('returns an empty list for garbage', () => {
     expect(migrateTouchedSettings(undefined)).toEqual([]);
-    expect(migrateTouchedSettings('limitWind')).toEqual([]);
-    expect(migrateTouchedSettings({ limitWind: true })).toEqual([]);
+    expect(migrateTouchedSettings('showPoms')).toEqual([]);
+    expect(migrateTouchedSettings({ showPoms: true })).toEqual([]);
   });
 });
 
@@ -391,11 +389,11 @@ describe('seedTouchedSettings', () => {
   it('returns exactly the keys that differ from the global default', () => {
     const settings = {
       ...DEFAULT_SETTINGS,
-      limitWind: 1234,
+      interpolateWind: !DEFAULT_SETTINGS.interpolateWind,
       showPoms: !DEFAULT_SETTINGS.showPoms
     };
 
-    expect(seedTouchedSettings(settings).sort()).toEqual(['limitWind', 'showPoms']);
+    expect(seedTouchedSettings(settings).sort()).toEqual(['interpolateWind', 'showPoms']);
   });
 
   it('compares nested objects by value', () => {

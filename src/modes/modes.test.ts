@@ -128,36 +128,39 @@ describe('migrateModeId (mode persistence codec)', () => {
 
 describe('applyModeDefaults', () => {
   const pattern = getMode('pattern');
-  // Synthetic mode exercising both a boolean and a numeric default
-  const testMode = { ...pattern, defaults: { showMeasureTool: true, limitWind: 500 } };
+  // Synthetic mode exercising both a boolean and a string default
+  const testMode = {
+    ...pattern,
+    defaults: { displayMapWinds: false, windModel: 'gfs_seamless' }
+  };
 
   it('applies mode defaults to untouched settings', () => {
-    expect(DEFAULT_SETTINGS.showMeasureTool).toBe(false); // sanity: they differ
+    expect(DEFAULT_SETTINGS.displayMapWinds).toBe(true); // sanity: they differ
     const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, []);
 
-    expect(resolved.showMeasureTool).toBe(true);
-    expect(resolved.limitWind).toBe(500);
+    expect(resolved.displayMapWinds).toBe(false);
+    expect(resolved.windModel).toBe('gfs_seamless');
   });
 
   it('preserves touched values', () => {
     const custom: Settings = {
       ...DEFAULT_SETTINGS,
-      limitWind: 1234 // user-set, differs from global default and mode default
+      windModel: 'icon_seamless' // user-set, differs from global and mode default
     };
-    const resolved = applyModeDefaults(custom, testMode, ['limitWind']);
+    const resolved = applyModeDefaults(custom, testMode, ['windModel']);
 
-    expect(resolved.limitWind).toBe(1234);
-    expect(resolved.showMeasureTool).toBe(true); // untouched setting still gets mode default
+    expect(resolved.windModel).toBe('icon_seamless');
+    expect(resolved.displayMapWinds).toBe(false); // untouched setting still gets mode default
   });
 
   it('lets a touched setting hold the global default against a mode default', () => {
     // The trap the old equals-global-default heuristic could not handle:
-    // the user explicitly turns the measure tool off (the global default)
-    // in a mode whose default is on — their choice must win.
-    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, ['showMeasureTool']);
+    // the user explicitly turns the map winds on (the global default) in a
+    // mode whose default is off — their choice must win.
+    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, ['displayMapWinds']);
 
-    expect(resolved.showMeasureTool).toBe(false);
-    expect(resolved.limitWind).toBe(500); // untouched key still overridden
+    expect(resolved.displayMapWinds).toBe(true);
+    expect(resolved.windModel).toBe('gfs_seamless'); // untouched key still overridden
   });
 
   it('leaves settings without a mode default alone', () => {

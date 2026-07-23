@@ -214,7 +214,7 @@ function DashboardContent() {
     invalidateWinds,
     forecastTime,
     onForecastTimeChange,
-    handleFetchWinds: fetchWindsWithMaxAlt,
+    handleFetchWinds: fetchWinds,
     stations,
     nearestStation,
     stationsFetched,
@@ -304,15 +304,13 @@ function DashboardContent() {
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
-  // Altitude bands for the map winds indicator: up to the wind-altitude
-  // limit, extended to the top of the jump in flocking. Ground is added by
-  // the component; the band ceiling matches what the fetch actually covers.
+  // Altitude bands for the map winds indicator: 5k ft for pattern, 15k for
+  // flocking (extended to the jump's top if higher). Ground is added by the
+  // component; the full profile (to ~41k) still shows in the Wind panel.
   const keyWindAltitudesFt = useMemo(() => {
-    const ceilingFt = isFlocking
-      ? Math.max(modeSettings.limitWind, flockingParams.windowTopFt)
-      : modeSettings.limitWind;
+    const ceilingFt = isFlocking ? Math.max(15000, flockingParams.windowTopFt) : 5000;
     return windBandAltitudesFt(ceilingFt);
-  }, [isFlocking, modeSettings.limitWind, flockingParams.windowTopFt]);
+  }, [isFlocking, flockingParams.windowTopFt]);
 
   const windSummary = useMemo(
     () => makeWindSummary(averageWind_),
@@ -357,15 +355,8 @@ function DashboardContent() {
   }, [flockingParams, setFlockingParams]);
 
   const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
-    // The fetch limit must reach the top of what is flown: the corrected
-    // path's exit altitude, or the flocking window top.
-    const maxAlt = isFlocking
-      ? flockingParams.windowTopFt
-      : paths.corrected.length > 0
-        ? paths.corrected[paths.corrected.length - 1].properties.alt
-        : undefined;
-
-    fetchWindsWithMaxAlt(maxAlt, overrideForecastTime, opts);
+    // Winds are fetched at every level (ground to ~41k ft); no altitude cap.
+    fetchWinds(overrideForecastTime, opts);
   };
 
   function onUpwindClick() {

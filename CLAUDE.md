@@ -90,14 +90,14 @@ Each mode keeps its own target.
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
 forecast time selection + hour scrubber, model/sounding comparison,
-persisted winds with staleness, KMZ and FlySight 2 export, measure tool.
+persisted winds with staleness, KMZ and FlySight 2 export.
 
 ## Key Components
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | App | `App.tsx` | Main orchestrator, path derivation, navigation |
-| MapComponent | `components/MapComponent.tsx` | Google Maps: paths, tooltips, drag handles, stations, measure tool |
+| MapComponent | `components/MapComponent.tsx` | Google Maps: paths, tooltips, drag handles, stations, winds indicator |
 | PatternComponent | `components/PatternComponent.tsx` | Landing pattern parameters UI |
 | ManoeuvreComponent | `components/ManoeuvreComponent.tsx` | Manoeuvre source selection (params/track/samples) |
 | TargetComponent | `components/TargetComponent.tsx` | Landing target and heading UI |
@@ -142,7 +142,7 @@ user can force a mode-overridden setting back to the global default.
 
 Sources implement a `WindSource` plugin interface (`source.ts`):
 
-- **OpenMeteo** (`openmeteo.ts`) — winds aloft at 17 pressure levels,
+- **OpenMeteo** (`openmeteo.ts`) — winds aloft at 27 pressure levels (to ~41k ft),
   selectable model, prefetches a ≥24 h window so hour-switching and the
   scrubber are local.
 - **Soundings** (`soundings.ts`) — Iowa Environmental Mesonet RAOB.

@@ -32,7 +32,6 @@ import {
   WindSpeedUnit
 } from '../core/units';
 
-import NumberInput from './NumberInput';
 
 interface CheckboxOption {
   key: keyof Settings;
@@ -53,11 +52,6 @@ const settingsGroups: SettingsGroup[] = [
         key: 'showPresets',
         label: 'Show presets',
         tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
-      },
-      {
-        key: 'showMeasureTool',
-        label: 'Show measure distance tool',
-        tooltip: 'Show the ruler button on the map to measure distances by clicking points.'
       }
     ]
   },
@@ -197,10 +191,6 @@ export default function SettingsComponent({
     setSettings({ ...settings, [key]: !settings[key] });
   };
 
-  const handleNumberChange = (key: keyof Settings) => (value: number) => {
-    setSettings({ ...settings, [key]: Number(value) });
-  };
-
   const handleUnitChange = <K extends keyof UnitPreferences>(
     unitKey: K,
     value: UnitPreferences[K]
@@ -252,16 +242,7 @@ export default function SettingsComponent({
           )}
           {group.title === 'Wind' && (
             <Box sx={{ pt: 0.5, width: '100%' }}>
-              <NumberInput
-                title="Show upper winds in the table up to this altitude."
-                label="Wind altitude limit"
-                initialValue={settings.limitWind}
-                step={1000}
-                min={1000}
-                unit="ft"
-                onChange={handleNumberChange('limitWind')}
-              />
-              <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+              <FormControl fullWidth size="small">
                 <InputLabel id="wind-aloft-label">Winds aloft source</InputLabel>
                 <Select
                   labelId="wind-aloft-label"
