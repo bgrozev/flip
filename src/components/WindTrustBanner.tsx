@@ -15,7 +15,6 @@ interface WindTrustBannerProps {
 
 type Palette = { bg: string; border: string; text: string; icon: string };
 
-const RED: Palette = { bg: 'rgba(58,20,20,0.92)', border: '#e24b4a', text: '#f5c4b3', icon: '#f09595' };
 const AMBER: Palette = { bg: 'rgba(58,47,18,0.92)', border: '#ef9f27', text: '#fac775', icon: '#efb44f' };
 
 /**
@@ -36,7 +35,7 @@ export default function WindTrustBanner({ trust, forecastTime }: WindTrustBanner
 
   switch (trust.reason) {
     case 'empty':
-      palette = RED;
+      palette = AMBER;
       Icon = WarningIcon;
       title = 'No forecast loaded';
       detail = 'Planning on zero wind — not jump-real.';

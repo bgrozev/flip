@@ -366,6 +366,19 @@ function DashboardContent() {
     fetchWinds(overrideForecastTime, opts);
   };
 
+  // Auto-fetch the forecast once on load when there is a target but no real
+  // wind yet (a fresh install, or persisted winds that were never fetched),
+  // so the app doesn't open on the "No forecast loaded" banner. Persisted
+  // real winds hydrate to a non-'none' trust level and are left untouched.
+  const didAutoFetchRef = useRef(false);
+  useEffect(() => {
+    if (didAutoFetchRef.current || !target.target || trust.level !== 'none') {
+      return;
+    }
+    didAutoFetchRef.current = true;
+    fetchWinds();
+  }, [trust.level, target.target, fetchWinds]);
+
   function onUpwindClick() {
     if (effectiveWinds?.winds && effectiveWinds.winds.length > 0 && effectiveWinds.winds[0].speedKts > 0 && target) {
       const newTarget: Target = {
@@ -636,7 +649,7 @@ function DashboardContent() {
   const bottomNavPanels = mode.nav.filter(id => !SECONDARY_PANELS.includes(id));
   const bottomNavValue = activePanel ? bottomNavPanels.indexOf(activePanel) : -1;
 
-  const activePresetName = presets.find(p => p.id === activePresetId)?.name ?? 'unnamed';
+  const activePresetName = presets.find(preset => preset.id === activePresetId)?.name ?? 'unnamed';
 
   const navigation = useMemo(() => buildNavigation(mode.nav), [mode]);
 
