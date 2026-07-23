@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { MapInteractions, MapInteractionsContext } from '../MapAdapter';
+import { MapClickModifiers, MapInteractions, MapInteractionsContext } from '../MapAdapter';
 import TargetEditLayer, { TargetEditTarget } from './TargetEditLayer';
 
 // The drawing primitives dispatch to a concrete provider (google.maps);
@@ -19,10 +19,6 @@ vi.mock('..', async () => {
   };
 });
 
-/**
- * The layer's map primitives need a provider; only the interaction
- * registry matters here, so stub it and watch what gets registered.
- */
 function renderWithInteractions(edit: TargetEditTarget) {
   const registerClickHandler = vi.fn(() => () => undefined);
   const registerCursor = vi.fn(() => () => undefined);
@@ -44,33 +40,29 @@ const baseEdit: TargetEditTarget = {
   onHeadingChange: vi.fn()
 };
 
-describe('TargetEditLayer click-to-move', () => {
-  it('registers a background-click handler by default (Edit on Map)', () => {
+describe('TargetEditLayer', () => {
+  it('registers a background-click handler but no crosshair cursor', () => {
     const { registerClickHandler, registerCursor } = renderWithInteractions(baseEdit);
 
     expect(registerClickHandler).toHaveBeenCalled();
-    expect(registerCursor).toHaveBeenCalledWith('crosshair');
+    // The target is always draggable; there is no click-to-move mode, so no
+    // crosshair is advertised.
+    expect(registerCursor).not.toHaveBeenCalled();
   });
 
-  it('moves the target when the map background is clicked', () => {
+  it('moves the target only on a shift-click, not a plain click', () => {
     const onMove = vi.fn();
     const { registerClickHandler } = renderWithInteractions({ ...baseEdit, onMove });
-    const handler = registerClickHandler.mock.calls[0][0] as (p: unknown) => void;
+    const handler = registerClickHandler.mock.calls[0][0] as (
+      p: unknown,
+      m: MapClickModifiers
+    ) => void;
     const pos = { lat: 29, lng: -82 };
 
-    handler(pos);
+    handler(pos, { shift: false });
+    expect(onMove).not.toHaveBeenCalled();
+
+    handler(pos, { shift: true });
     expect(onMove).toHaveBeenCalledWith(pos);
-  });
-
-  it('registers no click handler when clickToMove is false', () => {
-    // Flocking keeps this layer mounted permanently, so a stray click on
-    // the map must not relocate the target — dragging the handle does.
-    const { registerClickHandler, registerCursor } = renderWithInteractions({
-      ...baseEdit,
-      clickToMove: false
-    });
-
-    expect(registerClickHandler).not.toHaveBeenCalled();
-    expect(registerCursor).not.toHaveBeenCalled();
   });
 });

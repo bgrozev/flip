@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_CURSOR,
   DEFAULT_ZOOM,
+  MapClickModifiers,
   MapContainerProps,
   MapControlHostContext,
   MapInteractions,
@@ -16,7 +17,7 @@ import { LatLng } from '../../types';
 import { DEFAULT_MAP_OPTIONS, GOOGLE_MAPS_LIBRARIES, MAP_CONTAINER_STYLE } from './mapConfig';
 
 interface ClickEntry {
-  handler: (pos: LatLng) => void;
+  handler: (pos: LatLng, mods: MapClickModifiers) => void;
   priority: number;
   seq: number;
 }
@@ -125,7 +126,8 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
     const top = handlers.reduce((a, b) =>
       (b.priority > a.priority || (b.priority === a.priority && b.seq > a.seq) ? b : a));
 
-    top.handler(pos);
+    const shift = Boolean((ev.domEvent as MouseEvent | undefined)?.shiftKey);
+    top.handler(pos, { shift });
   }, []);
 
   const onZoomChanged = useCallback(() => {

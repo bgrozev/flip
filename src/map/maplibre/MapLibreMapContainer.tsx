@@ -12,6 +12,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   DEFAULT_CURSOR,
   DEFAULT_ZOOM,
+  MapClickModifiers,
   MapContainerProps,
   MapControlHostContext,
   MapInteractions,
@@ -25,7 +26,7 @@ import { DEFAULT_MAPLIBRE_STYLE } from './mapConfig';
 import { MapLibreMapContext } from './context';
 
 interface ClickEntry {
-  handler: (pos: LatLng) => void;
+  handler: (pos: LatLng, mods: MapClickModifiers) => void;
   priority: number;
   seq: number;
 }
@@ -143,7 +144,7 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
         const top = handlers.reduce((a, b) =>
           (b.priority > a.priority || (b.priority === a.priority && b.seq > a.seq) ? b : a));
 
-        top.handler(pos);
+        top.handler(pos, { shift: Boolean(ev.originalEvent?.shiftKey) });
       });
 
       // Reflow on later container size changes (e.g. the side panel opening or

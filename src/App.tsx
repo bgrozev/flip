@@ -166,7 +166,6 @@ function DashboardContent() {
   } = useAppState();
 
   const [courseEditOpen, setCourseEditOpen] = useState(false);
-  const [targetEditOpen, setTargetEditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
   const router = useToolpadRouter();
@@ -430,11 +429,6 @@ function DashboardContent() {
       <TargetComponent
         target={target}
         setTarget={setTarget}
-        editOpen={targetEditOpen}
-        onEditOpenChange={open => {
-          setTargetEditOpen(open);
-          if (open && isMobile) router.navigate(MAP_PATH);
-        }}
         onUpwindClick={onUpwindClick}
         headingRelevant={!isFlocking}
       />
@@ -539,18 +533,15 @@ function DashboardContent() {
   // Flocking ignores the target heading, so its target is always draggable
   // and only the move handle renders; other modes keep the explicit
   // "Edit on Map" toggle with the heading handle.
-  const targetEditTarget: TargetEditTarget | undefined = targetEditOpen || isFlocking
-    ? {
-      target: target.target,
-      heading: target.finalHeading,
-      onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
-      onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
-      headingEditable: !isFlocking,
-      // Flocking keeps the layer mounted permanently, so a click must not
-      // move the target — only dragging its handle does.
-      clickToMove: !isFlocking
-    }
-    : undefined;
+  // The target is always draggable, in every mode. Flocking hides the
+  // final-heading rotate handle (it has its own jumprun/canopy controls).
+  const targetEditTarget: TargetEditTarget = {
+    target: target.target,
+    heading: target.finalHeading,
+    onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
+    onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
+    headingEditable: !isFlocking
+  };
 
   const map = (
     <MapComponent
@@ -621,13 +612,6 @@ function DashboardContent() {
             fetching={fetching}
             onRefreshWindsClick={() => handleFetchWinds(undefined, { force: true })}
             onExportClick={() => setExportOpen(true)}
-            targetEditOpen={targetEditOpen}
-            showTargetEdit={!isFlocking}
-            onTargetEditToggle={() => {
-              const next = !targetEditOpen;
-              setTargetEditOpen(next);
-              if (next && isMobile) router.navigate(MAP_PATH);
-            }}
             showPresets={modeSettings.showPresets && hasFeature(mode, 'presets')}
             presets={presets}
             activePresetId={activePresetId}

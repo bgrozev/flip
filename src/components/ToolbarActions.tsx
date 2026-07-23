@@ -1,9 +1,8 @@
 import {
-  EditLocation as EditLocationIcon,
   FileDownload as FileDownloadIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { CircularProgress, Divider, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
+import { CircularProgress, Divider, IconButton, Stack, Tooltip } from '@mui/material';
 import React from 'react';
 
 import { ModeId } from '../modes';
@@ -17,10 +16,6 @@ interface ToolbarActionsProps {
   onModeChange: (id: ModeId) => void;
   onRefreshWindsClick: () => void;
   onExportClick: () => void;
-  targetEditOpen: boolean;
-  onTargetEditToggle: () => void;
-  /** Hidden when the mode keeps the target permanently draggable (flocking). */
-  showTargetEdit?: boolean;
   fetching: boolean;
   showPresets: boolean;
   presets: Preset[];
@@ -36,9 +31,6 @@ export default function ToolbarActions({
   onModeChange,
   onRefreshWindsClick,
   onExportClick,
-  targetEditOpen,
-  onTargetEditToggle,
-  showTargetEdit = true,
   fetching,
   showPresets,
   presets,
@@ -52,9 +44,6 @@ export default function ToolbarActions({
     <Stack direction="row" spacing={1} alignItems="center">
       <ModeSwitcher modeId={modeId} onChange={onModeChange} />
       <Divider orientation="vertical" flexItem />
-      {showTargetEdit && (
-        <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
-      )}
       <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
       <ExportButton onClick={onExportClick} />
       <Divider orientation="vertical" flexItem />
@@ -72,22 +61,6 @@ export default function ToolbarActions({
   );
 }
 
-
-function EditTargetButton({ active, onClick }: { active: boolean; onClick: () => void }) {
-  const theme = useTheme();
-  return (
-    <Tooltip title={active ? 'Stop editing target' : 'Edit target on map'}>
-      <IconButton
-        type="button"
-        aria-label="edit-target"
-        onClick={onClick}
-        sx={active ? { color: theme.palette.primary.main } : undefined}
-      >
-        <EditLocationIcon />
-      </IconButton>
-    </Tooltip>
-  );
-}
 
 function ExportButton({ onClick }: { onClick: () => void }) {
   return (

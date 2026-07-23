@@ -120,6 +120,10 @@ export interface MapDragHandleProps {
   onDrag?: (pos: LatLng) => void;
   /** Fired when the drag ends, with the final position. */
   onDragEnd: (pos: LatLng) => void;
+  /** Fired on a click/tap of the handle (no drag). */
+  onClick?: () => void;
+  onMouseOver?: () => void;
+  onMouseOut?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,9 +150,17 @@ export function useMapProvider(): MapProvider {
  * overrides through the hooks below; the container dispatches clicks to the
  * highest-priority handler and applies the most recent cursor override.
  */
+/** Modifier keys held during a map click. */
+export interface MapClickModifiers {
+  shift: boolean;
+}
+
 export interface MapInteractions {
   /** Register a map click handler. Returns an unregister function. */
-  registerClickHandler: (handler: (pos: LatLng) => void, priority: number) => () => void;
+  registerClickHandler: (
+    handler: (pos: LatLng, mods: MapClickModifiers) => void,
+    priority: number
+  ) => () => void;
   /** Register a cursor override. Returns a function removing the override. */
   registerCursor: (cursor: string) => () => void;
 }
@@ -181,7 +193,7 @@ export function useMapZoom(): number {
  * only the enabled handler with the highest priority receives the click.
  */
 export function useMapClick(
-  handler: (pos: LatLng) => void,
+  handler: (pos: LatLng, mods: MapClickModifiers) => void,
   { enabled = true, priority = 0 }: { enabled?: boolean; priority?: number } = {}
 ): void {
   const interactions = useContext(MapInteractionsContext);
@@ -196,7 +208,10 @@ export function useMapClick(
       return undefined;
     }
 
-    return interactions.registerClickHandler(pos => handlerRef.current(pos), priority);
+    return interactions.registerClickHandler(
+      (pos, mods) => handlerRef.current(pos, mods),
+      priority
+    );
   }, [interactions, enabled, priority]);
 }
 

@@ -1,7 +1,4 @@
 import {
-  EditLocation as EditLocationIcon
-} from '@mui/icons-material';
-import {
   Button,
   Divider,
   FormControl,
@@ -23,14 +20,11 @@ import { LocationComponent } from './';
 interface TargetComponentProps {
   target: Target;
   setTarget: (target: Target) => void;
-  editOpen: boolean;
-  onEditOpenChange: (open: boolean) => void;
   onUpwindClick: () => void;
   /**
    * Whether the final heading applies at all. Flocking ignores it (the
    * jumprun and canopy directions live in its own panel), so the heading
-   * controls and the map-edit toggle are hidden there — in that mode the
-   * target is always draggable on the map.
+   * controls are hidden there.
    */
   headingRelevant?: boolean;
 }
@@ -38,8 +32,6 @@ interface TargetComponentProps {
 export default function TargetComponent({
   target,
   setTarget,
-  editOpen,
-  onEditOpenChange,
   onUpwindClick,
   headingRelevant = true
 }: TargetComponentProps) {
@@ -54,21 +46,11 @@ export default function TargetComponent({
 
   return (
     <Stack spacing={3}>
-      {headingRelevant ? (
-        <Button
-          variant={editOpen ? 'contained' : 'outlined'}
-          size="small"
-          startIcon={<EditLocationIcon />}
-          onClick={() => onEditOpenChange(!editOpen)}
-          sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
-        >
-          {editOpen ? 'Done' : 'Edit on Map'}
-        </Button>
-      ) : (
-        <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
-          Drag the target on the map to move it.
-        </Typography>
-      )}
+      <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+        Drag the target on the map to move it
+        {headingRelevant ? '; hover it to rotate the final heading' : ''}.
+        Shift-click the map to jump it there.
+      </Typography>
 
       {headingRelevant && (
         <Stack direction="row">

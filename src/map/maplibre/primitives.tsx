@@ -265,12 +265,15 @@ export function MapDragHandle({
   cursor,
   zIndex,
   onDrag,
-  onDragEnd
+  onDragEnd,
+  onClick,
+  onMouseOver,
+  onMouseOut
 }: MapDragHandleProps) {
   const map = useMapLibreMap();
-  const handlers = useRef({ onDrag, onDragEnd });
+  const handlers = useRef({ onDrag, onDragEnd, onClick, onMouseOver, onMouseOut });
 
-  handlers.current = { onDrag, onDragEnd };
+  handlers.current = { onDrag, onDragEnd, onClick, onMouseOver, onMouseOut };
 
   const [el] = useState(() => document.createElement('div'));
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -311,9 +314,22 @@ export function MapDragHandle({
       handlers.current.onDragEnd({ lat: l.lat, lng: l.lng });
     });
 
+    const onEl = (e: MouseEvent) => {
+      e.stopPropagation();
+      handlers.current.onClick?.();
+    };
+    const onEnter = () => handlers.current.onMouseOver?.();
+    const onLeave = () => handlers.current.onMouseOut?.();
+    el.addEventListener('click', onEl);
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+
     markerRef.current = marker;
 
     return () => {
+      el.removeEventListener('click', onEl);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
       marker.remove();
       markerRef.current = null;
     };

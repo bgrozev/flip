@@ -1,13 +1,16 @@
 /**
- * Target edit layer: drag handle for the landing target position and a
- * second handle rotating the final heading. Mounted only while target
- * editing is active; map background clicks also move the target.
+ * Target layer: an always-present, always-draggable landing-target handle.
+ * Dragging it moves the target; there is no separate "edit" mode. The
+ * final-heading rotate handle is revealed on hover/tap of the target and
+ * hidden again shortly after, so it stays out of the way until wanted.
+ * Shift-clicking the map jumps the target there (fast relocation); a plain
+ * background click just dismisses a tapped reveal.
  */
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { bearingBetween, destinationPoint, metersPerPixel } from '../../core/geometry';
 import { LatLng } from '../../types';
-import { MapDragHandle, MapPolyline, useMapClick, useMapCursor, useMapZoom } from '..';
+import { MapDragHandle, MapPolyline, useMapClick, useMapZoom } from '..';
 
 /**
  * On-screen gap between the target handle and the heading handle. Kept in
@@ -15,7 +18,11 @@ import { MapDragHandle, MapPolyline, useMapClick, useMapCursor, useMapZoom } fro
  * a fixed distance in meters shrinks as you zoom out, which used to put the
  * heading handle on top of the target and steal its drags.
  */
-const HEADING_HANDLE_OFFSET_PX = 40;
+const HEADING_HANDLE_OFFSET_PX = 44;
+
+/** How long the rotate handle lingers after the pointer leaves (bridges the
+ *  gap while moving from the target handle to the rotate handle). */
+const REVEAL_HIDE_MS = 250;
 
 export interface TargetEditTarget {
   target: LatLng;
@@ -23,17 +30,10 @@ export interface TargetEditTarget {
   onMove: (pos: LatLng) => void;
   onHeadingChange: (heading: number) => void;
   /**
-   * Whether the final-heading handle is offered. Modes that ignore the
-   * target heading (flocking) pass false: only the move handle renders.
+   * Whether the final-heading rotate handle is offered. Modes that ignore
+   * the target heading (flocking) pass false: only the move handle renders.
    */
   headingEditable?: boolean;
-  /**
-   * Whether a click on the map background jumps the target there. True
-   * for the explicit, temporary "Edit on Map" mode; false where the layer
-   * is permanently mounted (flocking), since there every stray click
-   * would move the target — drag the handle instead.
-   */
-  clickToMove?: boolean;
 }
 
 export interface TargetEditLayerProps {
@@ -41,26 +41,56 @@ export interface TargetEditLayerProps {
 }
 
 export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
-  // Live position of the heading handle while dragging (for smooth line preview)
   const [liveHeadingPos, setLiveHeadingPos] = useState<LatLng | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [movingTarget, setMovingTarget] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // In click-to-move mode the crosshair advertises that a background click
-  // relocates the target (priority 0 — the measure tool wins when active).
-  // Otherwise the target moves by dragging its handle only.
-  const clickToMove = edit.clickToMove !== false;
+  const show = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+    setRevealed(true);
+  }, []);
 
-  useMapCursor(clickToMove ? 'crosshair' : null);
-  useMapClick(pos => edit.onMove(pos), { enabled: clickToMove });
+  const hideSoon = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+    hideTimer.current = setTimeout(() => setRevealed(false), REVEAL_HIDE_MS);
+  }, []);
+
+  useEffect(() => () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+  }, []);
+
+  // Shift-click relocates the target; a plain background click dismisses a
+  // tapped reveal (the target moves by dragging its handle otherwise).
+  useMapClick(
+    (pos, mods) => {
+      if (mods.shift) {
+        edit.onMove(pos);
+      } else {
+        setRevealed(false);
+      }
+    },
+    { enabled: true }
+  );
+
+  const headingEditable = edit.headingEditable !== false;
 
   const zoom = useMapZoom();
   const offsetM = HEADING_HANDLE_OFFSET_PX * metersPerPixel(edit.target.lat, zoom);
   const headingHandlePos = destinationPoint(edit.target, edit.heading, offsetM);
   const headingLineEnd = liveHeadingPos ?? headingHandlePos;
-  const headingEditable = edit.headingEditable !== false;
+
+  const showRotate = headingEditable && revealed && !movingTarget;
 
   return (
     <>
-      {headingEditable && (
+      {showRotate && (
         <MapPolyline
           path={[edit.target, headingLineEnd]}
           color="#ffaa00"
@@ -74,17 +104,32 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
         cursor="move"
         zIndex={26}
         color="#00ccff"
-        scale={9}
-        onDragEnd={pos => edit.onMove(pos)}
+        scale={revealed ? 8 : 6}
+        onClick={show}
+        onMouseOver={show}
+        onMouseOut={hideSoon}
+        onDrag={() => {
+          show();
+          setMovingTarget(true);
+        }}
+        onDragEnd={pos => {
+          setMovingTarget(false);
+          edit.onMove(pos);
+        }}
       />
-      {headingEditable && (
+      {showRotate && (
         <MapDragHandle
           position={headingHandlePos}
           cursor="pointer"
           zIndex={27}
           color="#ffaa00"
           scale={7}
-          onDrag={pos => setLiveHeadingPos(pos)}
+          onMouseOver={show}
+          onMouseOut={hideSoon}
+          onDrag={pos => {
+            show();
+            setLiveHeadingPos(pos);
+          }}
           onDragEnd={pos => {
             setLiveHeadingPos(null);
             edit.onHeadingChange(bearingBetween(edit.target, pos));

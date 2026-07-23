@@ -94,7 +94,10 @@ export function MapDragHandle({
   cursor,
   zIndex,
   onDrag,
-  onDragEnd
+  onDragEnd,
+  onClick,
+  onMouseOver,
+  onMouseOut
 }: MapDragHandleProps) {
   const icon: google.maps.Symbol = {
     path: google.maps.SymbolPath.CIRCLE,
@@ -112,6 +115,9 @@ export function MapDragHandle({
       cursor={cursor}
       zIndex={zIndex}
       icon={icon}
+      onClick={onClick}
+      onMouseOver={onMouseOver}
+      onMouseOut={onMouseOut}
       onDrag={onDrag && (e => {
         if (e.latLng) {
           onDrag({ lat: e.latLng.lat(), lng: e.latLng.lng() });
