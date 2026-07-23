@@ -366,13 +366,14 @@ function DashboardContent() {
     fetchWinds(overrideForecastTime, opts);
   };
 
-  // Auto-fetch the forecast once on load when there is a target but no real
-  // wind yet (a fresh install, or persisted winds that were never fetched),
-  // so the app doesn't open on the "No forecast loaded" banner. Persisted
-  // real winds hydrate to a non-'none' trust level and are left untouched.
+  // Auto-fetch the forecast once on load (target permitting), so the app
+  // opens on live winds rather than the "No forecast loaded" banner, and so
+  // the prefetch cache — which drives the time scrubber and is memory-only,
+  // hence empty on every reload — is warmed without a manual fetch. Skipped
+  // only for user-owned manual winds, which must not be clobbered.
   const didAutoFetchRef = useRef(false);
   useEffect(() => {
-    if (didAutoFetchRef.current || !target.target || trust.level !== 'none') {
+    if (didAutoFetchRef.current || !target.target || trust.level === 'manual') {
       return;
     }
     didAutoFetchRef.current = true;
