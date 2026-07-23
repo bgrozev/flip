@@ -13,6 +13,7 @@ import {
   TargetEditTarget
 } from '../map/layers';
 import { WindProfile } from '../core/wind';
+import { WindTrust } from '../core/windTrust';
 import {
   Course,
   FlightPath,
@@ -24,6 +25,7 @@ import {
 } from '../types';
 
 import WindMiniIndicator from './WindMiniIndicator';
+import WindTrustBanner from './WindTrustBanner';
 
 interface MapComponentProps {
   /** Reference location (the target): anchors the stations/ground-wind layer. */
@@ -51,6 +53,8 @@ interface MapComponentProps {
   flocking?: Omit<FlockingLayerProps, 'showPreWind' | 'showPoms' | 'showPomAltitudes'>;
   /** Which layers may render (from the active mode); defaults to all. */
   layers?: readonly MapLayerId[];
+  /** Wind-trust verdict for the top-of-map status banner (hidden when fresh). */
+  windTrust?: { trust: WindTrust; forecastTime?: Date };
   /** Compact winds indicator overlay data (gated by settings.displayMapWinds). */
   mapWinds?: {
     winds: WindProfile;
@@ -84,7 +88,8 @@ function MapComponent({
   finalHeading = 0,
   flocking,
   layers = MAP_LAYER_IDS,
-  mapWinds
+  mapWinds,
+  windTrust
 }: MapComponentProps) {
   const has = (layer: MapLayerId) => layers.includes(layer);
   const {
@@ -137,6 +142,12 @@ function MapComponent({
 
       {has('courseEdit') && courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
 
+      {windTrust && (
+        <MapControl>
+          <WindTrustBanner trust={windTrust.trust} forecastTime={windTrust.forecastTime} />
+        </MapControl>
+      )}
+
       {settings.displayMapWinds && mapWinds && (
         <MapControl>
           <WindMiniIndicator
@@ -147,6 +158,7 @@ function MapComponent({
             onOpen={mapWinds.onOpen}
             onRefresh={mapWinds.onRefresh}
             fetching={mapWinds.fetching}
+            topOffset={windTrust && windTrust.trust.level !== 'fresh' ? 46 : 10}
           />
         </MapControl>
       )}

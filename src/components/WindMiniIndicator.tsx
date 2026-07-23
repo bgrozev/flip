@@ -25,6 +25,8 @@ interface WindMiniIndicatorProps {
   onRefresh: () => void;
   /** Whether a wind fetch is in progress. */
   fetching: boolean;
+  /** Distance from the top of the map, in px (raised when a banner shows). */
+  topOffset?: number;
 }
 
 interface Row {
@@ -90,7 +92,8 @@ export default function WindMiniIndicator({
   forecastTime,
   onOpen,
   onRefresh,
-  fetching
+  fetching,
+  topOffset = 10
 }: WindMiniIndicatorProps) {
   const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel } = useUnits();
   const [collapsed, setCollapsed] = useCollapsed();
@@ -153,7 +156,7 @@ export default function WindMiniIndicator({
       <div
         style={{
           position: 'absolute',
-          top: 10,
+          top: topOffset,
           right: 10,
           zIndex: 1000,
           background: PANEL_BG,
@@ -184,7 +187,7 @@ export default function WindMiniIndicator({
     <div
       style={{
         position: 'absolute',
-        top: 10,
+        top: topOffset,
         right: 10,
         zIndex: 1000,
         background: PANEL_BG,

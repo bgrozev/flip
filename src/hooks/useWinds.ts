@@ -138,24 +138,29 @@ export function useWinds({ target, settings }: UseWindsOptions): UseWindsResult 
 
   const makeWindSummary = useCallback(
     (averageWind: { speedKts?: number; direction?: number }): WindSummaryData | undefined => {
+      // Show the summary whenever there is real wind to summarise —
+      // fetched, observed, or hand-entered/unlocked. Only the pristine
+      // empty default (manual, all calm) is hidden. Unlocking a fetched
+      // profile flips the source to manual but keeps the values, so gating
+      // on source alone used to wrongly drop the summary (bug).
+      const hasRealWind =
+        effectiveWinds.winds.length > 0 && effectiveWinds.winds.some(w => w.speedKts > 0);
+
       if (
         !settings.displayWindSummary ||
-        (effectiveWinds.groundSource === SOURCE_MANUAL && effectiveWinds.aloftSource === SOURCE_MANUAL) ||
-        typeof averageWind.speedKts !== 'number'
+        typeof averageWind.speedKts !== 'number' ||
+        !hasRealWind
       ) {
         return undefined;
       }
 
       const summary: WindSummaryData = { average: averageWind };
 
-      if (effectiveWinds.groundSource !== SOURCE_MANUAL && effectiveWinds.winds && effectiveWinds.winds.length > 0) {
-        const groundWind: WindRow & { observed?: boolean } = { ...effectiveWinds.winds[0] };
-
-        if (effectiveWinds.groundSource === SOURCE_DZ) {
-          groundWind.observed = true;
-        }
-        summary.ground = groundWind;
+      const groundWind: WindRow & { observed?: boolean } = { ...effectiveWinds.winds[0] };
+      if (effectiveWinds.groundSource === SOURCE_DZ) {
+        groundWind.observed = true;
       }
+      summary.ground = groundWind;
       if (effectiveWinds.validTime) {
         summary.forecastTime = effectiveWinds.validTime;
       }

@@ -257,8 +257,6 @@ interface FlockingComponentProps {
   corridorSolutions: (SolveSolution | null)[];
   /** Ground distance unit (from general Settings). */
   distanceUnit: DistanceUnit;
-  /** Whether any non-calm wind rows are loaded. */
-  hasWind: boolean;
   /** Current target position (B) — where "Pin spot reference" pins C. */
   target: LatLng;
 }
@@ -277,7 +275,6 @@ export default function FlockingComponent({
   solve,
   corridorSolutions,
   distanceUnit,
-  hasWind,
   target
 }: FlockingComponentProps) {
   const {
@@ -394,12 +391,6 @@ export default function FlockingComponent({
         </TooltipToggleButton>
       </ToggleButtonGroup>
 
-      {!hasWind && (
-        <Typography variant="body2" sx={{ textAlign: 'left', color: 'warning.main' }}>
-          No wind data loaded — this is the no-wind spot. Fetch winds in the
-          Wind panel for a forecast.
-        </Typography>
-      )}
 
       {vectors && (
         <Box sx={{ textAlign: 'left' }} data-testid="flocking-results">

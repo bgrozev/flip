@@ -24,11 +24,12 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 - ☐ **P1 · Explain dashed vs solid path** (tasks 13/14; UIUX #6/#7) —
   the core original-vs-wind-corrected concept has no legend/label/teaching.
   Biggest reach, cheapest, serves the student mission. **Top priority.**
-- ☐ **P2 / F4 / task 53 · Propagate the "not jump-real" signal to all
-  modes** — flocking already shows an orange "No wind data loaded — no-wind
-  spot" banner; pattern/swoop silently draw a path on 0/0/0.0 wind.
-  Generalise the flocking banner, don't reinvent. Safety-relevant. Seed of
-  the trust-state concern below.
+- ☑ **P2 / F4 / task 53 · Propagate the "not jump-real" signal to all
+  modes** — DONE. Unified the flocking no-wind text and the top-bar
+  "verify conditions" badge into one top-of-map status banner
+  (`WindTrustBanner`), driven by a pure `core/windTrust` verdict, shown in
+  every mode and hidden when the forecast is fresh. See the trust-state
+  concern below for what remains.
 - ☐ **P9 · Hide the leg-count selector in Standard Pattern** (task 9) —
   NONE/1/2/3 is a swooper control leaking into the simple mode; a regular
   jumper should never pick it. Hard-wire 3 legs in `pattern`, keep the
@@ -67,13 +68,17 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ### Cross-cutting concerns (design-level, architecture-relevant)
 
-- ☐ **Trust / planning-validity state** (task 53; owner requirement) — one
-  prominent "conditions are illustrative, not jump-real" verdict that
-  aggregates: stale forecast, no winds fetched, manual override
-  (`windRowSourceKind`), inverted/synthetic wind, scrubbed forecast time,
-  out-of-bounds manual values. Raw material exists (`forecastTime`, station
-  `observedAt`, `observed?`, provenance); missing is the aggregate signal.
-  Form TBD (map-corner badge on `WindMiniIndicator`, a banner, or both).
+- ◐ **Trust / planning-validity state** (task 53; owner requirement) —
+  FIRST VERSION DONE: `core/windTrust` aggregates into one verdict
+  (`none` / `manual` / `stale` / `fresh`) covering no-fetch, manual/
+  inverted/unlocked winds, forecast-time far from now, and stale fetch age;
+  rendered as a top-of-map `WindTrustBanner` (form chosen: banner, hidden
+  when fresh, manual flagged amber). Also fixed a related bug: unlocking
+  winds flips the profile to manual and used to drop the top-bar avg/gnd
+  summary — now the summary shows for any real wind, fetched or manual.
+  Still open ✎: explicit out-of-bounds / "silly manual value" call-out
+  (validation clamps are silent); tuning the stale-age threshold; whether
+  to also tint the `WindMiniIndicator` by level.
 - ☐ **Accounts & sync** (task 38a; owner monetization vector) — sync the
   persisted documents (presets, custom locations, settings, saved plans)
   behind an identity; anchor case = swooper's laptop→phone loop. Needs a

@@ -69,6 +69,7 @@ import { hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geome
 import { jumprunFromExit } from './core/flocking';
 import { COURSES } from './core/courses';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
+import { windTrust } from './core/windTrust';
 
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
@@ -317,6 +318,12 @@ function DashboardContent() {
     [makeWindSummary, averageWind_]
   );
 
+  // Single wind-trust verdict for the top-of-map status banner (all modes).
+  const trust = useMemo(
+    () => windTrust(effectiveWinds, forecastTime, new Date()),
+    [effectiveWinds, forecastTime]
+  );
+
   // Free-mode map manipulation. Move: drag the exit anywhere — decompose
   // its position (relative to the reference, in the current run frame) into
   // offset + along, so the whole run follows in 2D. Rotate: set the run
@@ -401,7 +408,6 @@ function DashboardContent() {
         solve={flocking.solve}
         corridorSolutions={flocking.corridorSolutions}
         distanceUnit={modeSettings.units.distance}
-        hasWind={flocking.hasWind}
         target={target.target}
       />
     );
@@ -550,6 +556,7 @@ function DashboardContent() {
         onRefresh: () => handleFetchWinds(undefined, { force: true }),
         fetching
       }}
+      windTrust={{ trust, forecastTime: forecastTime ?? effectiveWinds.validTime }}
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}
@@ -618,7 +625,7 @@ function DashboardContent() {
         ),
         sidebarFooter: SidebarFooter,
         appTitle: () => (
-          <CustomAppTitle wind={windSummary} forecastTime={windSummary?.forecastTime} />
+          <CustomAppTitle wind={windSummary} />
         )
       }}
     >
@@ -682,7 +689,7 @@ function SidebarFooter({ mini }: { mini?: boolean }) {
   );
 }
 
-function CustomAppTitle({ wind, forecastTime }: { wind?: WindSummaryData; forecastTime?: Date }) {
+function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
   return (
     <Stack direction="row" alignItems="center" spacing={2}>
       <FlipIcon />
@@ -708,7 +715,6 @@ function CustomAppTitle({ wind, forecastTime }: { wind?: WindSummaryData; foreca
             speedKts: wind.ground.speedKts,
             observed: wind.ground.observed
           }}
-          forecastTime={forecastTime}
         />
       )}
     </Stack>
