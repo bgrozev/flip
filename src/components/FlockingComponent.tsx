@@ -6,6 +6,7 @@
  * flight and the jumprun are fully independent.
  */
 import {
+  Delete as DeleteIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
@@ -25,6 +26,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  ToggleButtonProps,
   Tooltip,
   Typography
 } from '@mui/material';
@@ -69,6 +71,23 @@ const CARDINALS = [
 function roundDeg(deg: number): number {
   return Math.round(deg) % 360;
 }
+
+/**
+ * A ToggleButton with its own tooltip. forwardRef + prop spread so the
+ * parent ToggleButtonGroup still injects its selection props (value,
+ * selected, onChange) and the grouped border styling is preserved.
+ */
+const TooltipToggleButton = React.forwardRef<
+  HTMLButtonElement,
+  ToggleButtonProps & { title: string }
+>(({ title, children, ...props }, ref) => (
+  <Tooltip title={title}>
+    <ToggleButton ref={ref} {...props}>
+      {children}
+    </ToggleButton>
+  </Tooltip>
+));
+TooltipToggleButton.displayName = 'TooltipToggleButton';
 
 /** Panel colour per miss tier. */
 const TIER_COLOR: Record<SolveTier, string> = {
@@ -347,26 +366,33 @@ export default function FlockingComponent({
 
   return (
     <Box display="flex" flexDirection="column" gap={1.5}>
-      <Tooltip
-        title={'Classic: pick the canopy flight, the jumprun follows it — one unique '
-          + 'exit solution (as in the Flocking Wind Calculator). Free: set the '
-          + 'jumprun, the exit and the canopy flight yourself and see where the '
-          + 'jump ends up. Solve: describe the allowed jumprun corridors and let '
-          + 'the app find the best exit.'}
+      <ToggleButtonGroup
+        value={params.mode}
+        exclusive
+        onChange={(_e, m) => m !== null && set({ mode: m }, true)}
+        fullWidth
+        size="small"
+        color="primary"
       >
-        <ToggleButtonGroup
-          value={params.mode}
-          exclusive
-          onChange={(_e, m) => m !== null && set({ mode: m }, true)}
-          fullWidth
-          size="small"
-          color="primary"
+        <TooltipToggleButton
+          value="classic"
+          title="Pick the canopy flight; the jumprun follows it — one unique exit solution (as in the Flocking Wind Calculator)."
         >
-          <ToggleButton value="classic">Classic</ToggleButton>
-          <ToggleButton value="free">Free</ToggleButton>
-          <ToggleButton value="solve">Solve</ToggleButton>
-        </ToggleButtonGroup>
-      </Tooltip>
+          Classic
+        </TooltipToggleButton>
+        <TooltipToggleButton
+          value="free"
+          title="Set the jumprun, the exit and the canopy flight yourself and see where the jump ends up."
+        >
+          Free
+        </TooltipToggleButton>
+        <TooltipToggleButton
+          value="solve"
+          title="Describe the allowed jumprun corridors and let the app find the best exit."
+        >
+          Solve
+        </TooltipToggleButton>
+      </ToggleButtonGroup>
 
       {!hasWind && (
         <Typography variant="body2" sx={{ textAlign: 'left', color: 'warning.main' }}>
@@ -388,7 +414,9 @@ export default function FlockingComponent({
           <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
             Spot
           </Typography>
-          <Typography variant="body1">Jumprun {roundDeg(spot.jumprunDeg)}˚</Typography>
+          <Typography variant="body1">
+            Jumprun {roundDeg(spot.jumprunDeg)}˚ <BearingArrow deg={spot.jumprunDeg} />
+          </Typography>
           {canopyDeviationDeg >= 0.5 && (
             <Typography
               variant="body1"
@@ -666,9 +694,17 @@ export default function FlockingComponent({
                     inputProps={{ 'aria-label': `Corridor ${i + 1} name` }}
                     sx={{ flex: 1, minWidth: 0 }}
                   />
-                  <Button size="small" color="error" onClick={() => removeCorridor(i)}>
-                    Remove
-                  </Button>
+                  <Tooltip title="Remove this corridor.">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => removeCorridor(i)}
+                      sx={{ p: 0.5 }}
+                      aria-label={`Remove corridor ${i + 1}`}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
                 <Typography
                   variant="body2"
@@ -816,10 +852,7 @@ export default function FlockingComponent({
               + 'to keep the spot fixed while you move the target around.'}
           >
             <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
-              Spot Reference{' '}
-              {params.referencePoint
-                ? `${params.referencePoint.lat.toFixed(4)}, ${params.referencePoint.lng.toFixed(4)}`
-                : '· target'}
+              Spot Reference {params.referencePoint ? '· pinned' : '· target'}
             </Typography>
           </Tooltip>
           {params.referencePoint ? (
