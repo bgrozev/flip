@@ -5,7 +5,10 @@
  * target radius) and Display (units, grid, Spot Reference). The canopy
  * flight and the jumprun are fully independent.
  */
-import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import {
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon
+} from '@mui/icons-material';
 import {
   Accordion,
   AccordionDetails,
@@ -13,7 +16,9 @@ import {
   Box,
   Button,
   Checkbox,
+  Collapse,
   FormControlLabel,
+  IconButton,
   Slider,
   Stack,
   Switch,
@@ -308,8 +313,28 @@ export default function FlockingComponent({
     }, true);
   };
 
+  // Per-corridor collapse (details hidden; the checkbox/name/verdict stay
+  // visible so a corridor can be toggled on/off without expanding it).
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const toggleCollapsed = (i: number) =>
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
   const removeCorridor = (i: number) => {
     set({ solveCorridors: params.solveCorridors.filter((_c, j) => j !== i) }, true);
+    // Keep collapse flags aligned to the shifted indices.
+    setCollapsed(prev => {
+      const next = new Set<number>();
+      prev.forEach(idx => {
+        if (idx < i) next.add(idx);
+        else if (idx > i) next.add(idx - 1);
+      });
+      return next;
+    });
   };
 
   const activePreset = PRESETS.find(
@@ -599,6 +624,7 @@ export default function FlockingComponent({
           {params.solveCorridors.map((c, i) => {
             const result = corridorSolutions[i];
             const isBest = solve?.best?.corridorIndex === i;
+            const isCollapsed = collapsed.has(i);
 
             return (
               <Box
@@ -612,6 +638,16 @@ export default function FlockingComponent({
                 }}
               >
                 <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Tooltip title={isCollapsed ? 'Show corridor settings.' : 'Hide corridor settings.'}>
+                    <IconButton
+                      size="small"
+                      onClick={() => toggleCollapsed(i)}
+                      sx={{ p: 0.5 }}
+                      aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} corridor ${i + 1}`}
+                    >
+                      {isCollapsed ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="Include this corridor in the solve.">
                     <Checkbox
                       size="small"
@@ -646,77 +682,79 @@ export default function FlockingComponent({
                       milesToDisplay(result.missMi, distanceUnit).toFixed(2)} ${unitLabel}`}`}
                   {isBest && ' · best'}
                 </Typography>
-                <Stack direction="row" spacing={1}>
-                  <NumberInput
-                    key={`c${i}-dir-${externalEdit}`}
-                    title="Jumprun direction for this corridor."
-                    label="Direction"
-                    initialValue={roundDeg(c.directionDeg)}
-                    step={5}
-                    wrap={360}
-                    unit="˚"
-                    onChange={v => setCorridor(i, { directionDeg: normalizeDirection(v) })}
-                  />
-                  <NumberInput
-                    key={`c${i}-tol-${externalEdit}`}
-                    title="How far the canopy flight may deviate from the run."
-                    label="Canopy ±"
-                    initialValue={c.canopyToleranceDeg}
-                    step={5}
-                    min={LIMITS.flockingCanopyToleranceDeg.min}
-                    max={LIMITS.flockingCanopyToleranceDeg.max}
-                    unit="˚"
-                    onChange={v => setCorridor(i, { canopyToleranceDeg: v })}
-                  />
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                  <NumberInput
-                    key={`c${i}-offmin-${externalEdit}`}
-                    title="Left-most allowed lateral offset of the run (negative = left)."
-                    label="Offset min"
-                    initialValue={roundDist(c.offsetMinMi, distanceUnit)}
-                    step={0.25}
-                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
-                    unit={unitLabel}
-                    onChange={v => setCorridor(i, { offsetMinMi: displayToMiles(v, distanceUnit) })}
-                  />
-                  <NumberInput
-                    key={`c${i}-offmax-${externalEdit}`}
-                    title="Right-most allowed lateral offset of the run."
-                    label="Offset max"
-                    initialValue={roundDist(c.offsetMaxMi, distanceUnit)}
-                    step={0.25}
-                    min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
-                    unit={unitLabel}
-                    onChange={v => setCorridor(i, { offsetMaxMi: displayToMiles(v, distanceUnit) })}
-                  />
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                  <NumberInput
-                    key={`c${i}-alongmin-${externalEdit}`}
-                    title="Earliest allowed exit along the run (signed; negative = before the reference)."
-                    label="Along min"
-                    initialValue={roundDist(c.alongMinMi, distanceUnit)}
-                    step={0.5}
-                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
-                    unit={unitLabel}
-                    onChange={v => setCorridor(i, { alongMinMi: displayToMiles(v, distanceUnit) })}
-                  />
-                  <NumberInput
-                    key={`c${i}-alongmax-${externalEdit}`}
-                    title="Latest allowed exit along the run."
-                    label="Along max"
-                    initialValue={roundDist(c.alongMaxMi, distanceUnit)}
-                    step={0.5}
-                    min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
-                    max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
-                    unit={unitLabel}
-                    onChange={v => setCorridor(i, { alongMaxMi: displayToMiles(v, distanceUnit) })}
-                  />
-                </Stack>
+                <Collapse in={!isCollapsed}>
+                  <Stack direction="row" spacing={1}>
+                    <NumberInput
+                      key={`c${i}-dir-${externalEdit}`}
+                      title="Jumprun direction for this corridor."
+                      label="Direction"
+                      initialValue={roundDeg(c.directionDeg)}
+                      step={5}
+                      wrap={360}
+                      unit="˚"
+                      onChange={v => setCorridor(i, { directionDeg: normalizeDirection(v) })}
+                    />
+                    <NumberInput
+                      key={`c${i}-tol-${externalEdit}`}
+                      title="How far the canopy flight may deviate from the run."
+                      label="Canopy ±"
+                      initialValue={c.canopyToleranceDeg}
+                      step={5}
+                      min={LIMITS.flockingCanopyToleranceDeg.min}
+                      max={LIMITS.flockingCanopyToleranceDeg.max}
+                      unit="˚"
+                      onChange={v => setCorridor(i, { canopyToleranceDeg: v })}
+                    />
+                  </Stack>
+                  <Stack direction="row" spacing={1}>
+                    <NumberInput
+                      key={`c${i}-offmin-${externalEdit}`}
+                      title="Left-most allowed lateral offset of the run (negative = left)."
+                      label="Offset min"
+                      initialValue={roundDist(c.offsetMinMi, distanceUnit)}
+                      step={0.25}
+                      min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
+                      max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
+                      unit={unitLabel}
+                      onChange={v => setCorridor(i, { offsetMinMi: displayToMiles(v, distanceUnit) })}
+                    />
+                    <NumberInput
+                      key={`c${i}-offmax-${externalEdit}`}
+                      title="Right-most allowed lateral offset of the run."
+                      label="Offset max"
+                      initialValue={roundDist(c.offsetMaxMi, distanceUnit)}
+                      step={0.25}
+                      min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
+                      max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
+                      unit={unitLabel}
+                      onChange={v => setCorridor(i, { offsetMaxMi: displayToMiles(v, distanceUnit) })}
+                    />
+                  </Stack>
+                  <Stack direction="row" spacing={1}>
+                    <NumberInput
+                      key={`c${i}-alongmin-${externalEdit}`}
+                      title="Earliest allowed exit along the run (signed; negative = before the reference)."
+                      label="Along min"
+                      initialValue={roundDist(c.alongMinMi, distanceUnit)}
+                      step={0.5}
+                      min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
+                      max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
+                      unit={unitLabel}
+                      onChange={v => setCorridor(i, { alongMinMi: displayToMiles(v, distanceUnit) })}
+                    />
+                    <NumberInput
+                      key={`c${i}-alongmax-${externalEdit}`}
+                      title="Latest allowed exit along the run."
+                      label="Along max"
+                      initialValue={roundDist(c.alongMaxMi, distanceUnit)}
+                      step={0.5}
+                      min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
+                      max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
+                      unit={unitLabel}
+                      onChange={v => setCorridor(i, { alongMaxMi: displayToMiles(v, distanceUnit) })}
+                    />
+                  </Stack>
+                </Collapse>
               </Box>
             );
           })}

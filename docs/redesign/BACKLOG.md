@@ -23,6 +23,14 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☑ **No input limits** — FIXED Phase 1 (`12c7dcf`). `core/validation.ts`
   clamps pattern/manoeuvre/wind/heading inputs; panels show red +
   helperText while typing and clamp on blur (e.g. 999999 → 3000).
+- ☐ **Compact winds indicator outside the Wind panel** (owner request) —
+  a small always-visible wind readout so Flocking (or any) mode can be kept
+  open while still referencing the wind. There is already a toolbar
+  `WindSummary` (avg + ground + forecast-time chip, gated by
+  `displayWindSummary`); this wants a compact, mode-independent surface —
+  e.g. a persistent corner chip on the map or in the toolbar, showing at
+  least ground + a couple of key altitudes, not just the pattern average.
+  Design: what altitudes to show, where it lives, tap-to-open the panel.
 - ☐ **Wind table number field too narrow** — custom values don't fit.
 - ☐ **Winds tab: read-only first** — in the vast majority of uses the tab is
   read-only; the "unlock" button is used very rarely. Redesign around
@@ -349,7 +357,10 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
     map, 'Spot' heading (`c77e06a`); corridors nameable + individually
     enableable (`3526254`); flocking target drags only, never click-moves
     (`b916cc3`). Still ✎: corridor direction RANGES, per-DZ corridor
-    presets, corridor names on the map.
+    presets. Corridor names on the map: DONE — enabled, named corridors
+    are labelled at their exit-rectangle centroid (FlockingLayer
+    `corridorLabels`). Per-corridor collapse also added (the checkbox,
+    name and verdict stay visible while collapsed).
   (Owner: plan in detail when we get there; wishlist so far:)
   - map plot: drift vectors, exit spot(s), jumprun line
   - jumprun configuration (direction, aircraft airspeed, groups/separation?)

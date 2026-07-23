@@ -83,6 +83,8 @@ export interface FlockingDerived {
   corridorSolutions: (SolveSolution | null)[];
   /** Solve mode: exit-rectangle outlines of the ENABLED corridors. */
   corridorOutlines: LatLng[][];
+  /** Solve mode: name labels for the ENABLED, named corridors (map overlay). */
+  corridorLabels: { position: LatLng; text: string }[];
 }
 
 interface UseFlockingPathParams {
@@ -116,7 +118,8 @@ const EMPTY: FlockingDerived = {
   jumprunLine: null,
   solve: null,
   corridorSolutions: [],
-  corridorOutlines: []
+  corridorOutlines: [],
+  corridorLabels: []
 };
 
 /** Rigidly shift every point of a path by a flat lng/lat delta. */
@@ -238,7 +241,8 @@ export function useFlockingPath({
         jumprunLine: null,
         solve: null,
         corridorSolutions: [],
-        corridorOutlines: []
+        corridorOutlines: [],
+        corridorLabels: []
       };
     }
 
@@ -283,7 +287,8 @@ export function useFlockingPath({
       jumprunLine,
       solve: null,
       corridorSolutions: [],
-      corridorOutlines: []
+      corridorOutlines: [],
+      corridorLabels: []
     };
   }, [active, params, target.target, winds, interpolateWind, altitudeUnit]);
 }
@@ -320,6 +325,16 @@ function corridorOutline(
   return [a, b, c, d, a];
 }
 
+/** Centroid of a corridor outline's four corners (the closing repeat aside). */
+function outlineCentroid(loop: LatLng[]): LatLng {
+  const corners = loop.slice(0, 4);
+  const n = corners.length;
+  return {
+    lat: corners.reduce((s, p) => s + p.lat, 0) / n,
+    lng: corners.reduce((s, p) => s + p.lng, 0) / n
+  };
+}
+
 /**
  * Solve mode: minimize the miss over the described corridors, then render
  * the winning configuration exactly like free mode would.
@@ -334,6 +349,12 @@ function deriveSolve({
     .map((corridor, index) => ({ corridor, index }))
     .filter(entry => entry.corridor.enabled);
   const corridorOutlines = enabled.map(e => corridorOutline(reference, e.corridor));
+  // Name labels, placed at each rectangle's centroid. Unnamed corridors are
+  // left unlabeled to keep the map uncluttered.
+  const corridorLabels = enabled
+    .map((e, k) => ({ name: e.corridor.name.trim(), loop: corridorOutlines[k] }))
+    .filter(x => x.name !== '')
+    .map(x => ({ position: outlineCentroid(x.loop), text: x.name }));
 
   const drift = windDriftVector(
     winds, params.windowTopFt, params.windowBottomFt, params.descentRateMph, interpolateWind
@@ -374,7 +395,8 @@ function deriveSolve({
       canopyDeg: intoWindDeg,
       solve,
       corridorSolutions,
-      corridorOutlines
+      corridorOutlines,
+      corridorLabels
     };
   }
 
@@ -397,7 +419,8 @@ function deriveSolve({
 
   if (correctedAtTarget.length < 2) {
     return {
-      ...EMPTY, reference, hasWind, intoWindDeg, solve, corridorSolutions, corridorOutlines
+      ...EMPTY, reference, hasWind, intoWindDeg, solve, corridorSolutions,
+      corridorOutlines, corridorLabels
     };
   }
 
@@ -436,6 +459,7 @@ function deriveSolve({
     jumprunLine,
     solve,
     corridorSolutions,
-    corridorOutlines
+    corridorOutlines,
+    corridorLabels
   };
 }

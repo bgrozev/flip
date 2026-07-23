@@ -4,8 +4,14 @@ import { latLngToPoint } from './coords';
 import { ktsToFps } from './units';
 import { WindProfile, getWindAt, prepWind } from './wind';
 
-// Maximum distance (in feet) a target can move before wind data is invalidated
+// Maximum distance (in feet) between a target and the prefetched-forecast
+// location before the cached window is considered stale (OpenMeteo reuse).
 export const TARGET_MOVE_THRESHOLD_FT = 5000;
+
+// Maximum distance (in feet) a target can move before the fetched winds are
+// invalidated. Deliberately looser than the prefetch radius so nudging the
+// target around the map (esp. flocking) keeps the winds for reference. 5 mi.
+export const WIND_INVALIDATE_THRESHOLD_FT = 5 * 5280;
 
 /**
  * Calculate the distance in feet between two points.

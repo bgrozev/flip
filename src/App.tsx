@@ -65,7 +65,7 @@ import {
   useWinds
 } from './hooks';
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
-import { hasTargetMovedTooFar } from './core/geometry';
+import { hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
 import { jumprunFromExit } from './core/flocking';
 import { COURSES } from './core/courses';
 import { SOURCE_DZ, SOURCE_MANUAL } from './core/wind';
@@ -230,8 +230,13 @@ function DashboardContent() {
   // Each mode plans against its own target (see useAppState).
   const setTarget = useCallback(
     (newTarget: Target) => {
-      if (hasTargetMovedTooFar(target.target, newTarget.target)) {
-        console.log('Moved too far, invalidating winds');
+      if (
+        hasTargetMovedTooFar(
+          target.target,
+          newTarget.target,
+          WIND_INVALIDATE_THRESHOLD_FT
+        )
+      ) {
         invalidateWinds();
       }
       setTargetForMode(mode.id, newTarget);
@@ -571,6 +576,7 @@ function DashboardContent() {
         onJumprunRotate: flockingParams.mode === 'free' ? handleJumprunRotate : undefined,
         onCanopyRotate: flockingParams.mode === 'free' ? handleCanopyRotate : undefined,
         corridorOutlines: flocking.corridorOutlines,
+        corridorLabels: flocking.corridorLabels,
         showGrid: flockingParams.showGrid
       } : undefined}
     />

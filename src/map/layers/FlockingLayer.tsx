@@ -98,6 +98,19 @@ const REFERENCE_LABEL_STYLE: React.CSSProperties = {
   transform: 'translate(-50%, 12px)'
 };
 
+/** Corridor name, centered on its exit rectangle. */
+const CORRIDOR_LABEL_STYLE: React.CSSProperties = {
+  background: 'rgba(0, 0, 0, 0.65)',
+  padding: '1px 6px',
+  borderRadius: '3px',
+  fontSize: '12px',
+  color: JUMPRUN_COLOR,
+  fontWeight: 'bold',
+  display: 'inline-block',
+  whiteSpace: 'nowrap',
+  transform: 'translate(-50%, -50%)'
+};
+
 /** The spot one-liner near the exit. */
 const SPOT_LABEL_STYLE: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.85)',
@@ -154,6 +167,8 @@ export interface FlockingLayerProps {
   onCanopyRotate?: (directionDeg: number) => void;
   /** Solve mode: corridor exit-rectangle outlines (closed loops). */
   corridorOutlines?: LatLng[][];
+  /** Solve mode: corridor name labels, placed at each rectangle's centroid. */
+  corridorLabels?: { position: LatLng; text: string }[];
   /** Render the jumprun-aligned distance grid around the Spot Reference. */
   showGrid: boolean;
   showPreWind: boolean;
@@ -185,6 +200,7 @@ export default function FlockingLayer({
   onJumprunRotate,
   onCanopyRotate,
   corridorOutlines = [],
+  corridorLabels = [],
   showGrid,
   showPreWind,
   showPoms,
@@ -477,6 +493,13 @@ export default function FlockingLayer({
           zIndex={0}
           dotted
         />
+      ))}
+
+      {/* Solve mode: corridor name labels */}
+      {corridorLabels.map((label, i) => (
+        <MapOverlay key={`corridor-label-${i}`} position={label.position}>
+          <div style={CORRIDOR_LABEL_STYLE}>{label.text}</div>
+        </MapOverlay>
       ))}
 
       {/* Distance grid: a light-blue mesh that reads over both satellite
