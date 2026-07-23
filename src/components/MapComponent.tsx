@@ -13,6 +13,7 @@ import {
   TargetEditLayer,
   TargetEditTarget
 } from '../map/layers';
+import { WindProfile } from '../core/wind';
 import {
   Course,
   FlightPath,
@@ -24,6 +25,7 @@ import {
 } from '../types';
 
 import WindDirectionArrow from './WindDirectionArrow';
+import WindMiniIndicator from './WindMiniIndicator';
 
 interface MapComponentProps {
   windSpeed: number;
@@ -53,6 +55,14 @@ interface MapComponentProps {
   flocking?: Omit<FlockingLayerProps, 'showPreWind' | 'showPoms' | 'showPomAltitudes'>;
   /** Which layers may render (from the active mode); defaults to all. */
   layers?: readonly MapLayerId[];
+  /** Compact winds indicator overlay data (gated by settings.displayMapWinds). */
+  mapWinds?: {
+    winds: WindProfile;
+    altitudesFt: number[];
+    interpolate: boolean;
+    forecastTime?: Date;
+    onOpen: () => void;
+  };
 }
 
 /**
@@ -77,7 +87,8 @@ function MapComponent({
   forecastValidTime,
   finalHeading = 0,
   flocking,
-  layers = MAP_LAYER_IDS
+  layers = MAP_LAYER_IDS,
+  mapWinds
 }: MapComponentProps) {
   const has = (layer: MapLayerId) => layers.includes(layer);
   const {
@@ -137,6 +148,18 @@ function MapComponent({
       {has('windArrow') && displayWindArrow && (
         <MapControl>
           <WindDirectionArrow direction={windDirection} speed={windSpeed} />
+        </MapControl>
+      )}
+
+      {settings.displayMapWinds && mapWinds && (
+        <MapControl>
+          <WindMiniIndicator
+            winds={mapWinds.winds}
+            altitudesFt={mapWinds.altitudesFt}
+            interpolate={mapWinds.interpolate}
+            forecastTime={mapWinds.forecastTime}
+            onOpen={mapWinds.onOpen}
+          />
         </MapControl>
       )}
     </MapContainer>

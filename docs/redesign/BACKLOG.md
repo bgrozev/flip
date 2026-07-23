@@ -23,14 +23,18 @@ Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features
 - ☑ **No input limits** — FIXED Phase 1 (`12c7dcf`). `core/validation.ts`
   clamps pattern/manoeuvre/wind/heading inputs; panels show red +
   helperText while typing and clamp on blur (e.g. 999999 → 3000).
-- ☐ **Compact winds indicator outside the Wind panel** (owner request) —
-  a small always-visible wind readout so Flocking (or any) mode can be kept
-  open while still referencing the wind. There is already a toolbar
-  `WindSummary` (avg + ground + forecast-time chip, gated by
-  `displayWindSummary`); this wants a compact, mode-independent surface —
-  e.g. a persistent corner chip on the map or in the toolbar, showing at
-  least ground + a couple of key altitudes, not just the pattern average.
-  Design: what altitudes to show, where it lives, tap-to-open the panel.
+- ☑ **Compact winds indicator outside the Wind panel** (owner request) —
+  DONE. `components/WindMiniIndicator.tsx`, a map-corner overlay (via the
+  `MapControl` portal) visible in every mode. Expanded: a column of GND +
+  the plan-relevant bands (flocking window top/bottom, or the pattern leg
+  altitudes — `keyWindAltitudesFt` in App), each with a Beaufort-coloured
+  downwind arrow, direction and speed, plus the forecast hour in the
+  header. Collapses to a ground-wind chip (state persisted under
+  `flip.ui.windIndicatorCollapsed`); tapping the body opens the Wind
+  panel. Gated by the new `displayMapWinds` setting (default on).
+  Browser-verified: GND+300 at ZHills, collapse/expand + persistence, tap
+  → /wind. Follow-ups ✎: hide when winds are the empty manual default;
+  owner may want different default bands.
 - ☐ **Wind table number field too narrow** — custom values don't fit.
 - ☐ **Winds tab: read-only first** — in the vast majority of uses the tab is
   read-only; the "unlock" button is used very rarely. Redesign around

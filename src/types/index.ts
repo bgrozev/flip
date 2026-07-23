@@ -70,6 +70,8 @@ export interface Settings {
   showPreWind: boolean;
   displayWindArrow: boolean;
   displayWindSummary: boolean;
+  /** Show the compact winds indicator overlaid on the map corner. */
+  displayMapWinds: boolean;
   interpolateWind: boolean;
   correctPatternHeading: boolean;
   straightenLegs: boolean;

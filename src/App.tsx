@@ -304,6 +304,16 @@ function DashboardContent() {
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
+  // Plan-relevant altitudes for the map winds indicator: the flocking window
+  // ends, or the pattern's leg altitudes. Ground is added by the component.
+  const keyWindAltitudesFt = useMemo(
+    () =>
+      isFlocking
+        ? [flockingParams.windowBottomFt, flockingParams.windowTopFt]
+        : patternParams.legs.map(l => l.altitude),
+    [isFlocking, flockingParams.windowBottomFt, flockingParams.windowTopFt, patternParams.legs]
+  );
+
   const windSummary = useMemo(
     () => makeWindSummary(averageWind_),
     [makeWindSummary, averageWind_]
@@ -542,6 +552,13 @@ function DashboardContent() {
       layers={mode.mapLayers}
       windDirection={averageWind_?.direction ?? 0}
       windSpeed={averageWind_?.speedKts ?? 0}
+      mapWinds={{
+        winds: effectiveWinds,
+        altitudesFt: keyWindAltitudesFt,
+        interpolate: modeSettings.interpolateWind,
+        forecastTime: effectiveWinds.validTime,
+        onOpen: () => navigate('/wind')
+      }}
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}

@@ -114,6 +114,11 @@ const settingsGroups: SettingsGroup[] = [
         key: 'displayWindSummary',
         label: 'Show wind summary in title bar',
         tooltip: 'Shows the average and ground wind in the top bar of the app.'
+      },
+      {
+        key: 'displayMapWinds',
+        label: 'Show winds on the map',
+        tooltip: 'A compact winds-by-altitude indicator in the map corner, visible in every mode. Collapses to a ground-wind chip.'
       }
     ]
   },
