@@ -550,8 +550,6 @@ function DashboardContent() {
       pathB={paths.display}
       settings={modeSettings}
       layers={mode.mapLayers}
-      windDirection={averageWind_?.direction ?? 0}
-      windSpeed={averageWind_?.speedKts ?? 0}
       mapWinds={{
         winds: effectiveWinds,
         altitudesFt: keyWindAltitudesFt,

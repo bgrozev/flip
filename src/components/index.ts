@@ -20,7 +20,6 @@ export { default as PresetSelector } from './PresetSelector';
 export { default as SettingsComponent } from './SettingsComponent';
 export { default as TargetComponent } from './TargetComponent';
 export { default as ToolbarActions } from './ToolbarActions';
-export { default as WindDirectionArrow } from './WindDirectionArrow';
 export { default as WindComparison } from './WindComparison';
 export { default as WindSummary } from './WindSummary';
 export { default as WindsComponent } from './WindsComponent';

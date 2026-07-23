@@ -68,7 +68,6 @@ export interface Settings {
   showPomAltitudes: boolean;
   showPomTooltips: boolean;
   showPreWind: boolean;
-  displayWindArrow: boolean;
   displayWindSummary: boolean;
   /** Show the compact winds indicator overlaid on the map corner. */
   displayMapWinds: boolean;
@@ -111,7 +110,6 @@ export const MAP_LAYER_IDS = [
   'stations',
   'targetEdit',
   'courseEdit',
-  'windArrow',
   'flocking'
 ] as const;
 export type MapLayerId = typeof MAP_LAYER_IDS[number];

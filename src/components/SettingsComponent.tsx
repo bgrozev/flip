@@ -89,11 +89,6 @@ const settingsGroups: SettingsGroup[] = [
         key: 'showCrabArrow',
         label: 'Show drift angle arrows',
         tooltip: 'Show a heading arrow on pattern points where the drift angle (heading vs. ground track) exceeds 10°.'
-      },
-      {
-        key: 'displayWindArrow',
-        label: 'Show average wind on the map',
-        tooltip: 'Shows an arrow with the average wind on top of the map.'
       }
     ]
   },

@@ -42,7 +42,7 @@ const ALL_PANELS: readonly PanelId[] = [
   'pattern', 'manoeuvre', 'target', 'wind', 'courses', 'settings', 'about'
 ];
 const ALL_LAYERS: readonly MapLayerId[] = [
-  'flightPaths', 'courses', 'measure', 'stations', 'targetEdit', 'courseEdit', 'windArrow'
+  'flightPaths', 'courses', 'measure', 'stations', 'targetEdit', 'courseEdit'
 ];
 
 export const MODES: readonly Mode[] = [
@@ -52,9 +52,8 @@ export const MODES: readonly Mode[] = [
     description: 'Standard downwind-base-final pattern',
     enabled: true,
     nav: ['pattern', 'target', 'wind', 'settings', 'about'],
-    mapLayers: ['flightPaths', 'measure', 'stations', 'targetEdit', 'windArrow'],
-    // Student-friendly: show the wind arrow on the map by default
-    defaults: { displayWindArrow: true },
+    mapLayers: ['flightPaths', 'measure', 'stations', 'targetEdit'],
+    defaults: {},
     features: ['presets', 'export']
   },
   {
@@ -73,7 +72,7 @@ export const MODES: readonly Mode[] = [
     description: 'Wind drift and spot planning for flocking.',
     enabled: true,
     nav: ['flocking', 'target', 'wind', 'settings', 'about'],
-    mapLayers: ['flocking', 'stations', 'targetEdit', 'windArrow'],
+    mapLayers: ['flocking', 'stations', 'targetEdit'],
     defaults: {},
     features: ['export'],
     // The flocking picture (descent + 3 nm jumprun) spans several miles

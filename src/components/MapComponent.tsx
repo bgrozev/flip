@@ -24,12 +24,9 @@ import {
   Settings
 } from '../types';
 
-import WindDirectionArrow from './WindDirectionArrow';
 import WindMiniIndicator from './WindMiniIndicator';
 
 interface MapComponentProps {
-  windSpeed: number;
-  windDirection: number;
   /** Reference location (the target): anchors the stations/ground-wind layer. */
   center: LatLng;
   /**
@@ -72,8 +69,6 @@ interface MapComponentProps {
  * All map behavior lives in src/map (adapter primitives + layers).
  */
 function MapComponent({
-  windSpeed,
-  windDirection,
   center,
   cameraCenter,
   initialZoom,
@@ -98,7 +93,6 @@ function MapComponent({
     showPomAltitudes,
     showPomTooltips,
     showPreWind,
-    displayWindArrow,
     highlightCorrespondingPoints,
     showMeasureTool,
     showCrabArrow
@@ -146,12 +140,6 @@ function MapComponent({
       {has('targetEdit') && targetEditTarget && <TargetEditLayer edit={targetEditTarget} />}
 
       {has('courseEdit') && courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
-
-      {has('windArrow') && displayWindArrow && (
-        <MapControl>
-          <WindDirectionArrow direction={windDirection} speed={windSpeed} />
-        </MapControl>
-      )}
 
       {settings.displayMapWinds && mapWinds && (
         <MapControl>

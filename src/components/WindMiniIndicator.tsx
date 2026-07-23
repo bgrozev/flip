@@ -1,4 +1,9 @@
-import { Navigation as NavigationIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import {
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  Navigation as NavigationIcon,
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 import React from 'react';
 
@@ -124,10 +129,9 @@ export default function WindMiniIndicator({
     : '';
 
   const chevron = {
-    fontSize: 16,
+    fontSize: 18,
     color: LABEL_COLOR,
-    cursor: 'pointer',
-    transform: collapsed ? 'rotate(180deg)' : 'none'
+    cursor: 'pointer'
   } as const;
 
   const toggle = (e: React.MouseEvent) => {
@@ -171,11 +175,7 @@ export default function WindMiniIndicator({
       >
         <WindArrow direction={ground.direction} speedKts={ground.speedKts} />
         <span style={{ whiteSpace: 'nowrap' }}>{fmtSpeed(ground.speedKts)}</span>
-        <NavigationIcon
-          onClick={toggle}
-          sx={{ ...chevron }}
-          aria-label="Expand winds"
-        />
+        <ExpandMoreIcon onClick={toggle} sx={{ ...chevron }} aria-label="Expand winds" />
       </div>
     );
   }
@@ -214,7 +214,7 @@ export default function WindMiniIndicator({
           marginBottom: 5
         }}
       >
-        <span>WINDS · {altitudeLabel}</span>
+        <span>WINDS · {altitudeLabel} · {windSpeedLabel}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {forecastLabel && <span>{forecastLabel}</span>}
           {fetching ? (
@@ -222,7 +222,7 @@ export default function WindMiniIndicator({
           ) : (
             <RefreshIcon onClick={refresh} sx={{ fontSize: 15, ...ICON_BTN }} aria-label="Refresh winds" />
           )}
-          <NavigationIcon onClick={toggle} sx={{ ...chevron }} aria-label="Collapse winds" />
+          <ExpandLessIcon onClick={toggle} sx={{ ...chevron }} aria-label="Collapse winds" />
         </span>
       </div>
       <table style={{ borderCollapse: 'collapse' }}>
@@ -242,9 +242,6 @@ export default function WindMiniIndicator({
           ))}
         </tbody>
       </table>
-      <div style={{ color: LABEL_COLOR, fontSize: 11, textAlign: 'right', marginTop: 3 }}>
-        {windSpeedLabel}
-      </div>
     </div>
   );
 }

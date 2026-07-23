@@ -372,8 +372,8 @@ describe('migrateSettings', () => {
 describe('migrateTouchedSettings', () => {
   it('keeps valid setting keys and drops unknown or non-string entries', () => {
     expect(
-      migrateTouchedSettings(['limitWind', 'bogus', 42, null, 'displayWindArrow'])
-    ).toEqual(['limitWind', 'displayWindArrow']);
+      migrateTouchedSettings(['limitWind', 'bogus', 42, null, 'displayMapWinds'])
+    ).toEqual(['limitWind', 'displayMapWinds']);
   });
 
   it('returns an empty list for garbage', () => {

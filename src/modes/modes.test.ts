@@ -129,13 +129,13 @@ describe('migrateModeId (mode persistence codec)', () => {
 describe('applyModeDefaults', () => {
   const pattern = getMode('pattern');
   // Synthetic mode exercising both a boolean and a numeric default
-  const testMode = { ...pattern, defaults: { displayWindArrow: true, limitWind: 500 } };
+  const testMode = { ...pattern, defaults: { showMeasureTool: true, limitWind: 500 } };
 
   it('applies mode defaults to untouched settings', () => {
-    expect(DEFAULT_SETTINGS.displayWindArrow).toBe(false); // sanity: they differ
+    expect(DEFAULT_SETTINGS.showMeasureTool).toBe(false); // sanity: they differ
     const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, []);
 
-    expect(resolved.displayWindArrow).toBe(true);
+    expect(resolved.showMeasureTool).toBe(true);
     expect(resolved.limitWind).toBe(500);
   });
 
@@ -147,16 +147,16 @@ describe('applyModeDefaults', () => {
     const resolved = applyModeDefaults(custom, testMode, ['limitWind']);
 
     expect(resolved.limitWind).toBe(1234);
-    expect(resolved.displayWindArrow).toBe(true); // untouched setting still gets mode default
+    expect(resolved.showMeasureTool).toBe(true); // untouched setting still gets mode default
   });
 
   it('lets a touched setting hold the global default against a mode default', () => {
     // The trap the old equals-global-default heuristic could not handle:
-    // the user explicitly turns the wind arrow off (the global default)
+    // the user explicitly turns the measure tool off (the global default)
     // in a mode whose default is on — their choice must win.
-    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, ['displayWindArrow']);
+    const resolved = applyModeDefaults(DEFAULT_SETTINGS, testMode, ['showMeasureTool']);
 
-    expect(resolved.displayWindArrow).toBe(false);
+    expect(resolved.showMeasureTool).toBe(false);
     expect(resolved.limitWind).toBe(500); // untouched key still overridden
   });
 

@@ -46,11 +46,11 @@ describe('useAppState settings touch tracking', () => {
 
     act(() => result.current.setSettings({
       ...result.current.settings,
-      displayWindArrow: true
+      showMeasureTool: true
     }));
 
-    expect(result.current.touchedSettings).toEqual(['displayWindArrow']);
-    expect(result.current.settings.displayWindArrow).toBe(true);
+    expect(result.current.touchedSettings).toEqual(['showMeasureTool']);
+    expect(result.current.settings.showMeasureTool).toBe(true);
   });
 
   it('keeps a key touched when it is set back to the global default', () => {
@@ -58,17 +58,17 @@ describe('useAppState settings touch tracking', () => {
 
     act(() => result.current.setSettings({
       ...result.current.settings,
-      displayWindArrow: true
+      showMeasureTool: true
     }));
     act(() => result.current.setSettings({
       ...result.current.settings,
-      displayWindArrow: DEFAULT_SETTINGS.displayWindArrow
+      showMeasureTool: DEFAULT_SETTINGS.showMeasureTool
     }));
 
     // The user's explicit choice of the default value must survive —
     // this is what lets them override a mode default back to it
-    expect(result.current.touchedSettings).toEqual(['displayWindArrow']);
-    expect(result.current.settings.displayWindArrow).toBe(DEFAULT_SETTINGS.displayWindArrow);
+    expect(result.current.touchedSettings).toEqual(['showMeasureTool']);
+    expect(result.current.settings.showMeasureTool).toBe(DEFAULT_SETTINGS.showMeasureTool);
   });
 
   it('persists the touched list across a remount', () => {
