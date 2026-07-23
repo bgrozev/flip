@@ -325,14 +325,14 @@ function corridorOutline(
   return [a, b, c, d, a];
 }
 
-/** Centroid of a corridor outline's four corners (the closing repeat aside). */
-function outlineCentroid(loop: LatLng[]): LatLng {
-  const corners = loop.slice(0, 4);
-  const n = corners.length;
-  return {
-    lat: corners.reduce((s, p) => s + p.lat, 0) / n,
-    lng: corners.reduce((s, p) => s + p.lng, 0) / n
-  };
+/**
+ * Where a corridor's name label sits: the midpoint of the far short edge
+ * (the alongMax end of the run, loop corners b–c). Keeps the label on an
+ * edge, away from the target/POM tooltips clustered near the centre.
+ */
+function outlineLabelAnchor(loop: LatLng[]): LatLng {
+  const [, b, c] = loop;
+  return { lat: (b.lat + c.lat) / 2, lng: (b.lng + c.lng) / 2 };
 }
 
 /**
@@ -354,7 +354,7 @@ function deriveSolve({
   const corridorLabels = enabled
     .map((e, k) => ({ name: e.corridor.name.trim(), loop: corridorOutlines[k] }))
     .filter(x => x.name !== '')
-    .map(x => ({ position: outlineCentroid(x.loop), text: x.name }));
+    .map(x => ({ position: outlineLabelAnchor(x.loop), text: x.name }));
 
   const drift = windDriftVector(
     winds, params.windowTopFt, params.windowBottomFt, params.descentRateMph, interpolateWind
