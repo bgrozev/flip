@@ -5,6 +5,6 @@ export { default as FlightPathsLayer } from './FlightPathsLayer';
 export { PATH_COLORS } from './FlightPathsLayer';
 export { default as FlockingLayer } from './FlockingLayer';
 export type { FlockingLayerProps } from './FlockingLayer';
-export { default as StationsLayer } from './StationsLayer';
+export { default as StationsLayer, StationDetails } from './StationsLayer';
 export { default as TargetEditLayer } from './TargetEditLayer';
 export type { TargetEditTarget } from './TargetEditLayer';

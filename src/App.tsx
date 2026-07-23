@@ -559,19 +559,23 @@ function DashboardContent() {
         forecastTime: effectiveWinds.validTime,
         onOpen: () => navigate('/wind'),
         onRefresh: () => handleFetchWinds(undefined, { force: true }),
-        fetching
+        fetching,
+        groundStation: forecastTime === null && effectiveWinds.groundSource === SOURCE_DZ
+          ? nearestStation ?? undefined
+          : undefined,
+        forecastGround: effectiveWinds.groundSource !== SOURCE_DZ && effectiveWinds.aloftSource !== SOURCE_MANUAL && effectiveWinds.winds.length > 0
+          ? {
+            direction: effectiveWinds.winds[0].direction,
+            speedKts: effectiveWinds.winds[0].speedKts,
+            validTime: effectiveWinds.validTime
+          }
+          : undefined
       }}
       windTrust={{ trust, forecastTime: forecastTime ?? effectiveWinds.validTime }}
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}
       observedStations={forecastTime === null ? stations : []}
-      groundWindStation={forecastTime === null && effectiveWinds.groundSource === SOURCE_DZ ? nearestStation ?? undefined : undefined}
-      forecastGroundWind={effectiveWinds.groundSource !== SOURCE_DZ && effectiveWinds.aloftSource !== SOURCE_MANUAL && effectiveWinds.winds.length > 0
-        ? { direction: effectiveWinds.winds[0].direction, speedKts: effectiveWinds.winds[0].speedKts }
-        : undefined}
-      forecastValidTime={effectiveWinds.validTime}
-      finalHeading={target.finalHeading}
       flocking={isFlocking ? {
         ideal: flocking.ideal,
         corrected: flocking.corrected,

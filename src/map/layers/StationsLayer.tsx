@@ -1,17 +1,15 @@
 /**
- * Observed-wind stations layer: wind arrows at each station's location plus
- * a ground-wind arrow anchored near the target (from the nearest observed
- * station, or from the forecast when no station is in use), with hover
- * tooltips. The target-anchored arrow lives here (rather than a separate
- * wind-arrows layer) because it shares the single-tooltip hover state with
- * the station markers.
+ * Observed-wind stations layer: a wind arrow at each discovered station's
+ * geographic location, with a rich hover tooltip (`StationDetails`). The
+ * ground-wind readout for the target now lives in the winds indicator's
+ * hover instead of a target-anchored arrow.
  */
 import React, { useCallback, useRef, useState } from 'react';
 
 import { formatDegrees, speedGustLabel } from '../../core/units';
 import { beaufortColor } from '../../core/wind';
 import { useUnits } from '../../hooks';
-import { LatLng, ObservedWindStation } from '../../types';
+import { ObservedWindStation } from '../../types';
 import { MapOverlay } from '..';
 
 import { DirectionArrow, SECTION_STYLE, TOOLTIP_STYLE } from './tooltip';
@@ -53,27 +51,19 @@ function WindArrowGlyph({ color, rotation }: { color: string; rotation: number }
   );
 }
 
-function StationTooltip({ station, onMouseEnter, onMouseLeave }: {
-  station: ObservedWindStation;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
-}) {
+/**
+ * The rich observed-station readout (name, provenance, wind + gusts, temp,
+ * humidity, pressure, visibility, clouds). Container-agnostic so it can be
+ * shown both as a map tooltip here and inside the winds indicator's hover.
+ */
+export function StationDetails({ station }: { station: ObservedWindStation }) {
   const { formatWindSpeed, formatTemperature, formatPressure, windSpeedLabel, altitudeLabel } = useUnits();
   const distMiles = (station.distanceFt / 5280).toFixed(1);
   const wind = formatWindSpeed(station.wind.speedKts);
   const gust = station.wind.gustKts !== undefined ? formatWindSpeed(station.wind.gustKts) : null;
 
   return (
-    <div
-      style={{
-        ...TOOLTIP_STYLE,
-        minWidth: 180,
-        pointerEvents: 'auto',
-        transform: 'translate(-50%, calc(-100% - 18px))'
-      }}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
+    <>
       <div style={{ fontWeight: 'bold', marginBottom: 2 }}>{station.name}</div>
       <div style={{ color: '#aaa', fontSize: '10px', marginBottom: 2 }}>
         {station.stationUrl
@@ -153,6 +143,28 @@ function StationTooltip({ station, onMouseEnter, onMouseLeave }: {
           })}
         </div>
       )}
+    </>
+  );
+}
+
+/** Map tooltip wrapper around StationDetails (anchored above the marker). */
+function StationTooltip({ station, onMouseEnter, onMouseLeave }: {
+  station: ObservedWindStation;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}) {
+  return (
+    <div
+      style={{
+        ...TOOLTIP_STYLE,
+        minWidth: 180,
+        pointerEvents: 'auto',
+        transform: 'translate(-50%, calc(-100% - 18px))'
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <StationDetails station={station} />
     </div>
   );
 }
@@ -160,24 +172,10 @@ function StationTooltip({ station, onMouseEnter, onMouseLeave }: {
 export interface StationsLayerProps {
   /** Observed wind stations to render at their geographic locations. */
   stations: ObservedWindStation[];
-  /** Target position — anchor for the ground-wind arrow. */
-  center: LatLng;
-  /** Final heading; the target-anchored arrow is offset along it. */
-  finalHeading: number;
-  /** Nearest observed station when used as ground wind. */
-  groundWindStation?: ObservedWindStation;
-  /** Forecast ground wind (used when no observed station is in use). */
-  forecastGroundWind?: { direction: number; speedKts: number };
-  forecastValidTime?: Date;
 }
 
 export default function StationsLayer({
-  stations,
-  center,
-  finalHeading,
-  groundWindStation,
-  forecastGroundWind,
-  forecastValidTime
+  stations
 }: StationsLayerProps) {
   const { formatWindSpeed, windSpeedLabel } = useUnits();
   const [hoveredStationId, setHoveredStationId] = useState<string | null>(null);
@@ -234,96 +232,6 @@ export default function StationsLayer({
           </React.Fragment>
         );
       })}
-
-      {/* Arrow anchored near the target: observed station (if available) or forecast ground wind */}
-      {(() => {
-        const rad = (finalHeading * Math.PI) / 180;
-        const dx = Number((Math.sin(rad) * 50).toFixed(1));
-        const dy = Number((-Math.cos(rad) * 50).toFixed(1));
-        const transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-
-        if (groundWindStation) {
-          const station = groundWindStation;
-          const hoverId = `${station.id}-target`;
-          const isHovered = hoveredStationId === hoverId;
-          const speedKts = station.wind.speedKts;
-          const gustKts = station.wind.gustKts;
-          const color = beaufortColor(speedKts);
-          const arrowRotation = station.wind.direction + 180;
-          const speedDisplay = formatWindSpeed(speedKts);
-          const gustDisplay = gustKts != null ? formatWindSpeed(gustKts) : null;
-          return (
-            <React.Fragment key={hoverId}>
-              <MapOverlay position={center}>
-                <div
-                  style={{ transform, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default', userSelect: 'none', opacity: isHovered ? 1 : 0.85 }}
-                  onMouseEnter={() => onStationEnter(hoverId)}
-                  onMouseLeave={onStationLeave}
-                >
-                  <WindArrowGlyph color={color} rotation={arrowRotation} />
-                  <div style={ARROW_LABEL_STYLE}>
-                    {speedGustLabel(speedDisplay.value, gustDisplay?.value)} {windSpeedLabel}
-                  </div>
-                </div>
-              </MapOverlay>
-              {isHovered && (
-                <MapOverlay position={center}>
-                  <StationTooltip station={station} onMouseEnter={() => onStationEnter(hoverId)} onMouseLeave={onStationLeave} />
-                </MapOverlay>
-              )}
-            </React.Fragment>
-          );
-        }
-
-        if (forecastGroundWind) {
-          const { direction, speedKts } = forecastGroundWind;
-          const color = beaufortColor(speedKts);
-          const arrowRotation = direction + 180;
-          const speedDisplay = formatWindSpeed(speedKts);
-          const isHovered = hoveredStationId === 'forecast-ground';
-          const validTimeStr = forecastValidTime
-            ? forecastValidTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : null;
-          return (
-            <React.Fragment key="forecast-ground-target">
-              <MapOverlay position={center}>
-                <div
-                  style={{ transform, position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', cursor: 'default', userSelect: 'none', opacity: isHovered ? 1 : 0.75, pointerEvents: 'auto' }}
-                  onMouseEnter={() => onStationEnter('forecast-ground')}
-                  onMouseLeave={onStationLeave}
-                >
-                  <WindArrowGlyph color={color} rotation={arrowRotation} />
-                  <div style={ARROW_LABEL_STYLE}>
-                    {speedDisplay.value.toFixed(0)} {windSpeedLabel}
-                  </div>
-                  {isHovered && (
-                    <div style={{
-                      position: 'absolute',
-                      left: '100%',
-                      top: 0,
-                      marginLeft: 8,
-                      background: 'rgba(30,30,30,0.92)',
-                      color: 'white',
-                      borderRadius: 6,
-                      padding: '6px 10px',
-                      fontSize: '12px',
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                      pointerEvents: 'auto'
-                    }}>
-                      <div style={{ fontWeight: 700, marginBottom: 2 }}>Forecast ground wind</div>
-                      <div>{direction}° at {speedDisplay.value.toFixed(0)} {windSpeedLabel}</div>
-                      {validTimeStr && <div style={{ color: '#aaa', fontSize: '11px', marginTop: 2 }}>Valid {validTimeStr}</div>}
-                    </div>
-                  )}
-                </div>
-              </MapOverlay>
-            </React.Fragment>
-          );
-        }
-
-        return null;
-      })()}
     </>
   );
 }

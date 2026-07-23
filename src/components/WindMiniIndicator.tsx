@@ -9,6 +9,8 @@ import React from 'react';
 
 import { beaufortColor, getWindAt, WindProfile } from '../core/wind';
 import { useUnits } from '../hooks';
+import { StationDetails } from '../map/layers';
+import { ObservedWindStation } from '../types';
 
 interface WindMiniIndicatorProps {
   /** The effective wind profile (aloft + any observed ground). */
@@ -27,6 +29,10 @@ interface WindMiniIndicatorProps {
   fetching: boolean;
   /** Distance from the top of the map, in px (raised when a banner shows). */
   topOffset?: number;
+  /** Nearest observed station injected as ground wind — shown on GND hover. */
+  groundStation?: ObservedWindStation;
+  /** Forecast ground wind (when no observed station) — shown on GND hover. */
+  forecastGround?: { direction: number; speedKts: number; validTime?: Date };
 }
 
 interface Row {
@@ -44,6 +50,27 @@ const PANEL_BG = 'rgba(20, 28, 20, 0.82)';
 const LABEL_COLOR = '#9fb39a';
 const TEXT_COLOR = '#e8efe6';
 const COLLAPSED_KEY = 'flip.ui.windIndicatorCollapsed';
+
+/** Ground-wind detail popover, anchored to the left of the indicator. */
+const GROUND_TOOLTIP_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  right: 'calc(100% + 8px)',
+  top: 0,
+  width: 200,
+  background: 'rgba(16, 20, 16, 0.95)',
+  color: 'white',
+  border: '1px solid rgba(255,255,255,0.15)',
+  borderRadius: 8,
+  padding: '8px 10px',
+  fontSize: 12,
+  lineHeight: 1.35,
+  textAlign: 'left',
+  whiteSpace: 'normal',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
+  cursor: 'default',
+  pointerEvents: 'auto',
+  zIndex: 1001
+};
 
 /** Collapse state, persisted as an explicit 'true'/'false' string. */
 function useCollapsed(): [boolean, (v: boolean) => void] {
@@ -93,10 +120,14 @@ export default function WindMiniIndicator({
   onOpen,
   onRefresh,
   fetching,
-  topOffset = 10
+  topOffset = 10,
+  groundStation,
+  forecastGround
 }: WindMiniIndicatorProps) {
   const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel } = useUnits();
   const [collapsed, setCollapsed] = useCollapsed();
+  const [groundHover, setGroundHover] = React.useState(false);
+  const groundHideTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   if (!winds.winds || winds.winds.length === 0) {
     return null;
@@ -151,6 +182,40 @@ export default function WindMiniIndicator({
 
   const fmtSpeed = (kts: number) => formatWindSpeed(kts).value.toFixed(0);
 
+  const showGround = () => {
+    if (groundHideTimer.current) {
+      clearTimeout(groundHideTimer.current);
+    }
+    setGroundHover(true);
+  };
+  const hideGround = () => {
+    if (groundHideTimer.current) {
+      clearTimeout(groundHideTimer.current);
+    }
+    groundHideTimer.current = setTimeout(() => setGroundHover(false), 150);
+  };
+
+  const groundInfo = groundStation ?? forecastGround;
+  const groundTooltip = groundHover && groundInfo ? (
+    <div style={GROUND_TOOLTIP_STYLE} onMouseEnter={showGround} onMouseLeave={hideGround}>
+      {groundStation ? (
+        <StationDetails station={groundStation} />
+      ) : forecastGround ? (
+        <>
+          <div style={{ fontWeight: 'bold', marginBottom: 2 }}>Forecast ground wind</div>
+          <div>
+            {Math.round(forecastGround.direction) % 360}° at {fmtSpeed(forecastGround.speedKts)} {windSpeedLabel}
+          </div>
+          {forecastGround.validTime && (
+            <div style={{ color: '#aaa', fontSize: 11, marginTop: 2 }}>
+              Valid {forecastGround.validTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  ) : null;
+
   if (collapsed) {
     return (
       <div
@@ -172,6 +237,8 @@ export default function WindMiniIndicator({
           boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
         }}
         onClick={onOpen}
+        onMouseEnter={showGround}
+        onMouseLeave={hideGround}
         role="button"
         tabIndex={0}
         aria-label="Winds; open the wind panel"
@@ -179,6 +246,7 @@ export default function WindMiniIndicator({
         <WindArrow direction={ground.direction} speedKts={ground.speedKts} />
         <span style={{ whiteSpace: 'nowrap' }}>{fmtSpeed(ground.speedKts)}</span>
         <ExpandMoreIcon onClick={toggle} sx={{ ...chevron }} aria-label="Expand winds" />
+        {groundTooltip}
       </div>
     );
   }
@@ -230,21 +298,30 @@ export default function WindMiniIndicator({
       </div>
       <table style={{ borderCollapse: 'collapse' }}>
         <tbody>
-          {rows.map(row => (
-            <tr key={row.label}>
-              <td style={{ padding: '1px 8px 1px 0', color: LABEL_COLOR, whiteSpace: 'nowrap' }}>
-                {row.label}
-              </td>
-              <td style={{ padding: '1px 6px', lineHeight: 1 }}>
-                <WindArrow direction={row.direction} speedKts={row.speedKts} size={14} />
-              </td>
-              <td style={{ padding: '1px 0 1px 8px', textAlign: 'right' }}>
-                {fmtSpeed(row.speedKts)}
-              </td>
-            </tr>
-          ))}
+          {rows.map(row => {
+            const isGround = row.label === 'GND';
+            return (
+              <tr
+                key={row.label}
+                onMouseEnter={isGround ? showGround : undefined}
+                onMouseLeave={isGround ? hideGround : undefined}
+                style={isGround && groundInfo ? { cursor: 'help' } : undefined}
+              >
+                <td style={{ padding: '1px 8px 1px 0', color: LABEL_COLOR, whiteSpace: 'nowrap' }}>
+                  {row.label}
+                </td>
+                <td style={{ padding: '1px 6px', lineHeight: 1 }}>
+                  <WindArrow direction={row.direction} speedKts={row.speedKts} size={14} />
+                </td>
+                <td style={{ padding: '1px 0 1px 8px', textAlign: 'right' }}>
+                  {fmtSpeed(row.speedKts)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+      {groundTooltip}
     </div>
   );
 }

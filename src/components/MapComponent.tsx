@@ -45,10 +45,6 @@ interface MapComponentProps {
   courseEditTarget?: CourseEditTarget;
   targetEditTarget?: TargetEditTarget;
   observedStations?: ObservedWindStation[];
-  groundWindStation?: ObservedWindStation;
-  forecastGroundWind?: { direction: number; speedKts: number };
-  forecastValidTime?: Date;
-  finalHeading?: number;
   /** Flocking layer data (only provided in flocking mode). */
   flocking?: Omit<FlockingLayerProps, 'showPreWind' | 'showPoms' | 'showPomAltitudes'>;
   /** Which layers may render (from the active mode); defaults to all. */
@@ -64,6 +60,10 @@ interface MapComponentProps {
     onOpen: () => void;
     onRefresh: () => void;
     fetching: boolean;
+    /** Nearest observed station injected as ground wind (hover detail). */
+    groundStation?: ObservedWindStation;
+    /** Forecast ground wind, when no observed station is in use (hover detail). */
+    forecastGround?: { direction: number; speedKts: number; validTime?: Date };
   };
 }
 
@@ -82,10 +82,6 @@ function MapComponent({
   courseEditTarget,
   targetEditTarget,
   observedStations = [],
-  groundWindStation,
-  forecastGroundWind,
-  forecastValidTime,
-  finalHeading = 0,
   flocking,
   layers = MAP_LAYER_IDS,
   mapWinds,
@@ -127,16 +123,7 @@ function MapComponent({
 
       {has('courses') && <CourseLayer courses={courses} />}
 
-      {has('stations') && (
-        <StationsLayer
-          stations={observedStations}
-          center={center}
-          finalHeading={finalHeading}
-          groundWindStation={groundWindStation}
-          forecastGroundWind={forecastGroundWind}
-          forecastValidTime={forecastValidTime}
-        />
-      )}
+      {has('stations') && <StationsLayer stations={observedStations} />}
 
       {has('targetEdit') && targetEditTarget && <TargetEditLayer edit={targetEditTarget} />}
 
@@ -158,6 +145,8 @@ function MapComponent({
             onOpen={mapWinds.onOpen}
             onRefresh={mapWinds.onRefresh}
             fetching={mapWinds.fetching}
+            groundStation={mapWinds.groundStation}
+            forecastGround={mapWinds.forecastGround}
             topOffset={windTrust && windTrust.trust.level !== 'fresh' ? 46 : 10}
           />
         </MapControl>
