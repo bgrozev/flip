@@ -21,7 +21,7 @@ import { destinationPoint } from '../../core/geometry';
 import { WindProfile, getWindAt, prepWind } from '../../core/wind';
 import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
-import { MapCircle, MapDragHandle, MapOverlay, MapPolyline } from '..';
+import { MapCircle, MapDragHandle, MapOverlay, MapPolyline, useMapZoom } from '..';
 
 import { SolveTier } from '../../core/flockingSolve';
 
@@ -58,6 +58,10 @@ const MILES_PER_UNIT: Record<DistanceUnit, number> = {
 function roundDeg(deg: number): number {
   return Math.round(deg) % 360;
 }
+
+/** Below this zoom the flocking picture is small enough that the per-POM
+ *  altitude labels overlap; hide them until zoomed in past it. */
+const ALTITUDE_LABEL_MIN_ZOOM = 13;
 
 const ALTITUDE_LABEL_STYLE: React.CSSProperties = {
   background: 'black',
@@ -208,6 +212,10 @@ export default function FlockingLayer({
 }: FlockingLayerProps) {
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const zoom = useMapZoom();
+  // The per-POM altitude labels crowd together at the flocking overview zoom;
+  // only show them once zoomed in enough for them to read cleanly.
+  const showAltitudeLabels = showPomAltitudes && zoom >= ALTITUDE_LABEL_MIN_ZOOM;
 
   const idealLatLngs = useMemo(() => pathToLatLngs(ideal), [ideal]);
   const correctedLatLngs = useMemo(() => pathToLatLngs(corrected), [corrected]);
@@ -324,6 +332,14 @@ export default function FlockingLayer({
       milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} ${unitLabel} ${
       spot.prior ? 'prior' : 'PAST'}`
     : null;
+
+  // Perpendicular offset from the jumprun line (crosswind spot), when non-zero.
+  if (spotText && spot) {
+    const offsetDisp = milesToDisplay(spot.offsetMi, distanceUnit);
+    if (offsetDisp >= 0.005) {
+      spotText += ` · ${offsetDisp.toFixed(2)} ${unitLabel} ${spot.offsetLeft ? 'left' : 'right'}`;
+    }
+  }
 
   if (spotText && missed && missMi !== null) {
     spotText += `${tier === 'yellow' ? ' · CLOSE by ' : ' · MISSES by '}${
@@ -628,7 +644,7 @@ export default function FlockingLayer({
                 </MapOverlay>
               );
             })()}
-            {showPomAltitudes && (
+            {showAltitudeLabels && (
               <MapOverlay position={point}>
                 <div style={ALTITUDE_LABEL_STYLE}>
                   {`${Math.round(formatAltitude(point.alt ?? 0).value)} ${altitudeLabel}`}
