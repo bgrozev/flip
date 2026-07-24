@@ -604,6 +604,51 @@ export function jumprunFromExit(
 }
 
 /**
+ * The exit that keeps the flight's finish point fixed as the canopy
+ * direction changes — for the "rotate about the finish" handle.
+ *
+ * The finish is `end = exit + F(deg) + D`, where `F(deg)` is the canopy
+ * flight vector (length `canopyLengthMi` in the flight direction) and `D`
+ * is the wind drift over the window (independent of the flight direction).
+ * `D` is recovered from the current geometry (`D = (end−exit) − F(cur)`),
+ * so holding `end` fixed gives `exit = end − F(new) − D`.
+ */
+export function exitForFixedEnd(
+  exit: LatLng,
+  end: LatLng,
+  currentCanopyDeg: number,
+  newCanopyDeg: number,
+  canopyLengthMi: number
+): LatLng {
+  const flight = (deg: number): VectorEN => {
+    const r = deg * DEG_TO_RAD;
+    return { eastMi: canopyLengthMi * Math.sin(r), northMi: canopyLengthMi * Math.cos(r) };
+  };
+
+  const v = localMilesEN(exit, end);
+  const fCur = flight(currentCanopyDeg);
+  const drift: VectorEN = {
+    eastMi: v.eastMi - fCur.eastMi,
+    northMi: v.northMi - fCur.northMi
+  };
+  const fNew = flight(newCanopyDeg);
+  const newV: VectorEN = {
+    eastMi: fNew.eastMi + drift.eastMi,
+    northMi: fNew.northMi + drift.northMi
+  };
+
+  // newExit = end − newV
+  const mag = Math.hypot(newV.eastMi, newV.northMi);
+  if (mag < 1e-9) {
+    return end;
+  }
+  const bearing = vectorCardinalDirection(-newV.eastMi, -newV.northMi);
+  const pt = turf.destination([end.lng, end.lat], mag, bearing, { units: 'miles' });
+
+  return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
+}
+
+/**
  * The best exit position along the line: the projection of C = target − W
  * onto it (the exit minimizing the required canopy speed). When a reachable
  * segment exists this is always its midpoint, so no clamping is needed.

@@ -9,6 +9,7 @@ import {
   cardinalToDeg,
   degreeToCardinal,
   enToDriftVector,
+  exitForFixedEnd,
   flockingDurationS,
   flockingVectors,
   intoWindDirection,
@@ -597,5 +598,43 @@ describe('reachableJumprunSegment and bestExitAlongMi', () => {
 
     expect(seg!.tMinMi).toBeCloseTo(0.5, 2);
     expect(seg!.tMaxMi).toBeCloseTo(3.5, 2);
+  });
+});
+
+describe('exitForFixedEnd', () => {
+  const end: LatLng = { lat: 28.2, lng: -82.15 };
+
+  it('keeps the finish fixed while the canopy direction changes (no wind)', () => {
+    // No wind: end = exit + F(deg). Exit 1 mi due south of end means the
+    // flight goes north (deg 0), length 1 mi.
+    const exit = destinationPoint(end, 180, 1609.344);
+    const newExit = exitForFixedEnd(exit, end, 0, 90, 1);
+
+    // Re-fly from the new exit in the new direction: end must be unchanged.
+    const flownEnd = destinationPoint(newExit, 90, 1609.344);
+    expect(flownEnd.lat).toBeCloseTo(end.lat, 4);
+    expect(flownEnd.lng).toBeCloseTo(end.lng, 4);
+  });
+
+  it('preserves the wind drift so the finish holds with wind', () => {
+    // Fabricate a geometry with drift: end = exit + F(cur) + D.
+    const exit = destinationPoint(end, 200, 2000); // arbitrary current exit
+    const cur = 30;
+    const canopyLen = 0.8;
+    // With this exit/end, D is implied. Rotating to a new direction must keep
+    // end fixed: exit' + F(new) + D === end, i.e. end - exit' === F(new) + D.
+    const newDeg = 120;
+    const newExit = exitForFixedEnd(exit, end, cur, newDeg, canopyLen);
+
+    const vNew = localMilesEN(newExit, end);
+    const vOld = localMilesEN(exit, end);
+    const f = (deg: number) => ({
+      e: canopyLen * Math.sin((deg * Math.PI) / 180),
+      n: canopyLen * Math.cos((deg * Math.PI) / 180)
+    });
+    const driftFromOld = { e: vOld.eastMi - f(cur).e, n: vOld.northMi - f(cur).n };
+    const driftFromNew = { e: vNew.eastMi - f(newDeg).e, n: vNew.northMi - f(newDeg).n };
+    expect(driftFromNew.e).toBeCloseTo(driftFromOld.e, 3);
+    expect(driftFromNew.n).toBeCloseTo(driftFromOld.n, 3);
   });
 });

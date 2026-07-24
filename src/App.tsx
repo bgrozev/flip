@@ -66,7 +66,7 @@ import {
 } from './hooks';
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
 import { hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
-import { jumprunFromExit } from './core/flocking';
+import { exitForFixedEnd, flockingDurationS, jumprunFromExit } from './core/flocking';
 import { COURSES } from './core/courses';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
@@ -352,9 +352,41 @@ function DashboardContent() {
       });
     }
   }, [flockingParams, setFlockingParams, flocking.reference, flocking.exit]);
+  // Rotate the canopy flight about its FINISH point. Classic: set the run
+  // direction — the unique exit re-derives so the finish stays on target.
+  // Free: set the canopy direction and reposition the exit (via the jumprun
+  // offset/along) so the finish holds where it is.
   const handleCanopyRotate = useCallback((directionDeg: number) => {
-    setFlockingParams({ ...flockingParams, canopyDirection: Math.round(directionDeg) });
-  }, [flockingParams, setFlockingParams]);
+    const dir = Math.round(directionDeg);
+
+    if (flockingParams.mode === 'classic') {
+      setFlockingParams({ ...flockingParams, direction: dir });
+      return;
+    }
+
+    if (flockingParams.mode === 'free' && flocking.exit && flocking.end) {
+      const durationS = flockingDurationS(
+        flockingParams.windowTopFt, flockingParams.windowBottomFt, flockingParams.descentRateMph
+      );
+      const canopyLenMi = (flockingParams.horizontalSpeedMph * durationS) / 3600;
+      const newExit = exitForFixedEnd(
+        flocking.exit, flocking.end, flocking.canopyDeg, dir, canopyLenMi
+      );
+      const { offsetMi, exitAlongMi } = jumprunFromExit(
+        flocking.reference, flocking.jumprunDeg, newExit
+      );
+
+      setFlockingParams({
+        ...flockingParams,
+        canopyDirection: dir,
+        jumprun: { ...flockingParams.jumprun, offsetMi },
+        exitAlongMi
+      });
+    }
+  }, [
+    flockingParams, setFlockingParams,
+    flocking.exit, flocking.end, flocking.canopyDeg, flocking.reference, flocking.jumprunDeg
+  ]);
   // Dragging the Spot Reference pins it at the dropped point.
   const handleReferenceDrag = useCallback((pos: LatLng) => {
     setFlockingParams({ ...flockingParams, referencePoint: pos });
@@ -598,7 +630,7 @@ function DashboardContent() {
         canopyDeviationWarning: flocking.canopyDeviationWarning,
         onJumprunMove: flockingParams.mode === 'free' ? handleJumprunMove : undefined,
         onJumprunRotate: flockingParams.mode === 'free' ? handleJumprunRotate : undefined,
-        onCanopyRotate: flockingParams.mode === 'free' ? handleCanopyRotate : undefined,
+        onCanopyRotate: flockingParams.mode === 'solve' ? undefined : handleCanopyRotate,
         corridorOutlines: flocking.corridorOutlines,
         corridorLabels: flocking.corridorLabels,
         showGrid: flockingParams.showGrid

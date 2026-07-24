@@ -397,9 +397,22 @@ export default function FlockingLayer({
           />
         );
       })()}
-      {jumprunLine && exit && end && onCanopyRotate && (() => {
+      {exit && end && onCanopyRotate && (() => {
+        // Canopy-flight rotation about the FINISH: the handle rides the
+        // flight segment (60% from the finish toward the exit) and dragging
+        // it sets the direction from the handle toward the fixed finish, so
+        // the finish stays put and the exit swings around it. Works in
+        // classic (finish = target) and free (exit repositioned to hold it).
+        const seg = localMilesEN(end, exit);
+        const segMi = Math.hypot(seg.eastMi, seg.northMi);
+        if (segMi < 0.05) {
+          return null;
+        }
+        const handlePos = destinationPoint(
+          end, vectorCardinalDirection(seg.eastMi, seg.northMi), segMi * 0.6 * 1609.344
+        );
         const rotate = (pos: LatLng) => {
-          const en = localMilesEN(exit, pos);
+          const en = localMilesEN(pos, end);
 
           if (Math.hypot(en.eastMi, en.northMi) > 0.02) {
             onCanopyRotate(vectorCardinalDirection(en.eastMi, en.northMi));
@@ -408,7 +421,7 @@ export default function FlockingLayer({
 
         return (
           <MapDragHandle
-            position={end}
+            position={handlePos}
             color={FLOCKING_COLOR}
             scale={6}
             cursor="alias"
