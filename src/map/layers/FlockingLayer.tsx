@@ -174,10 +174,20 @@ export interface FlockingLayerProps {
   canopyDeviationWarning?: boolean;
   /** Free mode: move the whole jumprun so its exit lands at a dragged point. */
   onJumprunMove?: (exit: LatLng) => void;
-  /** Free mode: rotate the jumprun (new direction, cardinal deg). */
+  /** Free mode: rotate the jumprun about the exit (new direction, cardinal). */
   onJumprunRotate?: (directionDeg: number) => void;
-  /** Free mode: rotate the canopy flight (new direction, cardinal deg). */
+  /**
+   * Rotate the canopy flight about its FINISH (middle-of-CF handle): the
+   * finish stays put and the exit swings. Classic and free.
+   */
   onCanopyRotate?: (directionDeg: number) => void;
+  /**
+   * Free mode: rotate the canopy flight about the EXIT (end-of-CF handle):
+   * the exit and jumprun stay put and the finish swings.
+   */
+  onCanopyRotateAboutExit?: (directionDeg: number) => void;
+  /** Classic mode: drag the exit to translate the whole picture (the target). */
+  onExitTranslate?: (exit: LatLng) => void;
   /** Solve mode: corridor exit-rectangle outlines (closed loops). */
   corridorOutlines?: LatLng[][];
   /** Solve mode: corridor name labels, placed at each rectangle's centroid. */
@@ -212,6 +222,8 @@ export default function FlockingLayer({
   onJumprunMove,
   onJumprunRotate,
   onCanopyRotate,
+  onCanopyRotateAboutExit,
+  onExitTranslate,
   corridorOutlines = [],
   corridorLabels = [],
   showGrid,
@@ -382,28 +394,39 @@ export default function FlockingLayer({
         </>
       )}
 
-      {/* Free-mode handles. Move: drag the exit anywhere — the whole run
-          follows in 2D (keeps its direction). Rotate: a handle 1.5 nm
-          behind the exit; the run points from it toward the (fixed) exit,
-          so it swings about the exit with no 180° flip. Canopy: a handle
-          at the flight's end rotates the canopy direction. */}
-      {jumprunLine && exit && onJumprunMove && (
-        <MapDragHandle
-          position={exit}
-          color={onTarget ? JUMPRUN_COLOR : MISS_COLOR}
-          scale={8}
-          cursor="grab"
-          zIndex={110}
-          onDrag={onJumprunMove}
-          onDragEnd={onJumprunMove}
-        />
-      )}
+      {/* Handles.
+          Free: exit (green) translates the run (target fixed); a white
+          handle at the jumprun START rotates the run about the exit; a cyan
+          handle at the END of CF rotates the canopy about the exit (jumprun
+          fixed); a magenta handle at the MIDDLE of CF rotates the canopy
+          about the finish (finish fixed, exit swings).
+          Classic: the exit (green) translates everything (moves the target);
+          the magenta middle-of-CF handle rotates about the target.
+          The target has its own always-on drag handle. */}
+      {exit && (onJumprunMove || onExitTranslate) && (() => {
+        const translate = onJumprunMove ?? onExitTranslate;
+        if (!translate) {
+          return null;
+        }
+        return (
+          <MapDragHandle
+            position={exit}
+            color={onTarget ? JUMPRUN_COLOR : MISS_COLOR}
+            scale={8}
+            cursor="grab"
+            zIndex={110}
+            onDrag={translate}
+            onDragEnd={translate}
+          />
+        );
+      })()}
       {jumprunLine && exit && onJumprunRotate && (() => {
+        // Handle at the start of the run; the run points from it toward the
+        // fixed exit, so it swings about the exit with no 180° flip.
         const handlePos = destinationPoint(
-          exit, (jumprunLine.directionDeg + 180) % 360, 1.5 * 1852
+          exit, (jumprunLine.directionDeg + 180) % 360, JUMPRUN_LENGTH_M
         );
         const rotate = (pos: LatLng) => {
-          // Direction points from the dragged handle toward the fixed exit.
           const en = localMilesEN(pos, exit);
 
           if (Math.hypot(en.eastMi, en.northMi) > 1e-4) {
@@ -423,19 +446,40 @@ export default function FlockingLayer({
           />
         );
       })()}
+      {exit && end && onCanopyRotateAboutExit && (() => {
+        // End-of-CF handle: rotate the canopy about the EXIT. The direction
+        // is from the fixed exit toward the dragged handle; the finish swings.
+        const rotate = (pos: LatLng) => {
+          const en = localMilesEN(exit, pos);
+
+          if (Math.hypot(en.eastMi, en.northMi) > 0.02) {
+            onCanopyRotateAboutExit(vectorCardinalDirection(en.eastMi, en.northMi));
+          }
+        };
+
+        return (
+          <MapDragHandle
+            position={end}
+            color="#00d0ff"
+            scale={6}
+            cursor="alias"
+            zIndex={106}
+            onDrag={rotate}
+            onDragEnd={rotate}
+          />
+        );
+      })()}
       {exit && end && onCanopyRotate && (() => {
-        // Canopy-flight rotation about the FINISH: the handle rides the
-        // flight segment (60% from the finish toward the exit) and dragging
-        // it sets the direction from the handle toward the fixed finish, so
-        // the finish stays put and the exit swings around it. Works in
-        // classic (finish = target) and free (exit repositioned to hold it).
+        // Middle-of-CF handle: rotate the canopy about the FINISH. Sits at
+        // the midpoint of the flight line; dragging sets the direction from
+        // the handle toward the fixed finish, so the finish stays put.
         const seg = localMilesEN(end, exit);
         const segMi = Math.hypot(seg.eastMi, seg.northMi);
         if (segMi < 0.05) {
           return null;
         }
         const handlePos = destinationPoint(
-          end, vectorCardinalDirection(seg.eastMi, seg.northMi), segMi * 0.6 * 1609.344
+          end, vectorCardinalDirection(seg.eastMi, seg.northMi), segMi * 0.5 * 1609.344
         );
         const rotate = (pos: LatLng) => {
           const en = localMilesEN(pos, end);

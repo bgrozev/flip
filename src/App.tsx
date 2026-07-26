@@ -65,8 +65,13 @@ import {
   useWinds
 } from './hooks';
 import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
-import { hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
-import { exitForFixedEnd, flockingDurationS, jumprunFromExit } from './core/flocking';
+import { destinationPoint, hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
+import {
+  exitForFixedEnd,
+  jumprunFromExit,
+  localMilesEN,
+  vectorCardinalDirection
+} from './core/flocking';
 import { COURSES } from './core/courses';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
@@ -364,11 +369,10 @@ function DashboardContent() {
       return;
     }
 
-    if (flockingParams.mode === 'free' && flocking.exit && flocking.end) {
-      const durationS = flockingDurationS(
-        flockingParams.windowTopFt, flockingParams.windowBottomFt, flockingParams.descentRateMph
-      );
-      const canopyLenMi = (flockingParams.horizontalSpeedMph * durationS) / 3600;
+    if (flockingParams.mode === 'free' && flocking.exit && flocking.end && flocking.vectors) {
+      // Use the flight's exact length (from the derived no-wind vector, not
+      // speed×time) so the finish holds without drifting across rotations.
+      const canopyLenMi = flocking.vectors.canopyFlight.lengthMi;
       const newExit = exitForFixedEnd(
         flocking.exit, flocking.end, flocking.canopyDeg, dir, canopyLenMi
       );
@@ -384,9 +388,32 @@ function DashboardContent() {
       });
     }
   }, [
-    flockingParams, setFlockingParams,
-    flocking.exit, flocking.end, flocking.canopyDeg, flocking.reference, flocking.jumprunDeg
+    flockingParams, setFlockingParams, flocking.exit, flocking.end,
+    flocking.canopyDeg, flocking.reference, flocking.jumprunDeg, flocking.vectors
   ]);
+
+  // End-of-CF handle (free): rotate the canopy about the exit — the exit and
+  // jumprun stay put, only the canopy direction (and thus the finish) moves.
+  const handleCanopyRotateAboutExit = useCallback((directionDeg: number) => {
+    setFlockingParams({ ...flockingParams, canopyDirection: Math.round(directionDeg) });
+  }, [flockingParams, setFlockingParams]);
+
+  // Classic exit handle: dragging the exit translates the whole picture,
+  // i.e. moves the target by the same offset (everything is target-relative).
+  const handleExitTranslate = useCallback((pos: LatLng) => {
+    if (!flocking.exit) {
+      return;
+    }
+    const d = localMilesEN(flocking.exit, pos);
+    const dist = Math.hypot(d.eastMi, d.northMi);
+    if (dist < 1e-6) {
+      return;
+    }
+    const moved = destinationPoint(
+      target.target, vectorCardinalDirection(d.eastMi, d.northMi), dist * 1609.344
+    );
+    setTarget({ ...target, target: moved });
+  }, [flocking.exit, target, setTarget]);
   // Dragging the Spot Reference pins it at the dropped point.
   const handleReferenceDrag = useCallback((pos: LatLng) => {
     setFlockingParams({ ...flockingParams, referencePoint: pos });
@@ -631,6 +658,8 @@ function DashboardContent() {
         onJumprunMove: flockingParams.mode === 'free' ? handleJumprunMove : undefined,
         onJumprunRotate: flockingParams.mode === 'free' ? handleJumprunRotate : undefined,
         onCanopyRotate: flockingParams.mode === 'solve' ? undefined : handleCanopyRotate,
+        onCanopyRotateAboutExit: flockingParams.mode === 'free' ? handleCanopyRotateAboutExit : undefined,
+        onExitTranslate: flockingParams.mode === 'classic' ? handleExitTranslate : undefined,
         corridorOutlines: flocking.corridorOutlines,
         corridorLabels: flocking.corridorLabels,
         showGrid: flockingParams.showGrid
