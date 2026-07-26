@@ -469,18 +469,14 @@ export default function FlockingLayer({
           />
         );
       })()}
-      {exit && end && onCanopyRotate && (() => {
-        // Middle-of-CF handle: rotate the canopy about the FINISH. Sits at
-        // the midpoint of the flight line; dragging sets the direction from
-        // the handle toward the fixed finish, so the finish stays put.
-        const seg = localMilesEN(end, exit);
-        const segMi = Math.hypot(seg.eastMi, seg.northMi);
-        if (segMi < 0.05) {
-          return null;
-        }
-        const handlePos = destinationPoint(
-          end, vectorCardinalDirection(seg.eastMi, seg.northMi), segMi * 0.5 * 1609.344
-        );
+      {exit && end && onCanopyRotate && correctedLatLngs.length >= 3 && (() => {
+        // Middle-of-CF handle: rotate the canopy about the FINISH. Anchored
+        // to the actual (wind-curved) flight path's midpoint rather than the
+        // straight exit-end midpoint, so it stays on the purple line even
+        // when the wind bends it. Dragging sets the direction from the handle
+        // toward the fixed finish, so the finish stays put.
+        const mid = correctedLatLngs[Math.floor(correctedLatLngs.length / 2)];
+        const handlePos: LatLng = { lat: mid.lat, lng: mid.lng };
         const rotate = (pos: LatLng) => {
           const en = localMilesEN(pos, end);
 

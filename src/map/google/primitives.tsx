@@ -108,21 +108,26 @@ export function MapDragHandle({
     strokeWeight: 2
   };
 
-  // Google auto-pans the map when a dragged marker nears the viewport edge,
-  // and there is no option to turn that off. Freeze the map centre for the
-  // duration of a handle drag (snap it back on any change) so dragging a
-  // handle never scrolls the map.
   const markerRef = React.useRef<google.maps.Marker | null>(null);
   const freeze = React.useRef<google.maps.MapsEventListener | null>(null);
+  const dragging = React.useRef(false);
 
+  // Google auto-pans the map when a dragged marker nears the viewport edge,
+  // with no option to turn it off. Freeze the map centre for the duration of
+  // a handle drag: snap it back on any change (guarded against the
+  // synchronous re-entry that setCenter would otherwise cause).
   const startFreeze = () => {
     const map = markerRef.current?.getMap() as google.maps.Map | null | undefined;
-    const center = map?.getCenter();
-    if (!map || !center) {
+    const locked = map?.getCenter();
+    if (!map || !locked) {
       return;
     }
-    const locked = center;
-    freeze.current = map.addListener('center_changed', () => map.setCenter(locked));
+    freeze.current = map.addListener('center_changed', () => {
+      const c = map.getCenter();
+      if (c && !c.equals(locked)) {
+        map.setCenter(locked);
+      }
+    });
   };
   const endFreeze = () => {
     freeze.current?.remove();
@@ -130,6 +135,18 @@ export function MapDragHandle({
   };
 
   React.useEffect(() => endFreeze, []);
+
+  // Keep the marker a controlled component: after a native drag the marker
+  // is left wherever the pointer released it, so re-assert the prop position
+  // once the drag is over (rotation handles move the handle to a derived
+  // spot, not the raw drop point). Skipped mid-drag so it doesn't fight the
+  // live drag.
+  React.useEffect(() => {
+    if (!dragging.current) {
+      markerRef.current?.setPosition(position);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position.lat, position.lng]);
 
   return (
     <MarkerF
@@ -144,17 +161,24 @@ export function MapDragHandle({
       onClick={onClick}
       onMouseOver={onMouseOver}
       onMouseOut={onMouseOut}
-      onDragStart={startFreeze}
+      onDragStart={() => {
+        dragging.current = true;
+        startFreeze();
+      }}
       onDrag={onDrag && (e => {
         if (e.latLng) {
           onDrag({ lat: e.latLng.lat(), lng: e.latLng.lng() });
         }
       })}
       onDragEnd={e => {
+        dragging.current = false;
         endFreeze();
         if (e.latLng) {
           onDragEnd({ lat: e.latLng.lat(), lng: e.latLng.lng() });
         }
+        // Re-assert the controlled position (the derived spot may differ
+        // from where the pointer released).
+        markerRef.current?.setPosition(position);
       }}
     />
   );
