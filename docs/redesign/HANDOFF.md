@@ -1,22 +1,26 @@
 # Redesign hand-off — start here
 
 Entry point for a new session picking up the FliP redesign. Rewritten
-2026-07-19, at the end of the session that did the architecture review,
-the wind-UX batch, and all of Phase 6 (flocking).
+2026-07-25, at the end of a long UX-iteration session (winds indicator,
+trust banner, target + flocking map interactions). The 2026-07-19 revision
+covered the architecture review, the wind-UX batch, and Phase 6 flocking.
 
 ## Read order
 
 1. This file.
 2. `ARCHITECTURE.md` — the target design + the phased migration plan.
 3. `BACKLOG.md` — everything outstanding, by scope. Kept current; the
-   flocking entry and the "Architecture-review follow-ups" section are
-   the two that moved most recently.
-4. `NOTES.md` — running log: per-phase history, owner Q&A, commit refs.
+   **"UX analysis (2026-07-22)"** section near the top holds the newest
+   prioritised items.
+4. `docs/ux/pain-points.md` + `docs/ux/roles-and-tasks.md` — a walkthrough
+   of the running app: prioritised friction (P1–P9) and a role/task
+   inventory with the trust-state, accounts-sync, and Nerd-mode concerns.
+5. `NOTES.md` — running log: per-phase history, owner Q&A, commit refs.
    Read for "why is it like this", not for "what's next".
-5. `UIUX.md` — UX improvements + feature ideas, ⭐ = owner-prioritized.
+6. `UIUX.md` — UX improvements + feature ideas, ⭐ = owner-prioritized.
 
 `CLAUDE.md` (repo root) describes the codebase and is current as of this
-hand-off (structure, core modules, wind layer, flocking).
+hand-off (structure, core modules, wind layer, flocking, indicator/banner).
 
 ## Where things stand
 
@@ -24,30 +28,38 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **541 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **554 tests, 0 lint errors, 47 known lint
 warnings, build green, tree clean.**
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
-MapLibre provider landed earlier. This session added:
+MapLibre provider and all of Phase 6 (flocking) landed earlier — see the
+2026-07-19 history in NOTES.md.
 
-- **Architecture review** of the whole branch, and all its follow-ups:
-  an app-wide error surface (snackbar) that no longer wipes the wind
-  table on a failed fetch, a `useWinds` facade out of App.tsx, the last
-  pure modules moved into `core/`, the first React Testing Library
-  tests, explicit touched-settings tracking (fixing a real trap where a
-  mode default could not be overridden back to the global default), and
-  dead-code removal. Only two items were deliberately deferred:
-  track-scale path rendering (Phase 7) and the OpenMeteo prefetch
-  singleton (accepted as-is).
-- **Owner quick items**: jump-to-course, map tooltip contrast, per-row
-  wind source badges, ground speed in the point hover, cumulative turn
-  ("degrees rotated") in the manoeuvre hover.
-- **Wind UX**: winds persist across reloads with a staleness indicator,
-  an hour scrubber over the prefetched window, and a first-pass
-  model/sounding comparison view.
-- **Phase 6 — flocking**, ported from the owner's Flocking Wind
-  Calculator and then iterated heavily with the owner. See below.
+This UX-iteration session (2026-07-19 → 25) added, roughly in order:
+
+- **Compact winds indicator** (`WindMiniIndicator`): a map-corner overlay,
+  every mode, showing GND + plan-relevant altitude bands (5k ceiling for
+  pattern, 15k+ for flocking) with Beaufort arrows, a header refresh, a
+  collapse-to-chip, tap-to-open the Wind panel, and the ground-wind
+  station/forecast detail on hover. Gated by the `displayMapWinds` setting.
+- **Winds subsystem changes**: fetch every OpenMeteo level to ~41k ft (200
+  hPa, FWC-equivalent); the Wind panel table shows all of it; the
+  "wind altitude limit" setting is gone; winds auto-fetch once on load
+  (which also warms the scrubber cache).
+- **Wind-trust banner** (`WindTrustBanner` + pure `core/windTrust`): one
+  top-of-map verdict — none / manual / stale / fresh — that unified the
+  old flocking "no-wind" text and the top-bar "verify" badge; hidden when
+  fresh, amber otherwise. Fixed a related bug: unlocking winds dropped the
+  top-bar avg/gnd summary.
+- **Target interaction rework**: the target is now always draggable in all
+  modes (no "Edit on map" mode); hover reveals the heading-rotate handle;
+  shift-click the map jumps the target. The old average-wind arrow and the
+  target-anchored ground-wind arrow were removed (the ground readout moved
+  to the indicator hover).
+- **Flocking map interactions** — see below.
+- **Removed the measure tool** (to be reimplemented — BACKLOG).
+- **Docs**: ported the UX-analysis docs into `docs/ux/`.
 
 ### Flocking, in its current shape
 
@@ -67,9 +79,34 @@ south corridor on noise. A brute-force oracle test guards the math; a
 
 Corridors are nameable and individually enable-able ("North / South /
 East", untick East at ZHills). Disabled ones stay configured, leave the
-solve and vanish from the map.
+solve and vanish from the map. Names are labelled on the map at each
+corridor rectangle's far edge; corridor rows collapse (checkbox + verdict
+stay visible). The spot readout on the map now includes the crosswind
+offset. POM altitude labels thin out by zoom (max one per 1000 ft).
 
-### Two real bugs this session found and fixed
+### Flocking map handles (this session — verify with a real pointer)
+
+The drag-handle set was reworked and is the least-tested part.
+
+- **Free**: exit (green) translates the run; a white handle at the jumprun
+  *start* rotates the run about the exit; a cyan handle at the *end* of the
+  canopy flight rotates the canopy about the exit (jumprun static); a
+  magenta handle at the *middle* of the flight rotates the canopy about the
+  *finish* (finish held, exit repositioned via `core/flocking.exitForFixedEnd`
+  using the exact no-wind flight length so it doesn't drift).
+- **Classic**: exit (green) translates everything (moves the target); the
+  magenta middle-of-CF handle rotates about the target.
+- Rotation handles are **`pinned`** (a `MapDragHandle` mode): they stay on
+  their line and the drag only feeds the angle. The middle-of-CF handle
+  anchors to the actual (wind-curved) path midpoint.
+- Map handling during a handle drag: the camera never pans
+  (`MapInteractions.setHandleDragging` suppresses the target-follow `panTo`;
+  a per-handle centre-freeze also cancels Google's edge auto-pan). These
+  were bug fixes this session (a stack overflow from the freeze, a marker
+  left at the drop point, the camera chasing the target on the classic exit
+  drag) — all fixed but **unverified by a real drag**.
+
+### Two real bugs an earlier session found and fixed
 
 - **`addWind` curved paths.** Drift was accumulated in polar form
   (distance + a bearing re-derived spherically each step); the bearing
@@ -86,18 +123,22 @@ solve and vanish from the map.
 
 ## What's next
 
-Nothing is half-finished; pick from the backlog. The owner's own
-priorities, most-ready first:
+Nothing is half-finished; pick from the backlog. **Read a real pointer over
+the flocking/target map handles first** — much of the recent work can't be
+auto-verified (see below). Then, owner priorities most-ready first:
 
 | Item | Notes |
 |---|---|
-| **Owner feedback on what shipped** | Side-profile sketch (verdict never given), the model/sounding comparison view (explicitly a first pass), and solve mode generally |
+| **Owner feedback on what shipped** | The winds indicator, trust banner, target/flocking handle rework, ground-wind hover — all shipped this session, browser-verified only where a real pointer wasn't needed |
 | **Corridor direction ranges** | "anything 250–290°" — the solver structure already supports it, the schema stores fixed headings. Small. |
 | **Per-DZ corridor presets** | Describe ZHills-style restrictions by name; ties into `util/dropzones.ts` |
-| **Better wind visualization** | Owner request: windy.com-like particle/flow rendering. ✎ design |
-| ⭐ **Shareable setup links** | Still needs a *design session with the owner*; open questions parked in BACKLOG. A fragment-encoding proposal is recorded there. |
+| **UX-analysis items** | `docs/ux/` + the BACKLOG "UX analysis" section: dashed-vs-solid legend (P1), DZ discovery/geolocation (P6), mode-filtered Settings (P4), hide leg-count in pattern (P9), jumprun handoff copy/share (P8) |
+| **Trust state — finish it** | `◐` first version shipped; remaining: out-of-bounds "silly value" call-out, stale-age tuning |
+| **Nerd mode** | Owner-approved data-first mode (manual/invert winds + export); reframes the disabled `explore` stub |
+| ⭐ **Shareable setup links** | Still needs a *design session with the owner*; a fragment-encoding proposal is parked in BACKLOG |
+| **Better wind visualization** | windy.com-like particle/flow rendering. ✎ design |
 | **Phase 7 — documents & logbook** | The prerequisite for the backend tier and the whole Review pillar |
-| **Flocking wishlist** | Reverse build, jump profiles (runback), groups/separation, handoff to landing pattern, reachability zones. Owner: needs their input, and `core/reach/` should be built before the zones. |
+| **Flocking wishlist** | Reverse build, jump profiles (runback), groups/separation, handoff to landing pattern, reachability zones. `core/reach/` should be built before the zones. |
 
 ## Hard rules (these come from the owner — do not relax them)
 
@@ -147,19 +188,36 @@ priorities, most-ready first:
   `read_page` sometimes reports a 0x0 viewport on panel routes. DOM
   queries, `javascript_tool` and screenshots are reliable. Reading
   values back synchronously after dispatching an input event shows the
-  pre-React value — await a tick.
+  pre-React value — await a tick. React derives `onMouseEnter/Leave` from
+  `mouseover/out` — dispatch those, not `mouseenter`, to trigger hovers.
+- **Google Maps imagery is flaky in the preview**: it greys out / doesn't
+  fully initialise on rapid reloads (referrer/key sandboxing). The vector
+  overlays (paths, handles, markers) still render on the grey background,
+  so most checks work; if `.gm-style` isn't found, wait and retry, or read
+  the overlays regardless. The **fullscreen control was moved to
+  bottom-right** but couldn't be visually confirmed for this reason.
 - **Service worker only exists in a production build** — verify PWA
   behavior via `npm run build && npm run preview`.
 
 ## Never exercised by a real pointer
 
 Everything below works by unit test and by DOM inspection, but automated
-drags cannot drive them. Ask the owner to try, or verify another way:
+drags cannot drive them (Google-marker drags/hover don't reach the
+handlers here). This is the **top verification priority** — a lot of this
+session's work is drag-shaped. Ask the owner to try, or verify another way:
 
-- Flocking free mode: the jumprun **move** handle (2-D), the **rotate**
-  handle, and the canopy-rotate handle at the flight's end.
+- **All flocking map handles** (the reworked set above): exit-translate,
+  jumprun-rotate (at the run start), end-of-CF and middle-of-CF canopy
+  rotates, in both free and classic. Confirm: rotation handles stay pinned
+  on their line (no flicker), the free finish doesn't drift across repeated
+  middle-handle rotations, the classic exit translates everything, and the
+  camera never scrolls while dragging any handle.
+- **Target handle** (all modes): drag to move, hover to reveal the
+  heading-rotate handle, shift-click the map to jump it. The map must stay
+  put while dragging.
 - The **Spot Reference** drag (dragging pins it).
-- The flocking target drag (click-to-move is deliberately off there).
+- The **winds indicator hover** works via real DOM (not a marker), so it
+  *was* verified — ground-station detail shows on GND-row hover.
 
 ## Open questions for the owner
 

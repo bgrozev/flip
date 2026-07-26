@@ -362,3 +362,49 @@ Generalization now in HANDOFF: when an automated check passes, ask
 whether it would have *failed* before the change. If not, it proved
 nothing. Automated drags have the same problem — the flocking map
 handles have never been exercised by a real pointer.
+
+## Session 2026-07-19→25 — winds indicator, trust, target + flocking map UX
+
+A long UX-iteration session, per-slice committed (`543cf4a`..`a7d0490`).
+Highlights and the reasoning behind the fiddly bits:
+
+- **Compact winds indicator** (`WindMiniIndicator`, `43d0240`, `97b9266`,
+  `9ab0374`): map-corner overlay in every mode; GND + plan-relevant bands
+  (`core/wind.windBandAltitudesFt`); collapse persists under
+  `flip.ui.windIndicatorCollapsed`. Note: Toolpad `useLocalStorageState`
+  returned the raw string `"false"` (truthy) — replaced with a plain
+  parse-explicit hook. Ground-wind detail (observed station or forecast)
+  moved here on GND-row hover (`41865e7`), replacing the target-anchored
+  arrow; the station tooltip body was extracted as `StationDetails`.
+- **Winds fetch to ~41k** (`d16b634`): extended the OpenMeteo pressure
+  levels to 200 hPa (verified against the live API first); dropped the
+  `limitWind` setting; table shows all rows; auto-fetch once on load
+  (`b9e5614`) which also warms the scrubber's module-level prefetch cache
+  (`1c1d146` — that cache is memory-only, so the scrubber was missing on
+  reload until a manual fetch).
+- **Wind-trust banner** (`f9e025a`, `b9e5614`): unified the flocking
+  no-wind text and the top-bar "verify" badge into one `WindTrustBanner`
+  driven by pure `core/windTrust`. Owner chose: top-of-map banner, hidden
+  when fresh, manual winds flagged amber, no-forecast amber (not red). Bug
+  fixed: unlocking winds flips the profile to `SOURCE_MANUAL` and the
+  top-bar summary was gated on source — now gated on "has real wind".
+- **Target rework** (`c34fa4a`): removed the "Edit on map" mode; the target
+  is always draggable (`TargetEditLayer`), hover reveals the rotate handle,
+  shift-click jumps it (a `{shift}` modifier now flows through the map
+  click dispatch). Removed the old average-wind arrow entirely.
+- **Flocking rotation about the finish** (`21c4b0d`, `15dab14`): the
+  canopy-rotate handle now pivots about the finish, not the exit, in both
+  modes. `core/flocking.exitForFixedEnd` holds the finish fixed as the
+  direction changes (`end = exit + F(deg) + D`, drift `D` recovered from
+  the current geometry). Full handle set reworked per mode (see HANDOFF).
+- **Map-drag bug batch** (`dc4b0a7`, `983199a`, `a7d0490`): a `MapDragHandle`
+  `pinned` mode (rotation handles ride their line, drag only feeds the
+  angle); a per-handle centre-freeze for Google's marker edge auto-pan
+  (guarded against the synchronous `setCenter`→`center_changed` recursion
+  that first shipped as a stack overflow); and `setHandleDragging` so the
+  containers skip the target-follow `panTo` while a handle drags. **None of
+  the drag gestures are automatable — the whole batch is pointer-unverified.**
+- **Docs**: ported `docs/ux/` from the app-ux-analysis branch (`93aff0a`).
+
+Backlog additions this session: round-number display in ft/m, keyboard
+shortcuts, plus the whole "UX analysis" section.

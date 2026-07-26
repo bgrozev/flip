@@ -90,7 +90,14 @@ Each mode keeps its own target.
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
 forecast time selection + hour scrubber, model/sounding comparison,
-persisted winds with staleness, KMZ and FlySight 2 export.
+persisted winds, KMZ and FlySight 2 export. On the map: a compact
+by-altitude **winds indicator** (`WindMiniIndicator`, corner overlay,
+ground-wind detail on hover), a **wind-trust banner** (`WindTrustBanner` +
+`core/windTrust` — none/manual/stale/fresh, hidden when fresh), and an
+**always-draggable target** handle (no edit mode; drag to move, hover for
+the heading-rotate handle, shift-click the map to jump it). Winds are
+auto-fetched once on load. The old measure tool and average-wind arrow
+were removed (measure to be reimplemented — see BACKLOG).
 
 ## Key Components
 
