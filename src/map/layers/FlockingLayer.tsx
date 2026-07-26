@@ -59,9 +59,18 @@ function roundDeg(deg: number): number {
   return Math.round(deg) % 360;
 }
 
-/** Below this zoom the flocking picture is small enough that the per-POM
- *  altitude labels overlap; hide them until zoomed in past it. */
-const ALTITUDE_LABEL_MIN_ZOOM = 13;
+/**
+ * How densely to show the per-POM altitude labels at a given zoom, as a
+ * step in thousands of feet: 1 = one label every 1000 ft (max density),
+ * 2 = every 2000 ft, etc.; null = none. The labels overlap when the whole
+ * flocking picture is small, so they thin out as you zoom out.
+ */
+function altitudeLabelStepThousands(zoom: number): number | null {
+  if (zoom >= 14) return 1;
+  if (zoom >= 13) return 2;
+  if (zoom >= 12) return 4;
+  return null;
+}
 
 const ALTITUDE_LABEL_STYLE: React.CSSProperties = {
   background: 'black',
@@ -213,9 +222,10 @@ export default function FlockingLayer({
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const zoom = useMapZoom();
-  // The per-POM altitude labels crowd together at the flocking overview zoom;
-  // only show them once zoomed in enough for them to read cleanly.
-  const showAltitudeLabels = showPomAltitudes && zoom >= ALTITUDE_LABEL_MIN_ZOOM;
+  // The per-POM altitude labels crowd together as the picture shrinks, so
+  // thin them out by zoom: at most one label per this many thousands of
+  // feet (null = none at all). Applied per-POM in the render below.
+  const altitudeLabelStep = showPomAltitudes ? altitudeLabelStepThousands(zoom) : null;
 
   const idealLatLngs = useMemo(() => pathToLatLngs(ideal), [ideal]);
   const correctedLatLngs = useMemo(() => pathToLatLngs(corrected), [corrected]);
@@ -644,7 +654,8 @@ export default function FlockingLayer({
                 </MapOverlay>
               );
             })()}
-            {showAltitudeLabels && (
+            {altitudeLabelStep !== null &&
+              Math.round((point.alt ?? 0) / 1000) % altitudeLabelStep === 0 && (
               <MapOverlay position={point}>
                 <div style={ALTITUDE_LABEL_STYLE}>
                   {`${Math.round(formatAltitude(point.alt ?? 0).value)} ${altitudeLabel}`}

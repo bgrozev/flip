@@ -147,6 +147,11 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Polish (trivial)
 
+- ☐ **Round altitude/number display in both feet and metres** — labels and
+  readouts should land on round numbers in the active unit (e.g. 1000 ft
+  ↔ ~300 m shown as a clean 300 m, not 305 m), rather than converting an
+  exact value and showing an odd figure. Affects POM altitude labels, the
+  winds indicator, tables, hovers. Pick round-number targets per unit.
 - ☑ Rename "crab angle" → "drift angle" (owner chose this term, 2026-07-15).
   User-facing strings updated (Settings label/tooltip, map tooltip
   "Drift angle:"). To avoid a "Drift" collision, the existing wind-drift
