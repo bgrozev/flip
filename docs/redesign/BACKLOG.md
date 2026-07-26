@@ -185,6 +185,10 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Small features (days)
 
+- ☐ **Keyboard shortcuts** — desktop hotkeys for the common actions:
+  refresh winds, switch mode, toggle panels/nav, fetch/scrub forecast time,
+  nudge/rotate the target or (flocking) jumprun, zoom. Needs a small key-map
+  layer + a discoverable list (a "?" overlay). ✎ pick the bindings.
 - ☐ **Export: winds as note + user notes field** — append wind table + free
   text to exported plan (KMZ/FlySight/etc.). Notes field on export dialog.
 - ☐ **Improved KMZ export** (owner: unspecified what; gather wishes). ✎
