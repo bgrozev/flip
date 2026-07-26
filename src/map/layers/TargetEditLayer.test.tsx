@@ -22,7 +22,11 @@ vi.mock('..', async () => {
 function renderWithInteractions(edit: TargetEditTarget) {
   const registerClickHandler = vi.fn(() => () => undefined);
   const registerCursor = vi.fn(() => () => undefined);
-  const interactions: MapInteractions = { registerClickHandler, registerCursor };
+  const interactions: MapInteractions = {
+    registerClickHandler,
+    registerCursor,
+    setHandleDragging: vi.fn()
+  };
 
   render(
     <MapInteractionsContext.Provider value={interactions}>

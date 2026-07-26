@@ -14,7 +14,8 @@ import {
   MapCircleProps,
   MapDragHandleProps,
   MapOverlayProps,
-  MapPolylineProps
+  MapPolylineProps,
+  useHandleDrag
 } from '../MapAdapter';
 import { LatLng } from '../../types';
 
@@ -268,12 +269,18 @@ export function MapDragHandle({
   onDragEnd,
   onClick,
   onMouseOver,
-  onMouseOut
+  onMouseOut,
+  pinned
 }: MapDragHandleProps) {
   const map = useMapLibreMap();
-  const handlers = useRef({ onDrag, onDragEnd, onClick, onMouseOver, onMouseOut });
+  const handleDrag = useHandleDrag();
+  const handlers = useRef({
+    onDrag, onDragEnd, onClick, onMouseOver, onMouseOut, pinned, position, handleDrag
+  });
 
-  handlers.current = { onDrag, onDragEnd, onClick, onMouseOver, onMouseOut };
+  handlers.current = {
+    onDrag, onDragEnd, onClick, onMouseOver, onMouseOut, pinned, position, handleDrag
+  };
 
   const [el] = useState(() => document.createElement('div'));
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -303,14 +310,21 @@ export function MapDragHandle({
       .setLngLat([position.lng, position.lat])
       .addTo(map);
 
+    marker.on('dragstart', () => handlers.current.handleDrag.start());
     marker.on('drag', () => {
       const l = marker.getLngLat();
 
       handlers.current.onDrag?.({ lat: l.lat, lng: l.lng });
+      // Pinned handles never chase the pointer: snap back to the line.
+      if (handlers.current.pinned) {
+        const p = handlers.current.position;
+        marker.setLngLat([p.lng, p.lat]);
+      }
     });
     marker.on('dragend', () => {
       const l = marker.getLngLat();
 
+      handlers.current.handleDrag.end();
       handlers.current.onDragEnd({ lat: l.lat, lng: l.lng });
     });
 

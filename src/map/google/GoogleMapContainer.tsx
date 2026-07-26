@@ -46,6 +46,10 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
     });
   }, []);
 
+  // Suppress camera panning while a drag handle is active (see the center
+  // effect below).
+  const handleDraggingRef = useRef(false);
+
   const interactions = useMemo<MapInteractions>(() => ({
     registerClickHandler: (handler, priority) => {
       const entry: ClickEntry = { handler, priority, seq: seqRef.current++ };
@@ -68,6 +72,9 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
         }
         applyCursor();
       };
+    },
+    setHandleDragging: dragging => {
+      handleDraggingRef.current = dragging;
     }
   }), [applyCursor]);
 
@@ -95,8 +102,12 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
 
   useEffect(() => {
     if (mapRef.current && (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng)) {
-      mapRef.current.panTo(center);
+      // Keep the tracked center current so no deferred pan fires after the
+      // drag, but don't move the camera while a handle is being dragged.
       prevCenterRef.current = center;
+      if (!handleDraggingRef.current) {
+        mapRef.current.panTo(center);
+      }
     }
   }, [center]);
 

@@ -124,6 +124,13 @@ export interface MapDragHandleProps {
   onClick?: () => void;
   onMouseOver?: () => void;
   onMouseOut?: () => void;
+  /**
+   * Keep the handle glued to its controlled `position` throughout the drag
+   * (it never chases the pointer). Use for rotation handles that live on a
+   * line: the drag reads the pointer only for the angle, while the handle
+   * stays on the line as it swings.
+   */
+  pinned?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,9 +170,27 @@ export interface MapInteractions {
   ) => () => void;
   /** Register a cursor override. Returns a function removing the override. */
   registerCursor: (cursor: string) => () => void;
+  /**
+   * Mark that a drag handle is (or is not) being dragged. While dragging, the
+   * container suppresses camera panning so moving a handle never scrolls the
+   * map (e.g. the camera would otherwise chase a target-follow re-centre).
+   */
+  setHandleDragging: (dragging: boolean) => void;
 }
 
 export const MapInteractionsContext = createContext<MapInteractions | null>(null);
+
+/**
+ * Hook for a drag handle to bracket its drag so the map camera stays put
+ * for the duration. Returns start/end callbacks; no-ops with no provider.
+ */
+export function useHandleDrag(): { start: () => void; end: () => void } {
+  const interactions = useContext(MapInteractionsContext);
+  return {
+    start: () => interactions?.setHandleDragging(true),
+    end: () => interactions?.setHandleDragging(false)
+  };
+}
 
 /** Camera state exposed to layers. */
 export interface MapViewState {

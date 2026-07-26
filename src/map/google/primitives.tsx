@@ -9,7 +9,8 @@ import {
   MapCircleProps,
   MapDragHandleProps,
   MapOverlayProps,
-  MapPolylineProps
+  MapPolylineProps,
+  useHandleDrag
 } from '../MapAdapter';
 
 import { DOTTED_LINE_ICONS } from './mapConfig';
@@ -97,7 +98,8 @@ export function MapDragHandle({
   onDragEnd,
   onClick,
   onMouseOver,
-  onMouseOut
+  onMouseOut,
+  pinned
 }: MapDragHandleProps) {
   const icon: google.maps.Symbol = {
     path: google.maps.SymbolPath.CIRCLE,
@@ -111,6 +113,7 @@ export function MapDragHandle({
   const markerRef = React.useRef<google.maps.Marker | null>(null);
   const freeze = React.useRef<google.maps.MapsEventListener | null>(null);
   const dragging = React.useRef(false);
+  const handleDrag = useHandleDrag();
 
   // Google auto-pans the map when a dragged marker nears the viewport edge,
   // with no option to turn it off. Freeze the map centre for the duration of
@@ -163,15 +166,21 @@ export function MapDragHandle({
       onMouseOut={onMouseOut}
       onDragStart={() => {
         dragging.current = true;
+        handleDrag.start();
         startFreeze();
       }}
-      onDrag={onDrag && (e => {
-        if (e.latLng) {
+      onDrag={onDrag || pinned ? (e => {
+        if (onDrag && e.latLng) {
           onDrag({ lat: e.latLng.lat(), lng: e.latLng.lng() });
         }
-      })}
+        // Pinned handles never chase the pointer: snap back to the line.
+        if (pinned) {
+          markerRef.current?.setPosition(position);
+        }
+      }) : undefined}
       onDragEnd={e => {
         dragging.current = false;
+        handleDrag.end();
         endFreeze();
         if (e.latLng) {
           onDragEnd({ lat: e.latLng.lat(), lng: e.latLng.lng() });

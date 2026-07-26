@@ -61,6 +61,8 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
     }
   };
 
+  const handleDraggingRef = useRef(false);
+
   const interactions = useMemo<MapInteractions>(() => ({
     registerClickHandler: (handler, priority) => {
       const entry: ClickEntry = { handler, priority, seq: seqRef.current++ };
@@ -83,6 +85,9 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
         }
         applyCursor();
       };
+    },
+    setHandleDragging: dragging => {
+      handleDraggingRef.current = dragging;
     }
   }), []);
 
@@ -184,8 +189,10 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
 
   useEffect(() => {
     if (mapRef.current && (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng)) {
-      mapRef.current.panTo([center.lng, center.lat]);
       prevCenterRef.current = center;
+      if (!handleDraggingRef.current) {
+        mapRef.current.panTo([center.lng, center.lat]);
+      }
     }
   }, [center]);
 

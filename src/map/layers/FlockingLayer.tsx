@@ -441,6 +441,7 @@ export default function FlockingLayer({
             scale={6}
             cursor="alias"
             zIndex={105}
+            pinned
             onDrag={rotate}
             onDragEnd={rotate}
           />
@@ -464,6 +465,7 @@ export default function FlockingLayer({
             scale={6}
             cursor="alias"
             zIndex={106}
+            pinned
             onDrag={rotate}
             onDragEnd={rotate}
           />
@@ -492,6 +494,7 @@ export default function FlockingLayer({
             scale={6}
             cursor="alias"
             zIndex={105}
+            pinned
             onDrag={rotate}
             onDragEnd={rotate}
           />
