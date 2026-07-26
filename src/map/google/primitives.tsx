@@ -108,6 +108,29 @@ export function MapDragHandle({
     strokeWeight: 2
   };
 
+  // Google auto-pans the map when a dragged marker nears the viewport edge,
+  // and there is no option to turn that off. Freeze the map centre for the
+  // duration of a handle drag (snap it back on any change) so dragging a
+  // handle never scrolls the map.
+  const markerRef = React.useRef<google.maps.Marker | null>(null);
+  const freeze = React.useRef<google.maps.MapsEventListener | null>(null);
+
+  const startFreeze = () => {
+    const map = markerRef.current?.getMap() as google.maps.Map | null | undefined;
+    const center = map?.getCenter();
+    if (!map || !center) {
+      return;
+    }
+    const locked = center;
+    freeze.current = map.addListener('center_changed', () => map.setCenter(locked));
+  };
+  const endFreeze = () => {
+    freeze.current?.remove();
+    freeze.current = null;
+  };
+
+  React.useEffect(() => endFreeze, []);
+
   return (
     <MarkerF
       position={position}
@@ -115,15 +138,20 @@ export function MapDragHandle({
       cursor={cursor}
       zIndex={zIndex}
       icon={icon}
+      onLoad={m => {
+        markerRef.current = m;
+      }}
       onClick={onClick}
       onMouseOver={onMouseOver}
       onMouseOut={onMouseOut}
+      onDragStart={startFreeze}
       onDrag={onDrag && (e => {
         if (e.latLng) {
           onDrag({ lat: e.latLng.lat(), lng: e.latLng.lng() });
         }
       })}
       onDragEnd={e => {
+        endFreeze();
         if (e.latLng) {
           onDragEnd({ lat: e.latLng.lat(), lng: e.latLng.lng() });
         }
