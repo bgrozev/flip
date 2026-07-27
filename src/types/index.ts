@@ -149,6 +149,29 @@ export interface CustomLocation {
   direction: number;
 }
 
+/**
+ * How a place in the picker got there. `favorite` is a starred known
+ * dropzone (stored as a name reference, so corrections to the dropzone data
+ * reach it); `custom` is a position the user saved themselves.
+ */
+export type PlaceKind = 'dropzone' | 'favorite' | 'custom';
+
+/**
+ * A selectable landing place: the known dropzones plus everything the user
+ * saved, flattened into one list for the picker. Geocoder results are NOT
+ * places — they have no coordinates until they are resolved.
+ */
+export interface Place {
+  /** Stable across renders and unique within a list: `dz:<name>` / `custom:<name>`. */
+  id: string;
+  kind: PlaceKind;
+  name: string;
+  lat: number;
+  lng: number;
+  /** Usual landing heading, where known (see `Dropzone.direction`). */
+  direction?: number;
+}
+
 /** A manoeuvre track saved by the user ("My tracks"); keyed by name. */
 export interface StoredTrack {
   name: string;

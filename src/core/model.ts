@@ -565,6 +565,23 @@ export function migrateCustomLocations(raw: unknown): CustomLocation[] {
   return locations;
 }
 
+/**
+ * Starred dropzones, stored as names rather than copies so that corrections
+ * to the dropzone database reach them. Names that are no longer in the
+ * database are not filtered here — `core/places.buildPlaces` drops them when
+ * it resolves the list, which keeps this migrator free of that dependency
+ * (and keeps a favorite alive across a temporary rename).
+ */
+export function migrateFavoriteDropzones(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const names = raw.filter((entry): entry is string => typeof entry === 'string' && entry !== '');
+
+  return [...new Set(names)];
+}
+
 export function migrateStoredTracks(raw: unknown): StoredTrack[] {
   if (!Array.isArray(raw)) {
     return [];

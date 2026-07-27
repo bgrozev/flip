@@ -8,6 +8,8 @@ export { useMode } from './useMode';
 export { NotificationsProvider, useNotifications } from './useNotifications';
 export { useObservedWind } from './useObservedWind';
 export { usePresets } from './usePresets';
+export { useSavedPlaces } from './useSavedPlaces';
+export type { SavedPlaces } from './useSavedPlaces';
 export { TargetProvider, useTarget } from './useTargetContext';
 export { useUnits } from './useUnits';
 export { useWinds } from './useWinds';

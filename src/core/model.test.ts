@@ -14,6 +14,7 @@ import {
   SCHEMA_VERSION,
   migrateCustomCourses,
   migrateCustomLocations,
+  migrateFavoriteDropzones,
   migrateFlockingParams,
   migrateManoeuvreConfig,
   migrateManoeuvreParams,
@@ -549,6 +550,32 @@ describe('migrateCustomLocations', () => {
     expect(codec.parse('garbage')).toEqual([]);
     expect(codec.parse('{"doc":123}')).toEqual([]);
     expect(codec.parse('null')).toEqual([]);
+  });
+});
+
+describe('migrateFavoriteDropzones', () => {
+  it.each(GARBAGE.filter(g => !Array.isArray(g)).map(g => [g]))('returns [] for %j', raw => {
+    expect(migrateFavoriteDropzones(raw)).toEqual([]);
+  });
+
+  it('keeps names, drops non-strings and empties, and dedupes', () => {
+    expect(
+      migrateFavoriteDropzones(['Skydive Arizona', 42, '', null, 'Skydive Arizona', 'Jumptown'])
+    ).toEqual(['Skydive Arizona', 'Jumptown']);
+  });
+
+  it('keeps a name that is not currently a known dropzone', () => {
+    // Resolution against DROPZONES happens in core/places, not here: a
+    // dropzone renamed for one release shouldn't silently lose the star.
+    expect(migrateFavoriteDropzones(['Skydive Atlantis'])).toEqual(['Skydive Atlantis']);
+  });
+
+  it('never throws on corrupt stored values', () => {
+    const codec = createVersionedCodec(SCHEMA_VERSION, migrateFavoriteDropzones);
+
+    expect(codec.parse('garbage')).toEqual([]);
+    expect(codec.parse('{"doc":123}')).toEqual([]);
+    expect(codec.parse(codec.stringify(['Jumptown']))).toEqual(['Jumptown']);
   });
 });
 

@@ -258,7 +258,17 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 - ☑ **Weather station auto-discovery** — DONE Phase 4 (`0694842`). NWS
   `/points/{lat},{lon}` → gridpoint stations; verified live at a non-DZ
   location (Denver: 44 stations).
-- ☐ **Improve DZ/target selection UI** — search, favorites, map-pick flow.
+- ◐ **Improve DZ/target selection UI** — search, favorites, map-pick flow.
+  In progress: see P6 / F5 above. Deferred out of that work, owner's call:
+  - ☐ **Country/region on dropzone entries** — lets "denmark" or "arizona"
+    match in the place search and enables grouping by region. 58 rows to
+    fill in by hand, so not now.
+  - ☐ **Recently used places** — a short recents list/chips in the place
+    picker's empty state. Favorites cover most of this need.
+  - ☐ **Landing headings for the imported dropzones** — the 44 entries
+    ported from FWC have no `direction` (and ~100 m coordinates). Selecting
+    one sets the final heading into the wind instead. Promote them as they
+    get checked against imagery.
 - ☐ **Expected GR & ground speed up high** — e.g. "at 4000 ft heading south
   expect GR 1.5" for comparison against wrist GPS in flight. Table/overlay
   of expected GR/speed by altitude+heading.
