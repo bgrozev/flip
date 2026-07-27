@@ -521,3 +521,22 @@ preset, moved everything to ZHills, re-loaded the preset (all modes back
 to DeLand). Also spotted a pre-existing wrinkle worth fixing separately:
 re-selecting the *already active* preset is a no-op, so there is no way
 to revert to it once you have wandered off (backlogged).
+
+### Winds re-fetch when the place changes (2026-07-26, owner request)
+
+Moving to a new dropzone used to *clear* the winds (the 5 mi
+`WIND_INVALIDATE_THRESHOLD_FT` invalidation) and stop there — the
+on-load auto-fetch was a one-shot `didAutoFetchRef`, so you landed on the
+"no forecast" banner and had to hit refresh. Now the same effect is keyed
+on **where the winds were last fetched for**: on load, and whenever the
+target has moved further than the invalidate threshold, it fetches again.
+
+The ref records the location last *attempted*, not the last success, so a
+failing fetch cannot spin — it retries only once the target moves again.
+Sub-threshold nudges keep their winds, as before.
+
+Verified in the browser, including a **control run against the
+pre-change code**: same script, same steps — before, picking DeLand left
+`flip.winds` empty (0 rows) forever; after, the profile comes back for
+DeLand's coordinates within a second. Without that control the check
+would have proved nothing (see the verification lessons above).

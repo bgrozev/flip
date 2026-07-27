@@ -446,17 +446,31 @@ function DashboardContent() {
     fetchWinds(overrideForecastTime, opts);
   };
 
-  // Auto-fetch the forecast once on load (target permitting), so the app
-  // opens on live winds rather than the "No forecast loaded" banner, and so
-  // the prefetch cache — which drives the time scrubber and is memory-only,
-  // hence empty on every reload — is warmed without a manual fetch. Skipped
-  // only for user-owned manual winds, which must not be clobbered.
-  const didAutoFetchRef = useRef(false);
+  // Auto-fetch the forecast on load, and again whenever the target has moved
+  // far enough that the old forecast no longer describes where you are: a
+  // forecast is location-specific, and moving to a new dropzone otherwise
+  // left the winds cleared until the user hit refresh. On load this also
+  // warms the prefetch cache that drives the time scrubber (memory-only,
+  // hence empty on every reload). Skipped for user-owned manual winds, which
+  // must not be clobbered.
+  //
+  // The ref records the location we last *attempted*, not the last success,
+  // so a failing fetch can't spin: it retries only once the target moves
+  // again. Small nudges stay below the threshold and keep their winds.
+  const lastAutoFetchRef = useRef<LatLng | null>(null);
   useEffect(() => {
-    if (didAutoFetchRef.current || !target.target || trust.level === 'manual') {
+    if (!target.target || trust.level === 'manual') {
       return;
     }
-    didAutoFetchRef.current = true;
+    const lastFetchedFor = lastAutoFetchRef.current;
+
+    if (
+      lastFetchedFor &&
+      !hasTargetMovedTooFar(lastFetchedFor, target.target, WIND_INVALIDATE_THRESHOLD_FT)
+    ) {
+      return;
+    }
+    lastAutoFetchRef.current = target.target;
     fetchWinds();
   }, [trust.level, target.target, fetchWinds]);
 
