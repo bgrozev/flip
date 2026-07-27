@@ -132,7 +132,12 @@ export interface Dropzone {
   name: string;
   lat: number;
   lng: number;
-  direction: number;
+  /**
+   * Usual landing heading, where it is known. Absent for the bulk-imported
+   * entries (see `util/dropzones.ts`) — selecting one of those moves the
+   * target but leaves the final heading as the user set it.
+   */
+  direction?: number;
   nearbyStations?: string[]; // ICAO station IDs not in NWS gridpoints (e.g. AWOS at small airports)
 }
 
