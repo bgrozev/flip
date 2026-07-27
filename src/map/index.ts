@@ -27,6 +27,7 @@ export type {
 
 // Provider binding: the runtime dispatchers (Google or MapLibre per provider).
 export {
+  PlaceSearchLoader,
   searchPlaceSuggestions,
   resolvePlaceSuggestion,
   MapCircle,

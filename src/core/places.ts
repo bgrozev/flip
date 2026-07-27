@@ -7,6 +7,9 @@
  */
 import { CustomLocation, Dropzone, Place } from '../types';
 
+/** Longest query still treated as possible initials — see `matchScore`. */
+const MAX_SUBSEQUENCE_LENGTH = 5;
+
 /** Saved places (favorites + custom) sort above the plain dropzone list. */
 export function isSaved(place: Place): boolean {
   return place.kind !== 'dropzone';
@@ -106,7 +109,11 @@ function matchScore(haystack: string, needle: string): number | null {
   if (haystack.includes(needle)) {
     return 3;
   }
-  if (isSubsequence(needle, haystack)) {
+  // Subsequence matching is what makes initials work ("sdaz" → Skydive
+  // Arizona), but on a longer query almost anything qualifies — "deland"
+  // is a subsequence of "Skydive Spaceland Dallas" — so it is limited to
+  // queries short enough to be initials.
+  if (needle.length <= MAX_SUBSEQUENCE_LENGTH && isSubsequence(needle, haystack)) {
     return 4;
   }
 

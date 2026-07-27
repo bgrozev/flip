@@ -104,6 +104,13 @@ describe('rankPlaces', () => {
     expect(ranked).toContain('Skydive Arizona');
   });
 
+  it('stops matching by subsequence once the query is longer than initials', () => {
+    // "deland" is a subsequence of "Skydive Spaceland Dallas"; on a query
+    // that long that is noise, not a match.
+    expect(names('deland')).toEqual([]);
+    expect(names('spacelnd')).toEqual([]);
+  });
+
   it('puts a saved place above a dropzone that matches equally well', () => {
     const withFavorite = buildPlaces(DZS, [], ['Skydive Spaceland Houston']);
     const ranked = rankPlaces('skydive spaceland', withFavorite);

@@ -5,6 +5,18 @@ import { DEFAULT_ZOOM } from '../MapAdapter';
 
 export const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
+/**
+ * Script identity for the Maps JS API. The map container and the place
+ * search each load the API independently (the picker is reachable on mobile
+ * without the map ever mounting), so both must pass exactly the same id,
+ * key and libraries — the loader dedupes on the id, but only keeps the
+ * existing script if the URL matches too.
+ */
+export const GOOGLE_MAPS_SCRIPT_ID = 'google-map-script';
+
+export const GOOGLE_MAPS_API_KEY =
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'INSERT_GOOGLE_API_KEY';
+
 export const MAP_CONTAINER_STYLE = {
   width: '100%',
   height: '100%'

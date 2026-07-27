@@ -41,11 +41,11 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { rankPlaces } from '../core/places';
 import { useAppState, useGeolocation, useSavedPlaces, useTarget } from '../hooks';
-import { resolvePlaceSuggestion, searchPlaceSuggestions } from '../map';
+import { PlaceSearchLoader, resolvePlaceSuggestion, searchPlaceSuggestions } from '../map';
 import { MapProvider, Place, PlaceSuggestion } from '../types';
 import { findClosestDropzone } from '../util/dropzones';
 
@@ -75,7 +75,11 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
   const saved = matches.filter(place => place.kind !== 'dropzone');
   const dropzones = matches.filter(place => place.kind === 'dropzone');
 
-  const { suggestions, searching } = usePlaceSearch(query, provider);
+  // The geocoder may not be usable yet (Google's lives in the Maps JS API,
+  // which on mobile nothing else has loaded); re-run the query once it is.
+  const [geocoderReady, setGeocoderReady] = useState(false);
+  const handleGeocoderReady = useCallback(() => setGeocoderReady(true), []);
+  const { suggestions, searching } = usePlaceSearch(query, provider, geocoderReady);
 
   const handleSelectPlace = (place: Place) => {
     selectLocation({ lat: place.lat, lng: place.lng }, headingFor(place, upwindHeading));
@@ -91,6 +95,7 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
 
   return (
     <Stack spacing={2}>
+      <PlaceSearchLoader provider={provider} onReady={handleGeocoderReady} />
       <TextField
         value={query}
         onChange={event => setQuery(event.target.value)}
@@ -454,7 +459,7 @@ function NearestDropzoneButton({ onFound }: NearestDropzoneButtonProps) {
  * provider comes from settings so the picker never touches a concrete map
  * implementation.
  */
-function usePlaceSearch(query: string, provider: MapProvider) {
+function usePlaceSearch(query: string, provider: MapProvider, geocoderReady: boolean) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const seq = useRef(0);
@@ -483,7 +488,7 @@ function usePlaceSearch(query: string, provider: MapProvider) {
     }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [query, provider]);
+  }, [query, provider, geocoderReady]);
 
   return { suggestions, searching };
 }

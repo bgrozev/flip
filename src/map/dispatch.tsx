@@ -12,7 +12,7 @@
  * lazily via dynamic import, so it is code-split into its own chunk: the
  * default Google build never downloads it.
  */
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 
 import {
   MapCircleProps,
@@ -75,6 +75,31 @@ export function MapDragHandle(props: MapDragHandleProps) {
   return useMapProvider() === 'maplibre'
     ? <Suspense fallback={null}><MaplibreDragHandle {...props} /></Suspense>
     : <google.MapDragHandle {...props} />;
+}
+
+/**
+ * Loads whatever the given provider's place search needs, independent of the
+ * map. Only Google needs it (its geocoder lives in the Maps JS API, which the
+ * map would otherwise be the only thing to load); Photon is a plain fetch, so
+ * under MapLibre this renders nothing and reports ready immediately.
+ *
+ * Renders nothing either way — mount it wherever place search is offered.
+ */
+export function PlaceSearchLoader({ provider, onReady }: PlaceSearchLoaderProps) {
+  return provider === 'maplibre'
+    ? <ReadyImmediately onReady={onReady} />
+    : <google.PlacesLoader onReady={onReady} />;
+}
+
+interface PlaceSearchLoaderProps {
+  provider: MapProvider;
+  onReady: () => void;
+}
+
+function ReadyImmediately({ onReady }: { onReady: () => void }) {
+  useEffect(onReady, [onReady]);
+
+  return null;
 }
 
 /**

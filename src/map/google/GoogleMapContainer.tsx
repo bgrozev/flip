@@ -14,7 +14,13 @@ import {
 } from '../MapAdapter';
 import { LatLng } from '../../types';
 
-import { DEFAULT_MAP_OPTIONS, GOOGLE_MAPS_LIBRARIES, MAP_CONTAINER_STYLE } from './mapConfig';
+import {
+  DEFAULT_MAP_OPTIONS,
+  GOOGLE_MAPS_API_KEY,
+  GOOGLE_MAPS_LIBRARIES,
+  GOOGLE_MAPS_SCRIPT_ID,
+  MAP_CONTAINER_STYLE
+} from './mapConfig';
 
 interface ClickEntry {
   handler: (pos: LatLng, mods: MapClickModifiers) => void;
@@ -150,8 +156,8 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
   const viewState = useMemo<MapViewState>(() => ({ zoom }), [zoom]);
 
   const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'INSERT_GOOGLE_API_KEY',
+    id: GOOGLE_MAPS_SCRIPT_ID,
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: GOOGLE_MAPS_LIBRARIES
   });
 
