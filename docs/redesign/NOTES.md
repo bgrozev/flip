@@ -408,3 +408,80 @@ Highlights and the reasoning behind the fiddly bits:
 
 Backlog additions this session: round-number display in ft/m, keyboard
 shortcuts, plus the whole "UX analysis" section.
+
+## Session 2026-07-26 — dropzone data + the place picker (P6/F5)
+
+**Ported the FWC dropzone list** (`89ea2c8`). FWC's `Dropzones.kt` (60
+entries, from `markschulze.net/winds/dropzones.geojson`) merged into
+`util/dropzones.ts`: 14 → 58. Eight overlapped; FliP's own entry won each
+time, because those are hand-checked *landing areas* at 5 decimals with a
+landing heading, where the imported ones are 3-decimal (~100 m) points
+with no heading. That asymmetry is the interesting part — `direction`
+became optional, and the picker lands into wind when it is missing rather
+than keeping a heading that has nothing to do with the new place. A test
+pins list integrity (unique names, no two entries within ~1 km, ranges,
+display order) so the next import can't quietly double an entry under a
+second spelling.
+
+**The picker itself** (`2c71de4`, `5fcecab`). Three tabs (Dropzones / My
+Locations / Search) became one search box over one list. The owner's
+framing was the design: one list, custom places on top, searchable, with
+the wide (geocoder) search available from the same box. Shape:
+
+- `core/places.ts` is pure and holds all the judgement: `buildPlaces`
+  flattens dropzones + custom locations + starred dropzones into one list
+  (saved first), `rankPlaces` filters by tiered match quality. Tiers, not
+  one fuzzy score — the tiers are what keeps "zh" → ZHills above
+  coincidences. Diacritics and ligatures fold, so "arhus"/"faldskaerm"
+  find Århus Faldskærm Club.
+- **Favorites are stored as dropzone names**, not copies, so a later fix
+  to a dropzone's coordinates reaches everyone who starred it. Unknown
+  names are dropped when the list is built, not by the migrator, so a DZ
+  renamed for one release doesn't silently lose the star.
+- Two stores, not one union type: the existing `flip.custom_locations`
+  plus a new `flip.favorite_dropzones`. A favorite really is a reference.
+
+**What the running app taught us** (`98bbc6e`) — both found by driving it,
+neither by a test:
+
+- **The geocoder was dead on mobile.** Google's Places lives in the Maps
+  JS API, which only `MapContainer` loaded; on mobile the Target panel
+  *replaces* the map, so on the regular jumper's first mobile action
+  `window.google` was undefined and search returned nothing, silently.
+  The old Search tab had the same hole — the rework just made it matter.
+  Fix: `map/google/PlacesLoader` loads the API from the picker, dispatched
+  per provider as `PlaceSearchLoader`. Both loaders must pass the same
+  script id *and* URL — `@react-google-maps/api`'s `injectScript` removes
+  and re-injects an existing script whose URL differs — hence the shared
+  `GOOGLE_MAPS_SCRIPT_ID` / `GOOGLE_MAPS_API_KEY` in `mapConfig`.
+- **Subsequence matching was too loose**: "deland" is a subsequence of
+  "Skydive Spaceland Dallas". Now limited to queries ≤ 5 characters,
+  where it does its real job (initials).
+
+The geocoder also changed contract: from "attach to an input and own a
+dropdown" to `searchPlaceSuggestions` + `resolvePlaceSuggestion`. That is
+what lets its hits render in the same list as the dropzones, and it costs
+a details call only for the suggestion actually picked. Google keeps both
+Places generations (the new `AutocompleteSuggestion`, falling back to the
+legacy `AutocompleteService` if Places API (New) isn't enabled on the
+key); the owner's key runs the new one — verified live, no fallback
+logged. MapLibre's Photon geocoder moved to the same contract, which
+deleted ~120 lines of hand-rolled dropdown DOM.
+
+**Owner decisions** (asked before building): favorites yes; keep Google
+Places (don't switch everything to Photon); no distances in the results
+("not useful"); no top-bar location chip — switching DZs is rare, a few
+clicks is fine, and the map already shows where you are; landing heading
+is not important, so set it into wind when unknown, and don't show
+heading in the list; DZ country/region later, backlog it.
+
+Verified in the browser (desktop + 375 px): local filtering, Google
+suggestions in the same list, resolving one moves the target and sets it
+into wind, starring persists and re-groups, custom save/rename/delete,
+one `maps/api/js` script with no multiple-inclusion warning, and a denied
+location permission leaving everything else usable. **Not verified: a
+real geolocation grant** (the prompt can't be answered from automation) —
+unit-tested only.
+
+Backlog additions this session: DZ country/region, a recents list, and
+landing headings for the 44 imported dropzones.

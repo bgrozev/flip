@@ -2,7 +2,8 @@
 
 Entry point for a new session picking up the FliP redesign. Rewritten
 2026-07-25, at the end of a long UX-iteration session (winds indicator,
-trust banner, target + flocking map interactions). The 2026-07-19 revision
+trust banner, target + flocking map interactions); updated 2026-07-26
+with the dropzone port + place picker. The 2026-07-19 revision
 covered the architecture review, the wind-UX batch, and Phase 6 flocking.
 
 ## Read order
@@ -28,7 +29,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **554 tests, 0 lint errors, 47 known lint
+Baseline on the branch: **599 tests, 0 lint errors, 47 known lint
 warnings, build green, tree clean.**
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
@@ -60,6 +61,27 @@ This UX-iteration session (2026-07-19 → 25) added, roughly in order:
 - **Flocking map interactions** — see below.
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
+
+Then, on 2026-07-26 (P6/F5 — "DZ discovery", the #2 UX priority):
+
+- **Dropzone data**: FWC's list ported in, 14 → 58 dropzones. The
+  imported ones have ~100 m coordinates and no landing heading, so
+  `Dropzone.direction` is now optional and a place with no heading lands
+  **into wind** on select.
+- **The place picker** (`components/PlacePicker.tsx` + pure
+  `core/places.ts`): the three-tab Locations panel became one search box
+  over one list — saved places first, then dropzones, then the geocoder's
+  hits in the same list. Star a dropzone to save it (favorites are stored
+  as *names*, so dropzone-data fixes reach them); custom places rename /
+  move-to-current-target / delete in place.
+- **Geolocation exists now** (`hooks/useGeolocation.ts`), opt-in behind
+  "Nearest dropzone": nothing runs until it is tapped, and denial,
+  timeout or no-geolocation-at-all all leave the picker fully usable.
+- **Place search is a promise API** (`searchPlaceSuggestions` +
+  `resolvePlaceSuggestion`) instead of the old attach-to-an-input widget,
+  and it **loads the Maps API itself** — see NOTES: on mobile the panel
+  replaces the map, so the geocoder used to be silently dead exactly
+  where it mattered most.
 
 ### Flocking, in its current shape
 
@@ -132,6 +154,7 @@ auto-verified (see below). Then, owner priorities most-ready first:
 | **Owner feedback on what shipped** | The winds indicator, trust banner, target/flocking handle rework, ground-wind hover — all shipped this session, browser-verified only where a real pointer wasn't needed |
 | **Corridor direction ranges** | "anything 250–290°" — the solver structure already supports it, the schema stores fixed headings. Small. |
 | **Per-DZ corridor presets** | Describe ZHills-style restrictions by name; ties into `util/dropzones.ts` |
+| **Landing headings for the imported DZs** | 44 of the 58 dropzones have ~100 m coordinates and no heading; promote them as they get checked against imagery |
 | **UX-analysis items** | `docs/ux/` + the BACKLOG "UX analysis" section: dashed-vs-solid legend (P1), DZ discovery/geolocation (P6), mode-filtered Settings (P4), hide leg-count in pattern (P9), jumprun handoff copy/share (P8) |
 | **Trust state — finish it** | `◐` first version shipped; remaining: out-of-bounds "silly value" call-out, stale-age tuning |
 | **Nerd mode** | Owner-approved data-first mode (manual/invert winds + export); reframes the disabled `explore` stub |
@@ -216,6 +239,10 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
   heading-rotate handle, shift-click the map to jump it. The map must stay
   put while dragging.
 - The **Spot Reference** drag (dragging pins it).
+- **A real geolocation grant** ("Nearest dropzone" in the Target panel).
+  The permission prompt cannot be answered from automation, so only the
+  denied and unavailable paths were exercised in a browser; the granted
+  path is unit-tested only.
 - The **winds indicator hover** works via real DOM (not a marker), so it
   *was* verified — ground-station detail shows on GND-row hover.
 

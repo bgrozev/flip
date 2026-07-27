@@ -108,6 +108,7 @@ were removed (measure to be reimplemented — see BACKLOG).
 | PatternComponent | `components/PatternComponent.tsx` | Landing pattern parameters UI |
 | ManoeuvreComponent | `components/ManoeuvreComponent.tsx` | Manoeuvre source selection (params/track/samples) |
 | TargetComponent | `components/TargetComponent.tsx` | Landing target and heading UI |
+| PlacePicker | `components/PlacePicker.tsx` | One searchable list: saved places, dropzones, geocoder hits |
 | WindsComponent | `components/WindsComponent.tsx` | Wind table, forecast time picker, stations |
 | CoursesComponent | `components/CoursesComponent.tsx` | Course selection and editing |
 | SettingsComponent | `components/SettingsComponent.tsx` | App preferences |
@@ -142,7 +143,8 @@ user can force a mode-overridden setting back to the global default.
 | `core/units.ts` | Unit conversions + preferences (incl. mi/nm/km distances) |
 | `core/validation.ts` | `LIMITS`, clamping, direction normalization |
 | `core/model.ts` | Versioned document defaults + `migrate*` loaders |
-| `util/dropzones.ts` | Dropzone database with coordinates |
+| `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`) |
+| `util/dropzones.ts` | Dropzone database (58 entries; `direction` only where known) |
 | `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports (DOM/download side effects, so not in core) |
 
 ## Wind System (`src/data/wind/`)

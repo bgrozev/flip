@@ -48,12 +48,18 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ### Harder-than-necessary
 
-- ☐ **P6 / F5 · DZ discovery** (tasks 1–3) — the DZ picker is an unfiltered
-  dropdown; the SEARCH tab geocodes locations, it does not filter the DZ
-  list. Regular jumper's *first* mobile action, currently the clunkiest.
-  Add search-in-list, nearest-DZ, and geolocation (task 2 — no geolocation
-  anywhere in code). Extends the existing "Improve DZ/target selection UI".
-  **Top priority.**
+- ◐ **P6 / F5 · DZ discovery** (tasks 1–3) — FIRST VERSION DONE. The
+  three-tab Locations panel became one search box over one list
+  (`components/PlacePicker.tsx` + pure `core/places.ts`): saved places
+  first, then the 58 dropzones (44 of them ported from FWC), then the
+  geocoder's hits in the same list. Star a dropzone to pin it; custom
+  places rename / move / delete in place. Geolocation now exists
+  (`hooks/useGeolocation.ts`) behind a "Nearest dropzone" button — opt-in,
+  never prompts on load, and every failure path leaves the list working.
+  Google Places moved to a promise API and now loads without the map,
+  which is what makes search work on mobile at all.
+  Still open ✎: distances/nearest-first ordering were deliberately left
+  out (owner: not useful); recents and DZ country/region are below.
 - ☐ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — opening any
   panel on mobile replaces the map, breaking see-while-editing. (The
   top-bar + WINDS-indicator refresh already work from the map view.)
