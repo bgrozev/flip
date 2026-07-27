@@ -60,6 +60,16 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   which is what makes search work on mobile at all.
   Still open ✎: distances/nearest-first ordering were deliberately left
   out (owner: not useful); recents and DZ country/region are below.
+- ☑ **The dropzone changed when switching modes** (owner report,
+  2026-07-26) — FIXED. Per-mode targets are deliberate, but a *place* is
+  not per-mode: `setTargetEverywhere` now backs place selection (picker,
+  nearest-dropzone, preset load) and clears the per-mode overrides, while
+  drag / shift-click / heading stay per-mode.
+- ☐ **Re-selecting the active preset does nothing** (spotted while
+  verifying the above) — `PresetSelector.handleSelect` skips `onSelect`
+  when the id is already active, so once you have wandered off a preset
+  there is no way to reload it. Pre-existing; wants a "revert to preset"
+  affordance rather than just dropping the guard.
 - ☐ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — opening any
   panel on mobile replaces the map, breaking see-while-editing. (The
   top-bar + WINDS-indicator refresh already work from the map view.)

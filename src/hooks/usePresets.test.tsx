@@ -18,7 +18,7 @@ const OTHER_TARGET: Target = {
 
 function makeSetters() {
   return {
-    setTarget: vi.fn(),
+    applyTarget: vi.fn(),
     setPatternParams: vi.fn(),
     setManoeuvreConfig: vi.fn(),
     setSelectedCourseId: vi.fn()
@@ -76,7 +76,7 @@ describe('usePresets', () => {
     // ...and loading it pushes the snapshot into the app setters
     act(() => second.result.current.loadPreset(preset.id));
 
-    expect(setters.setTarget).toHaveBeenCalledWith(OTHER_TARGET);
+    expect(setters.applyTarget).toHaveBeenCalledWith(OTHER_TARGET);
     expect(setters.setPatternParams).toHaveBeenCalledWith(DEFAULT_PATTERN_PARAMS);
     expect(setters.setManoeuvreConfig).toHaveBeenCalledWith(DEFAULT_MANOEUVRE_CONFIG);
     expect(setters.setSelectedCourseId).toHaveBeenCalledWith(null);
@@ -135,6 +135,6 @@ describe('usePresets', () => {
     act(() => result.current.loadPreset(null));
 
     expect(result.current.activePresetId).toBeNull();
-    expect(setters.setTarget).not.toHaveBeenCalled();
+    expect(setters.applyTarget).not.toHaveBeenCalled();
   });
 });

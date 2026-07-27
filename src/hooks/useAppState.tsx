@@ -85,6 +85,11 @@ interface AppStateContextValue {
   targetForMode: (modeId: string) => Target;
   /** Set the target for a given mode only. */
   setTargetForMode: (modeId: string, target: Target) => void;
+  /**
+   * Move the target in every mode. For choosing a *place* — which is a
+   * statement about where you are, not about what you are planning.
+   */
+  setTargetEverywhere: (target: Target) => void;
   setSettings: (settings: Settings) => void;
   setSelectedCourseId: (id: string | null) => void;
 
@@ -218,6 +223,17 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     [targetsByMode, setStoredTargetsByMode]
   );
 
+  // Dropping the per-mode entries (rather than writing the new target into
+  // each of them) is what makes this work for modes the user has never
+  // opened: with no override left, every mode reads the shared target.
+  const setTargetEverywhere = useCallback(
+    (value: Target) => {
+      setStoredTarget(value);
+      setStoredTargetsByMode({});
+    },
+    [setStoredTarget, setStoredTargetsByMode]
+  );
+
   const setSettings = useCallback(
     (value: Settings) => {
       const changed = (Object.keys(value) as (keyof Settings)[]).filter(
@@ -265,6 +281,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setTarget,
       targetForMode,
       setTargetForMode,
+      setTargetEverywhere,
       setSettings,
       setSelectedCourseId,
       resetAll
@@ -285,6 +302,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setTarget,
       targetForMode,
       setTargetForMode,
+      setTargetEverywhere,
       setSettings,
       setSelectedCourseId,
       resetAll

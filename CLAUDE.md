@@ -85,7 +85,10 @@ Deploy: GitHub Pages via `.github/workflows/static.yml` (lint + test + build).
 Pattern*, *High Performance Landing* (adds manoeuvre + CP courses) and
 *Flocking* (its own panel/derivation; see below). A first-run picker
 chooses one; it is remembered per device and switchable from the toolbar.
-Each mode keeps its own target.
+Each mode keeps its own target *position within a place*, but the place
+itself is shared: choosing one in the picker (or loading a preset) moves
+the target in every mode, while dragging it, shift-clicking and the
+heading input affect only the current mode.
 
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,

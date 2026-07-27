@@ -98,3 +98,54 @@ describe('useAppState settings touch tracking', () => {
     expect(result.current.settings).toEqual(DEFAULT_SETTINGS);
   });
 });
+
+describe('useAppState targets', () => {
+  const ZHILLS = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
+  const DELAND = { target: { lat: 29.06402, lng: -81.27847 }, finalHeading: 125 };
+  const POND = { target: { lat: 28.219, lng: -82.152 }, finalHeading: 300 };
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('keeps a per-mode target separate from the other modes', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.setTargetForMode('swoop', POND));
+
+    expect(result.current.targetForMode('swoop')).toEqual(POND);
+    expect(result.current.targetForMode('flocking')).not.toEqual(POND);
+  });
+
+  it('setTargetEverywhere moves every mode, including untouched ones', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.setTargetForMode('swoop', POND));
+    act(() => result.current.setTargetEverywhere(DELAND));
+
+    expect(result.current.targetForMode('swoop')).toEqual(DELAND);
+    expect(result.current.targetForMode('pattern')).toEqual(DELAND);
+    expect(result.current.targetForMode('flocking')).toEqual(DELAND);
+  });
+
+  it('lets modes diverge again after a place is chosen', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.setTargetEverywhere(DELAND));
+    act(() => result.current.setTargetForMode('swoop', POND));
+
+    expect(result.current.targetForMode('swoop')).toEqual(POND);
+    expect(result.current.targetForMode('pattern')).toEqual(DELAND);
+  });
+
+  it('persists a chosen place across a remount', () => {
+    const first = renderAppState();
+
+    act(() => first.result.current.setTargetEverywhere(ZHILLS));
+    first.unmount();
+
+    const second = renderAppState();
+
+    expect(second.result.current.targetForMode('flocking')).toEqual(ZHILLS);
+  });
+});

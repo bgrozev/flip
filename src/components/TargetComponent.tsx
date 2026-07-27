@@ -20,6 +20,8 @@ import { PlacePicker } from './';
 interface TargetComponentProps {
   target: Target;
   setTarget: (target: Target) => void;
+  /** Applies a place chosen in the picker — every mode, not just this one. */
+  selectPlace: (target: Target) => void;
   /**
    * Heading that lands into wind — the current wind direction, or null when
    * there is no usable wind. Drives the Upwind button, and is the fallback
@@ -37,6 +39,7 @@ interface TargetComponentProps {
 export default function TargetComponent({
   target,
   setTarget,
+  selectPlace,
   upwindHeading,
   headingRelevant = true
 }: TargetComponentProps) {
@@ -88,7 +91,7 @@ export default function TargetComponent({
         </Stack>
       )}
       <Divider />
-      <TargetProvider target={target} setTarget={setTarget}>
+      <TargetProvider target={target} setTarget={setTarget} selectPlace={selectPlace}>
         <Typography variant="h6" sx={{ textAlign: 'left' }}>Location</Typography>
         <PlacePicker upwindHeading={upwindHeading} />
       </TargetProvider>

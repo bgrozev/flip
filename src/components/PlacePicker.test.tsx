@@ -15,11 +15,12 @@ const TARGET: Target = {
 
 function renderPicker({
   upwindHeading = null as number | null,
-  setTarget = vi.fn()
+  setTarget = vi.fn(),
+  selectPlace = undefined as ((target: Target) => void) | undefined
 } = {}) {
   render(
     <AppStateProvider>
-      <TargetProvider target={TARGET} setTarget={setTarget}>
+      <TargetProvider target={TARGET} setTarget={setTarget} selectPlace={selectPlace}>
         <PlacePicker upwindHeading={upwindHeading} />
       </TargetProvider>
     </AppStateProvider>
@@ -180,6 +181,22 @@ describe('PlacePicker', () => {
       target: TARGET.target,
       finalHeading: TARGET.finalHeading
     });
+  });
+
+  it('applies a chosen place through selectPlace, not the per-mode setter', () => {
+    // App passes the every-mode setter here: which dropzone you are at is
+    // not a per-mode choice.
+    const selectPlace = vi.fn();
+    const setTarget = renderPicker({ selectPlace });
+
+    search('zhills');
+    fireEvent.click(screen.getByText('Skydive City (ZHills)'));
+
+    expect(selectPlace).toHaveBeenCalledWith({
+      target: { lat: 28.21887, lng: -82.15122 },
+      finalHeading: 270
+    });
+    expect(setTarget).not.toHaveBeenCalled();
   });
 
   it('says so when nothing matches', async () => {

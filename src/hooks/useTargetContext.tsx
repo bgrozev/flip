@@ -5,9 +5,12 @@ import { LatLng, Target } from '../types';
 interface TargetContextValue {
   /** Current target (location + heading) */
   target: Target;
-  /** Update the target */
+  /** Update the target in the current mode only (drag, heading, ...) */
   setTarget: (target: Target) => void;
-  /** Convenience method to select a location, optionally with heading */
+  /**
+   * Select a place: moves the target in EVERY mode, because which dropzone
+   * you are at is not a per-mode choice. Optionally sets the heading too.
+   */
   selectLocation: (location: LatLng, heading?: number) => void;
 }
 
@@ -16,6 +19,11 @@ const TargetContext = createContext<TargetContextValue | null>(null);
 interface TargetProviderProps {
   target: Target;
   setTarget: (target: Target) => void;
+  /**
+   * Applies a chosen place. Defaults to `setTarget` (current mode only) so
+   * the provider stays usable on its own; App passes the every-mode setter.
+   */
+  selectPlace?: (target: Target) => void;
   children: ReactNode;
 }
 
@@ -23,9 +31,14 @@ interface TargetProviderProps {
  * Provider for target location context.
  * Wrap location-related components to avoid prop drilling.
  */
-export function TargetProvider({ target, setTarget, children }: TargetProviderProps) {
+export function TargetProvider({
+  target,
+  setTarget,
+  selectPlace,
+  children
+}: TargetProviderProps) {
   const selectLocation = (location: LatLng, heading?: number) => {
-    setTarget({
+    (selectPlace ?? setTarget)({
       target: location,
       finalHeading: heading ?? target.finalHeading
     });

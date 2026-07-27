@@ -485,3 +485,39 @@ unit-tested only.
 
 Backlog additions this session: DZ country/region, a recents list, and
 landing headings for the 44 imported dropzones.
+
+### Target scope: place vs position (2026-07-26, owner report)
+
+"When switching between pattern and flocking the DZ changes." Per-mode
+targets were deliberate (`flip.targets.byMode`, added with the flocking
+work) and the rationale still holds *within* a dropzone — a swoop pond
+and a flocking end point are not the same spot. But which dropzone you
+are at is not a per-mode fact, and having it change under you on a mode
+switch is just confusing.
+
+The split now is **place vs position**:
+
+- **Place** — the picker, "nearest dropzone", loading a preset → moves
+  every mode (`useAppState.setTargetEverywhere`).
+- **Position within the place** — dragging the target, shift-clicking the
+  map, the heading input, the flocking exit drag → current mode only
+  (`setTargetForMode`, unchanged).
+
+`setTargetEverywhere` *clears* the per-mode entries rather than writing
+the new target into each. That is what makes it work for modes the user
+has never opened: with no override left, every mode reads the shared
+`flip.target` again. Modes are free to diverge afterwards.
+
+Presets follow the same rule: **saving** snapshots the current mode's
+target (one place + heading), **loading** applies it everywhere — a
+preset names a place, so restoring it in pattern and finding flocking
+still at yesterday's DZ would be the same bug. `usePresets` takes the
+setter as `applyTarget` to make that explicit at the call site.
+
+Verified in the browser end to end: seeded a per-mode flocking target,
+picked DeLand in pattern, switched to flocking (followed); edited the
+heading in pattern (pattern-only override, shared untouched); saved a
+preset, moved everything to ZHills, re-loaded the preset (all modes back
+to DeLand). Also spotted a pre-existing wrinkle worth fixing separately:
+re-selecting the *already active* preset is a no-op, so there is no way
+to revert to it once you have wandered off (backlogged).

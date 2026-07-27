@@ -158,6 +158,7 @@ function DashboardContent() {
     setManoeuvreConfig,
     targetForMode,
     setTargetForMode,
+    setTargetEverywhere,
     pattern,
     patternParams,
     setPatternParams,
@@ -249,6 +250,27 @@ function DashboardContent() {
     [target.target, setTargetForMode, mode.id, invalidateWinds]
   );
 
+  // Choosing a place (the picker, "nearest dropzone", loading a preset) is
+  // not a per-mode edit: the dropzone you are at is the same whatever you
+  // are planning, and having it change under you when switching modes is
+  // just confusing. Positioning WITHIN the place — dragging the target,
+  // shift-clicking, the heading input — stays per-mode.
+  const selectPlace = useCallback(
+    (newTarget: Target) => {
+      if (
+        hasTargetMovedTooFar(
+          target.target,
+          newTarget.target,
+          WIND_INVALIDATE_THRESHOLD_FT
+        )
+      ) {
+        invalidateWinds();
+      }
+      setTargetEverywhere(newTarget);
+    },
+    [target.target, setTargetEverywhere, invalidateWinds]
+  );
+
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const {
@@ -264,7 +286,7 @@ function DashboardContent() {
     patternParams,
     manoeuvreConfig,
     selectedCourseId,
-    setTarget,
+    applyTarget: selectPlace,
     setPatternParams,
     setManoeuvreConfig,
     setSelectedCourseId
@@ -488,6 +510,7 @@ function DashboardContent() {
       <TargetComponent
         target={target}
         setTarget={setTarget}
+        selectPlace={selectPlace}
         upwindHeading={upwindHeading}
         headingRelevant={!isFlocking}
       />

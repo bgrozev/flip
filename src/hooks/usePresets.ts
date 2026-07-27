@@ -15,7 +15,11 @@ interface UsePresetsParams {
   patternParams: PatternParams;
   manoeuvreConfig: ManoeuvreConfig;
   selectedCourseId: string | null;
-  setTarget: (target: Target) => void;
+  /**
+   * Applies a loaded preset's target. A preset names a place, so this is the
+   * place-level setter (every mode), not the per-mode one — see App.
+   */
+  applyTarget: (target: Target) => void;
   setPatternParams: (params: PatternParams) => void;
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
   setSelectedCourseId: (id: string | null) => void;
@@ -36,7 +40,7 @@ export function usePresets({
   patternParams,
   manoeuvreConfig,
   selectedCourseId,
-  setTarget,
+  applyTarget,
   setPatternParams,
   setManoeuvreConfig,
   setSelectedCourseId
@@ -80,12 +84,12 @@ export function usePresets({
       const preset = presets.find(p => p.id === id);
       if (!preset) return;
 
-      setTarget(preset.target);
+      applyTarget(preset.target);
       setPatternParams(preset.patternParams);
       setManoeuvreConfig(preset.manoeuvre);
       setSelectedCourseId(preset.selectedCourseId ?? null);
     },
-    [presets, setActivePresetId, setTarget, setPatternParams, setManoeuvreConfig, setSelectedCourseId]
+    [presets, setActivePresetId, applyTarget, setPatternParams, setManoeuvreConfig, setSelectedCourseId]
   );
 
   const updatePreset = useCallback(
