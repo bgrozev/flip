@@ -438,16 +438,16 @@ function DashboardContent() {
     fetchWinds();
   }, [trust.level, target.target, fetchWinds]);
 
-  function onUpwindClick() {
-    if (effectiveWinds?.winds && effectiveWinds.winds.length > 0 && effectiveWinds.winds[0].speedKts > 0 && target) {
-      const newTarget: Target = {
-        target: target.target,
-        finalHeading: Math.round(effectiveWinds.winds[0].direction % 360)
-      };
+  // Heading that lands into wind: the ground wind's direction (it is where
+  // the wind comes FROM), or null when there is no wind to land into. Drives
+  // the Upwind button and stands in for a missing dropzone landing direction.
+  const upwindHeading = useMemo(() => {
+    const ground = effectiveWinds?.winds?.[0];
 
-      setTarget(newTarget);
-    }
-  }
+    return ground && ground.speedKts > 0
+      ? Math.round(ground.direction % 360)
+      : null;
+  }, [effectiveWinds]);
 
   const rawPanel = panelFromPathname(router.pathname);
   const activePanel = rawPanel && mode.nav.includes(rawPanel) ? rawPanel : null;
@@ -488,7 +488,7 @@ function DashboardContent() {
       <TargetComponent
         target={target}
         setTarget={setTarget}
-        onUpwindClick={onUpwindClick}
+        upwindHeading={upwindHeading}
         headingRelevant={!isFlocking}
       />
     );

@@ -23,7 +23,7 @@ import {
   MapProviderContext,
   useMapProvider
 } from './MapAdapter';
-import { LatLng, MapProvider } from '../types';
+import { LatLng, MapProvider, PlaceSuggestion } from '../types';
 import * as google from './google';
 
 // All MapLibre pieces resolve from the same dynamic import, so they share one
@@ -78,37 +78,40 @@ export function MapDragHandle(props: MapDragHandleProps) {
 }
 
 /**
- * Attach a place-search autocomplete to an input, using the given provider's
- * geocoder (Google Places or, for MapLibre, key-free Photon). Not a component,
- * so the provider is passed explicitly rather than read from context; the
- * MapLibre geocoder is loaded lazily from the shared MapLibre chunk.
+ * Search the given provider's geocoder (Google Places, or key-free Photon
+ * under MapLibre). Not a component, so the provider is passed explicitly
+ * rather than read from context; the MapLibre geocoder is loaded lazily from
+ * the shared MapLibre chunk.
  *
- * Returns a disposer; call it when the input goes away or before re-attaching.
- * It is safe to dispose before the lazy MapLibre chunk has loaded — the attach
- * is then skipped entirely.
+ * Never rejects: a geocoder that is down or unavailable yields no
+ * suggestions, which leaves the rest of the place picker working.
  */
-export function attachPlaceAutocomplete(
-  input: HTMLInputElement,
-  onPlace: (pos: LatLng) => void,
+export async function searchPlaceSuggestions(
+  query: string,
   provider: MapProvider = 'google'
-): () => void {
+): Promise<PlaceSuggestion[]> {
   if (provider !== 'maplibre') {
-    return google.attachPlaceAutocomplete(input, onPlace);
+    return google.searchPlaceSuggestions(query);
   }
 
-  // Lazy chunk: it may resolve after the caller has already disposed.
-  let disposed = false;
-  let dispose: (() => void) | null = null;
+  const m = await import('./maplibre');
 
-  import('./maplibre').then(m => {
-    if (disposed) {
-      return;
-    }
-    dispose = m.attachPlaceAutocomplete(input, onPlace);
-  });
+  return m.searchPlaceSuggestions(query);
+}
 
-  return () => {
-    disposed = true;
-    dispose?.();
-  };
+/**
+ * Coordinates for a suggestion from `searchPlaceSuggestions`. Pass the same
+ * provider that produced it — suggestion ids are provider-specific.
+ */
+export async function resolvePlaceSuggestion(
+  id: string,
+  provider: MapProvider = 'google'
+): Promise<LatLng | null> {
+  if (provider !== 'maplibre') {
+    return google.resolvePlaceSuggestion(id);
+  }
+
+  const m = await import('./maplibre');
+
+  return m.resolvePlaceSuggestion(id);
 }

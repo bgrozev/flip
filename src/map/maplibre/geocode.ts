@@ -1,19 +1,20 @@
 /**
  * Key-free place search for the MapLibre provider.
  *
- * The Google adapter backs the Target "Search" box with Google Places, which
- * needs the Maps JS API. Under MapLibre there is no Google API loaded, so this
- * provides an equivalent autocomplete using Photon (https://photon.komoot.io),
- * a free, CORS-enabled, key-less geocoder that supports type-ahead. It matches
- * `attachPlaceAutocomplete`'s contract: attach to an input, call `onPlace`
- * with the chosen location's coordinates.
+ * The Google adapter backs the place picker with Google Places, which needs
+ * the Maps JS API. Under MapLibre there is no Google API loaded, so this
+ * provides the same promise contract (`searchPlaceSuggestions` +
+ * `resolvePlaceSuggestion`) using Photon (https://photon.komoot.io), a free,
+ * CORS-enabled, key-less geocoder.
+ *
+ * Photon returns coordinates with the suggestions, so a suggestion id here
+ * simply carries them and resolving is local — no second request.
  *
  * Confined to `src/map/maplibre/`.
  */
-import { LatLng } from '../../types';
+import { LatLng, PlaceSuggestion } from '../../types';
 
 const PHOTON_URL = 'https://photon.komoot.io/api/';
-const DEBOUNCE_MS = 250;
 const MAX_RESULTS = 5;
 
 interface PhotonFeature {
@@ -27,155 +28,56 @@ interface PhotonFeature {
   };
 }
 
-/** Human-readable one-line label for a Photon feature. */
-function labelFor(f: PhotonFeature): string {
-  const p = f.properties;
-  const parts = [p.name ?? p.street, p.city, p.state, p.country].filter(Boolean);
-
-  return parts.join(', ');
+/** Photon has no place ids, so the coordinates travel in the id itself. */
+function suggestionId(lat: number, lng: number): string {
+  return `photon:${lat},${lng}`;
 }
 
-/**
- * Attach a Photon-backed autocomplete to a text input. As the user types, a
- * suggestion dropdown is shown beneath the input; picking one calls `onPlace`
- * with its coordinates.
- *
- * Returns a disposer that removes the dropdown, its listeners and any pending
- * timers. Callers must invoke it when the input goes away (or before
- * re-attaching) — this function owns DOM it appends, so attaching twice
- * without disposing would stack up dropdowns.
- */
-export function attachPlaceAutocomplete(
-  input: HTMLInputElement,
-  onPlace: (pos: LatLng) => void
-): () => void {
-  const container = input.parentElement;
-
-  if (!container) {
-    return () => { /* nothing was attached */ };
-  }
-  // The dropdown is positioned relative to the input's wrapper.
-  if (getComputedStyle(container).position === 'static') {
-    container.style.position = 'relative';
+/** Suggestions for a query. Never rejects — a failure degrades to no hits. */
+export async function searchPlaceSuggestions(query: string): Promise<PlaceSuggestion[]> {
+  if (query.trim() === '') {
+    return [];
   }
 
-  const menu = document.createElement('ul');
+  const url = `${PHOTON_URL}?q=${encodeURIComponent(query)}&limit=${MAX_RESULTS}`;
 
-  Object.assign(menu.style, {
-    position: 'absolute',
-    top: '100%',
-    left: '0',
-    right: '0',
-    zIndex: '1300',
-    margin: '2px 0 0',
-    padding: '0',
-    listStyle: 'none',
-    background: '#1e1e1e',
-    color: '#fff',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '4px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-    maxHeight: '220px',
-    overflowY: 'auto',
-    display: 'none',
-    fontSize: '13px'
-  } as Partial<CSSStyleDeclaration>);
-  container.appendChild(menu);
+  try {
+    const response = await fetch(url);
 
-  let seq = 0;
-  let debounce: ReturnType<typeof setTimeout> | null = null;
-
-  const hide = () => {
-    menu.style.display = 'none';
-    menu.innerHTML = '';
-  };
-
-  const render = (features: PhotonFeature[]) => {
-    menu.innerHTML = '';
-    if (features.length === 0) {
-      hide();
-
-      return;
+    if (!response.ok) {
+      throw new Error(`Photon ${response.status}`);
     }
-    for (const f of features) {
-      const item = document.createElement('li');
 
-      item.textContent = labelFor(f);
-      Object.assign(item.style, {
-        padding: '6px 10px',
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis'
-      } as Partial<CSSStyleDeclaration>);
-      item.addEventListener('mouseenter', () => { item.style.background = 'rgba(255,255,255,0.12)'; });
-      item.addEventListener('mouseleave', () => { item.style.background = ''; });
-      // mousedown (not click) so it fires before the input's blur hides the menu.
-      item.addEventListener('mousedown', ev => {
-        ev.preventDefault();
-        const [lng, lat] = f.geometry.coordinates;
+    const data = (await response.json()) as { features?: PhotonFeature[] };
 
-        input.value = labelFor(f);
-        hide();
-        onPlace({ lat, lng });
-      });
-      menu.appendChild(item);
-    }
-    menu.style.display = 'block';
-  };
+    return (data.features ?? [])
+      .filter(feature => feature.geometry?.coordinates)
+      .map(feature => {
+        const [lng, lat] = feature.geometry.coordinates;
+        const p = feature.properties;
+        const detail = [p.city, p.state, p.country].filter(Boolean).join(', ');
 
-  const search = (query: string) => {
-    const mySeq = ++seq;
-    const url = `${PHOTON_URL}?q=${encodeURIComponent(query)}&limit=${MAX_RESULTS}`;
-
-    fetch(url)
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error(`Photon ${r.status}`))))
-      .then((data: { features?: PhotonFeature[] }) => {
-        if (mySeq !== seq) {
-          return; // a newer query superseded this one
-        }
-        render((data.features ?? []).filter(f => f.geometry?.coordinates));
+        return {
+          id: suggestionId(lat, lng),
+          label: p.name ?? p.street ?? detail,
+          detail: detail === '' ? undefined : detail
+        };
       })
-      .catch(err => {
-        console.log('Photon geocode failed:', err);
-      });
-  };
+      .filter(suggestion => suggestion.label !== '');
+  } catch (error) {
+    console.log('Photon geocode failed:', error);
 
-  let blurTimer: ReturnType<typeof setTimeout> | null = null;
+    return [];
+  }
+}
 
-  const onInput = () => {
-    const query = input.value.trim();
+/** Coordinates for a suggestion id produced above. */
+export function resolvePlaceSuggestion(id: string): Promise<LatLng | null> {
+  const match = /^photon:(-?[\d.]+),(-?[\d.]+)$/.exec(id);
 
-    if (debounce) {
-      clearTimeout(debounce);
-    }
-    if (query.length < 3) {
-      hide();
+  if (!match) {
+    return Promise.resolve(null);
+  }
 
-      return;
-    }
-    debounce = setTimeout(() => search(query), DEBOUNCE_MS);
-  };
-
-  const onBlur = () => {
-    // Delay so a suggestion's mousedown can complete first.
-    blurTimer = setTimeout(hide, 150);
-  };
-
-  input.addEventListener('input', onInput);
-  input.addEventListener('blur', onBlur);
-
-  return () => {
-    input.removeEventListener('input', onInput);
-    input.removeEventListener('blur', onBlur);
-    if (debounce) {
-      clearTimeout(debounce);
-    }
-    if (blurTimer) {
-      clearTimeout(blurTimer);
-    }
-    // Ignore any in-flight response and drop the dropdown we created.
-    seq++;
-    menu.remove();
-  };
+  return Promise.resolve({ lat: Number(match[1]), lng: Number(match[2]) });
 }

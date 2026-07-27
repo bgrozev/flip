@@ -27,7 +27,8 @@ export type {
 
 // Provider binding: the runtime dispatchers (Google or MapLibre per provider).
 export {
-  attachPlaceAutocomplete,
+  searchPlaceSuggestions,
+  resolvePlaceSuggestion,
   MapCircle,
   MapContainer,
   MapDragHandle,

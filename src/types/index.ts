@@ -157,6 +157,17 @@ export interface CustomLocation {
 export type PlaceKind = 'dropzone' | 'favorite' | 'custom';
 
 /**
+ * A geocoder hit. Not a `Place`: its coordinates are only fetched when the
+ * user picks it (`resolvePlaceSuggestion`), so it can't be used as a target
+ * until it is resolved. `id` is provider-specific and opaque.
+ */
+export interface PlaceSuggestion {
+  id: string;
+  label: string;
+  detail?: string;
+}
+
+/**
  * A selectable landing place: the known dropzones plus everything the user
  * saved, flattened into one list for the picker. Geocoder results are NOT
  * places — they have no coordinates until they are resolved.

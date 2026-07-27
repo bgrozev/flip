@@ -15,12 +15,17 @@ import { TargetProvider } from '../hooks';
 import { Target } from '../types';
 import { normalizeDirection } from '../core/validation';
 
-import { LocationComponent } from './';
+import { PlacePicker } from './';
 
 interface TargetComponentProps {
   target: Target;
   setTarget: (target: Target) => void;
-  onUpwindClick: () => void;
+  /**
+   * Heading that lands into wind — the current wind direction, or null when
+   * there is no usable wind. Drives the Upwind button, and is the fallback
+   * heading for places with no known landing direction.
+   */
+  upwindHeading: number | null;
   /**
    * Whether the final heading applies at all. Flocking ignores it (the
    * jumprun and canopy directions live in its own panel), so the heading
@@ -32,7 +37,7 @@ interface TargetComponentProps {
 export default function TargetComponent({
   target,
   setTarget,
-  onUpwindClick,
+  upwindHeading,
   headingRelevant = true
 }: TargetComponentProps) {
   const handleHeadingChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,25 +68,29 @@ export default function TargetComponent({
             onChange={handleHeadingChange}
           />
           <Tooltip title="Set final heading against the wind." arrow>
-            <Button
-              variant="outlined"
-              onClick={onUpwindClick}
-              sx={{
-                textTransform: 'none',
-                alignSelf: 'center',
-                paddingTop: '4px',
-                paddingBottom: '4px',
-                minHeight: 'auto'
-              }}
-            >
-              Upwind
-            </Button>
+            <span>
+              <Button
+                variant="outlined"
+                disabled={upwindHeading === null}
+                onClick={() => setTarget({ ...target, finalHeading: upwindHeading ?? 0 })}
+                sx={{
+                  textTransform: 'none',
+                  alignSelf: 'center',
+                  paddingTop: '4px',
+                  paddingBottom: '4px',
+                  minHeight: 'auto'
+                }}
+              >
+                Upwind
+              </Button>
+            </span>
           </Tooltip>
         </Stack>
       )}
       <Divider />
       <TargetProvider target={target} setTarget={setTarget}>
-        <LocationComponent />
+        <Typography variant="h6" sx={{ textAlign: 'left' }}>Location</Typography>
+        <PlacePicker upwindHeading={upwindHeading} />
       </TargetProvider>
     </Stack>
   );
