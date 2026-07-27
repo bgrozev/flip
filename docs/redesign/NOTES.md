@@ -540,3 +540,36 @@ pre-change code**: same script, same steps — before, picking DeLand left
 `flip.winds` empty (0 rows) forever; after, the profile comes back for
 DeLand's coordinates within a second. Without that control the check
 would have proved nothing (see the verification lessons above).
+
+### P9 — leg-count selector hidden in Standard Pattern (2026-07-26)
+
+NONE/1/2/3 is a swooper's control; a regular jumper always flies the full
+downwind-base-final. Expressed the way the other exposure rules already
+are — a mode `feature` (`patternLegCount`, on `swoop`, absent on
+`pattern`) — rather than an `mode.id === 'pattern'` check in the panel.
+
+Two things worth remembering:
+
+- The override is applied **on read**, never written back
+  (`core/pattern.withFullPattern`). `patternParams` is a single store
+  shared by all modes, so persisting the promotion would silently destroy
+  a swooper's stored two-leg setup the moment they looked at Standard
+  Pattern. Verified in the browser: stored type stays `two-leg` while the
+  panel shows all three legs.
+- The pattern **path** is now derived in App instead of `useAppState`.
+  How many legs it has depends on the mode, and the state provider is
+  deliberately mode-agnostic; leaving the old derivation in place would
+  have handed callers a second, silently mode-blind pattern.
+
+Verification note: comparing map screenshots between the two modes proved
+nothing — at the default zoom the third leg is off-screen and both views
+look identical. Rather than fight the map, the actual behaviour is pinned
+by a unit test on `withFullPattern` + `makePatternByType` (top of pattern
+900 ft as stored, 1800 ft as flown). Writing that test also corrected a
+wrong assumption: leg altitudes are per-leg heights that sum, not
+absolute altitudes.
+
+Also fixed here: a lint error (`no-use-before-define` in
+`map/dispatch.tsx`) introduced with `PlaceSearchLoader` in `98bbc6e` and
+missed because that commit's check read only the tail of the lint output.
+That commit's "0 lint errors" claim was wrong; the tree is clean now.

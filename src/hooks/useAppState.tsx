@@ -20,7 +20,6 @@ import {
 import { FlockingParams } from '../core/flocking';
 import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
 import { createVersionedCodec } from '../util/storage';
-import { makePatternByType } from '../core/pattern';
 import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
 import { samples } from '../samples';
@@ -64,7 +63,6 @@ function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
 interface AppStateContextValue {
   // Derived paths (for rendering)
   manoeuvre: FlightPath;
-  pattern: FlightPath;
 
   // Config state (source of truth for presets)
   manoeuvreConfig: ManoeuvreConfig;
@@ -184,9 +182,12 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
   const selectedCourseId = storedSelectedCourseId ?? null;
 
-  // Derived paths — computed from configs, not stored
+  // Derived paths — computed from configs, not stored. The pattern path is
+  // NOT derived here: how many legs it has depends on the mode (Standard
+  // Pattern always flies three), and modes are App's concern, so App owns
+  // that derivation. Deriving it here too would give callers a second,
+  // silently mode-blind version.
   const manoeuvre = useMemo(() => computeManoeuvre(manoeuvreConfig), [manoeuvreConfig]);
-  const pattern = useMemo(() => makePatternByType(patternParams), [patternParams]);
 
   const setManoeuvreConfig = useCallback(
     (value: ManoeuvreConfig) => setStoredManoeuvreConfig(value),
@@ -267,7 +268,6 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   const value = useMemo<AppStateContextValue>(
     () => ({
       manoeuvre,
-      pattern,
       manoeuvreConfig,
       patternParams,
       flockingParams,
@@ -288,7 +288,6 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     }),
     [
       manoeuvre,
-      pattern,
       manoeuvreConfig,
       patternParams,
       flockingParams,

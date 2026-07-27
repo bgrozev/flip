@@ -30,10 +30,13 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   (`WindTrustBanner`), driven by a pure `core/windTrust` verdict, shown in
   every mode and hidden when the forecast is fresh. See the trust-state
   concern below for what remains.
-- ☐ **P9 · Hide the leg-count selector in Standard Pattern** (task 9) —
-  NONE/1/2/3 is a swooper control leaking into the simple mode; a regular
-  jumper should never pick it. Hard-wire 3 legs in `pattern`, keep the
-  selector only in `swoop`.
+- ☑ **P9 · Hide the leg-count selector in Standard Pattern** (task 9) —
+  DONE. New `patternLegCount` mode feature: `swoop` has it, `pattern` does
+  not. Standard Pattern hides the NONE/1/2/3 group and always flies three
+  legs (`core/pattern.withFullPattern`, applied on read in App so a
+  swooper's stored choice survives a trip through the simple mode). The
+  pattern path is now derived in App rather than `useAppState`, which had
+  no way to know the mode.
 - ☐ **P4 / F1 · Mode-filter the Settings panel** — modes gate nav + map
   layers but not Settings; a Standard-Pattern student sees forecast model,
   interpolate, drift arrows, map provider, etc. Gate settings rows by

@@ -63,6 +63,26 @@ describe('PatternComponent', () => {
     expect((glide as HTMLInputElement).value).toBe(String(LIMITS.glideRatio.max));
   });
 
+  it('hides the leg-count selector when the mode does not offer it', () => {
+    render(
+      <AppStateProvider>
+        <PatternComponent
+          params={DEFAULT_PATTERN_PARAMS}
+          onParamsChange={vi.fn()}
+          legCountSelectable={false}
+        />
+      </AppStateProvider>
+    );
+
+    expect(screen.queryByRole('button', { name: 'None' })).toBeNull();
+    expect(screen.queryByLabelText('Single leg')).toBeNull();
+    // ...but the three-leg controls are all still there
+    expect(screen.getByText('Final leg')).toBeTruthy();
+    expect(screen.getByText('Base leg')).toBeTruthy();
+    expect(screen.getByText('Downwind leg')).toBeTruthy();
+    expect(screen.getByLabelText('Descent Rate')).toBeTruthy();
+  });
+
   it('hides the leg controls when the pattern type is none', () => {
     render(
       <AppStateProvider>

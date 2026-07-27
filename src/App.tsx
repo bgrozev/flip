@@ -73,6 +73,7 @@ import {
   vectorCardinalDirection
 } from './core/flocking';
 import { COURSES } from './core/courses';
+import { makePatternByType, withFullPattern } from './core/pattern';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
 
@@ -159,7 +160,6 @@ function DashboardContent() {
     targetForMode,
     setTargetForMode,
     setTargetEverywhere,
-    pattern,
     patternParams,
     setPatternParams,
     flockingParams,
@@ -309,6 +309,18 @@ function DashboardContent() {
   // Flocking mode replaces the pattern/manoeuvre derivation with its own
   // descent-path pipeline; each derivation only runs in its own mode.
   const isFlocking = mode.id === 'flocking';
+
+  // Modes without the leg-count control always fly the full pattern. The
+  // override is applied on READ, never written back: a swooper's stored
+  // NONE/1/2 choice must survive a trip through Standard Pattern.
+  const patternParamsForMode = useMemo(
+    () => (hasFeature(mode, 'patternLegCount') ? patternParams : withFullPattern(patternParams)),
+    [mode, patternParams]
+  );
+  const pattern = useMemo(
+    () => makePatternByType(patternParamsForMode),
+    [patternParamsForMode]
+  );
 
   const paths = useFlightPaths({
     manoeuvre: !isFlocking && hasFeature(mode, 'manoeuvre') ? manoeuvre ?? [] : [],
@@ -499,7 +511,13 @@ function DashboardContent() {
       />
     );
   } else if (activePanel === 'pattern') {
-    p = <PatternComponent params={patternParams} onParamsChange={setPatternParams} />;
+    p = (
+      <PatternComponent
+        params={patternParamsForMode}
+        onParamsChange={setPatternParams}
+        legCountSelectable={hasFeature(mode, 'patternLegCount')}
+      />
+    );
   } else if (activePanel === 'flocking') {
     p = (
       <FlockingComponent

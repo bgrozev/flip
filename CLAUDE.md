@@ -81,7 +81,10 @@ Deploy: GitHub Pages via `.github/workflows/static.yml` (lint + test + build).
    - Dashed line: Original path without wind
    - Solid line: Wind-corrected path
 
-**Modes** (`src/modes/`) decide which of this is exposed: *Standard
+**Modes** (`src/modes/`) decide which of this is exposed (panels, map
+layers, coarse `features`, setting defaults). E.g. only `swoop` has the
+`patternLegCount` feature; Standard Pattern hides the selector and always
+flies the full three-leg pattern: *Standard
 Pattern*, *High Performance Landing* (adds manoeuvre + CP courses) and
 *Flocking* (its own panel/derivation; see below). A first-run picker
 chooses one; it is remembered per device and switchable from the toolbar.

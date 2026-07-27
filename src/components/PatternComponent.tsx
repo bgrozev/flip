@@ -35,9 +35,19 @@ import NumberInput from './NumberInput';
 interface PatternComponentProps {
   params: PatternParams;
   onParamsChange: (params: PatternParams) => void;
+  /**
+   * Whether the user may choose how many legs the pattern has. Standard
+   * Pattern hides it and always flies three (see modes/): picking NONE/1/2
+   * is a swooper's decision, not something a regular jumper should face.
+   */
+  legCountSelectable?: boolean;
 }
 
-export default function PatternComponent({ params, onParamsChange }: PatternComponentProps) {
+export default function PatternComponent({
+  params,
+  onParamsChange,
+  legCountSelectable = true
+}: PatternComponentProps) {
   const {
     formatDescentRate,
     parseDescentRate,
@@ -60,32 +70,36 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
 
   return (
     <Box display="flex" flexDirection="column" gap={2}>
-      <ToggleButtonGroup
-        value={params.type}
-        exclusive
-        onChange={(_e, value) => value !== null && handleChange('type', value)}
-        fullWidth
-        color="primary"
-      >
-        <ToggleButton value={PATTERN_NONE}>None</ToggleButton>
-        <ToggleButton value={PATTERN_ONE_LEG}>
-          <Tooltip title="Single leg">
-            <LooksOneIcon />
-          </Tooltip>
-        </ToggleButton>
-        <ToggleButton value={PATTERN_TWO_LEG}>
-          <Tooltip title="Two-leg pattern">
-            <LooksTwoIcon />
-          </Tooltip>
-        </ToggleButton>
-        <ToggleButton value={PATTERN_THREE_LEG}>
-          <Tooltip title="Three-leg pattern">
-            <Looks3Icon />
-          </Tooltip>
-        </ToggleButton>
-      </ToggleButtonGroup>
+      {legCountSelectable && (
+        <>
+          <ToggleButtonGroup
+            value={params.type}
+            exclusive
+            onChange={(_e, value) => value !== null && handleChange('type', value)}
+            fullWidth
+            color="primary"
+          >
+            <ToggleButton value={PATTERN_NONE}>None</ToggleButton>
+            <ToggleButton value={PATTERN_ONE_LEG}>
+              <Tooltip title="Single leg">
+                <LooksOneIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value={PATTERN_TWO_LEG}>
+              <Tooltip title="Two-leg pattern">
+                <LooksTwoIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value={PATTERN_THREE_LEG}>
+              <Tooltip title="Three-leg pattern">
+                <Looks3Icon />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-      <Divider orientation="vertical" flexItem />
+          <Divider orientation="vertical" flexItem />
+        </>
+      )}
       {params.type !== PATTERN_NONE && (
         <>
           <Stack direction="row" spacing={2}>

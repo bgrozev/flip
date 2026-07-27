@@ -10,7 +10,9 @@ import { MapLayerId, PanelId, Settings } from '../types';
 export type ModeId = 'pattern' | 'swoop' | 'flocking';
 
 /** Coarse feature switches for gates that are neither nav nor a map layer. */
-export const FEATURE_IDS = ['manoeuvre', 'courses', 'presets', 'export'] as const;
+export const FEATURE_IDS = [
+  'manoeuvre', 'courses', 'presets', 'export', 'patternLegCount'
+] as const;
 export type FeatureId = typeof FEATURE_IDS[number];
 
 export interface Mode {
@@ -54,6 +56,9 @@ export const MODES: readonly Mode[] = [
     nav: ['pattern', 'target', 'wind', 'settings', 'about'],
     mapLayers: ['flightPaths', 'stations', 'targetEdit'],
     defaults: {},
+    // No 'patternLegCount': NONE/1/2/3 is a swooper's control. A regular
+    // jumper always flies the full downwind-base-final, so this mode fixes
+    // the pattern at three legs (App) instead of offering the choice.
     features: ['presets', 'export']
   },
   {
@@ -64,7 +69,7 @@ export const MODES: readonly Mode[] = [
     nav: ALL_PANELS,
     mapLayers: ALL_LAYERS,
     defaults: {},
-    features: ['manoeuvre', 'courses', 'presets', 'export']
+    features: ['manoeuvre', 'courses', 'presets', 'export', 'patternLegCount']
   },
   {
     id: 'flocking',

@@ -39,6 +39,17 @@ export function getPatternLegCount(patternType: PatternType): number {
 }
 
 /**
+ * The params as a mode without the leg-count control sees them: the full
+ * downwind-base-final pattern, whatever type is stored.
+ *
+ * Applied on read only — never written back — so that a swooper's stored
+ * NONE/one-leg/two-leg choice survives a trip through Standard Pattern.
+ */
+export function withFullPattern<T extends { type: PatternType }>(params: T): T {
+  return params.type === PATTERN_THREE_LEG ? params : { ...params, type: PATTERN_THREE_LEG };
+}
+
+/**
  * Create a pattern by type, automatically slicing legs array to the appropriate count.
  */
 export function makePatternByType(params: MakePatternByTypeParams): FlightPath {

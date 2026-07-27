@@ -7,7 +7,8 @@ import {
   getPatternLegCount,
   isLeftTurn,
   makePattern,
-  makePatternByType
+  makePatternByType,
+  withFullPattern
 } from './pattern';
 
 describe('Pattern type constants', () => {
@@ -75,6 +76,54 @@ describe('makePatternByType', () => {
     const result = makePatternByType({ ...baseParams, type: PATTERN_THREE_LEG });
     const lastPoint = result[result.length - 1];
     expect(lastPoint.properties.alt).toBeCloseTo(900, 0);
+  });
+});
+
+describe('withFullPattern', () => {
+  const baseParams = {
+    descentRateMph: 12,
+    glideRatio: 2.6,
+    legs: [
+      { altitude: 300, direction: 0 },
+      { altitude: 600, direction: 270 },
+      { altitude: 900, direction: 270 }
+    ]
+  };
+
+  it('promotes every shorter type to the full three-leg pattern', () => {
+    for (const type of [PATTERN_NONE, PATTERN_ONE_LEG, PATTERN_TWO_LEG]) {
+      expect(withFullPattern({ ...baseParams, type }).type).toBe(PATTERN_THREE_LEG);
+    }
+  });
+
+  it('leaves everything else untouched', () => {
+    const params = { ...baseParams, type: PATTERN_TWO_LEG };
+    const full = withFullPattern(params);
+
+    expect(full).toEqual({ ...params, type: PATTERN_THREE_LEG });
+    // The caller's object is not mutated: the stored two-leg choice survives
+    expect(params.type).toBe(PATTERN_TWO_LEG);
+  });
+
+  it('is identity for a three-leg pattern', () => {
+    const params = { ...baseParams, type: PATTERN_THREE_LEG };
+
+    expect(withFullPattern(params)).toBe(params);
+  });
+
+  it('actually flies three legs where the stored type flies two', () => {
+    const stored = { ...baseParams, type: PATTERN_TWO_LEG };
+
+    const asStored = makePatternByType(stored);
+    const asFlown = makePatternByType(withFullPattern(stored));
+
+    expect(asFlown.length).toBeGreaterThan(asStored.length);
+    // Leg altitudes are per-leg heights, so the top of the pattern is their
+    // sum: 300+600 flown as two legs, 300+600+900 as three.
+    const top = (path: typeof asFlown) => Math.max(...path.map(p => p.properties.alt));
+
+    expect(top(asStored)).toBeCloseTo(900, 6);
+    expect(top(asFlown)).toBeCloseTo(1800, 6);
   });
 });
 

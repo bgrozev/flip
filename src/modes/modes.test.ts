@@ -81,6 +81,9 @@ describe('mode definitions integrity', () => {
     expect(hasLayer(pattern, 'courseEdit')).toBe(false);
     expect(hasFeature(pattern, 'manoeuvre')).toBe(false);
     expect(hasFeature(pattern, 'courses')).toBe(false);
+    // The leg-count selector is a swooper's control; Standard Pattern
+    // always flies the full three-leg pattern.
+    expect(hasFeature(pattern, 'patternLegCount')).toBe(false);
 
     const swoop = getMode('swoop');
 
@@ -89,6 +92,7 @@ describe('mode definitions integrity', () => {
     expect([...swoop.mapLayers].sort()).toEqual(MAP_LAYER_IDS.filter(l => l !== 'flocking').sort());
     expect(hasFeature(swoop, 'manoeuvre')).toBe(true);
     expect(hasFeature(swoop, 'courses')).toBe(true);
+    expect(hasFeature(swoop, 'patternLegCount')).toBe(true);
   });
 
   it('every mode keeps settings reachable (nav contains settings)', () => {

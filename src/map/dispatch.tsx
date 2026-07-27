@@ -77,6 +77,11 @@ export function MapDragHandle(props: MapDragHandleProps) {
     : <google.MapDragHandle {...props} />;
 }
 
+interface PlaceSearchLoaderProps {
+  provider: MapProvider;
+  onReady: () => void;
+}
+
 /**
  * Loads whatever the given provider's place search needs, independent of the
  * map. Only Google needs it (its geocoder lives in the Maps JS API, which the
@@ -89,11 +94,6 @@ export function PlaceSearchLoader({ provider, onReady }: PlaceSearchLoaderProps)
   return provider === 'maplibre'
     ? <ReadyImmediately onReady={onReady} />
     : <google.PlacesLoader onReady={onReady} />;
-}
-
-interface PlaceSearchLoaderProps {
-  provider: MapProvider;
-  onReady: () => void;
 }
 
 function ReadyImmediately({ onReady }: { onReady: () => void }) {
