@@ -623,3 +623,39 @@ Verification notes (two automation traps, both hit):
   mobile layout and the desktop-only hint correctly does not appear. Had
   to resize the viewport explicitly to test it — worth remembering before
   concluding a desktop-only feature is broken.
+
+### Two shortcut bugs, and the remount behind one of them (2026-07-27)
+
+Owner found both immediately.
+
+**`[` / `]` moved the slider but nothing else.** The scrubber does two
+things — `onForecastTimeChange(t)` *and* `fetch(t)` — and the keys only did
+the first, so the selected hour moved while the table and paths kept the
+old slice. The keys now go through one `applyForecastTime` helper that
+does both, and step on the same whole-hour grid as the slider (0 = now),
+clamped to the hours actually cached. Setting the time without re-slicing
+is a trap worth remembering for anything else that selects a forecast
+hour.
+
+**The preset menu re-opened on every state change.** The real cause was
+not the menu: `slots={{ toolbarActions: () => <ToolbarActions …/> }}`
+creates a NEW component type on every App render, so React unmounted and
+remounted the whole toolbar each time anything changed. The `openSignal`
+counter then re-fired its mount effect and re-opened the menu — which is
+why nudging the target with an arrow key popped the presets open.
+
+Two fixes, both worth keeping:
+
+- Slot components now have stable identity (created once, reading their
+  props from a ref that is refreshed each render), so the toolbar is no
+  longer torn down and rebuilt continuously. This was costing far more
+  than the preset menu — the toolbar's entire local state, including its
+  dialogs, was being discarded on every render.
+- The preset menu is **controlled** by App (`open` + `onOpenChange`)
+  rather than triggered by a signal. A "do this once" trigger held in
+  local state or a mount effect is not safe in a component that can
+  remount; controlled state is.
+
+The general lesson: an inline arrow in a `slots`/`components` prop is a
+remount, not a re-render. If a component under such a slot ever seems to
+forget itself, look there first.

@@ -90,11 +90,6 @@ const NUDGE_BEARINGS: Record<string, number> = {
   arrowup: 0, arrowright: 90, arrowdown: 180, arrowleft: 270
 };
 
-/** Step the forecast time, starting from now when none is chosen. */
-function shiftForecastHour(current: Date | null, hours: number): Date {
-  return new Date((current ?? new Date()).getTime() + hours * 3600_000);
-}
-
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
   manoeuvre: { title: 'Manoeuvre', icon: <RotateLeftIcon /> },
@@ -108,6 +103,12 @@ const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = 
 
 /** App-level panels shown after a divider, at the bottom of the sidebar. */
 const SECONDARY_PANELS: readonly PanelId[] = ['settings', 'about'];
+
+/** Focus map renders no header at all; a module-level component so the
+ * slot identity stays stable across renders. */
+function HiddenHeader() {
+  return null;
+}
 
 /** Sidebar navigation for a mode: its panels, divider before the app-level ones. */
 function buildNavigation(nav: readonly PanelId[]): Navigation {
@@ -195,8 +196,8 @@ function DashboardContent() {
   // Ephemeral: "show me just the map" is a way of looking at the plan, not a
   // preference, so it is deliberately not persisted.
   const [focusMap, setFocusMap] = useState(false);
-  // Bumped by the `S` shortcut; PresetSelector owns the menu itself.
-  const [presetsOpenSignal, setPresetsOpenSignal] = useState(0);
+  // Owned here so the `S` shortcut can open it (see PresetSelector).
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   const router = useToolpadRouter();
   const navigate = useNavigate();
@@ -536,6 +537,30 @@ function DashboardContent() {
     });
   }, [target, setTarget]);
 
+  /**
+   * Select a forecast hour the way the scrubber does — the selected time and
+   * the fetch go together. Setting the time alone moves the slider but never
+   * re-slices the cached window, so the table and the paths would not budge.
+   */
+  const applyForecastTime = useCallback((time: Date | null) => {
+    onForecastTimeChange(time);
+    handleFetchWinds(time);
+  }, [onForecastTimeChange, handleFetchWinds]);
+
+  /**
+   * Step whole hours from now, on the same grid as the scrubber (0 = now)
+   * and clamped to the hours actually cached.
+   */
+  const stepForecastHour = useCallback((delta: number) => {
+    const currentHour = forecastTime
+      ? Math.round((forecastTime.getTime() - Date.now()) / 3600_000)
+      : 0;
+    const maxHour = scrubHours && scrubHours > 0 ? scrubHours - 1 : 0;
+    const next = Math.min(Math.max(currentHour + delta, 0), maxHour);
+
+    applyForecastTime(next === 0 ? null : new Date(Date.now() + next * 3600_000));
+  }, [forecastTime, scrubHours, applyForecastTime]);
+
   const rotateHeading = useCallback((deltaDeg: number) => {
     setTarget({
       ...target,
@@ -572,7 +597,7 @@ function DashboardContent() {
     'app.mode.swoop': () => setModeId('swoop'),
     'app.mode.flocking': () => setModeId('flocking'),
     'app.export': () => setExportOpen(true),
-    'app.presets': () => setPresetsOpenSignal(signal => signal + 1),
+    'app.presets': () => setPresetsOpen(true),
     'panel.pattern': () => router.navigate(panelPath('pattern')),
     'panel.manoeuvre': () => router.navigate(panelPath('manoeuvre')),
     'panel.target': () => router.navigate(panelPath('target')),
@@ -581,9 +606,9 @@ function DashboardContent() {
     'panel.flocking': () => router.navigate(panelPath('flocking')),
     'panel.settings': () => router.navigate(panelPath('settings')),
     'winds.refresh': () => handleFetchWinds(undefined, { force: true }),
-    'winds.hourBack': () => onForecastTimeChange(shiftForecastHour(forecastTime, -1)),
-    'winds.hourForward': () => onForecastTimeChange(shiftForecastHour(forecastTime, 1)),
-    'winds.now': () => onForecastTimeChange(null),
+    'winds.hourBack': () => stepForecastHour(-1),
+    'winds.hourForward': () => stepForecastHour(1),
+    'winds.now': () => applyForecastTime(null),
     'target.nudge': (combo: string) => nudgeTarget(combo, NUDGE_FT),
     'target.nudgeFar': (combo: string) => nudgeTarget(combo, NUDGE_FAR_FT),
     'target.rotateLeft': () => rotateHeading(-HEADING_STEP_DEG),
@@ -595,7 +620,7 @@ function DashboardContent() {
     }
   }), [
     focusMap, openPanel, navigate, router, setModeId, handleFetchWinds,
-    onForecastTimeChange, forecastTime, nudgeTarget, rotateHeading,
+    applyForecastTime, stepForecastHour, nudgeTarget, rotateHeading,
     upwindHeading, setTarget, target
   ]);
 
@@ -831,37 +856,50 @@ function DashboardContent() {
       } : undefined}
     />
   );
+  // Slot components must keep a STABLE identity: Toolpad renders whatever
+  // component it is handed, so a fresh arrow function on every render makes
+  // React unmount and remount the entire toolbar each time App re-renders.
+  // That remount is what used to re-open the preset menu on any state change
+  // (and threw away the toolbar's own state with it). The components are
+  // created once and read their props from a ref, which is refreshed on every
+  // render, so they still render current data.
+  const toolbarPropsRef = useRef<React.ComponentProps<typeof ToolbarActions>>(null!);
+
+  toolbarPropsRef.current = {
+    modeId: mode.id,
+    onModeChange: setModeId,
+    fetching,
+    onRefreshWindsClick: () => handleFetchWinds(undefined, { force: true }),
+    onExportClick: () => setExportOpen(true),
+    showPresets: modeSettings.showPresets && hasFeature(mode, 'presets'),
+    presets,
+    activePresetId,
+    onPresetSelect: loadPreset,
+    onPresetSave: handlePresetSave,
+    onPresetDelete: handlePresetDelete,
+    onPresetRename: renamePreset,
+    presetsOpen,
+    onPresetsOpenChange: setPresetsOpen
+  };
+
+  const appTitlePropsRef = useRef<WindSummaryData | undefined>(undefined);
+
+  appTitlePropsRef.current = windSummary;
+
+  const slots = useMemo(() => ({
+    toolbarActions: () => <ToolbarActions {...toolbarPropsRef.current} />,
+    sidebarFooter: SidebarFooter,
+    appTitle: () => <CustomAppTitle wind={appTitlePropsRef.current} />
+  }), []);
+
   const dashboard = (
     <DashboardLayout
       defaultSidebarCollapsed={true}
       hideNavigation={focusMap}
-      slots={{
-        // Focus map hides the header outright. The DashboardLayout itself
-        // stays mounted, so the map is never torn down and re-created —
-        // that would reload tiles and lose the camera.
-        header: focusMap ? () => null : undefined,
-        toolbarActions: () => (
-          <ToolbarActions
-            modeId={mode.id}
-            onModeChange={setModeId}
-            fetching={fetching}
-            onRefreshWindsClick={() => handleFetchWinds(undefined, { force: true })}
-            onExportClick={() => setExportOpen(true)}
-            showPresets={modeSettings.showPresets && hasFeature(mode, 'presets')}
-            presets={presets}
-            activePresetId={activePresetId}
-            onPresetSelect={loadPreset}
-            onPresetSave={handlePresetSave}
-            onPresetDelete={handlePresetDelete}
-            onPresetRename={renamePreset}
-            presetsOpenSignal={presetsOpenSignal}
-          />
-        ),
-        sidebarFooter: SidebarFooter,
-        appTitle: () => (
-          <CustomAppTitle wind={windSummary} />
-        )
-      }}
+      // Focus map hides the header outright. The DashboardLayout itself stays
+      // mounted, so the map is never torn down and re-created — that would
+      // reload tiles and lose the camera.
+      slots={focusMap ? { ...slots, header: HiddenHeader } : slots}
     >
       <LayoutWithSidebar box={focusMap ? null : sidebar} map={map} />
     </DashboardLayout>

@@ -37,10 +37,13 @@ interface PresetSelectorProps {
   onDelete: () => void;
   onRename: (id: string, newName: string) => void;
   /**
-   * Bumped by the `S` shortcut to open the menu. A counter rather than a
-   * boolean so repeated presses re-open it after it has been dismissed.
+   * Whether the menu is open. Owned by App so the `S` shortcut can open it.
+   * Controlled rather than signalled: Toolpad re-creates the toolbar slot on
+   * every render, so this component remounts constantly, and any "open once"
+   * trigger held in local state or an effect would re-fire on each remount.
    */
-  openSignal?: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export default function PresetSelector({
@@ -50,7 +53,8 @@ export default function PresetSelector({
   onSave,
   onDelete,
   onRename,
-  openSignal = 0
+  open,
+  onOpenChange
 }: PresetSelectorProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -61,16 +65,17 @@ export default function PresetSelector({
   const [snackbarName, setSnackbarName] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
+  // Anchor follows the controlled flag. Done in an effect rather than at
+  // render because on a fresh mount the button ref is only attached after
+  // the first render.
   useEffect(() => {
-    if (openSignal > 0) {
-      setAnchorEl(buttonRef.current);
-    }
-  }, [openSignal]);
+    setAnchorEl(open ? buttonRef.current : null);
+  }, [open]);
 
   const activePreset = presets.find(p => p.id === activePresetId) ?? null;
-  const menuOpen = Boolean(anchorEl);
+  const menuOpen = open && Boolean(anchorEl);
 
-  const closeMenu = () => setAnchorEl(null);
+  const closeMenu = () => onOpenChange(false);
 
   const handleSelect = (id: string) => {
     if (id !== activePresetId) onSelect(id);
@@ -139,7 +144,7 @@ export default function PresetSelector({
       <Button
         ref={buttonRef}
         size="small"
-        onClick={e => setAnchorEl(e.currentTarget)}
+        onClick={() => onOpenChange(true)}
         startIcon={
           activePreset ? (
             <BookmarkIcon fontSize="small" />
