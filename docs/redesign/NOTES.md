@@ -573,3 +573,53 @@ Also fixed here: a lint error (`no-use-before-define` in
 `map/dispatch.tsx`) introduced with `PlaceSearchLoader` in `98bbc6e` and
 missed because that commit's check read only the tail of the lint output.
 That commit's "0 lint errors" claim was wrong; the tree is clean now.
+
+## Session 2026-07-27 — keyboard shortcuts (+ the `?` overlay)
+
+One table, two consumers: `core/keymap.ts` holds the bindings, and both
+`hooks/useKeyboardShortcuts` and `components/ShortcutsOverlay` read it.
+That is the whole design idea — a hand-written shortcut list goes stale
+the first time a binding changes, so the list is *derived*. Entries are
+gated by panel, mode feature, or whether the final heading applies, which
+is what makes the overlay show Standard Pattern four panel keys and the
+swooper seven.
+
+The table also carries **mouse gestures with no keys** (shift-click to
+move the target, drag, hover to rotate). The overlay is where someone
+looks to find out what they can do, and "how do I move the target" is
+that question — owner asked for shift-click to be documented.
+
+Things worth remembering:
+
+- **The guard is the feature.** Single-key shortcuts are only safe if they
+  stay out of the way: keys are ignored from inputs/textareas/selects/
+  contenteditable, and from inside anything with `role=menu|dialog|listbox`.
+  That second rule is what lets the preset menu own 1-9 without those
+  digits also switching mode. Ctrl/Cmd/Alt are never claimed, auto-repeat
+  fires once, and the key is only `preventDefault`ed when a handler
+  actually ran — an unbound key must keep its browser behaviour.
+- **Match on the character, not the physical key.** `?` is Shift+/ on a US
+  layout and elsewhere on others; `<` is not `shift+,`. So printable keys
+  compare `event.key` lowercased and named keys keep modifiers.
+- **Focus map (`F`) keeps the layout mounted.** It hides the header via
+  the DashboardLayout `header` slot, the nav via `hideNavigation`, and the
+  panel by passing `box={null}`. Swapping to a bare map element instead
+  would remount the map, reloading tiles and losing the camera.
+- **Key choice:** panel keys are first-letter (owner's call), so the
+  flocking panel got `G` — `F` is focus-map, which is global and the more
+  guessable of the two. Easy to flip; it is one line of data.
+- `Esc` is layered most-transient-first: leave focus map, else close the
+  open panel.
+
+Verification notes (two automation traps, both hit):
+
+- `document.querySelector('[role="dialog"]')` returns an *empty* first
+  dialog node in this app, so an early "did it close?" check passed while
+  the overlay was plainly open on screen. Select by content instead.
+- A "still open" check right after Escape reads the MUI **exit
+  transition**, not a failure. It had in fact closed.
+- The preview reports `window.innerWidth === 0` on some routes, which
+  makes `useMediaQuery('(max-width:600px)')` true, so the app renders its
+  mobile layout and the desktop-only hint correctly does not appear. Had
+  to resize the viewport explicitly to test it — worth remembering before
+  concluding a desktop-only feature is broken.

@@ -1,3 +1,4 @@
+import { Box } from '@mui/material';
 import React from 'react';
 
 import { MapContainer, MapControl } from '../map';
@@ -25,6 +26,7 @@ import {
 } from '../types';
 
 import WindMiniIndicator from './WindMiniIndicator';
+import ShortcutHint from './ShortcutHint';
 import WindTrustBanner from './WindTrustBanner';
 
 interface MapComponentProps {
@@ -52,6 +54,11 @@ interface MapComponentProps {
   /** Wind-trust verdict for the top-of-map status banner (hidden when fresh). */
   windTrust?: { trust: WindTrust; forecastTime?: Date };
   /** Compact winds indicator overlay data (gated by settings.displayMapWinds). */
+  /** One-time "press ? for shortcuts" nudge; omitted where it makes no sense. */
+  shortcutHint?: {
+    show: boolean;
+    onOpen: () => void;
+  };
   mapWinds?: {
     winds: WindProfile;
     altitudesFt: number[];
@@ -85,6 +92,7 @@ function MapComponent({
   flocking,
   layers = MAP_LAYER_IDS,
   mapWinds,
+  shortcutHint,
   windTrust
 }: MapComponentProps) {
   const has = (layer: MapLayerId) => layers.includes(layer);
@@ -149,6 +157,14 @@ function MapComponent({
             forecastGround={mapWinds.forecastGround}
             topOffset={windTrust && windTrust.trust.level !== 'fresh' ? 46 : 10}
           />
+        </MapControl>
+      )}
+
+      {shortcutHint && (
+        <MapControl>
+          <Box sx={{ position: 'absolute', bottom: 28, left: 10, pointerEvents: 'auto' }}>
+            <ShortcutHint show={shortcutHint.show} onOpenShortcuts={shortcutHint.onOpen} />
+          </Box>
         </MapControl>
       )}
     </MapContainer>

@@ -195,6 +195,8 @@ function DashboardContent() {
   // Ephemeral: "show me just the map" is a way of looking at the plan, not a
   // preference, so it is deliberately not persisted.
   const [focusMap, setFocusMap] = useState(false);
+  // Bumped by the `S` shortcut; PresetSelector owns the menu itself.
+  const [presetsOpenSignal, setPresetsOpenSignal] = useState(0);
 
   const router = useToolpadRouter();
   const navigate = useNavigate();
@@ -570,6 +572,7 @@ function DashboardContent() {
     'app.mode.swoop': () => setModeId('swoop'),
     'app.mode.flocking': () => setModeId('flocking'),
     'app.export': () => setExportOpen(true),
+    'app.presets': () => setPresetsOpenSignal(signal => signal + 1),
     'panel.pattern': () => router.navigate(panelPath('pattern')),
     'panel.manoeuvre': () => router.navigate(panelPath('manoeuvre')),
     'panel.target': () => router.navigate(panelPath('target')),
@@ -769,6 +772,10 @@ function DashboardContent() {
       pathB={paths.display}
       settings={modeSettings}
       layers={mode.mapLayers}
+      shortcutHint={{
+        show: !isMobile && !focusMap,
+        onOpen: () => setShortcutsOpen(true)
+      }}
       mapWinds={{
         winds: effectiveWinds,
         altitudesFt: keyWindAltitudesFt,
@@ -847,6 +854,7 @@ function DashboardContent() {
             onPresetSave={handlePresetSave}
             onPresetDelete={handlePresetDelete}
             onPresetRename={renamePreset}
+            presetsOpenSignal={presetsOpenSignal}
           />
         ),
         sidebarFooter: SidebarFooter,

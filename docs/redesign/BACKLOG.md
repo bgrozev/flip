@@ -204,10 +204,21 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Small features (days)
 
-- ☐ **Keyboard shortcuts** — desktop hotkeys for the common actions:
-  refresh winds, switch mode, toggle panels/nav, fetch/scrub forecast time,
-  nudge/rotate the target or (flocking) jumprun, zoom. Needs a small key-map
-  layer + a discoverable list (a "?" overlay). ✎ pick the bindings.
+- ◐ **Keyboard shortcuts** — FIRST VERSION DONE. `core/keymap.ts` is one
+  table that the handler (`hooks/useKeyboardShortcuts`) and the `?` overlay
+  (`components/ShortcutsOverlay`) both read, so the list cannot drift from
+  the bindings; entries are gated by panel/feature/heading so each mode
+  binds and lists only its own. Bound: panel letters (P/M/T/W/C/G/`,`),
+  modes 1-3, `R` refresh, `[`/`]`/`\` forecast hour, arrows nudge the
+  target (shift = coarse), `<`/`>` heading, `U` upwind, `E` export, `S`
+  presets (then 1-9), `F` hides everything but the map, `Esc` steps back,
+  `?` the list. Map gestures are documented in the overlay too. A one-time
+  "press ?" hint shows on desktop (`components/ShortcutHint`).
+  Still open ✎: flocking-specific bindings (rotate jumprun, step the exit
+  along it, cycle sub-mode, toggle a corridor); map zoom is left to the
+  provider. `G` for the flocking panel is the one awkward key — `F` went to
+  focus-map, which is global and more guessable; flip it in the table if
+  the owner prefers.
 - ☐ **Export: winds as note + user notes field** — append wind table + free
   text to exported plan (KMZ/FlySight/etc.). Notes field on export dialog.
 - ☐ **Improved KMZ export** (owner: unspecified what; gather wishes). ✎

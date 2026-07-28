@@ -25,7 +25,7 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { Preset } from '../types';
 
@@ -36,6 +36,11 @@ interface PresetSelectorProps {
   onSave: (name?: string) => void;
   onDelete: () => void;
   onRename: (id: string, newName: string) => void;
+  /**
+   * Bumped by the `S` shortcut to open the menu. A counter rather than a
+   * boolean so repeated presses re-open it after it has been dismissed.
+   */
+  openSignal?: number;
 }
 
 export default function PresetSelector({
@@ -44,15 +49,23 @@ export default function PresetSelector({
   onSelect,
   onSave,
   onDelete,
-  onRename
+  onRename,
+  openSignal = 0
 }: PresetSelectorProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inputName, setInputName] = useState('');
   const [snackbarName, setSnackbarName] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  useEffect(() => {
+    if (openSignal > 0) {
+      setAnchorEl(buttonRef.current);
+    }
+  }, [openSignal]);
 
   const activePreset = presets.find(p => p.id === activePresetId) ?? null;
   const menuOpen = Boolean(anchorEl);
@@ -62,6 +75,21 @@ export default function PresetSelector({
   const handleSelect = (id: string) => {
     if (id !== activePresetId) onSelect(id);
     closeMenu();
+  };
+
+  /**
+   * 1-9 load the nth preset while the menu is open. The global keymap keeps
+   * out of menus (see useKeyboardShortcuts), so these digits do not also
+   * switch mode.
+   */
+  const handleMenuKeyDown = (event: React.KeyboardEvent) => {
+    const index = Number(event.key) - 1;
+
+    if (!Number.isInteger(index) || index < 0 || index >= Math.min(presets.length, 9)) {
+      return;
+    }
+    event.preventDefault();
+    handleSelect(presets[index].id);
   };
 
   const handleUpdate = () => {
@@ -109,6 +137,7 @@ export default function PresetSelector({
   return (
     <>
       <Button
+        ref={buttonRef}
         size="small"
         onClick={e => setAnchorEl(e.currentTarget)}
         startIcon={
@@ -136,6 +165,7 @@ export default function PresetSelector({
         anchorEl={anchorEl}
         open={menuOpen}
         onClose={closeMenu}
+        onKeyDown={handleMenuKeyDown}
         slotProps={{ paper: { sx: { minWidth: 220 } } }}
       >
         {presets.length === 0 ? (
@@ -143,7 +173,7 @@ export default function PresetSelector({
             <ListItemText secondary="No saved presets" />
           </MenuItem>
         ) : (
-          presets.map(p => (
+          presets.map((p, index) => (
             <MenuItem
               key={p.id}
               selected={p.id === activePresetId}
@@ -153,6 +183,11 @@ export default function PresetSelector({
                 {p.id === activePresetId && <CheckIcon fontSize="small" />}
               </ListItemIcon>
               <ListItemText>{p.name}</ListItemText>
+              {index < 9 && (
+                <Typography variant="caption" sx={{ ml: 2, color: 'text.secondary' }}>
+                  {index + 1}
+                </Typography>
+              )}
             </MenuItem>
           ))
         )}

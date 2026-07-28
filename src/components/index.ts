@@ -16,6 +16,7 @@ export { default as PatternComponent } from './PatternComponent';
 export { default as PlacePicker } from './PlacePicker';
 export { default as PresetSelector } from './PresetSelector';
 export { default as SettingsComponent } from './SettingsComponent';
+export { default as ShortcutHint } from './ShortcutHint';
 export { default as ShortcutsOverlay } from './ShortcutsOverlay';
 export { default as TargetComponent } from './TargetComponent';
 export { default as ToolbarActions } from './ToolbarActions';

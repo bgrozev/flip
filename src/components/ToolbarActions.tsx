@@ -24,6 +24,8 @@ interface ToolbarActionsProps {
   onPresetSave: (name?: string) => void;
   onPresetDelete: () => void;
   onPresetRename: (id: string, newName: string) => void;
+  /** Bumped by the `S` shortcut to open the preset menu. */
+  presetsOpenSignal?: number;
 }
 
 export default function ToolbarActions({
@@ -38,7 +40,8 @@ export default function ToolbarActions({
   onPresetSelect,
   onPresetSave,
   onPresetDelete,
-  onPresetRename
+  onPresetRename,
+  presetsOpenSignal
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
@@ -55,6 +58,7 @@ export default function ToolbarActions({
           onSave={onPresetSave}
           onDelete={onPresetDelete}
           onRename={onPresetRename}
+          openSignal={presetsOpenSignal}
         />
       )}
     </Stack>
