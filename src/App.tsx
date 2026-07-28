@@ -45,6 +45,7 @@ import {
   MapComponent,
   ModePicker,
   PatternComponent,
+  ShortcutsOverlay,
   SettingsComponent,
   TargetComponent,
   ToolbarActions,
@@ -60,6 +61,7 @@ import {
   NotificationsProvider,
   useFlightPaths,
   useFlockingPath,
+  useKeyboardShortcuts,
   useMode,
   usePresets,
   useWinds
@@ -76,6 +78,22 @@ import { COURSES } from './core/courses';
 import { makePatternByType, withFullPattern } from './core/pattern';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
+import { visibleShortcuts } from './core/keymap';
+import { normalizeDirection } from './core/validation';
+
+/** Keyboard target nudges: a fine step and a coarse one. */
+const NUDGE_FT = 25;
+const NUDGE_FAR_FT = 250;
+const FT_TO_M = 0.3048;
+const HEADING_STEP_DEG = 5;
+const NUDGE_BEARINGS: Record<string, number> = {
+  arrowup: 0, arrowright: 90, arrowdown: 180, arrowleft: 270
+};
+
+/** Step the forecast time, starting from now when none is chosen. */
+function shiftForecastHour(current: Date | null, hours: number): Date {
+  return new Date((current ?? new Date()).getTime() + hours * 3600_000);
+}
 
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
@@ -173,6 +191,10 @@ function DashboardContent() {
 
   const [courseEditOpen, setCourseEditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Ephemeral: "show me just the map" is a way of looking at the plan, not a
+  // preference, so it is deliberately not persisted.
+  const [focusMap, setFocusMap] = useState(false);
 
   const router = useToolpadRouter();
   const navigate = useNavigate();
@@ -453,10 +475,13 @@ function DashboardContent() {
     setFlockingParams({ ...flockingParams, referencePoint: pos });
   }, [flockingParams, setFlockingParams]);
 
-  const handleFetchWinds = (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
-    // Winds are fetched at every level (ground to ~41k ft); no altitude cap.
-    fetchWinds(overrideForecastTime, opts);
-  };
+  const handleFetchWinds = useCallback(
+    (overrideForecastTime?: Date | null, opts?: { force?: boolean }) => {
+      // Winds are fetched at every level (ground to ~41k ft); no altitude cap.
+      fetchWinds(overrideForecastTime, opts);
+    },
+    [fetchWinds]
+  );
 
   // Auto-fetch the forecast on load, and again whenever the target has moved
   // far enough that the old forecast no longer describes where you are: a
@@ -496,6 +521,84 @@ function DashboardContent() {
       ? Math.round(ground.direction % 360)
       : null;
   }, [effectiveWinds]);
+
+  const nudgeTarget = useCallback((combo: string, distanceFt: number) => {
+    const bearing = NUDGE_BEARINGS[combo.replace('shift+', '')];
+
+    if (bearing === undefined) {
+      return;
+    }
+    setTarget({
+      ...target,
+      target: destinationPoint(target.target, bearing, distanceFt * FT_TO_M)
+    });
+  }, [target, setTarget]);
+
+  const rotateHeading = useCallback((deltaDeg: number) => {
+    setTarget({
+      ...target,
+      finalHeading: normalizeDirection(target.finalHeading + deltaDeg)
+    });
+  }, [target, setTarget]);
+
+  // --- Keyboard shortcuts -------------------------------------------------
+  // The bindings and the `?` list both come from core/keymap, filtered to
+  // what this mode exposes.
+  const shortcuts = useMemo(
+    () => visibleShortcuts({
+      navPanels: mode.nav,
+      features: mode.features,
+      headingRelevant: !isFlocking
+    }),
+    [mode, isFlocking]
+  );
+
+  const openPanel = panelFromPathname(router.pathname);
+
+  const shortcutHandlers = useMemo(() => ({
+    'app.help': () => setShortcutsOpen(true),
+    'app.focusMap': () => setFocusMap(on => !on),
+    // Layered, most-transient first: leave focus, else close the panel.
+    'app.close': () => {
+      if (focusMap) {
+        setFocusMap(false);
+      } else if (openPanel) {
+        navigate(MAP_PATH);
+      }
+    },
+    'app.mode.pattern': () => setModeId('pattern'),
+    'app.mode.swoop': () => setModeId('swoop'),
+    'app.mode.flocking': () => setModeId('flocking'),
+    'app.export': () => setExportOpen(true),
+    'panel.pattern': () => router.navigate(panelPath('pattern')),
+    'panel.manoeuvre': () => router.navigate(panelPath('manoeuvre')),
+    'panel.target': () => router.navigate(panelPath('target')),
+    'panel.wind': () => router.navigate(panelPath('wind')),
+    'panel.courses': () => router.navigate(panelPath('courses')),
+    'panel.flocking': () => router.navigate(panelPath('flocking')),
+    'panel.settings': () => router.navigate(panelPath('settings')),
+    'winds.refresh': () => handleFetchWinds(undefined, { force: true }),
+    'winds.hourBack': () => onForecastTimeChange(shiftForecastHour(forecastTime, -1)),
+    'winds.hourForward': () => onForecastTimeChange(shiftForecastHour(forecastTime, 1)),
+    'winds.now': () => onForecastTimeChange(null),
+    'target.nudge': (combo: string) => nudgeTarget(combo, NUDGE_FT),
+    'target.nudgeFar': (combo: string) => nudgeTarget(combo, NUDGE_FAR_FT),
+    'target.rotateLeft': () => rotateHeading(-HEADING_STEP_DEG),
+    'target.rotateRight': () => rotateHeading(HEADING_STEP_DEG),
+    'target.upwind': () => {
+      if (upwindHeading !== null) {
+        setTarget({ ...target, finalHeading: upwindHeading });
+      }
+    }
+  }), [
+    focusMap, openPanel, navigate, router, setModeId, handleFetchWinds,
+    onForecastTimeChange, forecastTime, nudgeTarget, rotateHeading,
+    upwindHeading, setTarget, target
+  ]);
+
+  // The mode picker owns the keyboard on first run; the `?` dialog and any
+  // menu are handled by the guard inside the hook.
+  useKeyboardShortcuts(shortcuts, shortcutHandlers, !firstRun);
 
   const rawPanel = panelFromPathname(router.pathname);
   const activePanel = rawPanel && mode.nav.includes(rawPanel) ? rawPanel : null;
@@ -724,7 +827,12 @@ function DashboardContent() {
   const dashboard = (
     <DashboardLayout
       defaultSidebarCollapsed={true}
+      hideNavigation={focusMap}
       slots={{
+        // Focus map hides the header outright. The DashboardLayout itself
+        // stays mounted, so the map is never torn down and re-created —
+        // that would reload tiles and lose the camera.
+        header: focusMap ? () => null : undefined,
         toolbarActions: () => (
           <ToolbarActions
             modeId={mode.id}
@@ -747,7 +855,7 @@ function DashboardContent() {
         )
       }}
     >
-      <LayoutWithSidebar box={sidebar} map={map} />
+      <LayoutWithSidebar box={focusMap ? null : sidebar} map={map} />
     </DashboardLayout>
   );
 
@@ -762,6 +870,12 @@ function DashboardContent() {
     <AppProvider router={router} theme={demoTheme} navigation={navigation}>
       {dashboard}
       <ModePicker open={firstRun} onSelect={setModeId} />
+      <ShortcutsOverlay
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        shortcuts={shortcuts}
+        modeLabel={mode.label}
+      />
       <ExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
@@ -769,7 +883,7 @@ function DashboardContent() {
         target={target.target}
         presetName={activePresetName}
       />
-      {isMobile && (
+      {isMobile && !focusMap && (
         <Paper
           sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200 }}
           elevation={3}
