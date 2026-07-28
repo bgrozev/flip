@@ -12,6 +12,18 @@ export const MAP_PATH = '/';
 /** Legacy alias for the map; the fake router used `/map` as its home path. */
 export const LEGACY_MAP_PATH = '/map';
 
+/**
+ * The About panel became a topic inside Help. Old links and bookmarks would
+ * otherwise hit the unknown-route guard and bounce to the map, so they are
+ * redirected to the topic instead.
+ */
+export const LEGACY_ABOUT_PATH = '/about';
+export const ABOUT_TOPIC_PATH = '/help?topic=about';
+
+export function isLegacyAboutPathname(pathname: string): boolean {
+  return normalizePathname(pathname) === LEGACY_ABOUT_PATH;
+}
+
 /** Route path for a panel. */
 export function panelPath(id: PanelId): string {
   return `/${id}`;

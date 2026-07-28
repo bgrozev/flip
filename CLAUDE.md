@@ -115,6 +115,7 @@ were removed (measure to be reimplemented — see BACKLOG).
 | ManoeuvreComponent | `components/ManoeuvreComponent.tsx` | Manoeuvre source selection (params/track/samples) |
 | TargetComponent | `components/TargetComponent.tsx` | Landing target and heading UI |
 | PlacePicker | `components/PlacePicker.tsx` | One searchable list: saved places, dropzones, geocoder hits |
+| HelpComponent | `components/HelpComponent.tsx` | In-app reference: topic list, drill-in; absorbed About |
 | WindsComponent | `components/WindsComponent.tsx` | Wind table, forecast time picker, stations |
 | CoursesComponent | `components/CoursesComponent.tsx` | Course selection and editing |
 | SettingsComponent | `components/SettingsComponent.tsx` | App preferences |
@@ -150,6 +151,8 @@ user can force a mode-overridden setting back to the global default.
 | `core/validation.ts` | `LIMITS`, clamping, direction normalization |
 | `core/model.ts` | Versioned document defaults + `migrate*` loaders |
 | `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`) |
+| `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
+| `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |
 | `util/dropzones.ts` | Dropzone database (58 entries; `direction` only where known) |
 | `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports (DOM/download side effects, so not in core) |
 

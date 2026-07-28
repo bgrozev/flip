@@ -6,6 +6,7 @@ import {
   FavoriteSharp as FavoriteIcon,
   Flag as FlagIcon,
   Groups as GroupsIcon,
+  HelpOutline as HelpOutlineIcon,
   Info as InfoIcon,
   RotateLeft as RotateLeftIcon,
   Settings as SettingsIcon
@@ -15,8 +16,10 @@ import {
   BottomNavigationAction,
   Box,
   Divider,
+  IconButton,
   Paper,
   Stack,
+  Tooltip,
   Typography,
   useMediaQuery
 } from '@mui/material';
@@ -27,7 +30,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import {
+  ABOUT_TOPIC_PATH,
   MAP_PATH,
+  isLegacyAboutPathname,
   isMapPathname,
   isPathnameAllowed,
   panelFromPathname,
@@ -36,11 +41,11 @@ import {
 import { applyModeDefaults, hasFeature, migrateModeId } from './modes';
 
 import {
-  AboutComponent,
   CoursesComponent,
   ExportDialog,
   FlipIcon,
   FlockingComponent,
+  HelpComponent,
   ManoeuvreComponent,
   MapComponent,
   ModePicker,
@@ -79,6 +84,7 @@ import { makePatternByType, withFullPattern } from './core/pattern';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
 import { visibleShortcuts } from './core/keymap';
+import { topicForPanel } from './core/help';
 import { normalizeDirection } from './core/validation';
 
 /** Keyboard target nudges: a fine step and a coarse one. */
@@ -98,11 +104,11 @@ const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = 
   courses: { title: 'Courses', icon: <FlagIcon /> },
   flocking: { title: 'Flocking', icon: <GroupsIcon /> },
   settings: { title: 'Settings', icon: <SettingsIcon /> },
-  about: { title: 'About', icon: <InfoIcon /> }
+  help: { title: 'Help', icon: <InfoIcon /> }
 };
 
 /** App-level panels shown after a divider, at the bottom of the sidebar. */
-const SECONDARY_PANELS: readonly PanelId[] = ['settings', 'about'];
+const SECONDARY_PANELS: readonly PanelId[] = ['settings', 'help'];
 
 /** Focus map renders no header at all; a module-level component so the
  * slot identity stays stable across renders. */
@@ -222,9 +228,19 @@ function DashboardContent() {
     }
   }, [rawUrlMode, urlModeId, router.pathname, navigate, setModeId]);
 
+  // The About panel became a Help topic; keep old links working.
+  useEffect(() => {
+    if (isLegacyAboutPathname(router.pathname)) {
+      navigate(ABOUT_TOPIC_PATH, { replace: true });
+    }
+  }, [router.pathname, navigate]);
+
   // Route guard: panels outside the current mode, unknown paths and the
   // legacy /map alias all redirect to the map
   useEffect(() => {
+    if (isLegacyAboutPathname(router.pathname)) {
+      return;
+    }
     if (!isPathnameAllowed(router.pathname, mode.nav) ||
         (isMapPathname(router.pathname) && router.pathname !== MAP_PATH)) {
       navigate(MAP_PATH, { replace: true });
@@ -705,8 +721,16 @@ function DashboardContent() {
         altitudeUnit={modeSettings.units.altitude}
       />
     );
-  } else if (activePanel === 'about') {
-    p = <AboutComponent />;
+  } else if (activePanel === 'help') {
+    p = (
+      <HelpComponent
+        topicId={router.searchParams.get('topic')}
+        onSelectTopic={(id: string | null) => navigate(
+          id ? `${panelPath('help')}?topic=${id}` : panelPath('help')
+        )}
+        shortcuts={shortcuts}
+      />
+    );
   } else if (activePanel === 'settings') {
     p = <SettingsComponent settings={settings} setSettings={setSettings} />;
   }
@@ -714,6 +738,8 @@ function DashboardContent() {
   let sidebar: React.ReactNode;
 
   if (p) {
+    const helpTopic = activePanel ? topicForPanel(activePanel) : undefined;
+
     sidebar = (
       <Box
         sx={{
@@ -725,6 +751,27 @@ function DashboardContent() {
           textAlign: 'center'
         }}
       >
+        {/* One header for every panel, so the reference is reachable from
+            wherever the question came up — the primary route on mobile,
+            where panels are full-screen. */}
+        {activePanel && (
+          <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ fontSize: '1rem', flex: 1, textAlign: 'left' }}>
+              {PANEL_NAV[activePanel].title}
+            </Typography>
+            {helpTopic && (
+              <Tooltip title={`What do these mean? (${helpTopic.title})`}>
+                <IconButton
+                  size="small"
+                  aria-label={`Help: ${helpTopic.title}`}
+                  onClick={() => navigate(`${panelPath('help')}?topic=${helpTopic.id}`)}
+                >
+                  <HelpOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        )}
         {p}
       </Box>
     );

@@ -20,7 +20,9 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import React from 'react';
 
-import { SHORTCUT_CATEGORY_LABELS, Shortcut, groupShortcuts } from '../core/keymap';
+import { Shortcut } from '../core/keymap';
+
+import ShortcutList from './ShortcutList';
 
 interface ShortcutsOverlayProps {
   open: boolean;
@@ -34,8 +36,6 @@ interface ShortcutsOverlayProps {
 export default function ShortcutsOverlay({
   open, onClose, shortcuts, modeLabel
 }: ShortcutsOverlayProps) {
-  const groups = groupShortcuts(shortcuts);
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth scroll="paper">
       <DialogTitle sx={{ pb: 1 }}>
@@ -53,96 +53,12 @@ export default function ShortcutsOverlay({
       </DialogTitle>
 
       <DialogContent dividers>
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-            columnGap: 4,
-            rowGap: 2,
-            alignItems: 'start'
-          }}
-        >
-          {groups.map(([category, entries]) => (
-            <Box key={category}>
-              <Typography
-                variant="caption"
-                sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.06em' }}
-              >
-                {SHORTCUT_CATEGORY_LABELS[category]}
-              </Typography>
-              {entries.map(entry => (
-                <ShortcutRow key={entry.id} shortcut={entry} />
-              ))}
-            </Box>
-          ))}
-        </Box>
+        <ShortcutList shortcuts={shortcuts} columns={2} />
 
         <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
           Shows only what this mode can do. Keys are ignored while you are typing in a field.
         </Typography>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ShortcutRow({ shortcut }: { shortcut: Shortcut }) {
-  return (
-    <Stack
-      direction="row"
-      spacing={1}
-      alignItems="center"
-      sx={{ py: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}
-    >
-      <Typography variant="body2" sx={{ flex: 1 }}>{shortcut.label}</Typography>
-      {shortcut.gestureText ? (
-        <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-          {shortcut.gestureText}
-        </Typography>
-      ) : (
-        <Stack direction="row" spacing={0.5}>
-          {shortcut.keys.map(key => <KeyCap key={key} combo={key} />)}
-        </Stack>
-      )}
-    </Stack>
-  );
-}
-
-/** Human-readable key names; the table stores them normalized for matching. */
-const KEY_LABELS: Record<string, string> = {
-  arrowleft: '←',
-  arrowright: '→',
-  arrowup: '↑',
-  arrowdown: '↓',
-  escape: 'Esc'
-};
-
-export function keyCapLabel(combo: string): string {
-  const shifted = combo.startsWith('shift+');
-  const base = shifted ? combo.slice('shift+'.length) : combo;
-  const label = KEY_LABELS[base] ?? (base.length === 1 ? base.toUpperCase() : base);
-
-  return shifted ? `⇧${label}` : label;
-}
-
-function KeyCap({ combo }: { combo: string }) {
-  return (
-    <Box
-      component="kbd"
-      sx={{
-        fontFamily: 'monospace',
-        fontSize: '0.72rem',
-        lineHeight: 1.6,
-        px: 0.75,
-        borderRadius: 0.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'action.hover',
-        color: 'text.primary',
-        minWidth: 20,
-        textAlign: 'center'
-      }}
-    >
-      {keyCapLabel(combo)}
-    </Box>
   );
 }

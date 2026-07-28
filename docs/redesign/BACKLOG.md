@@ -21,9 +21,12 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ### Not-intuitive / teaching
 
-- ☐ **P1 · Explain dashed vs solid path** (tasks 13/14; UIUX #6/#7) —
-  the core original-vs-wind-corrected concept has no legend/label/teaching.
-  Biggest reach, cheapest, serves the student mission. **Top priority.**
+- ◐ **P1 · Explain dashed vs solid path** (tasks 13/14; UIUX #6/#7) —
+  it now has a HOME: the Help panel's "How FliP works" topic opens with a
+  drawn dashed/solid legend (`core/help.ts`, `pathLegend` block). Still
+  open: the owner's own words for it, and an affordance ON the map (a
+  legend or a first-run pointer) — the panel only helps someone who goes
+  looking. **Still top priority for the map-side half.**
 - ☑ **P2 / F4 / task 53 · Propagate the "not jump-real" signal to all
   modes** — DONE. Unified the flocking no-wind text and the top-bar
   "verify conditions" badge into one top-of-map status banner

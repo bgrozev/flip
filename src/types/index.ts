@@ -96,7 +96,7 @@ export const PANEL_IDS = [
   'courses',
   'flocking',
   'settings',
-  'about'
+  'help'
 ] as const;
 export type PanelId = typeof PANEL_IDS[number];
 

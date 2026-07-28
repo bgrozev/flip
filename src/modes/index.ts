@@ -41,7 +41,7 @@ export interface Mode {
 }
 
 const ALL_PANELS: readonly PanelId[] = [
-  'pattern', 'manoeuvre', 'target', 'wind', 'courses', 'settings', 'about'
+  'pattern', 'manoeuvre', 'target', 'wind', 'courses', 'settings', 'help'
 ];
 const ALL_LAYERS: readonly MapLayerId[] = [
   'flightPaths', 'courses', 'stations', 'targetEdit', 'courseEdit'
@@ -53,7 +53,7 @@ export const MODES: readonly Mode[] = [
     label: 'Standard Pattern',
     description: 'Standard downwind-base-final pattern',
     enabled: true,
-    nav: ['pattern', 'target', 'wind', 'settings', 'about'],
+    nav: ['pattern', 'target', 'wind', 'settings', 'help'],
     mapLayers: ['flightPaths', 'stations', 'targetEdit'],
     defaults: {},
     // No 'patternLegCount': NONE/1/2/3 is a swooper's control. A regular
@@ -76,7 +76,7 @@ export const MODES: readonly Mode[] = [
     label: 'Flocking',
     description: 'Wind drift and spot planning for flocking.',
     enabled: true,
-    nav: ['flocking', 'target', 'wind', 'settings', 'about'],
+    nav: ['flocking', 'target', 'wind', 'settings', 'help'],
     mapLayers: ['flocking', 'stations', 'targetEdit'],
     defaults: {},
     features: ['export'],
