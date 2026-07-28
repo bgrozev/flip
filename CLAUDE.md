@@ -101,8 +101,15 @@ by-altitude **winds indicator** (`WindMiniIndicator`, corner overlay,
 ground-wind detail on hover), a **wind-trust banner** (`WindTrustBanner` +
 `core/windTrust` — none/manual/stale/fresh, hidden when fresh), and an
 **always-draggable target** handle (no edit mode; drag to move, hover for
-the heading-rotate handle, shift-click the map to jump it). Winds are
-auto-fetched once on load. The old measure tool and average-wind arrow
+the heading-rotate handle, shift-click the map to jump it). Winds
+auto-fetch on load and again whenever the target moves to a new place.
+
+**Keyboard + help.** `core/keymap.ts` is one table driving both the key
+handler (`hooks/useKeyboardShortcuts`) and the `?` overlay, gated per
+mode; it also documents mouse gestures. `F` hides all chrome but the map.
+`core/help.ts` holds the in-app reference as data — a topic per panel,
+reached from each panel header's `?` (`/help?topic=<id>`) or the Help
+nav item, which replaced About. The old measure tool and average-wind arrow
 were removed (measure to be reimplemented — see BACKLOG).
 
 ## Key Components

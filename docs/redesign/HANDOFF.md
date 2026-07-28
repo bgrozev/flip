@@ -1,9 +1,9 @@
 # Redesign hand-off — start here
 
 Entry point for a new session picking up the FliP redesign. Rewritten
-2026-07-25, at the end of a long UX-iteration session (winds indicator,
-trust banner, target + flocking map interactions); updated 2026-07-26
-with the dropzone port + place picker. The 2026-07-19 revision
+2026-07-25 (winds indicator, trust banner, target + flocking map
+interactions); updated 2026-07-27 at the end of the DZ-discovery,
+shortcuts and in-app-help session. The 2026-07-19 revision
 covered the architecture review, the wind-UX batch, and Phase 6 flocking.
 
 ## Read order
@@ -29,8 +29,9 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **599 tests, 0 lint errors, 47 known lint
-warnings, build green, tree clean.**
+Baseline on the branch: **649 tests, 0 lint errors, 47 known lint
+warnings, build green, tree clean.** (`.claude/launch.json` is untracked
+on purpose — it is the local dev-server config.)
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
@@ -62,7 +63,51 @@ This UX-iteration session (2026-07-19 → 25) added, roughly in order:
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
 
-Then, on 2026-07-26 (P6/F5 — "DZ discovery", the #2 UX priority):
+### Session 2026-07-26 → 27 (this one)
+
+Four things landed: DZ discovery (P6/F5), the leg-count fix (P9),
+keyboard shortcuts, and the in-app help panel. NOTES has the reasoning
+for each; the short version:
+
+**DZ discovery (P6/F5)** — see the detail below.
+
+**P9 — leg-count selector** hidden in Standard Pattern via a new
+`patternLegCount` mode feature. The promotion to three legs is applied on
+READ (`core/pattern.withFullPattern`), never written back, so a swooper's
+stored two-leg choice survives a trip through the simple mode. The
+pattern path moved from `useAppState` to App, which is the only place
+that knows the mode.
+
+**Target scope: place vs position** (owner report — "the DZ changes when
+I switch modes"). Per-mode targets stay, but choosing a *place* (picker,
+nearest-dropzone, loading a preset) now moves every mode via
+`setTargetEverywhere`, which clears the per-mode overrides so even
+never-opened modes follow. Dragging, shift-click and the heading input
+stay per-mode.
+
+**Winds re-fetch on a new place.** Moving beyond the 5 mi invalidation
+threshold used to clear the winds and stop; the auto-fetch effect is now
+keyed on where the winds were last fetched *for*, so it refetches. The
+ref records the location last **attempted**, so a failing fetch cannot
+spin.
+
+**Keyboard shortcuts + `?` overlay.** `core/keymap.ts` is one table read
+by both the handler (`hooks/useKeyboardShortcuts`) and the overlay
+(`components/ShortcutsOverlay`), gated per mode, and it carries mouse
+gestures with no keys so "how do I move the target" has an answer. `F`
+hides everything but the map; `S` opens presets and 1-9 load one; `Esc`
+steps back. The guard — ignore keys from inputs and from anything with
+`role=menu|dialog|listbox` — is the feature, and it is what lets the
+preset menu own the digits.
+
+**Help panel** (`core/help.ts` + `components/HelpComponent`): topics as
+DATA, one per panel plus How-it-works / Reading-the-map / Glossary /
+Shortcuts / About. The `about` panel is gone; About is a topic and
+`/about` redirects to `/help?topic=about`. Every panel header now has a
+`?` deep-linking to its own topic. **The prose is placeholder** — see
+"What's next".
+
+### DZ discovery, in detail (P6/F5)
 
 - **Dropzone data**: FWC's list ported in, 14 → 58 dropzones. The
   imported ones have ~100 m coordinates and no landing heading, so
@@ -145,23 +190,45 @@ The drag-handle set was reworked and is the least-tested part.
 
 ## What's next
 
-Nothing is half-finished; pick from the backlog. **Read a real pointer over
-the flocking/target map handles first** — much of the recent work can't be
-auto-verified (see below). Then, owner priorities most-ready first:
+**The immediate one: the help text.** `core/help.ts` has a topic per panel
+with placeholder prose written by an agent from reading the code. The
+structure is done and tested; the words are the owner's to write. Two
+entries need his eye before anyone trusts them:
+
+- **Courses** — the distance / zone-accuracy / speed descriptions were
+  inferred from type names and geometry, not from how they are judged.
+  Treat as unverified.
+- **How FliP works** — this is the P1 teaching text. It should sound like
+  the owner explaining it to a student, not like an agent's paraphrase.
+
+Then, owner priorities most-ready first:
 
 | Item | Notes |
 |---|---|
-| **Owner feedback on what shipped** | The winds indicator, trust banner, target/flocking handle rework, ground-wind hover — all shipped this session, browser-verified only where a real pointer wasn't needed |
-| **Corridor direction ranges** | "anything 250–290°" — the solver structure already supports it, the schema stores fixed headings. Small. |
+| **Owner feedback on what shipped** | Place picker, shortcuts, focus map, help panel — all browser-verified, none used in anger |
+| **P1's other half** | The Help topic gives dashed-vs-solid a home, but only for someone who goes looking. A legend or first-run pointer ON the map is still the higher-reach half |
+| **Trust banner → help link** | The banner says "don't trust this"; "why?" has an answer now (`/help?topic=winds`) but nothing links to it. Small and obvious |
+| **Flocking shortcuts** | Rotate jumprun, step the exit along it, cycle sub-mode, toggle a corridor by number. The keymap is ready for them |
+| **Corridor direction ranges** | "anything 250–290°" — solver structure supports it, schema stores fixed headings. Small |
 | **Per-DZ corridor presets** | Describe ZHills-style restrictions by name; ties into `util/dropzones.ts` |
-| **Landing headings for the imported DZs** | 44 of the 58 dropzones have ~100 m coordinates and no heading; promote them as they get checked against imagery |
-| **UX-analysis items** | `docs/ux/` + the BACKLOG "UX analysis" section: dashed-vs-solid legend (P1), DZ discovery/geolocation (P6), mode-filtered Settings (P4), hide leg-count in pattern (P9), jumprun handoff copy/share (P8) |
-| **Trust state — finish it** | `◐` first version shipped; remaining: out-of-bounds "silly value" call-out, stale-age tuning |
-| **Nerd mode** | Owner-approved data-first mode (manual/invert winds + export); reframes the disabled `explore` stub |
-| ⭐ **Shareable setup links** | Still needs a *design session with the owner*; a fragment-encoding proposal is parked in BACKLOG |
+| **Landing headings for the imported DZs** | 44 of 58 have ~100 m coordinates and no heading; promote them as they are checked against imagery |
+| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), course Type up front (P5), mobile panels page-swap the map (P7), jumprun handoff copy/share (P8) |
+| **Trust state — finish it** | `◐`: out-of-bounds "silly value" call-out, stale-age tuning |
+| **Nerd mode** | Owner-approved data-first mode; reframes the disabled `explore` stub |
+| ⭐ **Shareable setup links** | Needs a *design session with the owner*; fragment-encoding proposal parked in BACKLOG |
 | **Better wind visualization** | windy.com-like particle/flow rendering. ✎ design |
-| **Phase 7 — documents & logbook** | The prerequisite for the backend tier and the whole Review pillar |
-| **Flocking wishlist** | Reverse build, jump profiles (runback), groups/separation, handoff to landing pattern, reachability zones. `core/reach/` should be built before the zones. |
+| **Phase 7 — documents & logbook** | Prerequisite for the backend tier and the whole Review pillar |
+| **Flocking wishlist** | Reverse build, jump profiles (runback), groups/separation, handoff to landing pattern, reachability zones. `core/reach/` before the zones |
+
+### Open design decisions from this session
+
+- **`G` for the flocking panel** is the one awkward key: `F` went to
+  focus-map (global, more guessable). One line of data in `core/keymap.ts`
+  if the owner wants them swapped.
+- **`?` opens the shortcuts overlay, not the Help panel.** Deliberate: the
+  overlay floats over what you are doing, and `?` is useless without a
+  keyboard anyway. Contextual entry is the per-panel `?` icon instead.
+  Owner has not yet said whether he agrees.
 
 ## Hard rules (these come from the owner — do not relax them)
 
@@ -243,8 +310,32 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
   The permission prompt cannot be answered from automation, so only the
   denied and unavailable paths were exercised in a browser; the granted
   path is unit-tested only.
+- **Keyboard shortcuts under a real keyboard.** Every binding was driven
+  by synthetic `KeyboardEvent`s, which bypass focus: in particular the
+  guard that ignores keys inside menus and dialogs was only exercised by
+  unit test, because synthetic events dispatched on `window` never have a
+  menu as their target. Worth one real pass: type in a numeric field and
+  confirm nothing fires, open the preset menu and confirm 1-9 load
+  presets without also switching mode.
+- **Focus map (`F`) and the help `?` icons on a phone.** Verified at
+  375px in the preview, not on a real handset.
 - The **winds indicator hover** works via real DOM (not a marker), so it
   *was* verified — ground-station detail shows on GND-row hover.
+
+## Owner decisions recorded this session
+
+Recorded here because they were judgement calls, not deductions:
+
+- Dropzone list: no distances in the picker results ("not useful"); keep
+  Google Places rather than switching everything to Photon; no top-bar
+  location chip (switching DZs is rare, the map already shows where you
+  are); landing heading is not important — set it into wind when unknown.
+- Panel shortcut keys are letters, not numbers. `Esc` behaviour was left
+  to the agent's judgement (it is layered: leave focus map, else close the
+  panel). The first-run "press ?" hint was wanted.
+- Help absorbs About, and needs a reference entry for every panel's
+  controls — "if a user doesn't understand a piece of UI they can find a
+  reference" is the acceptance test for the content.
 
 ## Open questions for the owner
 

@@ -659,3 +659,40 @@ Two fixes, both worth keeping:
 The general lesson: an inline arrow in a `slots`/`components` prop is a
 remount, not a re-render. If a component under such a slot ever seems to
 forget itself, look there first.
+
+### The help panel (2026-07-27)
+
+Owner's requirement, which is also the acceptance test for the content:
+*if a user does not understand a piece of the UI, they can find a
+reference for it.* That makes this a manual, not a tutorial — hence a
+topic per panel, and a test asserting every panel a mode can open has
+one. A new panel cannot ship undocumented.
+
+Decisions worth keeping:
+
+- **Content is data, not JSX** (`core/help.ts`). Blocks are paragraph /
+  terms / note / pathLegend / shortcuts. `terms` is the workhorse: a
+  control-by-control list, which is the shape "what does this field mean"
+  actually wants. The point is that rewriting the prose means editing one
+  file of strings — the words will change far more often than the
+  rendering, and the owner is the one who will change them.
+- **`?` does NOT open the Help panel.** It opens the shortcuts overlay.
+  The overlay floats over what you are doing; a panel would replace the
+  thing you wanted help with. Contextual entry is the per-panel `?` icon,
+  which deep-links to that panel's topic and works without a keyboard.
+- **The topic is in the URL** (`/help?topic=winds`), so panel links and
+  links sent to a student both land in the right place and survive a
+  reload. `/about` redirects rather than hitting the unknown-route guard,
+  which would have silently bounced old bookmarks to the map.
+- **No rail.** The first attempt had a topic rail beside the content, as
+  designed; in the real 380px panel column that wrapped About to about a
+  word per line. It is list-then-drill-in at every width now, which also
+  deleted the mobile/desktop branch.
+- The shortcuts topic renders the same `ShortcutList` component as the
+  overlay — extracted for exactly this — so the keys are written down
+  once. It is hidden where there is no keyboard.
+
+**The prose is placeholder.** It was written from reading the code, and
+the Courses entry (distance / zone-accuracy / speed) was inferred from
+type names and geometry rather than from how the disciplines are judged —
+flagged to the owner as the least trustworthy part.
