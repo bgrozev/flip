@@ -81,12 +81,12 @@ Deploy: GitHub Pages via `.github/workflows/static.yml` (lint + test + build).
    - Dashed line: Original path without wind
    - Solid line: Wind-corrected path
 
-**Modes** (`src/modes/`) decide which of this is exposed (panels, map
-layers, coarse `features`, setting defaults). E.g. only `swoop` has the
-`patternLegCount` feature; Standard Pattern hides the selector and always
-flies the full three-leg pattern: *Standard
+**Modes** (`src/modes/`) decide which of this is exposed — panels, map
+layers, coarse `features`, setting defaults. The three are *Standard
 Pattern*, *High Performance Landing* (adds manoeuvre + CP courses) and
-*Flocking* (its own panel/derivation; see below). A first-run picker
+*Flocking* (its own panel/derivation; see below). Features gate the rest:
+e.g. only `swoop` has `patternLegCount`, so Standard Pattern hides the
+leg-count selector and always flies the full three-leg pattern. A first-run picker
 chooses one; it is remembered per device and switchable from the toolbar.
 Each mode keeps its own target *position within a place*, but the place
 itself is shared: choosing one in the picker (or loading a preset) moves

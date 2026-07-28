@@ -3,6 +3,8 @@ export { useCustomCourses } from './useCustomCourses';
 export { useFetchForecast } from './useFetchForecast';
 export { useFlightPaths } from './useFlightPaths';
 export { useGeolocation } from './useGeolocation';
+export { useKeyboardShortcuts } from './useKeyboardShortcuts';
+export type { ShortcutHandlers } from './useKeyboardShortcuts';
 export type { Geolocation, GeolocationStatus } from './useGeolocation';
 export { useFlockingPath } from './useFlockingPath';
 export type { FlockingDerived } from './useFlockingPath';
