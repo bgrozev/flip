@@ -48,6 +48,8 @@ const DEG_TO_RAD = Math.PI / 180;
 export interface WindRow extends IWindRow {
   /** Air temperature at this altitude, when the source provides it. */
   tempC?: number;
+  /** Relative humidity (%) at this altitude, when the source provides it. */
+  humidityPct?: number;
   /** Row provenance, e.g. 'open-meteo', 'sounding', a station id, 'manual'. */
   source?: string;
   /** When this row is valid (forecast hour or observation/launch time). */
@@ -68,6 +70,10 @@ export interface WindProfileMeta {
   stationName?: string;
   /** Distance from the fetch location to the station. */
   stationDistanceFt?: number;
+  /** Ground-level temperature (°C), when the source provides it (2m forecast or observed station). */
+  groundTempC?: number;
+  /** Ground-level relative humidity (%), when the source provides it. */
+  groundHumidityPct?: number;
 }
 
 /**
@@ -141,7 +147,7 @@ export function createWindRow(
   altFt: number,
   direction: number,
   speedKts: number,
-  extra?: Pick<WindRow, 'tempC' | 'source' | 'validTime'>
+  extra?: Pick<WindRow, 'tempC' | 'humidityPct' | 'source' | 'validTime'>
 ): WindRow {
   return {
     ...extra,
@@ -259,6 +265,26 @@ export function getWindAt(profile: WindProfile, altFt: number, interpolate?: boo
   }
 
   return lower || rows[0];
+}
+
+/**
+ * Ground-level temperature/humidity for display (e.g. density altitude):
+ * prefers profile-level metadata (an observed station or the 2m forecast),
+ * falling back to the ground row's own per-row values (soundings carry
+ * temperature/humidity per level, not in profile metadata).
+ */
+export function groundConditions(profile: WindProfile): {
+  tempC?: number;
+  humidityPct?: number;
+  elevationFt?: number;
+} {
+  const groundRow = profile.winds[0];
+
+  return {
+    tempC: profile.meta?.groundTempC ?? groundRow?.tempC,
+    humidityPct: profile.meta?.groundHumidityPct ?? groundRow?.humidityPct,
+    elevationFt: profile.meta?.elevationFt
+  };
 }
 
 /**

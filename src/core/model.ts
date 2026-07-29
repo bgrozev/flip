@@ -12,6 +12,7 @@ import {
   CourseParams,
   CourseType,
   CustomLocation,
+  LatLng,
   ManoeuvreConfig,
   ManoeuvreParams,
   ManoeuvreType,
@@ -19,6 +20,7 @@ import {
   PatternLeg,
   PatternParams,
   PatternType,
+  PlaceTargets,
   Preset,
   Settings,
   StoredTrack,
@@ -209,6 +211,52 @@ export function migrateTargetsByMode(raw: unknown): Record<string, Target> {
   return targets;
 }
 
+/** A coordinate pair clamped to the globe, or null if unusable. */
+function latLngOrNull(raw: unknown): LatLng | null {
+  if (
+    isRecord(raw) &&
+    typeof raw.lat === 'number' && Number.isFinite(raw.lat) &&
+    typeof raw.lng === 'number' && Number.isFinite(raw.lng)
+  ) {
+    return {
+      lat: clampNumber(raw.lat, -90, 90),
+      lng: clampNumber(raw.lng, -180, 180)
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Validating loader for the per-place target memory (`flip.targets.byPlace`).
+ * Entries whose place no longer exists are harmless — they are only ever read
+ * by place id, so a removed dropzone's entry simply never matches.
+ */
+export function migrateTargetsByPlace(raw: unknown): Record<string, PlaceTargets> {
+  if (!isRecord(raw)) {
+    return {};
+  }
+
+  const places: Record<string, PlaceTargets> = {};
+
+  Object.entries(raw).forEach(([placeId, value]) => {
+    if (placeId !== '' && isRecord(value)) {
+      places[placeId] = {
+        shared: migrateTarget(value.shared),
+        byMode: migrateTargetsByMode(value.byMode),
+        flockingReference: latLngOrNull(value.flockingReference),
+        // Absent (rather than the default pair) means "this place has no
+        // corridors of its own" — the current ones simply stay in force.
+        ...(Array.isArray(value.flockingCorridors)
+          ? { flockingCorridors: migrateSolveCorridors(value.flockingCorridors) }
+          : {})
+      };
+    }
+  });
+
+  return places;
+}
+
 const PATTERN_TYPES: readonly PatternType[] = ['none', 'one-leg', 'two-leg', 'three-leg'];
 
 export function migratePatternParams(raw: unknown): PatternParams {
@@ -303,16 +351,7 @@ export function migrateFlockingParams(raw: unknown): FlockingParams {
     canopyDirection = 'follow-jumprun';
   }
 
-  let referencePoint: FlockingParams['referencePoint'] = null;
-
-  if (isRecord(r.referencePoint) &&
-      typeof r.referencePoint.lat === 'number' && Number.isFinite(r.referencePoint.lat) &&
-      typeof r.referencePoint.lng === 'number' && Number.isFinite(r.referencePoint.lng)) {
-    referencePoint = {
-      lat: clampNumber(r.referencePoint.lat, -90, 90),
-      lng: clampNumber(r.referencePoint.lng, -180, 180)
-    };
-  }
+  const referencePoint: FlockingParams['referencePoint'] = latLngOrNull(r.referencePoint);
 
   return {
     windowTopFt: limitedNumber(r.windowTopFt, d.windowTopFt, LIMITS.flockingAltitudeFt),
@@ -666,6 +705,9 @@ export function migrateStoredWinds(raw: unknown): WindProfile | null {
     if (typeof entry.tempC === 'number' && Number.isFinite(entry.tempC)) {
       row.tempC = entry.tempC;
     }
+    if (typeof entry.humidityPct === 'number' && Number.isFinite(entry.humidityPct)) {
+      row.humidityPct = entry.humidityPct;
+    }
     if (typeof entry.source === 'string' && entry.source !== '') {
       row.source = entry.source;
     }
@@ -734,6 +776,12 @@ export function migrateStoredWinds(raw: unknown): WindProfile | null {
     }
     if (typeof m.stationDistanceFt === 'number' && Number.isFinite(m.stationDistanceFt)) {
       meta.stationDistanceFt = m.stationDistanceFt;
+    }
+    if (typeof m.groundTempC === 'number' && Number.isFinite(m.groundTempC)) {
+      meta.groundTempC = m.groundTempC;
+    }
+    if (typeof m.groundHumidityPct === 'number' && Number.isFinite(m.groundHumidityPct)) {
+      meta.groundHumidityPct = m.groundHumidityPct;
     }
 
     profile.meta = meta;

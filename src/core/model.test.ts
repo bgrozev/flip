@@ -25,6 +25,7 @@ import {
   migrateStoredWinds,
   migrateTarget,
   migrateTargetsByMode,
+  migrateTargetsByPlace,
   migrateTouchedSettings,
   seedTouchedSettings
 } from './model';
@@ -93,6 +94,37 @@ describe('migrateTargetsByMode', () => {
     // out-of-range values are clamped/normalized by migrateTarget
     expect(result.flocking.target.lat).toBe(90);
     expect(result.flocking.finalHeading).toBe(270);
+  });
+});
+
+describe('migrateTargetsByPlace', () => {
+  it.each(GARBAGE.map(g => [g]))('returns an empty map for %j', raw => {
+    expect(migrateTargetsByPlace(raw)).toEqual({});
+  });
+
+  it('round-trips a place entry with its per-mode overrides', () => {
+    const adjusted = { target: { lat: 47.24, lng: -123.14 }, finalHeading: 130 };
+    const result = migrateTargetsByPlace({
+      'dz:Skydive Kapowsin': {
+        shared: { target: { lat: 47.242, lng: -123.142 }, finalHeading: 270 },
+        byMode: { pattern: adjusted }
+      }
+    });
+
+    expect(result['dz:Skydive Kapowsin'].byMode.pattern).toEqual(adjusted);
+    expect(result['dz:Skydive Kapowsin'].shared.finalHeading).toBe(270);
+  });
+
+  it('drops unusable entries and defaults a missing shared target', () => {
+    const result = migrateTargetsByPlace({
+      'dz:Good': { byMode: 'nonsense' },
+      'dz:Bad': 'nonsense',
+      '': { shared: { target: { lat: 1, lng: 2 }, finalHeading: 0 } }
+    });
+
+    expect(Object.keys(result)).toEqual(['dz:Good']);
+    expect(result['dz:Good'].shared).toEqual(DEFAULT_TARGET);
+    expect(result['dz:Good'].byMode).toEqual({});
   });
 });
 
@@ -658,7 +690,7 @@ describe('migrateStoredWinds', () => {
     const stored = JSON.parse(JSON.stringify({
       winds: [
         { altFt: 0, direction: 260, speedKts: 4.1, source: 'KZPH', validTime: validIso },
-        { altFt: 1000, direction: 280, speedKts: 12.5, tempC: 21, source: 'open-meteo' }
+        { altFt: 1000, direction: 280, speedKts: 12.5, tempC: 21, humidityPct: 55, source: 'open-meteo' }
       ],
       groundSource: 'dropzone-specific',
       aloftSource: 'open-meteo',
@@ -668,7 +700,9 @@ describe('migrateStoredWinds', () => {
         model: 'best_match',
         fetchedAt: fetchedIso,
         location: { lat: 28.2, lng: -82.1 },
-        elevationFt: 90
+        elevationFt: 90,
+        groundTempC: 27,
+        groundHumidityPct: 86
       }
     }));
 
@@ -680,6 +714,7 @@ describe('migrateStoredWinds', () => {
     expect(profile!.winds[0].validTime).toBeInstanceOf(Date);
     expect(profile!.winds[0].validTime!.toISOString()).toBe(validIso);
     expect(profile!.winds[1].tempC).toBe(21);
+    expect(profile!.winds[1].humidityPct).toBe(55);
     expect(profile!.groundSource).toBe('dropzone-specific');
     expect(profile!.aloftSource).toBe('open-meteo');
     expect(profile!.validTime).toBeInstanceOf(Date);
@@ -687,6 +722,8 @@ describe('migrateStoredWinds', () => {
     expect(profile!.meta?.fetchedAt!.toISOString()).toBe(fetchedIso);
     expect(profile!.meta?.model).toBe('best_match');
     expect(profile!.meta?.elevationFt).toBe(90);
+    expect(profile!.meta?.groundTempC).toBe(27);
+    expect(profile!.meta?.groundHumidityPct).toBe(86);
     expect(profile!.center).toEqual({ lat: 28.2, lng: -82.1 });
   });
 

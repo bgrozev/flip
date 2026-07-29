@@ -1,5 +1,6 @@
 import * as turf from '@turf/turf';
 
+import { relativeHumidityPct } from '../../../core/atmosphere';
 import { ObservedWindStation } from '../../../types';
 import { ObservedStationSource } from '../source';
 import { STATION_RANGE_FT } from './common';
@@ -69,6 +70,9 @@ function parseObservation(
 
   if (p.temperature?.value != null) station.temperatureC = p.temperature.value;
   if (p.dewpoint?.value != null) station.dewpointC = p.dewpoint.value;
+  if (typeof p.temperature?.value === 'number' && typeof p.dewpoint?.value === 'number') {
+    station.humidityPct = relativeHumidityPct(p.temperature.value, p.dewpoint.value);
+  }
   if (p.seaLevelPressure?.value != null) station.seaLevelPressureHpa = p.seaLevelPressure.value / 100;
   if (p.visibility?.value != null) station.visibilityM = p.visibility.value;
 

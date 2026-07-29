@@ -1,6 +1,7 @@
 import * as turf from '@turf/turf';
 
 import { LatLng } from '../../types';
+import { relativeHumidityPct } from '../../core/atmosphere';
 import { metersToFeet } from '../../core/units';
 import {
   SOURCE_SOUNDING,
@@ -188,7 +189,10 @@ export function soundingToProfile(
 
     return createWindRow(altFt, l.drct as number, l.sknt as number, {
       ...extra,
-      ...(l.tmpc !== null ? { tempC: l.tmpc } : {})
+      ...(l.tmpc !== null ? { tempC: l.tmpc } : {}),
+      ...(l.tmpc !== null && l.dwpc !== null
+        ? { humidityPct: relativeHumidityPct(l.tmpc, l.dwpc) }
+        : {})
     });
   });
 

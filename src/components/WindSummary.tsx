@@ -1,10 +1,12 @@
 import {
   Navigation as NavigationIcon,
+  Terrain as TerrainIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { Stack, Tooltip, Typography } from '@mui/material';
 import React from 'react';
 
+import { DaSeverity } from '../core/atmosphere';
 import { useUnits } from '../hooks';
 
 interface WindData {
@@ -16,15 +18,30 @@ interface WindData {
 interface WindSummaryProps {
   average: WindData;
   ground: WindData;
+  densityAltitudeFt?: number;
+  densityAltitudeSeverity?: DaSeverity;
+  elevationFt?: number;
 }
 
-export default function WindSummary({ average, ground }: WindSummaryProps) {
-  const { formatWindSpeed, windSpeedLabel } = useUnits();
+export default function WindSummary({
+  average,
+  ground,
+  densityAltitudeFt,
+  densityAltitudeSeverity,
+  elevationFt
+}: WindSummaryProps) {
+  const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel } = useUnits();
   const rotAverage = average.direction + 180;
   const rotGround = ground.direction + 180;
 
   const avgSpeed = formatWindSpeed(average.speedKts);
   const gndSpeed = formatWindSpeed(ground.speedKts);
+
+  const daColor = densityAltitudeSeverity === 'warning'
+    ? 'error.main'
+    : densityAltitudeSeverity === 'caution'
+      ? 'warning.main'
+      : undefined;
 
   return (
     <Stack direction="row" spacing={3}>
@@ -49,6 +66,22 @@ export default function WindSummary({ average, ground }: WindSummaryProps) {
       {ground.observed && (
         <Tooltip sx={{ fontSize: 16, mx: 0.5 }} title="Observed conditions">
           <VisibilityIcon />
+        </Tooltip>
+      )}
+      {densityAltitudeFt !== undefined && (
+        <Tooltip
+          title={
+            `Density altitude: how the air performs, correcting field elevation for `
+            + `temperature and humidity.`
+            + (elevationFt !== undefined
+              ? ` Elevation ${Math.round(formatAltitude(elevationFt).value)} ${altitudeLabel}.`
+              : '')
+          }
+        >
+          <Typography variant="button" sx={{ color: daColor, display: 'inline-flex', alignItems: 'center' }}>
+            <TerrainIcon sx={{ fontSize: 16, mr: 0.5 }} />
+            {Math.round(formatAltitude(densityAltitudeFt).value)} {altitudeLabel}
+          </Typography>
         </Tooltip>
       )}
     </Stack>

@@ -10,11 +10,26 @@ export function composeWithObservedGround(
   profile: WindProfile,
   station: ObservedWindStation
 ): WindProfile {
-  return composeWinds(
+  const composed = composeWinds(
     profile,
     createWindRow(0, station.wind.direction, station.wind.speedKts, {
       source: station.id,
       validTime: station.observedAt
     })
   );
+
+  // Station temp/humidity, when present, take priority over whatever the
+  // aloft source's ground-level reading was (e.g. OpenMeteo's 2m forecast).
+  if (station.temperatureC === undefined && station.humidityPct === undefined) {
+    return composed;
+  }
+
+  return {
+    ...composed,
+    meta: {
+      ...composed.meta,
+      groundTempC: station.temperatureC ?? composed.meta?.groundTempC,
+      groundHumidityPct: station.humidityPct ?? composed.meta?.groundHumidityPct
+    }
+  };
 }

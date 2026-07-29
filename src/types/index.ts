@@ -1,5 +1,7 @@
 import { Feature, Point } from 'geojson';
 
+import { DaSeverity } from '../core/atmosphere';
+import { SolveCorridorParams } from '../core/flocking';
 import { UnitPreferences } from '../core/units';
 
 // Flight point properties
@@ -24,6 +26,56 @@ export interface LatLng {
 export interface Target {
   target: LatLng;
   finalHeading: number;
+}
+
+/**
+ * The target state remembered for one place: the place's own target plus the
+ * per-mode overrides made while there. A dropzone's stored coordinates are
+ * only a starting point — the landing spot a user shift-clicks to is the one
+ * they mean, so returning to a place restores it rather than snapping back.
+ */
+export interface PlaceTargets {
+  shared: Target;
+  byMode: Record<string, Target>;
+  /**
+   * Flocking's pinned Spot Reference ("C"). The only other absolute
+   * coordinate in the app: everything else in the flocking params is a
+   * heading or a distance, so this is the one that turns into a spot
+   * thousands of miles out if it follows you to another dropzone.
+   */
+  flockingReference?: LatLng | null;
+  /** The jumprun corridors in force here (flocking solve mode). */
+  flockingCorridors?: SolveCorridorParams[];
+}
+
+/**
+ * A dropzone's starting configuration for one mode. Anything omitted falls
+ * back to the dropzone's own coordinates and heading, so an entry only has
+ * to say what differs — a swoop pond away from the student LZ, a flocking
+ * end point out in the big field.
+ */
+export interface DropzoneModeConfig {
+  lat?: number;
+  lng?: number;
+  /**
+   * Landing heading. Meaningless for `flocking`, which has no final-heading
+   * UI (its target is where the canopy flight ends, not a landing direction).
+   */
+  direction?: number;
+  /**
+   * Allowed jumprun corridors (`flocking` only) — the DZ's own airspace and
+   * traffic restrictions, which is what makes them dropzone data rather than
+   * group data. Speeds, window altitudes and the ring radii deliberately
+   * stay out: those describe the flock, not the place.
+   */
+  solveCorridors?: SolveCorridorParams[];
+  /**
+   * The DZ's canonical Spot Reference (`flocking` only): the landmark a spot
+   * is quoted against when talking to the pilot, who knows the airport but
+   * not where this particular flock means to land. Pinned on arrival; absent
+   * means the spot stays relative to the target, as it is today.
+   */
+  spotReference?: LatLng;
 }
 
 // Wind types
@@ -116,6 +168,12 @@ export interface WindSummaryData {
   average: { speedKts?: number; direction?: number };
   ground?: { direction: number; speedKts: number; observed?: boolean };
   forecastTime?: Date;
+  /** Density altitude (ft) at the target's elevation, when computable. */
+  densityAltitudeFt?: number;
+  /** How far above field elevation the density altitude sits. */
+  densityAltitudeSeverity?: DaSeverity;
+  /** Field elevation (ft), shown alongside density altitude. */
+  elevationFt?: number;
 }
 
 // CSV parsing types (note: d3 csvParse returns strings, but JS coerces to number in arithmetic)
@@ -139,6 +197,14 @@ export interface Dropzone {
    */
   direction?: number;
   nearbyStations?: string[]; // ICAO station IDs not in NWS gridpoints (e.g. AWOS at small airports)
+  /**
+   * Per-mode starting configuration, keyed by mode id (`pattern` / `swoop` /
+   * `flocking` — a plain string key because `types` cannot import `modes`
+   * without a cycle; `dropzones.test.ts` checks the keys against the real
+   * mode list). A mode with no entry starts from the dropzone's own
+   * coordinates, so this only has to record what actually differs.
+   */
+  modes?: Record<string, DropzoneModeConfig>;
 }
 
 /** A landing location saved by the user ("My Locations"); keyed by name. */
@@ -181,6 +247,8 @@ export interface Place {
   lng: number;
   /** Usual landing heading, where known (see `Dropzone.direction`). */
   direction?: number;
+  /** Per-mode starting config, for places that come from the DZ database. */
+  modes?: Record<string, DropzoneModeConfig>;
 }
 
 /** A manoeuvre track saved by the user ("My tracks"); keyed by name. */

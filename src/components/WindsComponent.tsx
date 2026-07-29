@@ -2,9 +2,12 @@ import {
   Add as AddIcon,
   Close as CloseIcon,
   CloudOutlined as CloudOutlinedIcon,
+  DeviceThermostat as DeviceThermostatIcon,
   EditOutlined as EditOutlinedIcon,
   Remove as RemoveIcon,
-  Sensors as SensorsIcon
+  Sensors as SensorsIcon,
+  Terrain as TerrainIcon,
+  WaterDrop as WaterDropIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -31,6 +34,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAppState, useUnits } from '../hooks';
 import WindComparison from './WindComparison';
 import { LatLng, ObservedWindStation } from '../types';
+import {
+  DaSeverity,
+  TempSeverity,
+  daSeverity,
+  temperatureSeverity,
+  tryDensityAltitudeFt
+} from '../core/atmosphere';
 import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
 import {
   SOURCE_MANUAL,
@@ -41,6 +51,7 @@ import {
   beaufortColor,
   createWindProfile,
   createWindRow,
+  groundConditions,
   windModelLabel,
   windRowSourceKind
 } from '../core/wind';
@@ -212,6 +223,10 @@ export default function WindsComponent({
   // Keyed off the *selected* source, not the fetched profile's, so the picker
   // disappears as soon as soundings are chosen — before any fetch.
   const soundingSelected = settings.windAloftSource === 'sounding';
+
+  const { tempC, humidityPct, elevationFt } = groundConditions(winds);
+  const densityAltFt = tryDensityAltitudeFt(elevationFt, tempC, humidityPct);
+  const densitySeverity = daSeverity(densityAltFt, elevationFt);
 
   const lock =
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
@@ -407,6 +422,26 @@ export default function WindsComponent({
         >
           Open this location in Windy
         </Link>
+
+        <Stack direction="row" spacing={2.5} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
+          <ConditionStat
+            icon={<DeviceThermostatIcon fontSize="small" />}
+            label="Temperature"
+            value={tempC !== undefined ? `${formatTemperature(tempC).value.toFixed(0)}${formatTemperature(tempC).label}` : null}
+            severity={temperatureSeverity(tempC)}
+          />
+          <ConditionStat
+            icon={<WaterDropIcon fontSize="small" />}
+            label="Humidity"
+            value={humidityPct !== undefined ? `${Math.round(humidityPct)}%` : null}
+          />
+          <ConditionStat
+            icon={<TerrainIcon fontSize="small" />}
+            label={`Density altitude (elevation ${elevationFt !== undefined ? Math.round(formatAltitude(elevationFt).value) : '?'} ${altitudeLabel})`}
+            value={densityAltFt !== undefined ? `${Math.round(formatAltitude(densityAltFt).value)} ${altitudeLabel}` : null}
+            severity={densitySeverity}
+          />
+        </Stack>
 
         {fetching ? (
           <Box sx={{ mt: 2 }}>
@@ -654,6 +689,44 @@ function stationAge(date: Date): string {
   if (diffMin < 1) return 'just now';
   if (diffMin < 60) return `${diffMin} min ago`;
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * A ground-condition readout (temp/humidity/DA) at the top of the Wind
+ * panel: an icon + value, muted with an em-dash when the source doesn't
+ * have it, tinted when a severity (density-altitude caution/warning) applies.
+ */
+function ConditionStat({
+  icon,
+  label,
+  value,
+  severity = 'normal'
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | null;
+  severity?: DaSeverity | TempSeverity;
+}) {
+  const color = value === null
+    ? 'text.disabled'
+    : severity === 'warning' || severity === 'veryHot'
+      ? 'error.main'
+      : severity === 'caution' || severity === 'hot'
+        ? 'warning.main'
+        : severity === 'cold'
+          ? 'info.main'
+          : 'text.primary';
+
+  return (
+    <Tooltip title={label}>
+      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color }}>
+        {icon}
+        <Typography variant="body2" sx={{ color: 'inherit', fontWeight: severity !== 'normal' && value !== null ? 700 : 400 }}>
+          {value ?? '—'}
+        </Typography>
+      </Stack>
+    </Tooltip>
+  );
 }
 
 function DataRow({ label, value }: { label: string; value: string | null }) {

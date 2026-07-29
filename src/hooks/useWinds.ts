@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { composeWithObservedGround } from '../data/wind';
 import { prefetchedWindowHours } from '../data/wind/openmeteo';
 import { LatLng, ObservedWindStation, Settings, WindSummaryData } from '../types';
-import { SOURCE_DZ, SOURCE_MANUAL, WindProfile, WindRow } from '../core/wind';
+import { daSeverity, tryDensityAltitudeFt } from '../core/atmosphere';
+import { SOURCE_DZ, SOURCE_MANUAL, WindProfile, WindRow, groundConditions } from '../core/wind';
 import { useFetchForecast } from './useFetchForecast';
 import { useNotifications } from './useNotifications';
 import { useObservedWind } from './useObservedWind';
@@ -164,6 +165,15 @@ export function useWinds({ target, settings }: UseWindsOptions): UseWindsResult 
       if (effectiveWinds.validTime) {
         summary.forecastTime = effectiveWinds.validTime;
       }
+
+      const { tempC, humidityPct, elevationFt } = groundConditions(effectiveWinds);
+      const densityAltitudeFt = tryDensityAltitudeFt(elevationFt, tempC, humidityPct);
+      if (densityAltitudeFt !== undefined) {
+        summary.densityAltitudeFt = densityAltitudeFt;
+        summary.densityAltitudeSeverity = daSeverity(densityAltitudeFt, elevationFt);
+        summary.elevationFt = elevationFt;
+      }
+
       return summary;
     },
     [settings.displayWindSummary, effectiveWinds]

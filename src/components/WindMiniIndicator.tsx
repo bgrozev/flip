@@ -2,12 +2,20 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Navigation as NavigationIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Terrain as TerrainIcon
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 import React from 'react';
 
-import { beaufortColor, getWindAt, WindProfile } from '../core/wind';
+import {
+  DaSeverity,
+  TempSeverity,
+  daSeverity,
+  temperatureSeverity,
+  tryDensityAltitudeFt
+} from '../core/atmosphere';
+import { beaufortColor, getWindAt, groundConditions, WindProfile } from '../core/wind';
 import { useUnits } from '../hooks';
 import { StationDetails } from '../map/layers';
 import { ObservedWindStation } from '../types';
@@ -50,6 +58,21 @@ const PANEL_BG = 'rgba(20, 28, 20, 0.82)';
 const LABEL_COLOR = '#9fb39a';
 const TEXT_COLOR = '#e8efe6';
 const COLLAPSED_KEY = 'flip.ui.windIndicatorCollapsed';
+
+/** Density-altitude severity tint, sharing the Beaufort ramp's high end. */
+const DA_SEVERITY_COLOR: Record<DaSeverity, string> = {
+  normal: TEXT_COLOR,
+  caution: '#ffcc44',
+  warning: '#ff4400'
+};
+
+/** Temperature severity tint: blue when very cold, amber/red climbing hot. */
+const TEMP_SEVERITY_COLOR: Record<TempSeverity, string> = {
+  cold: '#5ac8ff',
+  normal: TEXT_COLOR,
+  hot: '#ffcc44',
+  veryHot: '#ff4400'
+};
 
 /** Ground-wind detail popover, anchored to the left of the indicator. */
 const GROUND_TOOLTIP_STYLE: React.CSSProperties = {
@@ -124,7 +147,7 @@ export default function WindMiniIndicator({
   groundStation,
   forecastGround
 }: WindMiniIndicatorProps) {
-  const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel } = useUnits();
+  const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel, formatTemperature } = useUnits();
   const [collapsed, setCollapsed] = useCollapsed();
   const [groundHover, setGroundHover] = React.useState(false);
   const groundHideTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -135,6 +158,16 @@ export default function WindMiniIndicator({
 
   const ground = winds.winds[0];
   const maxAltFt = winds.winds[winds.winds.length - 1].altFt;
+
+  const { tempC, humidityPct, elevationFt } = groundConditions(winds);
+  const densityAltFt = tryDensityAltitudeFt(elevationFt, tempC, humidityPct);
+  const densitySeverity = daSeverity(densityAltFt, elevationFt);
+  const tempSeverity = temperatureSeverity(tempC);
+  const daTitle = 'Density altitude: how the air performs, correcting field elevation for '
+    + 'temperature and humidity.'
+    + (elevationFt !== undefined
+      ? ` Elevation ${Math.round(formatAltitude(elevationFt).value)} ${altitudeLabel}.`
+      : '');
 
   // Ground + the plan bands within the profile, de-duplicated and ascending.
   const seen = new Set<number>([Math.round(ground.altFt)]);
@@ -279,14 +312,41 @@ export default function WindMiniIndicator({
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: 10,
-          color: LABEL_COLOR,
-          fontSize: 11,
-          letterSpacing: '0.04em',
-          marginBottom: 5
+          fontSize: 13,
+          marginBottom: 6
         }}
       >
-        <span>WINDS · {altitudeLabel} · {windSpeedLabel}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span
+            style={{
+              color: tempC !== undefined ? TEMP_SEVERITY_COLOR[tempSeverity] : LABEL_COLOR,
+              fontWeight: tempSeverity !== 'normal' && tempC !== undefined ? 700 : 400,
+              whiteSpace: 'nowrap'
+            }}
+            title="Ground temperature"
+          >
+            {tempC !== undefined
+              ? `${formatTemperature(tempC).value.toFixed(0)}${formatTemperature(tempC).label}`
+              : '—°'}
+          </span>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 2,
+              color: DA_SEVERITY_COLOR[densitySeverity],
+              fontWeight: densitySeverity !== 'normal' ? 700 : 400,
+              whiteSpace: 'nowrap'
+            }}
+            title={daTitle}
+          >
+            <TerrainIcon sx={{ fontSize: 14 }} />
+            {densityAltFt !== undefined
+              ? `${Math.round(formatAltitude(densityAltFt).value)} ${altitudeLabel}`
+              : '—'}
+          </span>
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: LABEL_COLOR, fontSize: 11 }}>
           {forecastLabel && <span>{forecastLabel}</span>}
           {fetching ? (
             <CircularProgress size={13} sx={{ color: LABEL_COLOR }} />
@@ -296,7 +356,18 @@ export default function WindMiniIndicator({
           <ExpandLessIcon onClick={toggle} sx={{ ...chevron }} aria-label="Collapse winds" />
         </span>
       </div>
-      <table style={{ borderCollapse: 'collapse' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <td style={{ padding: '0 8px 3px 0', color: LABEL_COLOR, fontSize: 10, whiteSpace: 'nowrap' }}>
+              {altitudeLabel}
+            </td>
+            <td style={{ padding: '0 6px 3px' }} />
+            <td style={{ padding: '0 0 3px 8px', textAlign: 'right', color: LABEL_COLOR, fontSize: 10, whiteSpace: 'nowrap' }}>
+              {windSpeedLabel}
+            </td>
+          </tr>
+        </thead>
         <tbody>
           {rows.map(row => {
             const isGround = row.label === 'GND';

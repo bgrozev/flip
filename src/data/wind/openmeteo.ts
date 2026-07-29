@@ -45,6 +45,8 @@ interface OpenMeteoHourlyData {
   wind_speed_10m: (number | null)[];
   wind_direction_80m: (number | null)[];
   wind_speed_80m: (number | null)[];
+  temperature_2m: (number | null)[];
+  relative_humidity_2m: (number | null)[];
   [key: string]: (number | null)[] | string[];
 }
 
@@ -145,6 +147,9 @@ function buildProfile(window: PrefetchedWindow, index: number): WindProfile {
     }
   });
 
+  const groundTempC = hourlyValue(hourly, 'temperature_2m', index);
+  const groundHumidityPct = hourlyValue(hourly, 'relative_humidity_2m', index);
+
   return {
     winds: rows,
     aloftSource: SOURCE_OPEN_METEO,
@@ -154,7 +159,9 @@ function buildProfile(window: PrefetchedWindow, index: number): WindProfile {
       model: window.model,
       fetchedAt: new Date(window.fetchedAt),
       location: window.location,
-      elevationFt
+      elevationFt,
+      ...(groundTempC !== null ? { groundTempC } : {}),
+      ...(groundHumidityPct !== null ? { groundHumidityPct } : {})
     }
   };
 }
@@ -266,6 +273,7 @@ function fetchWindow(
   });
   url += '&hourly=wind_speed_10m&hourly=wind_direction_10m';
   url += '&hourly=wind_speed_80m&hourly=wind_direction_80m';
+  url += '&hourly=temperature_2m&hourly=relative_humidity_2m';
   url += '&wind_speed_unit=kn';
   url += `&forecast_hours=${forecastHours}`;
 
