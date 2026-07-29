@@ -2,9 +2,14 @@
 
 Entry point for a new session picking up the FliP redesign. Rewritten
 2026-07-25 (winds indicator, trust banner, target + flocking map
-interactions); updated 2026-07-27 at the end of the DZ-discovery,
-shortcuts and in-app-help session. The 2026-07-19 revision
-covered the architecture review, the wind-UX batch, and Phase 6 flocking.
+interactions); updated 2026-07-28 at the end of the density-altitude,
+per-place-memory and dropzone-data session. The 2026-07-27 revision
+covered DZ discovery, shortcuts and in-app help; 2026-07-19 covered the
+architecture review, the wind-UX batch, and Phase 6 flocking.
+
+**The next session's task is already agreed: import a long list of
+dropzones from a file the owner has, then curate the whole list with
+him.** Read "Next up: the dropzone import" below before anything else.
 
 ## Read order
 
@@ -29,7 +34,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **649 tests, 0 lint errors, 47 known lint
+Baseline on the branch: **709 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.)
 
@@ -63,7 +68,7 @@ This UX-iteration session (2026-07-19 → 25) added, roughly in order:
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
 
-### Session 2026-07-26 → 27 (this one)
+### Session 2026-07-26 → 27
 
 Four things landed: DZ discovery (P6/F5), the leg-count fix (P9),
 keyboard shortcuts, and the in-app help panel. NOTES has the reasoning
@@ -106,6 +111,71 @@ Shortcuts / About. The `about` panel is gone; About is a topic and
 `/about` redirects to `/help?topic=about`. Every panel header now has a
 `?` deep-linking to its own topic. **The prose is placeholder** — see
 "What's next".
+
+### Session 2026-07-28 (most recent)
+
+Five commits, `7c3b867`..`779afff`. Every one browser-verified before
+committing, and the browser caught two things the unit tests could not
+(noted below, because that pattern keeps paying off).
+
+**Temperature, humidity and density altitude** (`7c3b867`). New pure
+`core/atmosphere.ts`: station pressure estimated from field elevation via
+the ISA standard atmosphere, virtual temperature folds humidity in, the
+ISA density relation inverted. Shown in the Wind panel, the top bar and
+the map indicator, with an em-dash where a source has nothing so
+"unknown" reads differently from "zero". Sourcing prefers the observed
+station, then the forecast; NWS humidity is derived from temp+dewpoint
+(the API never sends it, which is why the station card's Humidity row had
+always been blank). DA is tinted by delta above field elevation
+(>=1000 caution, >=3000 warning); temperature absolutely
+(<=5 C, >=28 C, >=35 C — owner's numbers). All thresholds are named
+constants and the tests assert against them, not literals.
+
+**Places remember** (`3128d21`). Owner report: adjust the target at
+Kapowsin, go to ZHills, come back, adjustment gone. It was lost on the way
+*out* — selecting a place wiped `flip.targets.byMode`, the only home for a
+shift-click. Now `flip.targets.byPlace` keyed by `Place.id`, with the
+active one in `flip.place.active`; every positioning edit writes through
+immediately, so there is no snapshot-on-leave to go stale. The pinned Spot
+Reference rides along (a second owner report: a spot reading "4538.02 mi
+prior" after a DZ change — it is the only other absolute coordinate in the
+app, so left behind it was measured against the new dropzone).
+
+**Dropzones seed each mode** (`3128d21`, refined in `cb01dd0`).
+`Dropzone.modes` keyed by mode id: a swoop pond away from the student LZ,
+a flocking end point, and for flocking the DZ's corridors and canonical
+Spot Reference. Precedence is user edits -> what the DZ declares -> the
+DZ's plain coordinates. Corridors never travel: a place that declares none
+and has no edits has none, and "Reset to default" in the Corridors section
+discards the edits. Speeds, window altitudes and ring radii deliberately
+stay out — they describe the flock, not the place.
+
+**Pattern params are per-mode** (`cb01dd0`), `flip.pattern.byMode` falling
+back to the shared legacy value. A swooper's descent rate no longer
+follows them into Standard Pattern. This also dissolved a bug the previous
+session had flagged as an open question: Standard Pattern used to write
+`type: 'three-leg'` back into shared storage, clobbering a swooper's leg
+count. With per-mode storage that write lands in pattern mode's own entry
+and is simply correct, so no decision was needed.
+
+**Dropzone data** (`aa123df`, `779afff`). Optional `website`, linked from
+the picker row. Structured `town` / `region` / `country` instead of a
+keyword bag — the terms the owner wanted ("eloy", "zephyr", "arizona")
+are all location, and as fields they also give the picker a subtitle.
+Short forms live in one table (`core/regions.ts`), not repeated per entry.
+Search scores each field separately and takes the best, and drops
+subsequence-only hits once anything matches properly — "eloy" used to
+return *Skydive Pink Klatovy*.
+
+**Two things only the browser caught.** Both had a green test suite and
+correct localStorage at the time:
+- Temp/humidity vanished on any forecast change. `migrateStoredWinds`
+  whitelists fields for the `flip.winds` round-trip and predated the new
+  ones, so every `setWinds` silently stripped them. First fetch looked
+  fine; scrubbing an hour did not.
+- The Pattern panel kept showing the previous mode's numbers after a mode
+  switch. Its number fields are uncontrolled (`initialValue`), so the panel
+  is now keyed on `mode.id`.
 
 ### DZ discovery, in detail (P6/F5)
 
@@ -151,7 +221,7 @@ corridor rectangle's far edge; corridor rows collapse (checkbox + verdict
 stay visible). The spot readout on the map now includes the crosswind
 offset. POM altitude labels thin out by zoom (max one per 1000 ft).
 
-### Flocking map handles (this session — verify with a real pointer)
+### Flocking map handles (2026-07-25 — still unverified by a real pointer)
 
 The drag-handle set was reworked and is the least-tested part.
 
@@ -188,6 +258,51 @@ The drag-handle set was reworked and is the least-tested part.
   geometric side always. **The same bug is still live in FWC itself** —
   worth fixing upstream (owner's call).
 
+## Next up: the dropzone import
+
+The owner has a file with a long list of dropzones to import, and then
+wants to curate the whole list together. Do not start writing an importer
+before he supplies the file and says what is in it.
+
+What the importer has to satisfy — all of it enforced by
+`src/util/dropzones.test.ts`, which is the cheapest way to check an import:
+
+- **No duplicate names, and no two entries within ~0.01 deg** of each
+  other. The second one is the real guard: the same DZ under two spellings
+  is exactly what a bulk import produces. Expect collisions with the 59
+  entries already there.
+- **The list is sorted by name** for display.
+- **`country` is set on every entry.** The other location fields are
+  best-effort and only shape-checked.
+- **`website` must be `https://...`** if present.
+- **`modes` keys must be real mode ids**, and a per-mode entry must have
+  both `lat` and `lng` or neither.
+- Headings are `0 <= direction < 360`; `0,0` is rejected (it was the FWC
+  "CUSTOM" sentinel).
+
+Conventions worth keeping straight during curation:
+
+- An entry with a **`direction`** is hand-checked against imagery — the
+  coordinates are the landing area and the heading is the usual landing
+  direction. An entry **without** one came from the FWC bulk import at
+  3-decimal (~100 m) precision, and selecting it lands into wind. Promoting
+  an entry means tightening the coordinates *and* adding the heading.
+  44 of the 59 are still unpromoted; that is the bulk of the curation.
+- **`town` is filled for 34 entries and blank for 25.** The blanks are
+  deliberate, not forgotten. The filled ones come from the previous agent's
+  own knowledge cross-checked against the stored coordinates, **not from a
+  checked source** — they are worth spot-checking during curation.
+  Kapowsin is the one to check first (recorded as Shelton, WA on the basis
+  that it relocated).
+- The **flocking corridors on ZHills** are the same N/S pair that is still
+  `DEFAULT_FLOCKING_PARAMS.solveCorridors`. Now that a DZ can declare its
+  own, that app-wide default is arguably in the wrong place — worth
+  raising when the list is being curated.
+
+Likely worth doing as part of the import, if the owner agrees: a
+`verified` flag or equivalent, so "hand-checked" stops being inferred from
+the presence of `direction`.
+
 ## What's next
 
 **The immediate one: the help text.** `core/help.ts` has a topic per panel
@@ -201,7 +316,8 @@ entries need his eye before anyone trusts them:
 - **How FliP works** — this is the P1 teaching text. It should sound like
   the owner explaining it to a student, not like an agent's paraphrase.
 
-Then, owner priorities most-ready first:
+Then, owner priorities most-ready first (the dropzone import above comes
+before all of these — it is already agreed):
 
 | Item | Notes |
 |---|---|
@@ -210,8 +326,8 @@ Then, owner priorities most-ready first:
 | **Trust banner → help link** | The banner says "don't trust this"; "why?" has an answer now (`/help?topic=winds`) but nothing links to it. Small and obvious |
 | **Flocking shortcuts** | Rotate jumprun, step the exit along it, cycle sub-mode, toggle a corridor by number. The keymap is ready for them |
 | **Corridor direction ranges** | "anything 250–290°" — solver structure supports it, schema stores fixed headings. Small |
-| **Per-DZ corridor presets** | Describe ZHills-style restrictions by name; ties into `util/dropzones.ts` |
-| **Landing headings for the imported DZs** | 44 of 58 have ~100 m coordinates and no heading; promote them as they are checked against imagery |
+| **Landing headings for the imported DZs** | 44 of 59 have ~100 m coordinates and no heading; promote them as they are checked against imagery. Folds into the import/curation session |
+| **Dropzone `timezone`** | Deferred by the owner this session. Forecast times render in *browser* local time, so a coach planning a DZ two zones away reads the wrong clock |
 | **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), course Type up front (P5), mobile panels page-swap the map (P7), jumprun handoff copy/share (P8) |
 | **Trust state — finish it** | `◐`: out-of-bounds "silly value" call-out, stale-age tuning |
 | **Nerd mode** | Owner-approved data-first mode; reframes the disabled `explore` stub |
@@ -220,7 +336,7 @@ Then, owner priorities most-ready first:
 | **Phase 7 — documents & logbook** | Prerequisite for the backend tier and the whole Review pillar |
 | **Flocking wishlist** | Reverse build, jump profiles (runback), groups/separation, handoff to landing pattern, reachability zones. `core/reach/` before the zones |
 
-### Open design decisions from this session
+### Open design decisions (2026-07-27 session)
 
 - **`G` for the flocking panel** is the one awkward key: `F` went to
   focus-map (global, more guessable). One line of data in `core/keymap.ts`
@@ -322,9 +438,29 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
 - The **winds indicator hover** works via real DOM (not a marker), so it
   *was* verified — ground-station detail shows on GND-row hover.
 
-## Owner decisions recorded this session
+## Owner decisions recorded (most recent first)
 
-Recorded here because they were judgement calls, not deductions:
+Recorded here because they were judgement calls, not deductions.
+
+**2026-07-28:**
+
+- Temperature thresholds are the owner's: 5 C cold, 28 C hot, 35 C very
+  hot. Density altitude is judged as a delta above field elevation, not
+  absolutely.
+- Target adjustments are **auto-remembered** per place (picked over an
+  explicit "pin my spot here" button, and over telling users to save a
+  custom place).
+- Corridors are strictly per-dropzone and do **not** travel; a DZ with
+  none configured shows none. "Reset to default" restores what the
+  dropzone declares.
+- Flocking's per-DZ config is position + corridors + Spot Reference, and
+  deliberately **not** speeds, window altitudes or ring radii. No landing
+  heading for flocking — it has no final-heading UI.
+- Search uses structured `town`/`region`/`country` plus a shared
+  abbreviation table, **not** per-entry keywords.
+- `timezone` on dropzones: deferred, not rejected.
+
+**2026-07-27:**
 
 - Dropzone list: no distances in the picker results ("not useful"); keep
   Google Places rather than switching everything to Photon; no top-bar

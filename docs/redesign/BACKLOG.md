@@ -167,6 +167,30 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   `getWindAt` now interpolates the wind vector (u/v components), so
   350°→10° goes through north and speeds cancel correctly.
 
+## From the 2026-07-28 session
+
+- ☐ **Import the owner's dropzone list, then curate all of it** — agreed as
+  the next session's task; he has the file. See HANDOFF "Next up: the
+  dropzone import" for the invariants an import has to satisfy and the
+  conventions to keep straight. Absorbs the "landing headings for the
+  imported dropzones" item below.
+- ☐ **Dropzone `timezone`** — deferred, not rejected. Forecast times render
+  in *browser* local time, so a coach or traveling jumper planning a DZ two
+  zones away is reading the wrong clock. One IANA string per entry.
+- ☐ **A `verified` flag on dropzone entries** — "hand-checked against
+  imagery" is currently *inferred* from the presence of `direction`, which
+  conflates two different facts (we know the heading / we trust the
+  coordinates). Worth making explicit as part of the import.
+- ✎ **Move the default corridors off ZHills** — `DEFAULT_FLOCKING_PARAMS.
+  solveCorridors` is the ZHills N/S pair, which is now also declared on the
+  ZHills entry itself. Decide whether the app-wide default should be empty.
+- ☐ **Temperature aloft** — the ground reading is done; per-level
+  temperature is available (`temperature_{hPa}hPa`, and soundings already
+  carry it) and would give density altitude at altitude, not just at the
+  DZ.
+- ☐ **Group the place picker by region** — the data now exists; only the
+  grouping is missing.
+
 ## Polish (trivial)
 
 - ☐ **Round altitude/number display in both feet and metres** — labels and
@@ -225,8 +249,16 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 - ☐ **Export: winds as note + user notes field** — append wind table + free
   text to exported plan (KMZ/FlySight/etc.). Notes field on export dialog.
 - ☐ **Improved KMZ export** (owner: unspecified what; gather wishes). ✎
-- ☐ **Density altitude display** — needs temp/pressure (OpenMeteo has it).
-- ☐ **Temperature readings/forecast display** — same data fetch as above.
+- ☑ **Density altitude display** — DONE (`7c3b867`). Pure `core/atmosphere`
+  (ISA pressure from elevation, virtual temperature for humidity, inverted
+  ISA density relation); shown in the Wind panel, top bar and map
+  indicator, tinted by delta above field elevation. Temperature and
+  humidity flow with it, preferring the observed station over the
+  forecast; NWS humidity is derived from temp+dewpoint.
+- ◐ **Temperature readings/forecast display** — GROUND temperature is done
+  with the above. Still open: temperature *aloft* (OpenMeteo can return
+  `temperature_{hPa}hPa` per pressure level, and soundings already carry
+  it per row) and anything forecast-shaped beyond the selected hour.
 - ☐ **Distance course: more markers** (120 m etc.) — render only when zoomed in.
 - ☐ **Preset UX** — explicit "none"/default preset, clearer active-preset
   indication, dirty state. ✎ discuss desired behavior.
@@ -293,9 +325,15 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   location (Denver: 44 stations).
 - ◐ **Improve DZ/target selection UI** — search, favorites, map-pick flow.
   In progress: see P6 / F5 above. Deferred out of that work, owner's call:
-  - ☐ **Country/region on dropzone entries** — lets "denmark" or "arizona"
-    match in the place search and enables grouping by region. 58 rows to
-    fill in by hand, so not now.
+  - ☑ **Country/region on dropzone entries** — DONE (`779afff`), and it
+    became `town`/`region`/`country` plus a shared abbreviation table
+    (`core/regions.ts`) rather than per-entry keywords, which was the
+    owner's original framing. Search scores each field separately and
+    drops subsequence-only hits once anything matches properly, so "eloy"
+    stops returning Skydive Pink Klatovy. Also shown as the picker's
+    subtitle. Data: country on all 59, region on all US/CA, town on 34 —
+    the towns are unverified and want a spot-check during curation.
+    Grouping by region is still not implemented.
   - ☐ **Recently used places** — a short recents list/chips in the place
     picker's empty state. Favorites cover most of this need.
   - ☐ **Landing headings for the imported dropzones** — the 44 entries
@@ -484,10 +522,13 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
     RANGES per corridor (e.g. 'anything from 250 to 290') are a small
     follow-up ✎ — the solver structure supports them, the schema stores
     fixed headings today.
-  - ☐ **per-DZ corridor presets** — describe DZ jumprun restrictions
-    (e.g. ZHills: N/S free, E limited to ~1.5 mi) as stored corridor
-    lists, selectable per dropzone; feeds the solve sub-mode. Ties into
-    the dropzone database (util/dropzones.ts).
+  - ☑ **per-DZ corridor presets** — DONE (`3128d21`, semantics fixed in
+    `cb01dd0`). `Dropzone.modes.flocking.solveCorridors` seeds the solve
+    sub-mode on arrival; edits stay with that place and "Reset to default"
+    restores the declared set. Corridors never travel between dropzones.
+    Only ZHills is populated (the N/S pair). ✎ The app-wide
+    `DEFAULT_FLOCKING_PARAMS.solveCorridors` is still that same
+    ZHills-flavored pair — arguably wrong now that DZs declare their own.
   - ☑ **UI iteration round 2** (owner feedback, 2026-07-18/19): compact
     vector rows with bearing arrows (`b1da95b`); direction fields wrap
     360->0 via a NumberInput `wrap` modulus and distances display to 0.1
