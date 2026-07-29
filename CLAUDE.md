@@ -186,7 +186,7 @@ user can force a mode-overridden setting back to the global default.
 | `core/regions.ts` | State/country short forms, so "az" finds Arizona |
 | `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
 | `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |
-| `util/dropzones.ts` | Dropzone database (59 entries; `direction`, `website`, `town`/`region`/`country` and per-mode config only where known) |
+| `util/dropzones.ts` | Dropzone database (339 entries; `direction`, `website`, `town`/`region`/`country` and per-mode config only where known) |
 | `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports (DOM/download side effects, so not in core) |
 
 ## Wind System (`src/data/wind/`)

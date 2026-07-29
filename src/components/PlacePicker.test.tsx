@@ -143,6 +143,8 @@ describe('PlacePicker', () => {
   });
 
   it('saves the current target as a custom place, then renames and deletes it', async () => {
+    // Timeout bumped: rendering the unfiltered place list (now 339+
+    // dropzones after the CSV import) is slow in jsdom.
     renderPicker();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save current target' }));
@@ -164,9 +166,11 @@ describe('PlacePicker', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
     expect(screen.queryByText('North field')).toBeNull();
-  });
+  }, 15000);
 
   it('selects a custom place at its own coordinates and heading', () => {
+    // Timeout bumped: rendering the unfiltered place list (now 339+
+    // dropzones after the CSV import) is slow in jsdom.
     const setTarget = vi.fn();
 
     renderPicker({ setTarget });
@@ -181,7 +185,7 @@ describe('PlacePicker', () => {
       target: TARGET.target,
       finalHeading: TARGET.finalHeading
     });
-  });
+  }, 15000);
 
   it('applies a chosen place through selectPlace, not the per-mode setter', () => {
     // App passes the every-mode setter here: which dropzone you are at is
