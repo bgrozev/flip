@@ -3,13 +3,15 @@
 Entry point for a new session picking up the FliP redesign. Rewritten
 2026-07-25 (winds indicator, trust banner, target + flocking map
 interactions); updated 2026-07-28 at the end of the density-altitude,
-per-place-memory and dropzone-data session. The 2026-07-27 revision
-covered DZ discovery, shortcuts and in-app help; 2026-07-19 covered the
-architecture review, the wind-UX batch, and Phase 6 flocking.
+per-place-memory and dropzone-data session, and again same-day after the
+dropzone import (59 -> 339 entries). The 2026-07-27 revision covered DZ
+discovery, shortcuts and in-app help; 2026-07-19 covered the architecture
+review, the wind-UX batch, and Phase 6 flocking.
 
-**The next session's task is already agreed: import a long list of
-dropzones from a file the owner has, then curate the whole list with
-him.** Read "Next up: the dropzone import" below before anything else.
+**The dropzone import landed; curating the list is still open and is the
+natural next task, together with the owner.** Read "Next up: the dropzone
+import" below before anything else — the invariants and conventions there
+still apply during curation.
 
 ## Read order
 
@@ -36,7 +38,10 @@ merged to main and nothing is deployed** — deliberate (see Hard rules).
 
 Baseline on the branch: **709 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
-on purpose — it is the local dev-server config.)
+on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
+cases now run with a 15 s timeout instead of the 5 s default — the
+unfiltered place-list render (still no grouping/limit — BACKLOG) scales
+with dropzone count and jsdom is slow at 339 of them.
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
@@ -258,18 +263,54 @@ The drag-handle set was reworked and is the least-tested part.
   geometric side always. **The same bug is still live in FWC itself** —
   worth fixing upstream (owner's call).
 
-## Next up: the dropzone import
+## The dropzone import (done 2026-07-28) — curation next
 
-The owner has a file with a long list of dropzones to import, and then
-wants to curate the whole list together. Do not start writing an importer
-before he supplies the file and says what is in it.
+The owner's list (`/tmp/flip-dropzone-candidates.csv`, 310 rows, mixed
+USPA-directory and OSM sourcing) is imported: 280 new entries, 30 rows
+dropped as duplicates of the existing 59 (matched by name, then by real
+haversine distance under ~1 km — not just the test's `toFixed(2)`
+coordinate-rounding guard, which would have missed several: e.g. "Kapowsin
+Air Sports" vs "Skydive Kapowsin", "SkyDance SkyDiving" vs "Skydive Davis",
+"Jumptown/MSPC, Inc." vs "Jumptown" — same DZ, different operator/business
+name in the source data). 59 -> 339 entries.
 
-What the importer has to satisfy — all of it enforced by
-`src/util/dropzones.test.ts`, which is the cheapest way to check an import:
+Fields filled per row: `country` always; `region` from the CSV `state`
+column, expanding US-state and Canadian-province abbreviations and the
+UK's bilingual forms ("Alba / Scotland" -> "Scotland") to match the
+existing full-name convention; `website`, upgrading `http://` to
+`https://` unconditionally (required by `dropzones.test.ts`, not
+individually verified — a curation item). `town` was **only** filled for
+the ~33 rows whose source was structurally reliable (OSM "town-level
+fallback" query results, which by construction resolved to the town
+itself) — left blank everywhere else rather than guess from multi-language
+free-text address strings (the CSV's `notes` column), which is what the
+previous 34-town batch already flagged as unverified. All 280 are
+bulk/~100-500 m precision with no landing heading, same shape as the
+existing FWC-ported set.
+
+**Curation still open** (this was always going to be a second pass):
+
+- Verify/tighten coordinates and add landing headings — the bulk of it.
+  325 of 339 have no `direction` yet (only 14 were ever hand-checked).
+- Spot-check the `http`->`https` upgrade on the ~230 sites it touched —
+  not fetched or verified, just string-substituted.
+- Consider filling `town` for the ~230 rows that have no town at all
+  (mostly `USPA directory` and `OSM sport=parachuting` rows, which carry
+  no locality data in the source — would need a separate geocoding pass,
+  not a notes-field guess).
+- A few CSV rows had odd `state`-column data worth a second look during
+  curation: Abu Dhabi Skydive's region is literally "Al Smeih Area" (a
+  district, not an emirate) and Venezuela's row packed town+region into
+  one quoted field ("Higuerote, Estado Miranda") — both were parsed
+  through, not verified against a source.
+
+What the importer had to satisfy — all of it enforced by
+`src/util/dropzones.test.ts`, which is the cheapest way to check an import,
+and still the checklist for hand-curating individual entries going forward:
 
 - **No duplicate names, and no two entries within ~0.01 deg** of each
   other. The second one is the real guard: the same DZ under two spellings
-  is exactly what a bulk import produces. Expect collisions with the 59
+  is exactly what a bulk import produces. Expect collisions with the 339
   entries already there.
 - **The list is sorted by name** for display.
 - **`country` is set on every entry.** The other location fields are
@@ -284,16 +325,21 @@ Conventions worth keeping straight during curation:
 
 - An entry with a **`direction`** is hand-checked against imagery — the
   coordinates are the landing area and the heading is the usual landing
-  direction. An entry **without** one came from the FWC bulk import at
-  3-decimal (~100 m) precision, and selecting it lands into wind. Promoting
-  an entry means tightening the coordinates *and* adding the heading.
-  44 of the 59 are still unpromoted; that is the bulk of the curation.
-- **`town` is filled for 34 entries and blank for 25.** The blanks are
-  deliberate, not forgotten. The filled ones come from the previous agent's
-  own knowledge cross-checked against the stored coordinates, **not from a
-  checked source** — they are worth spot-checking during curation.
-  Kapowsin is the one to check first (recorded as Shelton, WA on the basis
-  that it relocated).
+  direction. An entry **without** one came from a bulk import (FWC
+  originally, now also the owner's CSV) at ~100-500 m precision, and
+  selecting it lands into wind. Promoting an entry means tightening the
+  coordinates *and* adding the heading. 325 of 339 are still unpromoted;
+  that is the bulk of the curation.
+- **`town` is filled for 74 entries and blank for 265.** The blanks are
+  deliberate, not forgotten — most of the CSV rows had no locality data at
+  all (`USPA directory` / `OSM sport=parachuting` sourcing), and the ones
+  that did weren't guessed from free-text addresses unless the source was
+  structurally reliable (see the import section above). The town values
+  that *are* filled are a mix of provenance: some from a previous agent's
+  own knowledge cross-checked against coordinates (**not from a checked
+  source**), some parsed straight from the CSV's OSM data — both worth
+  spot-checking during curation. Kapowsin is the one to check first
+  (recorded as Shelton, WA on the basis that it relocated).
 - The **flocking corridors on ZHills** are the same N/S pair that is still
   `DEFAULT_FLOCKING_PARAMS.solveCorridors`. Now that a DZ can declare its
   own, that app-wide default is arguably in the wrong place — worth

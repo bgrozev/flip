@@ -169,11 +169,14 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## From the 2026-07-28 session
 
-- ☐ **Import the owner's dropzone list, then curate all of it** — agreed as
-  the next session's task; he has the file. See HANDOFF "Next up: the
-  dropzone import" for the invariants an import has to satisfy and the
-  conventions to keep straight. Absorbs the "landing headings for the
-  imported dropzones" item below.
+- ◐ **Import the owner's dropzone list, then curate all of it** — import
+  DONE (2026-07-28): 280 new entries from the owner's CSV, 59 -> 339,
+  30 CSV rows dropped as duplicates of existing entries. See HANDOFF "The
+  dropzone import" for what was filled per field, what was deliberately
+  left blank (most `town`s — no reliable source), and the curation list
+  (325 of 339 still need verified coordinates + a landing heading).
+  Absorbs the "landing headings for the imported dropzones" item below,
+  now folded into that same curation pass.
 - ☐ **Dropzone `timezone`** — deferred, not rejected. Forecast times render
   in *browser* local time, so a coach or traveling jumper planning a DZ two
   zones away is reading the wrong clock. One IANA string per entry.
@@ -336,10 +339,11 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
     Grouping by region is still not implemented.
   - ☐ **Recently used places** — a short recents list/chips in the place
     picker's empty state. Favorites cover most of this need.
-  - ☐ **Landing headings for the imported dropzones** — the 44 entries
-    ported from FWC have no `direction` (and ~100 m coordinates). Selecting
-    one sets the final heading into the wind instead. Promote them as they
-    get checked against imagery.
+  - ☐ **Landing headings for the imported dropzones** — 325 of 339 entries
+    (FWC's original ports plus the 2026-07-28 CSV import) have no
+    `direction` and only bulk-precision coordinates. Selecting one sets the
+    final heading into the wind instead. Promote them as they get checked
+    against imagery — folded into the dropzone-curation item above.
 - ☐ **Expected GR & ground speed up high** — e.g. "at 4000 ft heading south
   expect GR 1.5" for comparison against wrist GPS in flight. Table/overlay
   of expected GR/speed by altitude+heading.
