@@ -95,6 +95,14 @@ export const DROPZONES: Dropzone[] = [
     country: 'Denmark'
   },
   {
+    name: 'AVA Flying Center',
+    lat: 43.49804,
+    lng: 23.30481,
+    direction: 138,
+    town: 'Erden',
+    country: 'Bulgaria'
+  },
+  {
     name: 'Avignon Pujaut',
     lat: 43.99673,
     lng: 4.75119,
@@ -1785,6 +1793,13 @@ export const DROPZONES: Dropzone[] = [
     direction: 20,
     country: 'Mexico',
     website: 'https://www.skydivepuebla.com/'
+  },
+  {
+    name: 'Skydive Pull Out Ravenna',
+    lat: 44.36147,
+    lng: 12.21693,
+    direction: 315,
+    country: 'Italy'
   },
   {
     name: 'Skydive Ramblers',
