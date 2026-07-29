@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 
 import { LatLng, Target } from '../types';
+import { PlaceSelection } from './useAppState';
 
 interface TargetContextValue {
   /** Current target (location + heading) */
@@ -10,8 +11,13 @@ interface TargetContextValue {
   /**
    * Select a place: moves the target in EVERY mode, because which dropzone
    * you are at is not a per-mode choice. Optionally sets the heading too.
+   *
+   * `place` gives the selection a memory — later adjustments are recorded
+   * against it and restored next time it is chosen, and its declared
+   * per-mode config seeds the first visit. Leave it out for a location that
+   * is not a place in the list (a geocoder hit).
    */
-  selectLocation: (location: LatLng, heading?: number) => void;
+  selectLocation: (location: LatLng, heading?: number, place?: PlaceSelection) => void;
 }
 
 const TargetContext = createContext<TargetContextValue | null>(null);
@@ -23,7 +29,7 @@ interface TargetProviderProps {
    * Applies a chosen place. Defaults to `setTarget` (current mode only) so
    * the provider stays usable on its own; App passes the every-mode setter.
    */
-  selectPlace?: (target: Target) => void;
+  selectPlace?: (target: Target, place?: PlaceSelection) => void;
   children: ReactNode;
 }
 
@@ -37,11 +43,17 @@ export function TargetProvider({
   selectPlace,
   children
 }: TargetProviderProps) {
-  const selectLocation = (location: LatLng, heading?: number) => {
-    (selectPlace ?? setTarget)({
+  const selectLocation = (location: LatLng, heading?: number, place?: PlaceSelection) => {
+    const next: Target = {
       target: location,
       finalHeading: heading ?? target.finalHeading
-    });
+    };
+
+    if (selectPlace) {
+      selectPlace(next, place);
+    } else {
+      setTarget(next);
+    }
   };
 
   return (

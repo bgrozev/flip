@@ -14,14 +14,24 @@ import {
   migrateSettings,
   migrateTarget,
   migrateTargetsByMode,
+  migrateTargetsByPlace,
   migrateTouchedSettings,
   seedTouchedSettings
 } from '../core/model';
 import { FlockingParams } from '../core/flocking';
-import { FlightPath, ManoeuvreConfig, PatternParams, Settings, Target } from '../types';
+import {
+  DropzoneModeConfig,
+  FlightPath,
+  ManoeuvreConfig,
+  PatternParams,
+  PlaceTargets,
+  Settings,
+  Target
+} from '../types';
 import { createVersionedCodec } from '../util/storage';
 import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
+import { placeModeTargets } from '../core/places';
 import { samples } from '../samples';
 
 // Canonical defaults live in core/model; re-exported here for existing users
@@ -29,6 +39,16 @@ export { DEFAULT_PATTERN_PARAMS, DEFAULT_MANOEUVRE_CONFIG };
 
 /** The settings keys the user has explicitly changed. */
 type TouchedSettings = (keyof Settings)[];
+
+/**
+ * The place a target move belongs to: its id (the key its adjustments are
+ * remembered under) and whatever starting configuration the dropzone
+ * database declares for it.
+ */
+export interface PlaceSelection {
+  id: string;
+  modes?: Record<string, DropzoneModeConfig>;
+}
 
 // The codec's type is widened to include null (the "never stored" state the
 // initializer provides); parsing stored data still always yields a list.
@@ -86,8 +106,14 @@ interface AppStateContextValue {
   /**
    * Move the target in every mode. For choosing a *place* — which is a
    * statement about where you are, not about what you are planning.
+   *
+   * Pass the place to give the move a memory: adjustments made while that
+   * place is active are recorded against it, and selecting it again restores
+   * them instead of the place's stored coordinates. The place's declared
+   * per-mode config seeds the first visit. Omit it for targets that belong
+   * to no place (a preset, a geocoder hit).
    */
-  setTargetEverywhere: (target: Target) => void;
+  selectPlaceTarget: (target: Target, place?: PlaceSelection) => void;
   setSettings: (settings: Settings) => void;
   setSelectedCourseId: (id: string | null) => void;
 
@@ -135,6 +161,22 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       { codec: createVersionedCodec(SCHEMA_VERSION, migrateTargetsByMode) }
     );
   const targetsByMode = useMemo(() => storedTargetsByMode ?? {}, [storedTargetsByMode]);
+
+  // Per-place target memory. A dropzone's coordinates are where the database
+  // says the DZ is; the spot a user shift-clicks to is where they actually
+  // land. Recording the latter against the place means a trip to another DZ
+  // and back restores their spot instead of snapping to the database's.
+  const [storedActivePlaceId, setStoredActivePlaceId] =
+    useLocalStorageState<string | null>('flip.place.active', null);
+  const activePlaceId = storedActivePlaceId ?? null;
+
+  const [storedTargetsByPlace, setStoredTargetsByPlace] =
+    useLocalStorageState<Record<string, PlaceTargets>>(
+      'flip.targets.byPlace',
+      {},
+      { codec: createVersionedCodec(SCHEMA_VERSION, migrateTargetsByPlace) }
+    );
+  const targetsByPlace = useMemo(() => storedTargetsByPlace ?? {}, [storedTargetsByPlace]);
 
   // Pattern params — source of truth; path is derived.
   // Uses the same key as the old PatternComponent so existing user data is preserved.
@@ -199,9 +241,41 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     [setStoredPatternParams]
   );
 
+  // Pinning (or dragging) the Spot Reference is a statement about a point on
+  // the ground at the place you are at, so it is remembered with that place —
+  // same reasoning as the target. Only a change to the reference itself
+  // touches the place record; the rest of the flocking params are headings
+  // and distances that travel fine.
   const setFlockingParams = useCallback(
-    (value: FlockingParams) => setStoredFlockingParams(value),
-    [setStoredFlockingParams]
+    (value: FlockingParams) => {
+      setStoredFlockingParams(value);
+
+      const referenceChanged = value.referencePoint !== flockingParams.referencePoint;
+      const corridorsChanged = value.solveCorridors !== flockingParams.solveCorridors;
+
+      if (activePlaceId && (referenceChanged || corridorsChanged)) {
+        const entry = targetsByPlace[activePlaceId] ??
+          { shared: target, byMode: targetsByMode };
+
+        setStoredTargetsByPlace({
+          ...targetsByPlace,
+          [activePlaceId]: {
+            ...entry,
+            flockingReference: value.referencePoint,
+            flockingCorridors: value.solveCorridors
+          }
+        });
+      }
+    },
+    [
+      setStoredFlockingParams,
+      activePlaceId,
+      flockingParams.referencePoint,
+      targetsByPlace,
+      setStoredTargetsByPlace,
+      target,
+      targetsByMode
+    ]
   );
 
   const setTarget = useCallback(
@@ -217,22 +291,77 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     [targetsByMode, target]
   );
 
+  // Every positioning edit (drag, shift-click, heading) is also written
+  // through to the active place, so its memory is always current — there is
+  // no snapshot-on-leave that could go stale or be lost to a closed tab.
   const setTargetForMode = useCallback(
     (modeId: string, value: Target) => {
-      setStoredTargetsByMode({ ...targetsByMode, [modeId]: value });
+      const nextByMode = { ...targetsByMode, [modeId]: value };
+
+      setStoredTargetsByMode(nextByMode);
+
+      if (activePlaceId) {
+        setStoredTargetsByPlace({
+          ...targetsByPlace,
+          [activePlaceId]: { shared: target, byMode: nextByMode }
+        });
+      }
     },
-    [targetsByMode, setStoredTargetsByMode]
+    [
+      targetsByMode,
+      setStoredTargetsByMode,
+      activePlaceId,
+      targetsByPlace,
+      setStoredTargetsByPlace,
+      target
+    ]
   );
 
   // Dropping the per-mode entries (rather than writing the new target into
   // each of them) is what makes this work for modes the user has never
   // opened: with no override left, every mode reads the shared target.
-  const setTargetEverywhere = useCallback(
-    (value: Target) => {
-      setStoredTarget(value);
-      setStoredTargetsByMode({});
+  const selectPlaceTarget = useCallback(
+    (value: Target, place?: PlaceSelection) => {
+      const remembered = place ? targetsByPlace[place.id] : undefined;
+      const declared = place?.modes;
+
+      setStoredActivePlaceId(place?.id ?? null);
+      setStoredTarget(remembered?.shared ?? value);
+      // What the user did here wins; failing that, what the dropzone says
+      // this mode starts from; failing that, the shared target.
+      setStoredTargetsByMode(remembered?.byMode ?? placeModeTargets(declared, value));
+
+      // A Spot Reference left pinned at the old dropzone would be measured
+      // against the new one — the flat-earth projection the spot text uses
+      // turns that into "4538 mi prior". Restore this place's own (the user's
+      // pin, else the DZ's canonical landmark), or unpin.
+      const reference = remembered?.flockingReference ??
+        declared?.flocking?.spotReference ?? null;
+      // Corridors are the one thing with no sensible "none": a DZ that says
+      // nothing leaves whatever is in force alone rather than resetting to a
+      // default pair that describes some other dropzone's airspace.
+      const corridors = remembered?.flockingCorridors ??
+        declared?.flocking?.solveCorridors;
+
+      if (
+        reference !== flockingParams.referencePoint ||
+        (corridors !== undefined && corridors !== flockingParams.solveCorridors)
+      ) {
+        setStoredFlockingParams({
+          ...flockingParams,
+          referencePoint: reference,
+          ...(corridors !== undefined ? { solveCorridors: corridors } : {})
+        });
+      }
     },
-    [setStoredTarget, setStoredTargetsByMode]
+    [
+      targetsByPlace,
+      setStoredActivePlaceId,
+      setStoredTarget,
+      setStoredTargetsByMode,
+      flockingParams,
+      setStoredFlockingParams
+    ]
   );
 
   const setSettings = useCallback(
@@ -258,12 +387,14 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     setStoredManoeuvreConfig(DEFAULT_MANOEUVRE_CONFIG);
     setStoredTarget(DEFAULT_TARGET);
     setStoredTargetsByMode({});
+    setStoredTargetsByPlace({});
+    setStoredActivePlaceId(null);
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
     setStoredFlockingParams(DEFAULT_FLOCKING_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
     setStoredTouched([]);
     setStoredSelectedCourseId(null);
-  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredTargetsByMode, setStoredPatternParams, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredTargetsByMode, setStoredTargetsByPlace, setStoredActivePlaceId, setStoredPatternParams, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -281,7 +412,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setTarget,
       targetForMode,
       setTargetForMode,
-      setTargetEverywhere,
+      selectPlaceTarget,
       setSettings,
       setSelectedCourseId,
       resetAll
@@ -301,7 +432,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setTarget,
       targetForMode,
       setTargetForMode,
-      setTargetEverywhere,
+      selectPlaceTarget,
       setSettings,
       setSelectedCourseId,
       resetAll

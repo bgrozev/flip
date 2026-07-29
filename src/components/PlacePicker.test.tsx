@@ -192,10 +192,19 @@ describe('PlacePicker', () => {
     search('zhills');
     fireEvent.click(screen.getByText('Skydive City (ZHills)'));
 
-    expect(selectPlace).toHaveBeenCalledWith({
-      target: { lat: 28.21887, lng: -82.15122 },
-      finalHeading: 270
-    });
+    // The place rides along so the choice gains a memory: adjustments made
+    // here are recorded against ZHills and restored on the way back, and the
+    // dropzone's own per-mode config seeds the first visit.
+    expect(selectPlace).toHaveBeenCalledWith(
+      {
+        target: { lat: 28.21887, lng: -82.15122 },
+        finalHeading: 270
+      },
+      expect.objectContaining({ id: 'dz:Skydive City (ZHills)' })
+    );
+    // ...including whatever per-mode config the dropzone declares
+    expect(selectPlace.mock.calls[0][1].modes?.flocking?.solveCorridors)
+      .toHaveLength(2);
     expect(setTarget).not.toHaveBeenCalled();
   });
 

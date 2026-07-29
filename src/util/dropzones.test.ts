@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
+import { MODES } from '../modes';
+
 import { DROPZONES, findClosestDropzone } from './dropzones';
 
 describe('DROPZONES', () => {
@@ -31,6 +33,36 @@ describe('DROPZONES', () => {
         expect(dz.direction).toBeGreaterThanOrEqual(0);
         expect(dz.direction).toBeLessThan(360);
       }
+    });
+  });
+
+  // `Dropzone.modes` is keyed by a plain string (types cannot import modes
+  // without a cycle), so the keys are only as good as this check.
+  it('keys per-mode config by a real mode id', () => {
+    const modeIds = new Set(MODES.map(mode => mode.id));
+
+    DROPZONES.forEach(dz => {
+      Object.keys(dz.modes ?? {}).forEach(modeId => {
+        expect(modeIds, `${dz.name} declares mode "${modeId}"`).toContain(modeId);
+      });
+    });
+  });
+
+  it('gives per-mode entries usable coordinates and headings', () => {
+    DROPZONES.forEach(dz => {
+      Object.values(dz.modes ?? {}).forEach(config => {
+        // A position is both halves or neither — a lone lat is a typo
+        expect(typeof config.lat).toBe(typeof config.lng);
+
+        if (typeof config.lat === 'number' && typeof config.lng === 'number') {
+          expect(Math.abs(config.lat)).toBeLessThanOrEqual(90);
+          expect(Math.abs(config.lng)).toBeLessThanOrEqual(180);
+        }
+        if (config.direction !== undefined) {
+          expect(config.direction).toBeGreaterThanOrEqual(0);
+          expect(config.direction).toBeLessThan(360);
+        }
+      });
     });
   });
 

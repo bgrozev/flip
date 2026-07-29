@@ -1,4 +1,5 @@
 export { AppStateProvider, useAppState, DEFAULT_TARGET, DEFAULT_SETTINGS } from './useAppState';
+export type { PlaceSelection } from './useAppState';
 export { useCustomCourses } from './useCustomCourses';
 export { useFetchForecast } from './useFetchForecast';
 export { useFlightPaths } from './useFlightPaths';

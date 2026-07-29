@@ -43,10 +43,10 @@ import {
 } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { rankPlaces } from '../core/places';
+import { dropzonePlaceId, rankPlaces } from '../core/places';
 import { useAppState, useGeolocation, useSavedPlaces, useTarget } from '../hooks';
 import { PlaceSearchLoader, resolvePlaceSuggestion, searchPlaceSuggestions } from '../map';
-import { MapProvider, Place, PlaceSuggestion } from '../types';
+import { Dropzone, MapProvider, Place, PlaceSuggestion } from '../types';
 import { findClosestDropzone } from '../util/dropzones';
 
 /** Below this a geocoder query is noise; the local list is doing the work. */
@@ -82,7 +82,11 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
   const { suggestions, searching } = usePlaceSearch(query, provider, geocoderReady);
 
   const handleSelectPlace = (place: Place) => {
-    selectLocation({ lat: place.lat, lng: place.lng }, headingFor(place, upwindHeading));
+    selectLocation(
+      { lat: place.lat, lng: place.lng },
+      headingFor(place, upwindHeading),
+      { id: place.id, modes: place.modes }
+    );
   };
 
   const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
@@ -120,7 +124,8 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
       <NearestDropzoneButton
         onFound={dz => selectLocation(
           { lat: dz.lat, lng: dz.lng },
-          dz.direction ?? upwindHeading ?? undefined
+          dz.direction ?? upwindHeading ?? undefined,
+          { id: dropzonePlaceId(dz.name), modes: dz.modes }
         )}
       />
 
@@ -414,7 +419,7 @@ function NameDialog({
 }
 
 interface NearestDropzoneButtonProps {
-  onFound: (dropzone: { lat: number; lng: number; direction?: number }) => void;
+  onFound: (dropzone: Dropzone) => void;
 }
 
 function NearestDropzoneButton({ onFound }: NearestDropzoneButtonProps) {

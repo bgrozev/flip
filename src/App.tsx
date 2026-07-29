@@ -61,6 +61,7 @@ import { CourseEditTarget, TargetEditTarget } from './map/layers';
 import {
   AppStateProvider,
   DEFAULT_TARGET,
+  PlaceSelection,
   useAppState,
   useCustomCourses,
   NotificationsProvider,
@@ -184,7 +185,7 @@ function DashboardContent() {
     setManoeuvreConfig,
     targetForMode,
     setTargetForMode,
-    setTargetEverywhere,
+    selectPlaceTarget,
     patternParams,
     setPatternParams,
     flockingParams,
@@ -297,7 +298,7 @@ function DashboardContent() {
   // just confusing. Positioning WITHIN the place — dragging the target,
   // shift-clicking, the heading input — stays per-mode.
   const selectPlace = useCallback(
-    (newTarget: Target) => {
+    (newTarget: Target, place?: PlaceSelection) => {
       if (
         hasTargetMovedTooFar(
           target.target,
@@ -307,9 +308,9 @@ function DashboardContent() {
       ) {
         invalidateWinds();
       }
-      setTargetEverywhere(newTarget);
+      selectPlaceTarget(newTarget, place);
     },
-    [target.target, setTargetEverywhere, invalidateWinds]
+    [target.target, selectPlaceTarget, invalidateWinds]
   );
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -1040,6 +1041,9 @@ function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
             speedKts: wind.ground.speedKts,
             observed: wind.ground.observed
           }}
+          densityAltitudeFt={wind.densityAltitudeFt}
+          densityAltitudeSeverity={wind.densityAltitudeSeverity}
+          elevationFt={wind.elevationFt}
         />
       )}
     </Stack>

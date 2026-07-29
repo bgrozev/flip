@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { CustomLocation, Dropzone } from '../types';
 
-import { buildPlaces, normalizeForSearch, rankPlaces } from './places';
+import { buildPlaces, normalizeForSearch, placeModeTargets, rankPlaces } from './places';
 
 const DZS: Dropzone[] = [
   { name: 'Århus Faldskærm Club', lat: 56.313, lng: 10.615 },
@@ -121,5 +121,48 @@ describe('rankPlaces', () => {
 
   it('returns nothing when nothing matches', () => {
     expect(names('nowhere at all')).toEqual([]);
+  });
+});
+
+describe('placeModeTargets', () => {
+  const BASE = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
+
+  it('is empty when the place declares nothing', () => {
+    expect(placeModeTargets(undefined, BASE)).toEqual({});
+    expect(placeModeTargets({}, BASE)).toEqual({});
+  });
+
+  it('takes position and heading from the entry when both are given', () => {
+    const targets = placeModeTargets(
+      { swoop: { lat: 28.22, lng: -82.153, direction: 310 } },
+      BASE
+    );
+
+    expect(targets.swoop).toEqual({
+      target: { lat: 28.22, lng: -82.153 },
+      finalHeading: 310
+    });
+  });
+
+  it('falls back to the place for whatever an entry leaves out', () => {
+    const targets = placeModeTargets(
+      { flocking: { lat: 28.25, lng: -82.1 }, pattern: { direction: 90 } },
+      BASE
+    );
+
+    // Position only: keeps the place's heading
+    expect(targets.flocking).toEqual({
+      target: { lat: 28.25, lng: -82.1 },
+      finalHeading: 270
+    });
+    // Heading only: keeps the place's position
+    expect(targets.pattern).toEqual({ target: BASE.target, finalHeading: 90 });
+  });
+
+  it('skips entries that say nothing about the target', () => {
+    // A flocking entry may carry only corridors — that is not a target
+    const targets = placeModeTargets({ flocking: { solveCorridors: [] } }, BASE);
+
+    expect(targets).toEqual({});
   });
 });

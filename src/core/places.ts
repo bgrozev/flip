@@ -5,7 +5,7 @@
  * Pure — no storage, no geocoder. The picker adds geocoder suggestions as a
  * separate group, because those have no coordinates until they are resolved.
  */
-import { CustomLocation, Dropzone, Place } from '../types';
+import { CustomLocation, Dropzone, DropzoneModeConfig, Place, Target } from '../types';
 
 /** Longest query still treated as possible initials — see `matchScore`. */
 const MAX_SUBSEQUENCE_LENGTH = 5;
@@ -21,6 +21,40 @@ export function dropzonePlaceId(name: string): string {
 
 export function customPlaceId(name: string): string {
   return `custom:${name}`;
+}
+
+/**
+ * The per-mode starting targets a place declares, resolved against the
+ * place's own position and heading: an entry may give a position, a heading,
+ * or both, and whatever it leaves out comes from `base`. Modes that declare
+ * nothing are left out entirely so they fall back to the shared target.
+ */
+export function placeModeTargets(
+  modes: Record<string, DropzoneModeConfig> | undefined,
+  base: Target
+): Record<string, Target> {
+  const targets: Record<string, Target> = {};
+
+  if (!modes) {
+    return targets;
+  }
+
+  Object.entries(modes).forEach(([modeId, config]) => {
+    const { lat, lng, direction } = config ?? {};
+    const hasPosition = typeof lat === 'number' && typeof lng === 'number';
+    const hasHeading = typeof direction === 'number';
+
+    if (modeId === '' || (!hasPosition && !hasHeading)) {
+      return;
+    }
+
+    targets[modeId] = {
+      target: hasPosition ? { lat, lng } : base.target,
+      finalHeading: hasHeading ? direction : base.finalHeading
+    };
+  });
+
+  return targets;
 }
 
 /**
@@ -47,7 +81,8 @@ export function buildPlaces(
         name: dz.name,
         lat: dz.lat,
         lng: dz.lng,
-        direction: dz.direction
+        direction: dz.direction,
+        modes: dz.modes
       })),
     ...customLocations.map((loc): Place => ({
       id: customPlaceId(loc.name),
@@ -67,7 +102,8 @@ export function buildPlaces(
       name: dz.name,
       lat: dz.lat,
       lng: dz.lng,
-      direction: dz.direction
+      direction: dz.direction,
+      modes: dz.modes
     }));
 
   return [...saved, ...rest];

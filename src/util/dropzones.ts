@@ -66,6 +66,11 @@ export const DROPZONES: Dropzone[] = [
     lng: 9.327
   },
   {
+    name: 'Mile-Hi Skydiving Center',
+    lat: 40.164,
+    lng: -105.163
+  },
+  {
     name: 'Netheravon',
     lat: 51.245,
     lng: -1.764
@@ -127,10 +132,30 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive City (ZHills)',
     lat: 28.21887,
     lng: -82.15122,
-    direction: 270
+    direction: 270,
     // No nearbyStations supplement needed: KZPH (Zephyrhills Municipal AWOS)
     // is returned by NWS gridpoint discovery for this location — verified
     // against gridpoints/TBW/82,110/stations, where it is the nearest of 51.
+    modes: {
+      // Jumprun runs north or south here. These are the same two corridors
+      // that have been the app-wide default since the solver landed (they
+      // were described in core/model as "the ZHills-flavored default");
+      // stating them on the dropzone is what makes them ZHills' own.
+      flocking: {
+        solveCorridors: [
+          {
+            name: 'North', enabled: true, directionDeg: 0,
+            offsetMinMi: -1, offsetMaxMi: 1,
+            alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15
+          },
+          {
+            name: 'South', enabled: true, directionDeg: 180,
+            offsetMinMi: -1, offsetMaxMi: 1,
+            alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15
+          }
+        ]
+      }
+    }
   },
   {
     name: 'Skydive Colorado Springs',

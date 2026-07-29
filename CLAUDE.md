@@ -91,7 +91,26 @@ chooses one; it is remembered per device and switchable from the toolbar.
 Each mode keeps its own target *position within a place*, but the place
 itself is shared: choosing one in the picker (or loading a preset) moves
 the target in every mode, while dragging it, shift-clicking and the
-heading input affect only the current mode.
+heading input affect only the current mode. Places also *remember*: a
+dropzone's stored coordinates are only a starting point, so the spot you
+shift-click to is recorded against that place (`flip.targets.byPlace`,
+keyed by `Place.id`, with the active one in `flip.place.active`) and
+restored next time you pick it. Flocking's pinned Spot Reference and its
+jumprun corridors ride along in the same record: the reference is the only
+other absolute coordinate in the app, so it unpins on a move (one left at
+the old DZ produced spots thousands of miles out) and comes back with its
+place. Targets belonging to no place — a preset, a geocoder hit — pass no
+place id and are not remembered.
+
+A dropzone can also declare where each mode *starts*
+(`Dropzone.modes`, keyed by mode id): a swoop pond away from the student
+LZ, a flocking end point out in the big field, and for flocking the DZ's
+jumprun corridors and canonical Spot Reference (the landmark a spot is
+quoted against to the pilot). Anything omitted falls back to the
+dropzone's own coordinates and heading, and what the user did at a place
+always outranks what the dropzone declares. Speeds, window altitudes and
+the ring radii stay out of the DZ data on purpose — they describe the
+flock, not the place.
 
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
