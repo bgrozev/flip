@@ -74,6 +74,25 @@ describe('DROPZONES', () => {
     });
   });
 
+  it('says what country every dropzone is in', () => {
+    // Country is the one location field filled in for every entry; town and
+    // region are best-effort, so they are only checked for shape.
+    DROPZONES.forEach(dz => {
+      expect(dz.country, dz.name).toBeTruthy();
+    });
+  });
+
+  it('has trimmed, non-empty location fields where set', () => {
+    DROPZONES.forEach(dz => {
+      [dz.town, dz.region, dz.country].forEach(value => {
+        if (value !== undefined) {
+          expect(value.trim(), dz.name).toBe(value);
+          expect(value, dz.name).not.toBe('');
+        }
+      });
+    });
+  });
+
   it('is sorted for display', () => {
     const sorted = [...DROPZONES].sort((a, b) => a.name.localeCompare(b.name));
 

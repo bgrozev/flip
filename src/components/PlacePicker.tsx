@@ -209,6 +209,14 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
   );
 }
 
+/** "Eloy, Arizona" — whichever of the location fields are known. */
+function placeLocationLabel(place: Place): string | undefined {
+  const parts = [place.town, place.region, place.country]
+    .filter((value): value is string => value !== undefined && value !== '');
+
+  return parts.length > 0 ? parts.join(', ') : undefined;
+}
+
 /** A dropzone's own landing direction, else into wind, else leave it alone. */
 function headingFor(place: Place, upwindHeading: number | null): number | undefined {
   return place.direction ?? upwindHeading ?? undefined;
@@ -240,7 +248,7 @@ function PlaceGroup({
       <ListSubheader disableSticky>{title}</ListSubheader>
       {places.map(place => (
         <ListItemButton key={place.id} onClick={() => onSelect(place)}>
-          <ListItemText primary={place.name} />
+          <ListItemText primary={place.name} secondary={placeLocationLabel(place)} />
           {place.website && <WebsiteLink place={place} />}
           {place.kind === 'custom' ? (
             <CustomPlaceMenu

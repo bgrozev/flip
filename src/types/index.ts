@@ -200,6 +200,15 @@ export interface Dropzone {
   /** The dropzone's own site, linked from the place picker. */
   website?: string;
   /**
+   * Where it is, in words. Searchable and shown under the name in the
+   * picker, so "eloy" or "az" finds Skydive Arizona and the four Spacelands
+   * tell themselves apart. `region` is a state/province; short forms like
+   * "AZ" come from `core/regions`, not from repeating them here.
+   */
+  town?: string;
+  region?: string;
+  country?: string;
+  /**
    * Per-mode starting configuration, keyed by mode id (`pattern` / `swoop` /
    * `flocking` — a plain string key because `types` cannot import `modes`
    * without a cycle; `dropzones.test.ts` checks the keys against the real
@@ -253,6 +262,10 @@ export interface Place {
   modes?: Record<string, DropzoneModeConfig>;
   /** The dropzone's own site, where one is known. */
   website?: string;
+  /** Where it is, in words (see `Dropzone`). */
+  town?: string;
+  region?: string;
+  country?: string;
 }
 
 /** A manoeuvre track saved by the user ("My tracks"); keyed by name. */

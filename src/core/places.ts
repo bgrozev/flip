@@ -7,8 +7,13 @@
  */
 import { CustomLocation, Dropzone, DropzoneModeConfig, Place, Target } from '../types';
 
+import { regionAliases } from './regions';
+
 /** Longest query still treated as possible initials — see `matchScore`. */
 const MAX_SUBSEQUENCE_LENGTH = 5;
+
+/** The weakest match tier: letters in order, nothing more (see `matchScore`). */
+const SUBSEQUENCE_SCORE = 4;
 
 /** Saved places (favorites + custom) sort above the plain dropzone list. */
 export function isSaved(place: Place): boolean {
@@ -98,7 +103,10 @@ export function buildPlaces(
         lng: dz.lng,
         direction: dz.direction,
         modes: dz.modes,
-        website: dz.website
+        website: dz.website,
+        town: dz.town,
+        region: dz.region,
+        country: dz.country
       })),
     ...customLocations.map((loc): Place => ({
       id: customPlaceId(loc.name),
@@ -120,7 +128,10 @@ export function buildPlaces(
       lng: dz.lng,
       direction: dz.direction,
       modes: dz.modes,
-      website: dz.website
+      website: dz.website,
+      town: dz.town,
+      region: dz.region,
+      country: dz.country
     }));
 
   return [...saved, ...rest];
@@ -167,7 +178,7 @@ function matchScore(haystack: string, needle: string): number | null {
   // is a subsequence of "Skydive Spaceland Dallas" — so it is limited to
   // queries short enough to be initials.
   if (needle.length <= MAX_SUBSEQUENCE_LENGTH && isSubsequence(needle, haystack)) {
-    return 4;
+    return SUBSEQUENCE_SCORE;
   }
 
   return null;
@@ -196,6 +207,50 @@ function isSubsequence(needle: string, haystack: string): boolean {
  * token. Ties break by group (saved first) then name, which is also the
  * order an empty query returns.
  */
+/**
+ * Everything a place can be found by: its name, where it is, and the short
+ * forms of those ("AZ" for Arizona). Kept as separate strings rather than
+ * one blob so a town match scores as a match on the town, not as an
+ * incidental substring somewhere in the middle of a concatenation.
+ */
+export function placeSearchFields(place: Place): string[] {
+  const fields = [place.name, place.town, place.region, place.country]
+    .filter((value): value is string => value !== undefined && value !== '')
+    .map(normalizeForSearch);
+
+  const aliases = fields.flatMap(regionAliases);
+
+  return [...fields, ...aliases];
+}
+
+/** The best (lowest) score this token gets against any of a place's fields. */
+function bestFieldScore(fields: readonly string[], token: string): number | null {
+  let best: number | null = null;
+
+  for (const field of fields) {
+    const score = matchScore(field, token);
+
+    if (score !== null && (best === null || score < best)) {
+      best = score;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Filter and order places for a query. Every whitespace-separated token must
+ * match ("spaceland tx" needs both), and the worst-matching token decides the
+ * score, so a place that only just qualifies doesn't ride in on one strong
+ * token. Ties break by group (saved first) then name, which is also the
+ * order an empty query returns.
+ *
+ * Places that only qualify by subsequence are dropped as soon as anything
+ * matched properly: "eloy" is a subsequence of "Skydive Pink Klatovy", and
+ * showing that next to the dropzone actually in Eloy is just noise. They
+ * still carry the query when nothing else matches, which is what makes
+ * initials ("sdaz") work.
+ */
 export function rankPlaces(query: string, places: readonly Place[]): Place[] {
   const normalizedQuery = normalizeForSearch(query);
 
@@ -207,11 +262,11 @@ export function rankPlaces(query: string, places: readonly Place[]): Place[] {
   const scored: { place: Place; score: number }[] = [];
 
   places.forEach(place => {
-    const haystack = normalizeForSearch(place.name);
+    const fields = placeSearchFields(place);
     let worst = 0;
 
     for (const token of tokens) {
-      const score = matchScore(haystack, token);
+      const score = bestFieldScore(fields, token);
 
       if (score === null) {
         return;
@@ -222,7 +277,12 @@ export function rankPlaces(query: string, places: readonly Place[]): Place[] {
     scored.push({ place, score: worst });
   });
 
-  return scored
+  const hasRealMatch = scored.some(entry => entry.score < SUBSEQUENCE_SCORE);
+  const kept = hasRealMatch
+    ? scored.filter(entry => entry.score < SUBSEQUENCE_SCORE)
+    : scored;
+
+  return kept
     .sort((a, b) => {
       if (a.score !== b.score) {
         return a.score - b.score;

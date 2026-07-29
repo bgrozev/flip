@@ -5,9 +5,15 @@ import { CustomLocation, Dropzone } from '../types';
 import { buildPlaces, normalizeForSearch, placeModeTargets, rankPlaces } from './places';
 
 const DZS: Dropzone[] = [
-  { name: 'Århus Faldskærm Club', lat: 56.313, lng: 10.615 },
-  { name: 'Skydive Arizona', lat: 32.80799, lng: -111.58167, direction: 216 },
-  { name: 'Skydive City (ZHills)', lat: 28.21887, lng: -82.15122, direction: 270 },
+  { name: 'Århus Faldskærm Club', lat: 56.313, lng: 10.615, country: 'Denmark' },
+  {
+    name: 'Skydive Arizona', lat: 32.80799, lng: -111.58167, direction: 216,
+    town: 'Eloy', region: 'Arizona', country: 'United States'
+  },
+  {
+    name: 'Skydive City (ZHills)', lat: 28.21887, lng: -82.15122, direction: 270,
+    town: 'Zephyrhills', region: 'Florida', country: 'United States'
+  },
   { name: 'Skydive Spaceland Dallas', lat: 33.449, lng: -96.378 },
   { name: 'Skydive Spaceland Houston', lat: 29.357628, lng: -95.461775, direction: 151 }
 ];
@@ -164,5 +170,34 @@ describe('placeModeTargets', () => {
     const targets = placeModeTargets({ flocking: { solveCorridors: [] } }, BASE);
 
     expect(targets).toEqual({});
+  });
+});
+
+describe('rankPlaces location fields', () => {
+  const places = buildPlaces(DZS, [], []);
+  const names = (query: string) => rankPlaces(query, places).map(p => p.name);
+
+  it('finds a dropzone by its town', () => {
+    expect(names('eloy')).toEqual(['Skydive Arizona']);
+    expect(names('zephyr')).toEqual(['Skydive City (ZHills)']);
+  });
+
+  it('finds a dropzone by region or country', () => {
+    expect(names('florida')).toEqual(['Skydive City (ZHills)']);
+    expect(names('denmark')).toEqual(['Århus Faldskærm Club']);
+  });
+
+  it('matches a region by its short form, without per-entry aliases', () => {
+    expect(names('az')).toEqual(['Skydive Arizona']);
+    expect(names('fl')).toEqual(['Skydive City (ZHills)']);
+  });
+
+  it('drops subsequence-only hits once anything matches properly', () => {
+    // "eloy" is also a subsequence of other names; the real match wins alone
+    expect(names('eloy')).not.toContain('Skydive Spaceland Dallas');
+  });
+
+  it('still matches initials when nothing else does', () => {
+    expect(names('sdaz')).toEqual(['Skydive Arizona']);
   });
 });
