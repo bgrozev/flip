@@ -24,6 +24,21 @@ export function customPlaceId(name: string): string {
 }
 
 /**
+ * The dropzone a place id refers to, if it refers to one at all: custom
+ * places and geocoder hits have no entry in the database.
+ */
+export function dropzoneForPlaceId(
+  dropzones: readonly Dropzone[],
+  placeId: string | null
+): Dropzone | undefined {
+  if (!placeId) {
+    return undefined;
+  }
+
+  return dropzones.find(dz => dropzonePlaceId(dz.name) === placeId);
+}
+
+/**
  * The per-mode starting targets a place declares, resolved against the
  * place's own position and heading: an entry may give a position, a heading,
  * or both, and whatever it leaves out comes from `base`. Modes that declare

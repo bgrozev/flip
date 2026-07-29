@@ -11,6 +11,7 @@ import {
   migrateFlockingParams,
   migrateManoeuvreConfig,
   migratePatternParams,
+  migratePatternParamsByMode,
   migrateSettings,
   migrateTarget,
   migrateTargetsByMode,
@@ -31,7 +32,8 @@ import {
 import { createVersionedCodec } from '../util/storage';
 import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
-import { placeModeTargets } from '../core/places';
+import { dropzoneForPlaceId, placeModeTargets } from '../core/places';
+import { DROPZONES } from '../util/dropzones';
 import { samples } from '../samples';
 
 // Canonical defaults live in core/model; re-exported here for existing users
@@ -97,6 +99,10 @@ interface AppStateContextValue {
   // Setters
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
   setPatternParams: (params: PatternParams) => void;
+  /** Pattern params for a mode (falls back to the shared legacy value). */
+  patternParamsForMode: (modeId: string) => PatternParams;
+  /** Set the pattern params for a given mode only. */
+  setPatternParamsForMode: (modeId: string, params: PatternParams) => void;
   setFlockingParams: (params: FlockingParams) => void;
   setTarget: (target: Target) => void;
   /** The target for a given mode (falls back to the shared legacy target). */
@@ -114,6 +120,10 @@ interface AppStateContextValue {
    * to no place (a preset, a geocoder hit).
    */
   selectPlaceTarget: (target: Target, place?: PlaceSelection) => void;
+  /** Restore the active place's corridors to what its dropzone declares. */
+  resetFlockingCorridors: () => void;
+  /** True when the active place has corridor edits of its own. */
+  flockingCorridorsAreCustom: boolean;
   setSettings: (settings: Settings) => void;
   setSelectedCourseId: (id: string | null) => void;
 
@@ -187,6 +197,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
   const patternParams = storedPatternParams ?? DEFAULT_PATTERN_PARAMS;
 
+  // Per-mode pattern params. A swooper's high descent rate and long legs
+  // describe their canopy, not the student pattern next to it, so each mode
+  // keeps its own; a mode with no entry yet falls back to the shared legacy
+  // value, which is what every existing user has.
+  const [storedPatternByMode, setStoredPatternByMode] =
+    useLocalStorageState<Record<string, PatternParams>>(
+      'flip.pattern.byMode',
+      {},
+      { codec: createVersionedCodec(SCHEMA_VERSION, migratePatternParamsByMode) }
+    );
+  const patternByMode = useMemo(() => storedPatternByMode ?? {}, [storedPatternByMode]);
+
   // Flocking params — source of truth for the flocking mode's math
   const [storedFlockingParams, setStoredFlockingParams] = useLocalStorageState<FlockingParams>(
     'flip.flocking.params',
@@ -239,6 +261,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   const setPatternParams = useCallback(
     (value: PatternParams) => setStoredPatternParams(value),
     [setStoredPatternParams]
+  );
+
+  const patternParamsForMode = useCallback(
+    (modeId: string) => patternByMode[modeId] ?? patternParams,
+    [patternByMode, patternParams]
+  );
+
+  const setPatternParamsForMode = useCallback(
+    (modeId: string, value: PatternParams) => {
+      setStoredPatternByMode({ ...patternByMode, [modeId]: value });
+    },
+    [patternByMode, setStoredPatternByMode]
   );
 
   // Pinning (or dragging) the Spot Reference is a statement about a point on
@@ -337,11 +371,12 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       // pin, else the DZ's canonical landmark), or unpin.
       const reference = remembered?.flockingReference ??
         declared?.flocking?.spotReference ?? null;
-      // Corridors are the one thing with no sensible "none": a DZ that says
-      // nothing leaves whatever is in force alone rather than resetting to a
-      // default pair that describes some other dropzone's airspace.
-      const corridors = remembered?.flockingCorridors ??
-        declared?.flocking?.solveCorridors;
+      // Corridors describe a dropzone's own airspace, so they never travel:
+      // a place with none configured and nothing remembered has none, rather
+      // than inheriting the restrictions of the DZ you just came from.
+      const corridors = place
+        ? remembered?.flockingCorridors ?? declared?.flocking?.solveCorridors ?? []
+        : undefined;
 
       if (
         reference !== flockingParams.referencePoint ||
@@ -363,6 +398,35 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setStoredFlockingParams
     ]
   );
+
+  /**
+   * Throw away the corridor edits made at this place and go back to what the
+   * dropzone declares — nothing, for a place the database says nothing about.
+   */
+  const resetFlockingCorridors = useCallback(() => {
+    const declared = dropzoneForPlaceId(DROPZONES, activePlaceId)
+      ?.modes?.flocking?.solveCorridors ?? [];
+
+    setStoredFlockingParams({ ...flockingParams, solveCorridors: declared });
+
+    if (activePlaceId && targetsByPlace[activePlaceId]) {
+      // Forget this place's own corridors so it falls back to the dropzone's
+      const entry = { ...targetsByPlace[activePlaceId] };
+
+      delete entry.flockingCorridors;
+      setStoredTargetsByPlace({ ...targetsByPlace, [activePlaceId]: entry });
+    }
+  }, [
+    activePlaceId,
+    flockingParams,
+    setStoredFlockingParams,
+    targetsByPlace,
+    setStoredTargetsByPlace
+  ]);
+
+  /** Whether this place has corridor edits to reset (enables the button). */
+  const flockingCorridorsAreCustom = activePlaceId !== null &&
+    targetsByPlace[activePlaceId]?.flockingCorridors !== undefined;
 
   const setSettings = useCallback(
     (value: Settings) => {
@@ -390,11 +454,12 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     setStoredTargetsByPlace({});
     setStoredActivePlaceId(null);
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
+    setStoredPatternByMode({});
     setStoredFlockingParams(DEFAULT_FLOCKING_PARAMS);
     setStoredSettings(DEFAULT_SETTINGS);
     setStoredTouched([]);
     setStoredSelectedCourseId(null);
-  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredTargetsByMode, setStoredTargetsByPlace, setStoredActivePlaceId, setStoredPatternParams, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
+  }, [setStoredManoeuvreConfig, setStoredTarget, setStoredTargetsByMode, setStoredTargetsByPlace, setStoredActivePlaceId, setStoredPatternParams, setStoredPatternByMode, setStoredFlockingParams, setStoredSettings, setStoredTouched, setStoredSelectedCourseId]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -408,11 +473,15 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
+      patternParamsForMode,
+      setPatternParamsForMode,
       setFlockingParams,
       setTarget,
       targetForMode,
       setTargetForMode,
       selectPlaceTarget,
+      resetFlockingCorridors,
+      flockingCorridorsAreCustom,
       setSettings,
       setSelectedCourseId,
       resetAll
@@ -428,11 +497,15 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       selectedCourseId,
       setManoeuvreConfig,
       setPatternParams,
+      patternParamsForMode,
+      setPatternParamsForMode,
       setFlockingParams,
       setTarget,
       targetForMode,
       setTargetForMode,
       selectPlaceTarget,
+      resetFlockingCorridors,
+      flockingCorridorsAreCustom,
       setSettings,
       setSelectedCourseId,
       resetAll

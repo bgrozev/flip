@@ -279,14 +279,54 @@ describe('useAppState targets', () => {
     expect(result.current.flockingParams.solveCorridors[0].name).toBe('North');
   });
 
-  it('leaves corridors alone at a dropzone that declares none', () => {
+  it('has no corridors at a dropzone that declares none', () => {
     const { result } = renderAppState();
 
     act(() => result.current.selectPlaceTarget(ZHILLS, ZHILLS_PLACE));
     act(() => result.current.selectPlaceTarget(DELAND, { id: 'dz:DeLand' }));
 
-    // No sensible "none" for corridors: the working set stays in force
-    expect(result.current.flockingParams.solveCorridors[0].name).toBe('North');
+    // Corridors are a dropzone's own airspace and never travel
+    expect(result.current.flockingParams.solveCorridors).toEqual([]);
+  });
+
+  it('resets corridors to what the dropzone declares', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ZHILLS, {
+      id: 'dz:Skydive City (ZHills)'
+    }));
+    expect(result.current.flockingCorridorsAreCustom).toBe(false);
+
+    act(() => result.current.setFlockingParams({
+      ...result.current.flockingParams,
+      solveCorridors: []
+    }));
+    expect(result.current.flockingCorridorsAreCustom).toBe(true);
+
+    act(() => result.current.resetFlockingCorridors());
+
+    // Back to the real dropzone entry's pair, and no longer "custom"
+    expect(result.current.flockingParams.solveCorridors.map(c => c.name))
+      .toEqual(['North', 'South']);
+    expect(result.current.flockingCorridorsAreCustom).toBe(false);
+  });
+
+  it('resets to no corridors where the dropzone declares none', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(DELAND, { id: 'dz:DeLand' }));
+    act(() => result.current.setFlockingParams({
+      ...result.current.flockingParams,
+      solveCorridors: [{
+        name: 'Mine', enabled: true, directionDeg: 90,
+        offsetMinMi: -1, offsetMaxMi: 1,
+        alongMinMi: -5, alongMaxMi: 3, canopyToleranceDeg: 15
+      }]
+    }));
+
+    act(() => result.current.resetFlockingCorridors());
+
+    expect(result.current.flockingParams.solveCorridors).toEqual([]);
   });
 
   it('prefers what the user did here over what the dropzone declares', () => {
@@ -314,5 +354,50 @@ describe('useAppState targets', () => {
     // Headings and distances travel fine — only the anchored point is dropped
     expect(result.current.flockingParams.windowTopFt).toBe(17000);
     expect(result.current.flockingParams.referencePoint).toBeNull();
+  });
+});
+
+describe('useAppState pattern params', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('falls back to the shared value for a mode with no entry', () => {
+    const { result } = renderAppState();
+
+    // What every existing user has: one stored pattern, no per-mode entries
+    expect(result.current.patternParamsForMode('swoop'))
+      .toEqual(result.current.patternParams);
+    expect(result.current.patternParamsForMode('pattern'))
+      .toEqual(result.current.patternParams);
+  });
+
+  it('keeps a swooper\'s pattern out of Standard Pattern', () => {
+    const { result } = renderAppState();
+    const swoop = {
+      ...result.current.patternParams,
+      descentRateMph: 30,
+      glideRatio: 1.5
+    };
+
+    act(() => result.current.setPatternParamsForMode('swoop', swoop));
+
+    expect(result.current.patternParamsForMode('swoop').descentRateMph).toBe(30);
+    expect(result.current.patternParamsForMode('pattern').descentRateMph)
+      .toBe(result.current.patternParams.descentRateMph);
+  });
+
+  it('persists per-mode patterns across a remount', () => {
+    const first = renderAppState();
+
+    act(() => first.result.current.setPatternParamsForMode('swoop', {
+      ...first.result.current.patternParams,
+      descentRateMph: 30
+    }));
+    first.unmount();
+
+    const second = renderAppState();
+
+    expect(second.result.current.patternParamsForMode('swoop').descentRateMph).toBe(30);
   });
 });

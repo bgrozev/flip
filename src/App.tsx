@@ -72,7 +72,7 @@ import {
   usePresets,
   useWinds
 } from './hooks';
-import { Course, LatLng, PanelId, Target, WindSummaryData } from './types';
+import { Course, LatLng, PanelId, PatternParams, Target, WindSummaryData } from './types';
 import { destinationPoint, hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
 import {
   exitForFixedEnd,
@@ -186,8 +186,8 @@ function DashboardContent() {
     targetForMode,
     setTargetForMode,
     selectPlaceTarget,
-    patternParams,
-    setPatternParams,
+    patternParamsForMode,
+    setPatternParamsForMode,
     flockingParams,
     setFlockingParams,
     settings,
@@ -218,6 +218,15 @@ function DashboardContent() {
   // Each mode plans against its own target; modes with none yet share the
   // legacy one, so existing setups carry over on first switch.
   const target = targetForMode(mode.id);
+
+  // Each mode keeps its own pattern: a swooper's descent rate and long legs
+  // describe their canopy, not the student pattern next to it.
+  const modePatternParams = patternParamsForMode(mode.id);
+  const setModePatternParams = useCallback(
+    (value: PatternParams) => setPatternParamsForMode(mode.id, value),
+    [setPatternParamsForMode, mode.id]
+  );
+
 
   // Persist the link's mode, then strip the param to keep the URL canonical
   useEffect(() => {
@@ -325,11 +334,11 @@ function DashboardContent() {
     renamePreset
   } = usePresets({
     target,
-    patternParams,
+    patternParams: modePatternParams,
     manoeuvreConfig,
     selectedCourseId,
     applyTarget: selectPlace,
-    setPatternParams,
+    setPatternParams: setModePatternParams,
     setManoeuvreConfig,
     setSelectedCourseId
   });
@@ -355,13 +364,15 @@ function DashboardContent() {
   // Modes without the leg-count control always fly the full pattern. The
   // override is applied on READ, never written back: a swooper's stored
   // NONE/1/2 choice must survive a trip through Standard Pattern.
-  const patternParamsForMode = useMemo(
-    () => (hasFeature(mode, 'patternLegCount') ? patternParams : withFullPattern(patternParams)),
-    [mode, patternParams]
+  const effectivePatternParams = useMemo(
+    () => (hasFeature(mode, 'patternLegCount')
+      ? modePatternParams
+      : withFullPattern(modePatternParams)),
+    [mode, modePatternParams]
   );
   const pattern = useMemo(
-    () => makePatternByType(patternParamsForMode),
-    [patternParamsForMode]
+    () => makePatternByType(effectivePatternParams),
+    [effectivePatternParams]
   );
 
   const paths = useFlightPaths({
@@ -661,8 +672,12 @@ function DashboardContent() {
   } else if (activePanel === 'pattern') {
     p = (
       <PatternComponent
-        params={patternParamsForMode}
-        onParamsChange={setPatternParams}
+        // Each mode has its own pattern, and the panel's number fields are
+        // uncontrolled (seeded once from initialValue) — remount on a mode
+        // change or they keep showing the previous mode's numbers.
+        key={mode.id}
+        params={effectivePatternParams}
+        onParamsChange={setModePatternParams}
         legCountSelectable={hasFeature(mode, 'patternLegCount')}
       />
     );

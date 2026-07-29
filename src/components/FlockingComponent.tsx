@@ -48,7 +48,7 @@ import {
 } from '../core/flocking';
 import { LIMITS, normalizeDirection } from '../core/validation';
 import { LatLng } from '../types';
-import { useUnits } from '../hooks';
+import { useAppState, useUnits } from '../hooks';
 
 import NumberInput from './NumberInput';
 
@@ -277,6 +277,7 @@ export default function FlockingComponent({
   distanceUnit,
   target
 }: FlockingComponentProps) {
+  const { resetFlockingCorridors, flockingCorridorsAreCustom } = useAppState();
   const {
     formatAltitude,
     parseAltitude,
@@ -785,9 +786,20 @@ export default function FlockingComponent({
               </Box>
             );
           })}
-          <Button size="small" onClick={addCorridor} sx={{ alignSelf: 'flex-start' }}>
-            Add corridor
-          </Button>
+          <Stack direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>
+            <Button size="small" onClick={addCorridor}>
+              Add corridor
+            </Button>
+            {/* Corridors belong to the dropzone, so "default" means what the
+                dropzone declares — nothing, where the database is silent. */}
+            {flockingCorridorsAreCustom && (
+              <Tooltip title="Discard the corridor changes made at this place.">
+                <Button size="small" color="inherit" onClick={resetFlockingCorridors}>
+                  Reset to default
+                </Button>
+              </Tooltip>
+            )}
+          </Stack>
 
         </Section>
       )}

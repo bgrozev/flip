@@ -257,6 +257,27 @@ export function migrateTargetsByPlace(raw: unknown): Record<string, PlaceTargets
   return places;
 }
 
+/**
+ * Validating loader for the per-mode pattern params (`flip.pattern.byMode`).
+ * A mode with no entry falls back to the shared legacy value, so dropping a
+ * broken one is safe.
+ */
+export function migratePatternParamsByMode(raw: unknown): Record<string, PatternParams> {
+  if (!isRecord(raw)) {
+    return {};
+  }
+
+  const params: Record<string, PatternParams> = {};
+
+  Object.entries(raw).forEach(([modeId, value]) => {
+    if (modeId !== '' && isRecord(value)) {
+      params[modeId] = migratePatternParams(value);
+    }
+  });
+
+  return params;
+}
+
 const PATTERN_TYPES: readonly PatternType[] = ['none', 'one-leg', 'two-leg', 'three-leg'];
 
 export function migratePatternParams(raw: unknown): PatternParams {

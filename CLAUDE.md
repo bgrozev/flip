@@ -108,9 +108,15 @@ LZ, a flocking end point out in the big field, and for flocking the DZ's
 jumprun corridors and canonical Spot Reference (the landmark a spot is
 quoted against to the pilot). Anything omitted falls back to the
 dropzone's own coordinates and heading, and what the user did at a place
-always outranks what the dropzone declares. Speeds, window altitudes and
+always outranks what the dropzone declares, and "Reset to default" in the
+Corridors section throws those edits away. Corridors never travel: a place
+that declares none and has no edits has none. Speeds, window altitudes and
 the ring radii stay out of the DZ data on purpose — they describe the
 flock, not the place.
+
+Pattern params are per-mode too (`flip.pattern.byMode`, falling back to
+the shared legacy `flip.pattern.params`): a swooper's descent rate and
+long legs describe their canopy, not the student pattern next to it.
 
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
