@@ -9,8 +9,8 @@ import { Target } from '../types';
 import PlacePicker from './PlacePicker';
 
 const TARGET: Target = {
-  target: { lat: 28.21887, lng: -82.15122 },
-  finalHeading: 270
+  target: { lat: 28.21952, lng: -82.15154 },
+  finalHeading: 180
 };
 
 function renderPicker({
@@ -81,19 +81,19 @@ describe('PlacePicker', () => {
     fireEvent.click(screen.getByText('Skydive City (ZHills)'));
 
     expect(setTarget).toHaveBeenCalledWith({
-      target: { lat: 28.21887, lng: -82.15122 },
-      finalHeading: 270
+      target: { lat: 28.21952, lng: -82.15154 },
+      finalHeading: 180
     });
   });
 
   it('lands a headingless dropzone into wind', () => {
     const setTarget = renderPicker({ upwindHeading: 40 });
 
-    search('jumptown');
-    fireEvent.click(screen.getByText('Jumptown'));
+    search('whistler');
+    fireEvent.click(screen.getByText('Whistler Skydiving Pemberton'));
 
     expect(setTarget).toHaveBeenCalledWith({
-      target: { lat: 42.568, lng: -72.283 },
+      target: { lat: 50.30251, lng: -122.73884 },
       finalHeading: 40
     });
   });
@@ -101,11 +101,11 @@ describe('PlacePicker', () => {
   it('keeps the current heading for a headingless dropzone when there is no wind', () => {
     const setTarget = renderPicker({ upwindHeading: null });
 
-    search('jumptown');
-    fireEvent.click(screen.getByText('Jumptown'));
+    search('whistler');
+    fireEvent.click(screen.getByText('Whistler Skydiving Pemberton'));
 
     expect(setTarget).toHaveBeenCalledWith({
-      target: { lat: 42.568, lng: -72.283 },
+      target: { lat: 50.30251, lng: -122.73884 },
       finalHeading: TARGET.finalHeading
     });
   });
@@ -201,8 +201,8 @@ describe('PlacePicker', () => {
     // dropzone's own per-mode config seeds the first visit.
     expect(selectPlace).toHaveBeenCalledWith(
       {
-        target: { lat: 28.21887, lng: -82.15122 },
-        finalHeading: 270
+        target: { lat: 28.21952, lng: -82.15154 },
+        finalHeading: 180
       },
       expect.objectContaining({ id: 'dz:Skydive City (ZHills)' })
     );
@@ -254,8 +254,8 @@ describe('PlacePicker', () => {
     await vi.waitFor(() => expect(setTarget).toHaveBeenCalled());
 
     expect(setTarget).toHaveBeenCalledWith({
-      target: { lat: 28.21887, lng: -82.15122 },
-      finalHeading: 270
+      target: { lat: 28.21952, lng: -82.15154 },
+      finalHeading: 180
     });
 
     vi.unstubAllGlobals();

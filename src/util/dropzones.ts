@@ -20,72 +20,51 @@ import { Dropzone } from '../types';
  */
 export const DROPZONES: Dropzone[] = [
   {
-    name: '321 Chutelibre',
-    lat: 48.34066,
-    lng: 2.79611,
-    country: 'France'
-  },
-  {
     name: 'Abu Dhabi Skydive',
-    lat: 24.72669,
-    lng: 54.83057,
+    lat: 24.72509,
+    lng: 54.82728,
+    direction: 221,
     region: 'Al Smeih Area',
     country: 'United Arab Emirates',
     website: 'https://www.abudhabiskydive.com/'
   },
   {
     name: 'Aero Fallschirmsport Kassel Calden',
-    lat: 51.41658,
-    lng: 9.38613,
+    lat: 51.41757,
+    lng: 9.38507,
+    direction: 276,
     country: 'Germany'
   },
   {
     name: 'Aerohio Skydiving Center',
-    lat: 40.89722,
-    lng: -82.25734,
+    lat: 40.8963,
+    lng: -82.25818,
+    direction: 1,
     region: 'Ohio',
     country: 'United States',
     website: 'https://www.aerohio.com/'
   },
   {
-    name: 'Aeroklub Bialostocki',
-    lat: 53.1324,
-    lng: 23.15917,
-    town: 'Białystok',
-    country: 'Poland'
-  },
-  {
     name: 'Aeroklub Elblaski',
-    lat: 54.15587,
-    lng: 19.40446,
+    lat: 54.14388,
+    lng: 19.42622,
+    direction: 108,
     town: 'Elbląg',
     country: 'Poland'
   },
   {
-    name: 'Aeroklub Gliwicki',
-    lat: 50.30113,
-    lng: 18.66235,
-    town: 'Gliwice',
-    country: 'Poland'
-  },
-  {
-    name: 'Aeroklub Rzeszowski',
-    lat: 51.94983,
-    lng: 19.39077,
-    town: 'Jasionka',
-    country: 'Poland'
-  },
-  {
     name: 'Aeroklub Warszawski Skydive Warszawa',
-    lat: 52.57273,
-    lng: 20.861,
+    lat: 52.57377,
+    lng: 20.86617,
+    direction: 331,
     town: 'Chrcynno',
     country: 'Poland'
   },
   {
     name: 'Air Libre Parachutisme Dieppe',
-    lat: 49.88451,
-    lng: 1.08378,
+    lat: 49.88479,
+    lng: 1.08445,
+    direction: 126,
     country: 'France'
   },
   {
@@ -97,14 +76,16 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Aix-en-Provence Parachutisme',
-    lat: 43.50297,
-    lng: 5.37341,
+    lat: 43.5094,
+    lng: 5.36606,
+    direction: 146,
     country: 'France'
   },
   {
     name: 'Amiens Parachutisme',
-    lat: 49.87256,
-    lng: 2.38527,
+    lat: 49.87053,
+    lng: 2.38952,
+    direction: 296,
     country: 'France'
   },
   {
@@ -114,279 +95,246 @@ export const DROPZONES: Dropzone[] = [
     country: 'Denmark'
   },
   {
-    name: 'Australian Skydive Bridgewater',
-    lat: -36.60102,
-    lng: 143.94147,
-    town: 'Bridgewater on Loddon',
-    country: 'Australia'
-  },
-  {
     name: 'Avignon Pujaut',
-    lat: 43.99604,
-    lng: 4.75486,
+    lat: 43.99673,
+    lng: 4.75119,
+    direction: 351,
     country: 'France'
   },
   {
     name: 'Bay Area Skydiving',
-    lat: 37.83516,
-    lng: -121.63264,
+    lat: 37.83443,
+    lng: -121.63366,
+    direction: 319,
     region: 'California',
     country: 'United States',
     website: 'https://www.bayareaskydiving.com/'
   },
   {
     name: 'Beccles Skydivers',
-    lat: 52.43537,
-    lng: 1.61868,
+    lat: 52.4347,
+    lng: 1.61865,
+    direction: 269,
+    town: 'Beccles',
     country: 'United Kingdom'
   },
   {
-    name: 'Beni Mellal DZ',
-    lat: 32.42887,
-    lng: -6.33518,
-    country: 'Morocco',
-    website: 'https://www.pacma.ma/'
-  },
-  {
     name: 'Black Knights Skydiving Centre',
-    lat: 53.96328,
-    lng: -2.83584,
+    lat: 53.96257,
+    lng: -2.83357,
+    direction: 225,
     region: 'England',
     country: 'United Kingdom'
   },
   {
     name: 'Cahors Parachutisme',
-    lat: 44.35213,
-    lng: 1.47516,
+    lat: 44.34909,
+    lng: 1.47928,
+    direction: 311,
     country: 'France'
   },
   {
     name: 'Capital City Skydiving Campbell River',
-    lat: 49.9541,
-    lng: -125.27572,
+    lat: 49.9524,
+    lng: -125.27596,
+    direction: 313,
     country: 'Canada'
   },
   {
     name: 'Centre ecole parachutisme Laval',
-    lat: 48.03213,
-    lng: -0.74324,
+    lat: 48.03037,
+    lng: -0.7443,
+    direction: 323,
     country: 'France'
   },
   {
     name: 'Centre Europeen de Chute Libre Lapalisse',
-    lat: 46.25369,
-    lng: 3.59,
+    lat: 46.25093,
+    lng: 3.58607,
+    direction: 234,
     country: 'France'
   },
   {
     name: 'Centro Paracaidismo Pirineos Jaca',
-    lat: 42.5692,
-    lng: -0.72778,
+    lat: 42.56803,
+    lng: -0.72664,
+    direction: 270,
     country: 'Spain'
   },
   {
     name: 'CEPS Ariege Pamiers',
-    lat: 43.09074,
-    lng: 1.69831,
+    lat: 43.09145,
+    lng: 1.69905,
+    direction: 90,
     country: 'France'
   },
   {
     name: 'Chattanooga Skydiving Company',
-    lat: 35.06067,
-    lng: -85.58531,
+    lat: 35.06022,
+    lng: -85.58517,
+    direction: 221,
     region: 'Tennessee',
     country: 'United States',
     website: 'https://www.chattanoogaskydivingcompany.com/'
   },
   {
     name: 'Chicagoland Skydiving Center',
-    lat: 41.89338,
-    lng: -89.07201,
+    lat: 41.89395,
+    lng: -89.07263,
     town: 'Rochelle',
     region: 'Illinois',
     country: 'United States',
-    direction: 250
+    direction: 250,
   },
   {
     name: 'Chute Libre Dordogne',
-    lat: 45.1973,
-    lng: 0.81459,
+    lat: 45.19643,
+    lng: 0.81647,
+    direction: 295,
     country: 'France'
   },
   {
     name: 'Cleveland Skydiving Center',
-    lat: 41.352,
-    lng: -81.099,
+    lat: 41.35048,
+    lng: -81.09904,
+    direction: 259,
     town: 'Garrettsville',
     region: 'Ohio',
-    country: 'United States'
-  },
-  {
-    name: 'Complete Parachute Solutions Bishop',
-    lat: 33.75565,
-    lng: -111.44427,
-    region: 'Arizona',
     country: 'United States',
-    website: 'https://www.cpsworld.com/'
+    modes: {
+      swoop: {
+        lat: 41.35109,
+        lng: -81.10023,
+        direction: 79
+      },
+    },
   },
   {
     name: 'Connecticut Parachutists, Inc.',
-    lat: 41.92542,
-    lng: -72.45711,
+    lat: 41.9222,
+    lng: -72.45825,
+    direction: 0,
     region: 'Connecticut',
     country: 'United States',
     website: 'https://www.skydivect.com/'
   },
   {
     name: 'Cornish Parachute Club',
-    lat: 50.33126,
-    lng: -5.17836,
+    lat: 50.32788,
+    lng: -5.18008,
+    direction: 266,
     country: 'United Kingdom'
-  },
-  {
-    name: 'Darwin Parachute Club',
-    lat: -12.63466,
-    lng: 131.07469,
-    town: 'Noonamah',
-    country: 'Australia'
-  },
-  {
-    name: 'DreamFly',
-    lat: 38.77618,
-    lng: -9.33964,
-    country: 'Portugal'
   },
   {
     name: 'Dropzone Ceska Lipa',
     lat: 50.70922,
     lng: 14.56603,
+    direction: 315,
     country: 'Czech Republic'
   },
   {
     name: 'Dropzone Denmark',
-    lat: 56.184,
-    lng: 9.031,
+    lat: 56.18408,
+    lng: 9.03664,
+    direction: 271,
     country: 'Denmark'
   },
   {
     name: 'Dropzone Most',
-    lat: 50.52515,
-    lng: 13.68199,
+    lat: 50.5261,
+    lng: 13.68031,
+    direction: 21,
     country: 'Czech Republic'
   },
   {
     name: 'Dropzone Prostejov',
-    lat: 49.44521,
-    lng: 17.13065,
+    lat: 49.44748,
+    lng: 17.12908,
+    direction: 304,
     country: 'Czech Republic',
     website: 'https://www.dropzoneprostejov.com/'
   },
   {
-    name: 'Dunkerque Parachutisme',
-    lat: 51.03966,
-    lng: 2.54915,
-    country: 'France'
-  },
-  {
-    name: 'DZ Pribram',
-    lat: 49.71608,
-    lng: 14.09464,
-    country: 'Czech Republic',
-    website: 'https://skycentrum.com/'
-  },
-  {
     name: 'École de Parachutisme de Lyon Corbas',
-    lat: 45.65814,
-    lng: 4.91378,
+    lat: 45.656,
+    lng: 4.91495,
+    direction: 179,
     region: 'Auvergne-Rhône-Alpes',
     country: 'France',
     website: 'https://parachutisme-lyon.fr/'
   },
   {
     name: 'Ecole de Parachutisme du Valinco',
-    lat: 41.66003,
-    lng: 8.89374,
+    lat: 41.65954,
+    lng: 8.89557,
+    direction: 276,
     country: 'France'
   },
   {
     name: 'Ecole de Parachutisme Nord Franche-Comte',
-    lat: 47.70259,
-    lng: 6.54805,
+    lat: 47.70294,
+    lng: 6.54728,
+    direction: 221,
     country: 'France'
   },
   {
     name: 'EFPLB Lille Bondues',
-    lat: 50.68725,
-    lng: 3.0859,
+    lat: 50.68612,
+    lng: 3.07813,
+    direction: 255,
     country: 'France'
   },
   {
     name: 'EPCOL Orleans',
-    lat: 47.89938,
-    lng: 2.16655,
-    country: 'France'
+    lat: 47.90242,
+    lng: 2.16771,
+    direction: 57,
+    country: 'France',
+    modes: {
+      swoop: {
+        lat: 47.9036,
+        lng: 2.16958,
+        direction: 72
+      },
+    },
   },
   {
     name: 'EPSBA Arcachon',
-    lat: 44.59781,
-    lng: -1.11398,
-    country: 'France'
-  },
-  {
-    name: 'ERP Granville',
-    lat: 48.83763,
-    lng: -1.59592,
-    town: 'Granville',
+    lat: 44.59664,
+    lng: -1.11642,
+    direction: 76,
     country: 'France'
   },
   {
     name: 'Euroa Skydive – The Parachute School',
-    lat: -36.74381,
-    lng: 145.5158,
+    lat: -36.74491,
+    lng: 145.51481,
+    direction: 203,
     region: 'Victoria',
     country: 'Australia',
-    website: 'https://www.skydivingmelbourne.com.au/'
-  },
-  {
-    name: 'Faldskærmsklubben DFC',
-    lat: 55.34383,
-    lng: 12.11057,
-    region: 'Region Sjælland',
-    country: 'Denmark'
   },
   {
     name: 'Fallschirmsport Damme',
-    lat: 52.48855,
-    lng: 8.1849,
+    lat: 52.48813,
+    lng: 8.18671,
+    direction: 104,
     region: 'Niedersachsen',
     country: 'Germany'
   },
   {
-    name: 'Fallschirmsprungzentrum Mitteldeutschland',
-    lat: 51.87403,
-    lng: 11.38828,
-    town: 'Cochstedt',
-    country: 'Germany'
-  },
-  {
     name: 'Fano Sky Team S.S.D.',
-    lat: 43.82733,
-    lng: 13.03409,
+    lat: 43.82382,
+    lng: 13.02883,
+    direction: 231,
     country: 'Italy',
     website: 'https://www.skydivefano.com/'
   },
   {
     name: 'Firebird Skydiving Bitburg',
-    lat: 49.95061,
-    lng: 6.5761,
+    lat: 49.94957,
+    lng: 6.5717,
+    direction: 59,
     country: 'Germany'
-  },
-  {
-    name: 'FlyFast Zamosc',
-    lat: 50.72125,
-    lng: 23.25958,
-    town: 'Zamość',
-    country: 'Poland'
   },
   {
     name: 'Føniks Fallskjermklubb',
@@ -397,93 +345,80 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'FSC Suedpfalz E.V.',
-    lat: 49.03091,
-    lng: 7.99106,
+    lat: 49.03252,
+    lng: 7.99096,
+    direction: 80,
     country: 'Germany',
     website: 'https://www.fsc-suedpfalz.de/'
   },
   {
     name: 'Fun Parachutisme Albi',
-    lat: 43.91423,
-    lng: 2.11878,
+    lat: 43.91444,
+    lng: 2.1187,
+    direction: 91,
     country: 'France'
   },
   {
-    name: 'Gaokongshijie Skydiving Base',
-    lat: 21.95834,
-    lng: 112.11014,
-    region: 'Guangdong Province',
-    country: 'China'
-  },
-  {
-    name: 'GoJump Hawaii',
-    lat: 21.65357,
-    lng: -158.2063,
-    region: 'Hawaii',
-    country: 'United States',
-    website: 'https://www.gojump-america.com/'
-  },
-  {
     name: 'GoJump Las Vegas LLC',
-    lat: 35.76827,
-    lng: -115.32964,
+    lat: 35.77113,
+    lng: -115.33232,
+    direction: 37,
     region: 'Nevada',
     country: 'United States',
-    website: 'https://www.gojump.vegas/'
   },
   {
     name: 'GoJump New York',
     lat: 40.81533,
-    lng: -72.86603,
+    lng: -72.86523,
+    direction: 316,
     region: 'New York',
     country: 'United States',
     website: 'https://gojump-newyork.com/'
   },
   {
     name: 'GoJump Oceanside',
-    lat: 33.21715,
-    lng: -117.35231,
+    lat: 33.21921,
+    lng: -117.34826,
+    direction: 80,
     region: 'California',
     country: 'United States',
     website: 'https://www.gojump-oceanside.com/'
   },
   {
     name: 'Gotlands Fallskärmsklubb',
-    lat: 57.64811,
-    lng: 18.32698,
+    lat: 57.64871,
+    lng: 18.3291,
+    direction: 240,
     country: 'Sweden',
     website: 'https://gotland.com/companies/gotlands-fallskarmsklubb/'
   },
   {
     name: 'Gravity Skydive',
-    lat: 14.01387,
-    lng: -90.77103,
+    lat: 14.01366,
+    lng: -90.77161,
+    direction: 151,
     country: 'Guatemala',
     website: 'https://www.gravity.com.gt/'
   },
   {
     name: 'HLF Denmark',
-    lat: 56.396,
-    lng: 8.442,
+    lat: 56.39541,
+    lng: 8.44144,
+    direction: 255,
     country: 'Denmark'
   },
   {
     name: 'Hosin Ceske Budejovice Skysurf',
-    lat: 49.03959,
-    lng: 14.49214,
+    lat: 49.03838,
+    lng: 14.48939,
+    direction: 63,
     country: 'Czech Republic'
   },
   {
-    name: 'Irish Parachute Club, Ltd.',
-    lat: 53.2336,
-    lng: -7.1168,
-    country: 'Ireland',
-    website: 'https://www.skydive.ie/'
-  },
-  {
     name: 'iSkydive America – Miami',
-    lat: 25.49923,
-    lng: -80.55424,
+    lat: 25.49842,
+    lng: -80.54537,
+    direction: 358,
     region: 'Florida',
     country: 'United States',
     website: 'https://www.iskydive.com/miami'
@@ -498,15 +433,24 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Johannesburg Skydiving Club',
-    lat: -26.36972,
-    lng: 27.35217,
+    lat: -26.36769,
+    lng: 27.3483,
+    direction: 115,
     region: 'Gauteng',
-    country: 'South Africa'
+    country: 'South Africa',
+    modes: {
+      swoop: {
+        lat: -26.36626,
+        lng: 27.35172,
+        direction: 210
+      },
+    },
   },
   {
     name: 'Jump Club Krems',
-    lat: 48.44608,
-    lng: 15.62897,
+    lat: 48.44647,
+    lng: 15.63166,
+    direction: 287,
     country: 'Austria',
     website: 'https://www.fallschirmspringen-krems.at/'
   },
@@ -520,57 +464,63 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Jump Georgia Skydiving',
-    lat: 32.65,
-    lng: -81.598,
+    lat: 32.64906,
+    lng: -81.59571,
+    direction: 279,
     region: 'Georgia',
     country: 'United States'
   },
   {
     name: 'Jump TN',
-    lat: 36.19601,
-    lng: -82.81099,
+    lat: 36.19653,
+    lng: -82.8095,
+    direction: 230,
     region: 'Tennessee',
     country: 'United States',
     website: 'https://www.jumptn.com/'
   },
   {
     name: 'Jumptown',
-    lat: 42.568,
-    lng: -72.283,
+    lat: 42.56717,
+    lng: -72.28669,
+    direction: 225,
     town: 'Orange',
     region: 'Massachusetts',
-    country: 'United States'
-  },
-  {
-    name: 'Kansas State Skydive',
-    lat: 38.904,
-    lng: -97.236,
-    region: 'Kansas',
-    country: 'United States'
+    country: 'United States',
+    modes: {
+      swoop: {
+        lat: 42.56829,
+        lng: -72.28526,
+        direction: 225
+      },
+    },
   },
   {
     name: 'Kolding Faldskærmsklub',
-    lat: 55.437,
-    lng: 9.327,
+    lat: 55.43651,
+    lng: 9.32623,
+    direction: 79,
     country: 'Denmark'
   },
   {
     name: 'Krutitcy',
-    lat: 54.27618,
-    lng: 40.81746,
+    lat: 54.27657,
+    lng: 40.82074,
+    direction: 66,
     country: 'Russian Federation',
-    website: 'https://www.dzk-resort.com/'
   },
   {
     name: 'Kunovice OK Boogie',
-    lat: 49.0329,
-    lng: 17.4414,
+    lat: 49.035,
+    lng: 17.44115,
+    direction: 26,
     country: 'Czech Republic'
   },
   {
     name: 'Kuwait Skydive',
-    lat: 28.60255,
-    lng: 48.30974,
+    lat: 28.60385,
+    lng: 48.31022,
+    direction: 179,
     country: 'Kuwait',
     website: 'https://kuwaitskydiveco.com/'
   },
@@ -578,55 +528,54 @@ export const DROPZONES: Dropzone[] = [
     name: 'La Rochelle Parachutisme',
     lat: 46.1777,
     lng: -1.18973,
+    direction: 270,
     country: 'France'
   },
   {
     name: 'Lens Parachutisme',
-    lat: 50.46607,
-    lng: 2.82142,
-    country: 'France'
-  },
-  {
-    name: 'Lons le Saunier Parachutisme',
-    lat: 46.67442,
-    lng: 5.46932,
+    lat: 50.4674,
+    lng: 2.82236,
+    direction: 214,
     country: 'France'
   },
   {
     name: 'Maubeuge Parachutisme',
-    lat: 50.31092,
-    lng: 4.0326,
+    lat: 50.31185,
+    lng: 4.03453,
+    direction: 50,
     country: 'France'
   },
   {
-    name: 'Meido Skydive',
-    lat: 52.71309,
-    lng: 9.87313,
-    region: 'Niedersachsen',
-    country: 'Germany',
-    website: 'https://www.meido.de/'
-  },
-  {
     name: 'Midwest Freefall Sport Parachute Club, Inc.',
-    lat: 42.75956,
-    lng: -82.94168,
+    lat: 42.75876,
+    lng: -82.94165,
+    direction: 176,
     region: 'Michigan',
     country: 'United States',
     website: 'https://www.midwestfreefall.com/'
   },
   {
     name: 'Mile-Hi Skydiving Center',
-    lat: 40.164,
-    lng: -105.163,
+    lat: 40.16289,
+    lng: -105.16394,
+    direction: 305,
     town: 'Longmont',
     region: 'Colorado',
     country: 'United States',
-    website: 'https://www.milehiskydiving.com/'
+    website: 'https://www.milehiskydiving.com/',
+    modes: {
+      swoop: {
+        lat: 40.16205,
+        lng: -105.16584,
+        direction: 125
+      },
+    },
   },
   {
     name: 'Music City Skydiving',
-    lat: 36.11186,
-    lng: -87.74158,
+    lat: 36.11386,
+    lng: -87.74093,
+    direction: 30,
     region: 'Tennessee',
     country: 'United States',
     website: 'https://www.musiccityskydiving.com/'
@@ -639,46 +588,27 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Netheravon',
-    lat: 51.245,
-    lng: -1.764,
+    lat: 51.24287,
+    lng: -1.76179,
+    direction: 242,
     town: 'Netheravon',
     region: 'England',
     country: 'United Kingdom'
   },
   {
-    name: 'Newcastle Sport Parachute Club Elderslie',
-    lat: -34.05903,
-    lng: 150.7154,
-    town: 'Elderslie',
-    country: 'Australia'
-  },
-  {
     name: 'Nimes Courbessac Parachutisme',
-    lat: 43.85388,
-    lng: 4.41507,
+    lat: 43.85348,
+    lng: 4.41335,
+    direction: 357,
     country: 'France'
   },
   {
     name: 'NorCal Skydiving',
-    lat: 38.77288,
-    lng: -122.99271,
+    lat: 38.77289,
+    lng: -122.99163,
+    direction: 332,
     region: 'California',
     country: 'United States'
-  },
-  {
-    name: 'Normandie Belleme ULM',
-    lat: 48.37536,
-    lng: 0.56294,
-    town: 'Bellême',
-    country: 'France'
-  },
-  {
-    name: 'NZOne Skydive',
-    lat: -45.03122,
-    lng: 168.6597,
-    region: 'Otago',
-    country: 'New Zealand',
-    website: 'https://www.nzoneskydive.co.nz/'
   },
   {
     name: 'Ogden Skydiving Center',
@@ -690,200 +620,203 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Okanagan Skydive',
-    lat: 50.24658,
-    lng: -119.32819,
+    lat: 50.24651,
+    lng: -119.33169,
+    direction: 70,
     country: 'Canada'
   },
   {
     name: 'Olimpic Skydive Wroclaw',
-    lat: 50.95515,
-    lng: 16.76772,
+    lat: 50.9565,
+    lng: 16.76905,
+    direction: 357,
     country: 'Poland'
   },
   {
     name: 'Pacific Northwest Skydiving Center',
-    lat: 45.21816,
-    lng: -122.58878,
+    lat: 45.22036,
+    lng: -122.59129,
+    direction: 156,
     region: 'Oregon',
     country: 'United States',
     website: 'https://www.pnwskydiving.com/'
   },
   {
     name: 'Para 71 Chalon-sur-Saone',
-    lat: 46.82679,
-    lng: 4.82502,
+    lat: 46.82742,
+    lng: 4.82584,
+    direction: 146,
     country: 'France'
   },
   {
-    name: 'Paracaidismo Galicia Galsur',
-    lat: 42.92795,
-    lng: -8.99414,
-    town: 'Mazaricos',
-    country: 'Spain'
-  },
-  {
     name: 'Paracentro Roma',
-    lat: 41.88457,
-    lng: 12.71334,
+    lat: 41.88422,
+    lng: 12.71637,
+    direction: 270,
     region: 'Lazio',
     country: 'Italy'
   },
   {
     name: 'Paracentrum Texel',
-    lat: 53.11818,
-    lng: 4.82774,
+    lat: 53.11824,
+    lng: 4.82894,
+    direction: 38,
     country: 'Netherlands',
     website: 'https://www.paracentrumtexel.nl/'
   },
   {
     name: 'Parachute Montreal',
-    lat: 45.28492,
-    lng: -73.0105,
+    lat: 45.28507,
+    lng: -73.01252,
     region: 'Quebec',
     country: 'Canada',
-    direction: 278
+    direction: 278,
+    modes: {
+      swoop: {
+        lat: 45.2849,
+        lng: -73.01042,
+        direction: 278
+      },
+    },
   },
   {
     name: 'Parachute Montreal Rive-Nord',
-    lat: 45.91116,
-    lng: -73.67241,
+    lat: 45.9143,
+    lng: -73.67156,
+    direction: 185,
     region: 'Quebec',
     country: 'Canada',
     website: 'https://www.parachutemontreal.ca/'
   },
   {
     name: 'Parachute Ottawa',
-    lat: 45.46049,
-    lng: -75.64412,
+    lat: 45.46075,
+    lng: -75.63846,
+    direction: 257,
     country: 'Canada'
   },
   {
     name: 'Parachute School of Toronto',
-    lat: 44.26373,
-    lng: -79.33951,
+    lat: 44.26719,
+    lng: -79.33987,
+    direction: 180,
     region: 'Ontario',
     country: 'Canada',
     website: 'https://www.parachuteschool.com/'
   },
   {
     name: 'Parachute Victoriaville',
-    lat: 46.11545,
-    lng: -71.92454,
+    lat: 46.11541,
+    lng: -71.92456,
+    direction: 227,
     region: 'Quebec',
     country: 'Canada',
     website: 'https://www.paravic.com/'
   },
   {
     name: 'Parachutisme 38 Grenoble',
-    lat: 45.21822,
-    lng: 5.8482,
+    lat: 45.21744,
+    lng: 5.84881,
+    direction: 223,
     country: 'France'
   },
   {
     name: 'Parachutisme 42 Saint Galmier',
-    lat: 45.60637,
-    lng: 4.30362,
+    lat: 45.60708,
+    lng: 4.30364,
+    direction: 345,
     country: 'France'
   },
   {
     name: 'Parachutisme Adrenaline Trois-Rivieres',
-    lat: 46.36547,
-    lng: -72.67565,
+    lat: 46.36485,
+    lng: -72.67076,
+    direction: 34,
     region: 'Quebec',
     country: 'Canada',
-    website: 'https://www.parachute3r.ca/'
   },
   {
     name: 'Parachutisme Besancon',
-    lat: 47.20694,
-    lng: 6.08281,
+    lat: 47.20436,
+    lng: 6.07709,
+    direction: 56,
     country: 'France'
   },
   {
     name: 'Paraclub Agenais',
-    lat: 44.17396,
-    lng: 0.59331,
+    lat: 44.17202,
+    lng: 0.59563,
+    direction: 288,
     country: 'France'
   },
   {
-    name: 'Paraklub Jihlava',
-    lat: 49.41431,
-    lng: 15.63706,
-    town: 'Henčov',
-    country: 'Czech Republic'
-  },
-  {
-    name: 'Paraklub Nove Mesto nad Metuji',
-    lat: 50.35343,
-    lng: 16.12143,
-    country: 'Czech Republic'
-  },
-  {
     name: 'Paris Parachutisme Fretoy le Chateau',
-    lat: 49.67005,
-    lng: 2.96777,
+    lat: 49.66944,
+    lng: 2.96644,
+    direction: 354,
     country: 'France'
   },
   {
     name: 'Pau Parachutisme Passion',
-    lat: 43.37914,
-    lng: -0.41643,
+    lat: 43.38215,
+    lng: -0.42025,
+    direction: 125,
     country: 'France'
   },
   {
     name: 'Pepperell Skydiving Center',
-    lat: 42.69862,
-    lng: -71.55006,
+    lat: 42.69567,
+    lng: -71.55178,
+    direction: 44,
     region: 'Massachusetts',
     country: 'United States',
     website: 'https://www.skyjump.com/'
   },
   {
     name: 'Piedmont Skydiving',
-    lat: 35.64831,
-    lng: -80.51749,
+    lat: 35.64629,
+    lng: -80.52125,
+    direction: 20,
     region: 'North Carolina',
     country: 'United States',
     website: 'https://piedmontskydiving.com/'
   },
   {
     name: 'Pinjarra Skydiving Airstrip',
-    lat: -32.66481,
-    lng: 115.88244,
+    lat: -32.66445,
+    lng: 115.8815,
+    direction: 20,
     region: 'Western Australia',
     country: 'Australia'
   },
   {
-    name: 'Przasnysz Skoczek',
-    lat: 53.01829,
-    lng: 20.88456,
-    town: 'Przasnysz',
-    country: 'Poland'
-  },
-  {
     name: 'SA Skydiving Murray Bridge',
-    lat: -35.06475,
-    lng: 139.22395,
+    lat: -35.06671,
+    lng: 139.22394,
+    direction: 26,
     country: 'Australia'
   },
   {
     name: 'Saltamos - SkydiveBCN',
-    lat: 41.76414,
-    lng: 1.86374,
+    lat: 41.76456,
+    lng: 1.86256,
+    direction: 281,
     region: 'Catalunya',
     country: 'Spain',
     website: 'https://skydivebcn.com'
   },
   {
     name: 'Saumur Parachutisme',
-    lat: 47.25806,
-    lng: -0.1164,
+    lat: 47.25848,
+    lng: -0.11217,
+    direction: 94,
     country: 'France'
   },
   {
     name: 'Seven Hills Skydivers',
-    lat: 43.258,
-    lng: -89.065,
+    lat: 43.26041,
+    lng: -89.06727,
+    direction: 2,
     region: 'Wisconsin',
     country: 'United States'
   },
@@ -896,174 +829,171 @@ export const DROPZONES: Dropzone[] = [
     website: 'https://www.siliconvalleyskydiving.com/'
   },
   {
-    name: 'Sissonne Parachutisme',
-    lat: 49.57299,
-    lng: 3.89279,
-    town: 'Sissonne',
-    country: 'France'
-  },
-  {
-    name: 'Skoczek Nowy Targ',
-    lat: 49.48921,
-    lng: 20.02634,
-    town: 'Nowy Targ',
-    country: 'Poland'
-  },
-  {
     name: 'Sky Company Clube e Escola de Paraquedismo',
-    lat: -23.29543,
-    lng: -47.69083,
+    lat: -23.2974,
+    lng: -47.69042,
+    direction: 222,
     country: 'Brazil',
-    website: 'https://www.paraquedismoskycompany.com.br/'
+    website: 'https://www.paraquedismoskycompany.com.br/',
+    modes: {
+      swoop: {
+        lat: -23.29854,
+        lng: -47.68929,
+        direction: 347
+      },
+    },
   },
   {
     name: 'Sky Down Skydiving',
-    lat: 43.642,
-    lng: -116.636,
+    lat: 43.645,
+    lng: -116.63724,
+    direction: 138,
     region: 'Idaho',
     country: 'United States'
   },
   {
     name: 'Sky Kef',
-    lat: 31.28669,
-    lng: 34.72425,
+    lat: 31.28538,
+    lng: 34.72335,
+    direction: 310,
     country: 'Israel',
     website: 'https://www.skykef.co.il/'
   },
   {
     name: 'Sky Service Skydive Prague',
-    lat: 50.12779,
-    lng: 14.51587,
+    lat: 50.13097,
+    lng: 14.53007,
+    direction: 234,
     country: 'Czech Republic'
   },
   {
-    name: 'Sky4 Pombal',
-    lat: 39.88561,
-    lng: -8.64993,
-    country: 'Portugal'
-  },
-  {
-    name: 'Skydive 12 Apostles Peterborough',
-    lat: -38.60612,
-    lng: 142.87702,
-    town: 'Peterborough',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Abel Tasman',
-    lat: -41.12042,
-    lng: 172.99293,
+    lat: -41.12033,
+    lng: 172.99303,
+    direction: 227,
     region: 'Tasman',
     country: 'New Zealand'
   },
   {
-    name: 'Skydive Adelaide',
-    lat: -35.29594,
-    lng: 139.03645,
-    town: 'Langhorne Creek',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Aircruz-Totana',
-    lat: 37.75247,
-    lng: -1.4493,
+    lat: 37.75377,
+    lng: -1.44761,
+    direction: 34,
     country: 'Spain',
     website: 'https://skydiveaircruz.com/'
   },
   {
     name: 'Skydive Alabama',
-    lat: 34.267,
-    lng: -86.863,
+    lat: 34.26661,
+    lng: -86.86196,
+    direction: 128,
     region: 'Alabama',
     country: 'United States'
   },
   {
     name: 'Skydive Algarve',
-    lat: 37.14748,
-    lng: -8.58122,
+    lat: 37.14846,
+    lng: -8.58156,
+    direction: 290,
     country: 'Portugal',
     website: 'https://www.skydivealgarve.com/'
   },
   {
     name: 'Skydive Andes',
-    lat: -33.67727,
-    lng: -71.11043,
+    lat: -33.67747,
+    lng: -71.10929,
+    direction: 264,
     country: 'Chile',
-    website: 'https://www.skydiveandes.com/'
+    website: 'https://www.skydiveandes.com/',
+    modes: {
+      swoop: {
+        lat: -33.67724,
+        lng: -71.107,
+        direction: 264
+      },
+    },
   },
   {
     name: 'Skydive Arizona',
     website: 'https://skydiveaz.com/',
-    lat: 32.80799,
-    lng: -111.58167,
+    lat: 32.8035,
+    lng: -111.57985,
     town: 'Eloy',
     region: 'Arizona',
     country: 'United States',
-    direction: 216
+    direction: 181,
   },
   {
     name: 'Skydive Atlanta',
-    lat: 32.953,
-    lng: -84.262,
+    lat: 32.95406,
+    lng: -84.26341,
+    direction: 295,
     town: 'Thomaston',
     region: 'Georgia',
     country: 'United States'
   },
   {
     name: 'Skydive Auckland',
-    lat: -36.65181,
-    lng: 174.43553,
+    lat: -36.65046,
+    lng: 174.43194,
+    direction: 90,
     region: 'Auckland',
-    country: 'New Zealand'
-  },
-  {
-    name: 'Skydive Bad Lippspringe',
-    lat: 51.78844,
-    lng: 8.78713,
-    country: 'Germany'
+    country: 'New Zealand',
+    modes: {
+      swoop: {
+        lat: -36.65037,
+        lng: 174.43453,
+        direction: 270
+      },
+    },
   },
   {
     name: 'Skydive Benghazi',
-    lat: 31.97593,
-    lng: 20.02693,
+    lat: 31.97536,
+    lng: 20.02613,
+    direction: 336,
     country: 'Libya',
-    website: 'https://skydivebenghazi.com/'
   },
   {
     name: 'Skydive Bovec',
-    lat: 46.32861,
-    lng: 13.54861,
+    lat: 46.33203,
+    lng: 13.55092,
+    direction: 58,
     country: 'Slovenia',
     website: 'https://www.skydivebovec.com/'
   },
   {
     name: 'Skydive Braga',
-    lat: 41.5863,
-    lng: -8.44541,
+    lat: 41.58688,
+    lng: -8.44451,
+    direction: 245,
     country: 'Portugal'
   },
   {
     name: 'Skydive Bragança Galsur',
-    lat: 41.85778,
-    lng: -6.7069,
+    lat: 41.85802,
+    lng: -6.70641,
+    direction: 193,
     country: 'Portugal'
   },
   {
     name: 'Skydive Breclav',
-    lat: 48.79127,
-    lng: 16.89198,
+    lat: 48.79227,
+    lng: 16.89621,
+    direction: 79,
     country: 'Czech Republic'
   },
   {
     name: 'Skydive Buckeye',
-    lat: 33.4204,
-    lng: -112.6862,
+    lat: 33.42042,
+    lng: -112.6879,
+    direction: 3,
     region: 'Arizona',
     country: 'United States',
     website: 'https://skydivebuckeye.com/'
   },
   {
-    name: 'Skydive Bulgaria (Ihtiman)',
+    name: 'Skydive Bulgaria',
     lat: 42.42256,
     lng: 23.76556,
     town: 'Ihtiman',
@@ -1072,38 +1002,27 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Burnaby Inc.',
-    lat: 42.87784,
-    lng: -79.35299,
+    lat: 42.876,
+    lng: -79.35473,
+    direction: 24,
     region: 'Ontario',
     country: 'Canada',
     website: 'https://www.skydiveburnaby.com/'
   },
   {
     name: 'Skydive Byron Bay',
-    lat: -28.59468,
-    lng: 153.54696,
+    lat: -28.59568,
+    lng: 153.54725,
+    direction: 67,
     region: 'New South Wales',
     country: 'Australia',
     website: 'https://www.skydive.com.au/byron-bay/'
   },
   {
-    name: 'Skydive Canberra',
-    lat: -35.41427,
-    lng: 149.44944,
-    town: 'Hoskinstown',
-    country: 'Australia'
-  },
-  {
-    name: 'Skydive Capricorn',
-    lat: -23.37821,
-    lng: 150.51342,
-    town: 'Rockhampton',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Caribbean',
-    lat: 10.46376,
-    lng: -66.09553,
+    lat: 10.46215,
+    lng: -66.09536,
+    direction: 74,
     town: 'Higuerote',
     region: 'Miranda',
     country: 'Venezuela',
@@ -1119,39 +1038,47 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Castellon',
-    lat: 39.99837,
-    lng: 0.02645,
+    lat: 39.99681,
+    lng: 0.02552,
+    direction: 5,
     country: 'Spain'
   },
   {
     name: 'Skydive Chelan',
-    lat: 47.866,
-    lng: -119.943,
+    lat: 47.86397,
+    lng: -119.94448,
+    direction: 225,
     town: 'Chelan',
     region: 'Washington',
     country: 'United States'
   },
   {
     name: 'Skydive Chicago',
-    lat: 41.4,
-    lng: -88.794,
+    lat: 41.39818,
+    lng: -88.79379,
+    direction: 216,
     town: 'Ottawa',
     region: 'Illinois',
     country: 'United States'
   },
   {
     name: 'Skydive City (ZHills)',
-    lat: 28.21887,
-    lng: -82.15122,
+    lat: 28.21952,
+    lng: -82.15154,
     town: 'Zephyrhills',
     region: 'Florida',
     country: 'United States',
-    direction: 270,
+    direction: 180,
     website: 'https://www.skydivecity.com/',
     // No nearbyStations supplement needed: KZPH (Zephyrhills Municipal AWOS)
     // is returned by NWS gridpoint discovery for this location — verified
     // against gridpoints/TBW/82,110/stations, where it is the nearest of 51.
     modes: {
+      swoop: {
+        lat: 28.21887,
+        lng: -82.15107,
+        direction: 270
+      },
       // Jumprun runs north or south here. These are the same two corridors
       // that have been the app-wide default since the solver landed (they
       // were described in core/model as "the ZHills-flavored default");
@@ -1174,16 +1101,18 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Coastal Carolinas',
-    lat: 33.93081,
-    lng: -78.07336,
+    lat: 33.93017,
+    lng: -78.07334,
+    direction: 225,
     region: 'North Carolina',
     country: 'United States',
     website: 'https://www.skydivecoastalcarolinas.com/'
   },
   {
     name: 'Skydive Colorado Springs',
-    lat: 38.427,
-    lng: -105.105,
+    lat: 38.42961,
+    lng: -105.10423,
+    direction: 120,
     region: 'Colorado',
     country: 'United States'
   },
@@ -1191,28 +1120,45 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive Costa D\'Argento',
     lat: 42.49546,
     lng: 11.23892,
+    direction: 10,
     country: 'Italy',
     website: 'https://www.skydivecostadargento.com/'
   },
   {
     name: 'Skydive Cross Keys',
-    lat: 39.70548,
-    lng: -75.033,
+    lat: 39.70725,
+    lng: -75.03609,
+    direction: 78,
     region: 'New Jersey',
     country: 'United States',
-    website: 'https://www.skydivecrosskeys.com/'
+    website: 'https://www.skydivecrosskeys.com/',
+    modes: {
+      swoop: {
+        lat: 39.70593,
+        lng: -75.03482,
+        direction: 323
+      },
+    },
   },
   {
     name: 'Skydive Cuautla',
-    lat: 18.69891,
-    lng: -98.88979,
+    lat: 18.70146,
+    lng: -98.89191,
+    direction: 30,
     country: 'Mexico',
-    website: 'https://www.skydivecuautla.com/'
+    modes: {
+      swoop: {
+        lat: 18.7034,
+        lng: -98.89056,
+        direction: 210
+      },
+    },
   },
   {
     name: 'Skydive Danielson',
-    lat: 41.81974,
-    lng: -71.90096,
+    lat: 41.82059,
+    lng: -71.90105,
+    direction: 119,
     region: 'Connecticut',
     country: 'United States',
     website: 'https://www.skydivedanielson.com/'
@@ -1235,125 +1181,91 @@ export const DROPZONES: Dropzone[] = [
     direction: 125
   },
   {
-    name: 'Skydive Deluxe Freiburg',
-    lat: 47.91746,
-    lng: 7.62388,
-    town: 'Bremgarten',
-    country: 'Germany'
-  },
-  {
-    name: 'Skydive Diani',
-    lat: -4.36992,
-    lng: 39.55744,
-    region: 'Kwale',
-    country: 'Kenya',
-    website: 'https://www.skydivediani.com/'
-  },
-  {
     name: 'Skydive Dubai',
-    lat: 25.090263,
-    lng: 55.13561,
+    lat: 25.09014,
+    lng: 55.13651,
     town: 'Dubai',
     country: 'United Arab Emirates',
-    direction: 82
-  },
-  {
-    name: 'Skydive Egypt - Jump Like A Pharaoh',
-    lat: 30.1121,
-    lng: 31.40075,
-    country: 'Egypt',
-    website: 'https://www.skydiveegypt.info/'
+    direction: 262,
+    modes: {
+      swoop: {
+        lat: 25.09025,
+        lng: 55.13536,
+        direction: 82
+      },
+    },
   },
   {
     name: 'Skydive Elsinore',
     lat: 33.63177,
-    lng: -117.29978,
+    lng: -117.29979,
     town: 'Lake Elsinore',
     region: 'California',
     country: 'United States',
-    direction: 308
+    direction: 308,
+    modes: {
+      swoop: {
+        lat: 33.63005,
+        lng: -117.2965,
+        direction: 308
+      },
+    },
   },
   {
     name: 'Skydive Empuriabrava',
-    lat: 42.259,
-    lng: 3.109,
+    lat: 42.25836,
+    lng: 3.11008,
+    direction: 346,
     town: 'Empuriabrava',
     region: 'Catalonia',
     country: 'Spain'
   },
   {
-    name: 'Skydive Estonia',
-    lat: 59.41169,
-    lng: 24.74243,
-    country: 'Estonia',
-    website: 'https://www.skydive.ee/'
-  },
-  {
     name: 'Skydive Fehrbellin',
-    lat: 52.79424,
-    lng: 12.76087,
+    lat: 52.79233,
+    lng: 12.7616,
+    direction: 286,
     region: 'Brandenburg',
     country: 'Germany'
   },
   {
     name: 'Skydive Finland',
-    lat: 60.89785,
-    lng: 26.91936,
+    lat: 60.89762,
+    lng: 26.9261,
+    direction: 78,
     region: 'Kymenlaakso',
     country: 'Finland',
     website: 'https://www.skydivefinland.fi'
   },
   {
-    name: 'Skydive Finsterwalde',
-    lat: 51.63153,
-    lng: 13.70736,
-    town: 'Finsterwalde',
-    country: 'Germany'
-  },
-  {
-    name: 'Skydive Flanders dropzone Moorsele',
-    lat: 50.84872,
-    lng: 3.14651,
+    name: 'Skydive Flanders',
+    lat: 50.84967,
+    lng: 3.14726,
+    direction: 230,
     region: 'West-Vlaanderen',
     country: 'Belgium',
     website: 'https://www.pcv.be/'
   },
   {
-    name: 'Skydive FlyGang F4F DZone',
-    lat: 44.59778,
-    lng: 11.65389,
-    country: 'Italy',
-    website: 'https://www.skydiveflygang.com/'
-  },
-  {
-    name: 'Skydive Franz Josef and Fox Glacier',
-    lat: -43.36158,
-    lng: 170.13197,
-    country: 'New Zealand'
-  },
-  {
     name: 'Skydive Gananoque',
-    lat: 44.40112,
-    lng: -76.24286,
+    lat: 44.40279,
+    lng: -76.23635,
+    direction: 167,
     country: 'Canada'
   },
   {
     name: 'Skydive Gap Tallard',
-    lat: 44.4543,
-    lng: 6.03819,
+    lat: 44.45571,
+    lng: 6.03597,
+    direction: 25,
     region: 'Provence-Alpes-Côte d\'Azur',
     country: 'France'
   },
   {
-    name: 'Skydive GB',
-    lat: 54.08224,
-    lng: -0.19086,
-    country: 'United Kingdom'
-  },
-  {
     name: 'Skydive Georgia',
-    lat: 34.018,
-    lng: -85.148,
+    lat: 34.01796,
+    lng: -85.14648,
+    direction: 279,
     town: 'Cedartown',
     region: 'Georgia',
     country: 'United States'
@@ -1372,32 +1284,20 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Grand Haven',
-    lat: 43.035,
-    lng: -86.2,
+    lat: 43.03347,
+    lng: -86.19964,
+    direction: 272,
     town: 'Grand Haven',
     region: 'Michigan',
     country: 'United States'
   },
   {
-    name: 'Skydive Great Ocean Road',
-    lat: -38.25924,
-    lng: 144.42892,
-    region: 'Victoria',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Headcorn',
-    lat: 51.15635,
-    lng: 0.64191,
+    lat: 51.15573,
+    lng: 0.64187,
+    direction: 283,
     region: 'England',
     country: 'United Kingdom'
-  },
-  {
-    name: 'Skydive Hel',
-    lat: 54.62371,
-    lng: 18.7275,
-    town: 'Hel',
-    country: 'Poland'
   },
   {
     name: 'Skydive Hervey Bay',
@@ -1407,24 +1307,27 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Hinton',
-    lat: 52.03012,
-    lng: -1.21025,
+    lat: 52.03026,
+    lng: -1.2075,
+    direction: 59,
     region: 'England',
     country: 'United Kingdom',
     website: 'https://www.skydive.co.uk/'
   },
   {
     name: 'Skydive Hoogeveen',
-    lat: 52.73216,
-    lng: 6.52105,
+    lat: 52.73178,
+    lng: 6.52221,
+    direction: 92,
     region: 'Drenthe',
     country: 'Netherlands',
     website: 'https://skydivehoogeveen.nl/'
   },
   {
     name: 'Skydive Hunter Valley',
-    lat: -32.60906,
-    lng: 151.19542,
+    lat: -32.60051,
+    lng: 151.18862,
+    direction: 294,
     region: 'New South Wales',
     country: 'Australia'
   },
@@ -1437,43 +1340,35 @@ export const DROPZONES: Dropzone[] = [
     website: 'https://www.skydiveindianapolis.com/'
   },
   {
-    name: 'Skydive Ireland',
-    lat: 55.13159,
-    lng: -6.67186,
-    country: 'United Kingdom'
-  },
-  {
     name: 'Skydive Iseo',
     lat: 45.81514,
     lng: 10.09552,
+    direction: 224,
     region: 'Lombardia',
     country: 'Italy',
     website: 'https://skydiveiseo.it/'
   },
   {
     name: 'Skydive Jeffreys Bay',
-    lat: -33.96682,
-    lng: 24.94379,
+    lat: -33.96719,
+    lng: 24.94383,
+    direction: 237,
     region: 'Eastern Cape',
     country: 'South Africa'
   },
   {
     name: 'Skydive Jerez',
-    lat: 36.62949,
-    lng: -6.01826,
+    lat: 36.6302,
+    lng: -6.01832,
+    direction: 112,
     country: 'Spain'
   },
   {
     name: 'Skydive Jersey',
-    lat: 49.20656,
-    lng: -2.18467,
+    lat: 49.20786,
+    lng: -2.18586,
+    direction: 266,
     country: 'Jersey'
-  },
-  {
-    name: 'Skydive Jurien Bay',
-    lat: -30.30318,
-    lng: 115.05439,
-    country: 'Australia'
   },
   {
     name: 'Skydive Jyväskylä',
@@ -1491,39 +1386,51 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Kansas City',
-    lat: 38.28978,
-    lng: -94.34014,
+    lat: 38.29112,
+    lng: -94.3416,
+    direction: 2,
     region: 'Missouri',
     country: 'United States',
     website: 'https://www.skydivekc.com/'
   },
   {
     name: 'Skydive Kapowsin',
-    lat: 47.242,
-    lng: -123.142,
+    lat: 47.23761,
+    lng: -123.1458,
+    direction: 208,
     town: 'Shelton',
     region: 'Washington',
-    country: 'United States'
+    country: 'United States',
+    modes: {
+      swoop: {
+        lat: 47.23967,
+        lng: -123.14286,
+        direction: 208
+      },
+    },
   },
   {
     name: 'Skydive Karjala',
-    lat: 61.24827,
-    lng: 28.89576,
+    lat: 61.24741,
+    lng: 28.89801,
+    direction: 30,
     region: 'Etelä-Karjala',
     country: 'Finland'
   },
   {
     name: 'Skydive Key West',
-    lat: 24.64833,
-    lng: -81.57315,
+    lat: 24.64888,
+    lng: -81.57664,
+    direction: 103,
     region: 'Florida',
     country: 'United States',
     website: 'https://skydivekeywest.com/'
   },
   {
     name: 'Skydive Kiel',
-    lat: 54.3725,
-    lng: 10.13617,
+    lat: 54.38216,
+    lng: 10.14677,
+    direction: 82,
     town: 'Holtenau',
     country: 'Germany'
   },
@@ -1531,40 +1438,60 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive Konstanz',
     lat: 47.6818,
     lng: 9.13796,
+    direction: 295,
     country: 'Germany'
   },
   {
     name: 'Skydive Krakow',
-    lat: 50.0822,
-    lng: 20.20545,
+    lat: 50.08453,
+    lng: 20.20402,
+    direction: 271,
     town: 'Pobiednik Wielki',
     country: 'Poland'
   },
   {
     name: 'Skydive Langar',
-    lat: 52.89,
-    lng: -0.909,
+    lat: 52.89138,
+    lng: -0.90717,
+    direction: 147,
     town: 'Langar',
     region: 'England',
-    country: 'United Kingdom'
+    country: 'United Kingdom',
+    modes: {
+      swoop: {
+        lat: 52.89086,
+        lng: -0.90486,
+        direction: 307
+      },
+    },
   },
   {
     name: 'Skydive Latvia',
-    lat: 57.4855,
-    lng: 24.67104,
+    lat: 57.48712,
+    lng: 24.67375,
+    direction: 166,
     country: 'Latvia',
     website: 'https://www.skydive.lv/'
   },
   {
     name: 'Skydive Leipzig Loebnitz',
-    lat: 51.57848,
-    lng: 12.50071,
-    country: 'Germany'
+    lat: 51.57637,
+    lng: 12.48816,
+    direction: 277,
+    country: 'Germany',
+    modes: {
+      swoop: {
+        lat: 51.57627,
+        lng: 12.48964,
+        direction: 277
+      },
+    },
   },
   {
     name: 'Skydive Leon',
-    lat: 42.58166,
-    lng: -5.64374,
+    lat: 42.58733,
+    lng: -5.65402,
+    direction: 230,
     town: 'La Virgen del Camino',
     country: 'Spain'
   },
@@ -1592,8 +1519,9 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Maitland',
-    lat: -32.70093,
-    lng: 151.49284,
+    lat: -32.70194,
+    lng: 151.48996,
+    direction: 57,
     country: 'Australia'
   },
   {
@@ -1605,25 +1533,27 @@ export const DROPZONES: Dropzone[] = [
     country: 'United States'
   },
   {
-    name: 'Skydive Melbourne',
-    lat: -37.87404,
-    lng: 144.97644,
-    region: 'Victoria',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Merville',
-    lat: 50.61908,
-    lng: 2.64434,
+    lat: 50.62295,
+    lng: 2.64949,
+    direction: 283,
     country: 'France'
   },
   {
     name: 'Skydive Midwest',
-    lat: 42.70312,
-    lng: -87.95587,
+    lat: 42.70341,
+    lng: -87.9587,
+    direction: 79,
     region: 'Wisconsin',
     country: 'United States',
-    website: 'https://sdmw.com/'
+    website: 'https://sdmw.com/',
+    modes: {
+      swoop: {
+        lat: 42.70255,
+        lng: -87.95797,
+        direction: 269
+      },
+    },
   },
   {
     name: 'Skydive Milwaukee/Sky Knights Sport Parachute Club',
@@ -1634,16 +1564,10 @@ export const DROPZONES: Dropzone[] = [
     website: 'https://www.skydivemilwaukee.com/'
   },
   {
-    name: 'Skydive Mission Beach',
-    lat: -17.86751,
-    lng: 146.10733,
-    region: 'Queensland',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Moab',
-    lat: 38.759,
-    lng: -109.745,
+    lat: 38.75729,
+    lng: -109.74427,
+    direction: 169,
     town: 'Moab',
     region: 'Utah',
     country: 'United States'
@@ -1658,18 +1582,12 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Monterey Bay',
-    lat: 36.68153,
-    lng: -121.76167,
+    lat: 36.68038,
+    lng: -121.76116,
+    direction: 300,
     region: 'California',
     country: 'United States',
     website: 'https://www.skydivemontereybay.com/'
-  },
-  {
-    name: 'Skydive Mount Cook',
-    lat: -44.25122,
-    lng: 170.11893,
-    region: 'Canterbury',
-    country: 'New Zealand'
   },
   {
     name: 'Skydive Nagambie',
@@ -1680,11 +1598,19 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive New England',
-    lat: 43.37441,
-    lng: -70.92777,
+    lat: 43.37134,
+    lng: -70.92663,
+    direction: 336,
     region: 'Maine',
     country: 'United States',
-    website: 'https://www.skydivenewengland.com/'
+    website: 'https://www.skydivenewengland.com/',
+    modes: {
+      swoop: {
+        lat: 43.37182,
+        lng: -70.92546,
+        direction: 331
+      },
+    },
   },
   {
     name: 'Skydive Noosa',
@@ -1695,25 +1621,20 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Northwest',
-    lat: 54.16498,
-    lng: -2.96344,
+    lat: 54.16345,
+    lng: -2.9614,
+    direction: 237,
     region: 'England',
     country: 'United Kingdom',
     website: 'https://skydivenorthwest.co.uk/'
   },
   {
     name: 'Skydive Nuggets',
-    lat: 47.85866,
-    lng: 10.0102,
+    lat: 47.85886,
+    lng: 10.01238,
+    direction: 57,
     country: 'Germany',
     website: 'https://www.skydive-nuggets.de'
-  },
-  {
-    name: 'Skydive Olsztyn',
-    lat: 53.77664,
-    lng: 20.47775,
-    town: 'Olsztyn',
-    country: 'Poland'
   },
   {
     name: 'Skydive Oppdal',
@@ -1723,15 +1644,16 @@ export const DROPZONES: Dropzone[] = [
     website: 'https://skydiveoppdal.no/'
   },
   {
-    name: 'Skydive Orange, Inc.',
-    lat: 38.24907,
-    lng: -78.04813,
+    name: 'Skydive Orange',
+    lat: 38.24972,
+    lng: -78.04602,
+    direction: 64,
     region: 'Virginia',
     country: 'United States',
     website: 'https://www.skydiveorange.com/'
   },
   {
-    name: 'Skydive Oregon, Inc.',
+    name: 'Skydive Oregon',
     lat: 45.14526,
     lng: -122.61829,
     region: 'Oregon',
@@ -1740,14 +1662,16 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Ostsee Barth',
-    lat: 54.33608,
-    lng: 12.72456,
+    lat: 54.33742,
+    lng: 12.71819,
+    direction: 270,
     country: 'Germany'
   },
   {
     name: 'Skydive Oz',
-    lat: -35.90427,
-    lng: 150.14185,
+    lat: -35.90294,
+    lng: 150.14312,
+    direction: 243,
     region: 'New South Wales',
     country: 'Australia'
   },
@@ -1761,17 +1685,25 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Paraclete XP',
-    lat: 35.01717,
-    lng: -79.19393,
+    lat: 35.01754,
+    lng: -79.19054,
     town: 'Raeford',
     region: 'North Carolina',
     country: 'United States',
-    direction: 33
+    direction: 213,
+    modes: {
+      swoop: {
+        lat: 35.01713,
+        lng: -79.19396,
+        direction: 33
+      },
+    },
   },
   {
     name: 'Skydive Pennsylvania',
-    lat: 41.14603,
-    lng: -80.16775,
+    lat: 41.14553,
+    lng: -80.16627,
+    direction: 273,
     region: 'Pennsylvania',
     country: 'United States',
     website: 'https://www.skydivepa.com/'
@@ -1784,8 +1716,9 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Perris',
-    lat: 33.76464,
-    lng: -117.219,
+    lat: 33.76227,
+    lng: -117.2176,
+    direction: 168,
     region: 'California',
     country: 'United States',
     website: 'https://www.skydiveperris.com/'
@@ -1800,16 +1733,18 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Philadelphia',
-    lat: 40.39217,
-    lng: -75.2861,
+    lat: 40.39033,
+    lng: -75.28913,
+    direction: 70,
     region: 'Pennsylvania',
     country: 'United States',
     website: 'https://www.skydivephiladelphia.com/'
   },
   {
     name: 'Skydive Phoenix',
-    lat: 33.053,
-    lng: -112.175,
+    lat: 33.05352,
+    lng: -112.17536,
+    direction: 270,
     region: 'Arizona',
     country: 'United States'
   },
@@ -1840,75 +1775,37 @@ export const DROPZONES: Dropzone[] = [
     name: 'Skydive Proenca-a-Nova',
     lat: 39.73118,
     lng: -7.8753,
+    direction: 306,
     country: 'Portugal'
   },
   {
     name: 'Skydive Puebla',
-    lat: 18.85528,
-    lng: -98.44643,
+    lat: 18.85405,
+    lng: -98.44649,
+    direction: 20,
     country: 'Mexico',
     website: 'https://www.skydivepuebla.com/'
   },
   {
     name: 'Skydive Ramblers',
-    lat: -27.06955,
-    lng: 152.38358,
+    lat: -27.07137,
+    lng: 152.38437,
+    direction: 252,
     region: 'Queensland',
     country: 'Australia',
-    website: 'https://www.ramblers.com.au/'
-  },
-  {
-    name: 'Skydive Requena',
-    lat: 39.47158,
-    lng: -1.01129,
-    country: 'Spain'
+    website: 'https://www.ramblers.com.au/',
+    modes: {
+      swoop: {
+        lat: -27.07083,
+        lng: 152.38604,
+        direction: 252
+      },
+    },
   },
   {
     name: 'Skydive Ries Dinkelsbuehl',
     lat: 49.06404,
     lng: 10.40007,
-    country: 'Germany'
-  },
-  {
-    name: 'Skydive Rockingham',
-    lat: -32.27615,
-    lng: 115.73074,
-    region: 'Western Australia',
-    country: 'Australia'
-  },
-  {
-    name: 'Skydive Salerno',
-    lat: 40.47195,
-    lng: 14.96104,
-    country: 'Italy',
-    website: 'https://www.skydivesalerno.it/'
-  },
-  {
-    name: 'Skydive San Diego',
-    lat: 32.63491,
-    lng: -116.89021,
-    region: 'California',
-    country: 'United States',
-    website: 'https://www.skydivesandiego.com/'
-  },
-  {
-    name: 'Skydive Sandown',
-    lat: 50.65264,
-    lng: -1.18281,
-    country: 'United Kingdom'
-  },
-  {
-    name: 'Skydive Sardegna',
-    lat: 39.40111,
-    lng: 9.14,
-    country: 'Italy',
-    website: 'https://www.skydivesardegna.it/'
-  },
-  {
-    name: 'Skydive Sauerland Schmallenberg',
-    lat: 51.18856,
-    lng: 8.31194,
-    town: 'Bad Fredeburg',
     country: 'Germany'
   },
   {
@@ -1920,16 +1817,25 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Sebastian',
-    lat: 27.81672,
-    lng: -80.50071,
+    lat: 27.81645,
+    lng: -80.4995,
+    direction: 180,
     region: 'Florida',
     country: 'United States',
-    website: 'https://www.skydiveseb.com/'
+    website: 'https://www.skydiveseb.com/',
+    modes: {
+      swoop: {
+        lat: 27.81705,
+        lng: -80.49839,
+        direction: 135
+      },
+    },
   },
   {
     name: 'Skydive Sibson',
-    lat: 52.561,
-    lng: -0.397,
+    lat: 52.5604,
+    lng: -0.39576,
+    direction: 230,
     town: 'Sibson',
     region: 'England',
     country: 'United Kingdom'
@@ -1951,8 +1857,9 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Snohomish',
-    lat: 47.907,
-    lng: -122.101,
+    lat: 47.90611,
+    lng: -122.10135,
+    direction: 170,
     town: 'Snohomish',
     region: 'Washington',
     country: 'United States'
@@ -1974,37 +1881,70 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Spaceland Atlanta',
-    lat: 33.977,
-    lng: -85.166,
+    lat: 33.97696,
+    lng: -85.16969,
+    direction: 75,
     town: 'Rome',
     region: 'Georgia',
-    country: 'United States'
+    country: 'United States',
+    modes: {
+      swoop: {
+        lat: 33.97775,
+        lng: -85.16761,
+        direction: 250
+      },
+    },
   },
   {
     name: 'Skydive Spaceland Dallas',
-    lat: 33.449,
-    lng: -96.378,
+    lat: 33.45054,
+    lng: -96.37674,
+    direction: 182,
     town: 'Whitewright',
     region: 'Texas',
-    country: 'United States'
+    country: 'United States',
+    website: 'https://dallas.skydivespaceland.com/',
+    modes: {
+      swoop: {
+        lat: 33.44723,
+        lng: -96.37707,
+        direction: 2
+      },
+    },
   },
   {
     name: 'Skydive Spaceland Houston',
-    lat: 29.357628,
-    lng: -95.461775,
+    lat: 29.35885,
+    lng: -95.45801,
     town: 'Rosharon',
     region: 'Texas',
     country: 'United States',
-    direction: 151
+    website: 'https://houston.skydivespaceland.com/',
+    direction: 181,
+    modes: {
+      swoop: {
+        lat: 29.35764,
+        lng: -95.4618,
+        direction: 151
+      },
+    },
   },
   {
     name: 'Skydive Spaceland San Marcos',
-    lat: 29.76994,
-    lng: -97.77173,
+    lat: 29.77047,
+    lng: -97.77156,
     town: 'San Marcos',
     region: 'Texas',
     country: 'United States',
-    direction: 210
+    website: 'https://sanmarcos.skydivespaceland.com/',
+    direction: 210,
+    modes: {
+      swoop: {
+        lat: 29.77082,
+        lng: -97.77366,
+        direction: 50
+      },
+    },
   },
   {
     name: 'Skydive Spaceland-Clewiston',
@@ -2023,20 +1963,16 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive St Andrews',
-    lat: 56.18347,
-    lng: -3.21941,
+    lat: 56.18419,
+    lng: -3.21998,
+    direction: 60,
     country: 'United Kingdom'
   },
   {
-    name: 'SkyDive St-Frederic',
-    lat: 46.33198,
-    lng: -70.96225,
-    country: 'Canada'
-  },
-  {
     name: 'Skydive Strathallan',
-    lat: 56.32582,
-    lng: -3.75112,
+    lat: 56.32555,
+    lng: -3.74849,
+    direction: 95,
     region: 'Scotland',
     country: 'United Kingdom',
     website: 'https://skydivestrathallan.co.uk/'
@@ -2050,24 +1986,10 @@ export const DROPZONES: Dropzone[] = [
     country: 'United States'
   },
   {
-    name: 'Skydive Sunrise Scuola di Paracadutismo',
-    lat: 43.22698,
-    lng: 13.74207,
-    region: 'Marche',
-    country: 'Italy',
-    website: 'https://www.skydivesunrise.com/'
-  },
-  {
-    name: 'Skydive Surfers Paradise',
-    lat: -27.95987,
-    lng: 153.42425,
-    region: 'Queensland',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Sussex',
-    lat: 41.20028,
-    lng: -74.62305,
+    lat: 41.19949,
+    lng: -74.62508,
+    direction: 20,
     region: 'New Jersey',
     country: 'United States',
     website: 'https://www.skydivesussex.com/'
@@ -2080,29 +2002,33 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Switzerland',
-    lat: 46.61522,
-    lng: 7.6812,
+    lat: 46.61551,
+    lng: 7.68111,
+    direction: 215,
     country: 'Switzerland',
     website: 'https://www.skydiveswitzerland.com/'
   },
   {
     name: 'Skydive Sydney - Newcastle',
-    lat: -33.06633,
-    lng: 151.65081,
+    lat: -33.06595,
+    lng: 151.64933,
+    direction: 264,
     region: 'New South Wales',
     country: 'Australia'
   },
   {
     name: 'Skydive Taroudant',
-    lat: 30.50017,
-    lng: -8.8275,
+    lat: 30.50081,
+    lng: -8.82528,
+    direction: 253,
     country: 'Morocco',
     website: 'https://www.skydivetaroudant.com/'
   },
   {
     name: 'Skydive Tauranga',
-    lat: -37.67302,
-    lng: 176.199,
+    lat: -37.66967,
+    lng: 176.19329,
+    direction: 239,
     country: 'New Zealand'
   },
   {
@@ -2129,73 +2055,65 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Teuge',
-    lat: 52.246,
-    lng: 6.047,
+    lat: 52.24651,
+    lng: 6.04902,
+    direction: 90,
     town: 'Teuge',
     country: 'Netherlands'
   },
   {
     name: 'Skydive Thailand',
-    lat: 19.14874,
-    lng: 98.98806,
+    lat: 19.1488,
+    lng: 98.98847,
+    direction: 267,
     country: 'Thailand',
     website: 'https://www.skydivethailand.com/'
   },
   {
-    name: 'Skydive The Falls',
-    lat: 43.26396,
-    lng: -78.96603,
-    region: 'New York',
-    country: 'United States',
-    website: 'https://www.skydivethefalls.com/'
-  },
-  {
     name: 'Skydive The Ranch',
-    lat: 41.674,
-    lng: -74.151,
+    lat: 41.67515,
+    lng: -74.1502,
+    direction: 293,
     town: 'Gardiner',
     region: 'New York',
-    country: 'United States'
+    country: 'United States',
+    modes: {
+      swoop: {
+        lat: 41.67406,
+        lng: -74.14726,
+        direction: 293
+      },
+    },
   },
   {
     name: 'Skydive Thiene',
-    lat: 45.67459,
-    lng: 11.495,
+    lat: 45.67254,
+    lng: 11.49562,
+    direction: 354,
     country: 'Italy',
     website: 'https://www.skydivethiene.it/'
   },
   {
     name: 'Skydive Tilstock',
-    lat: 52.93292,
-    lng: -2.64772,
+    lat: 52.93223,
+    lng: -2.64475,
+    direction: 145,
     country: 'United Kingdom'
   },
   {
-    name: 'Skydive Tirol',
-    lat: 47.46379,
-    lng: 11.95055,
-    region: 'Tirol',
-    country: 'Austria'
-  },
-  {
     name: 'Skydive Toledo',
-    lat: 46.47717,
-    lng: -122.80648,
+    lat: 46.47783,
+    lng: -122.81297,
+    direction: 80,
     region: 'Washington',
     country: 'United States',
     website: 'https://www.skydivetoledo.com/'
   },
   {
-    name: 'Skydive Townsville',
-    lat: -19.25694,
-    lng: 146.82395,
-    town: 'Townsville',
-    country: 'Australia'
-  },
-  {
     name: 'Skydive Twin Cities',
-    lat: 44.96464,
-    lng: -92.39054,
+    lat: 44.96601,
+    lng: -92.39057,
+    direction: 183,
     region: 'Wisconsin',
     country: 'United States',
     website: 'https://www.skydivetwincities.com/'
@@ -2208,8 +2126,9 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Utah',
-    lat: 40.619,
-    lng: -112.407,
+    lat: 40.61014,
+    lng: -112.35378,
+    direction: 1,
     region: 'Utah',
     country: 'United States'
   },
@@ -2222,31 +2141,42 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Valladolid',
-    lat: 41.53081,
-    lng: -4.92142,
+    lat: 41.53198,
+    lng: -4.92215,
+    direction: 70,
     region: 'Castilla y León',
     country: 'Spain'
   },
   {
     name: 'Skydive Vancouver',
-    lat: 49.09556,
-    lng: -122.31351,
+    lat: 49.09545,
+    lng: -122.31247,
+    direction: 225,
     region: 'British Columbia',
     country: 'Canada',
     website: 'https://www.skydivevancouver.com/'
   },
   {
     name: 'Skydive Venice',
-    lat: 45.70019,
-    lng: 12.76395,
+    lat: 45.69929,
+    lng: 12.76374,
+    direction: 323,
     region: 'Veneto',
     country: 'Italy',
-    website: 'https://www.skydive-venice.com/'
+    website: 'https://www.skydive-venice.com/',
+    modes: {
+      swoop: {
+        lat: 45.69849,
+        lng: 12.76257,
+        direction: 83
+      },
+    },
   },
   {
     name: 'Skydive Victoria Corowa',
-    lat: -35.99261,
-    lng: 146.35699,
+    lat: -35.99171,
+    lng: 146.35594,
+    direction: 144,
     country: 'Australia'
   },
   {
@@ -2257,15 +2187,17 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Voss',
-    lat: 60.64,
-    lng: 6.482,
+    lat: 60.63951,
+    lng: 6.50354,
+    direction: 85,
     town: 'Voss',
     country: 'Norway'
   },
   {
     name: 'Skydive Wanaka',
-    lat: -44.72254,
-    lng: 169.24545,
+    lat: -44.72163,
+    lng: 169.24993,
+    direction: 144,
     region: 'Otago',
     country: 'New Zealand'
   },
@@ -2284,38 +2216,27 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Yarra Valley',
-    lat: -37.69543,
-    lng: 145.36985,
+    lat: -37.69495,
+    lng: 145.36899,
+    direction: 247,
     region: 'Victoria',
     country: 'Australia'
   },
   {
     name: 'St Florentin Sports Parachutisme',
-    lat: 47.98101,
-    lng: 3.77629,
+    lat: 47.98291,
+    lng: 3.77646,
+    direction: 73,
     country: 'France'
   },
   {
     name: 'Start Skydiving',
-    lat: 39.53,
-    lng: -84.398,
+    lat: 39.53374,
+    lng: -84.39927,
+    direction: 84,
     town: 'Middletown',
     region: 'Ohio',
     country: 'United States'
-  },
-  {
-    name: 'Strefa Baltic',
-    lat: 54.43973,
-    lng: 16.99681,
-    town: 'Kobylnica',
-    country: 'Poland'
-  },
-  {
-    name: 'Strefa Silesia',
-    lat: 51.92714,
-    lng: 14.91671,
-    town: 'Kaniów',
-    country: 'Poland'
   },
   {
     name: 'Sundsvalls Fallskärmsklubb',
@@ -2325,11 +2246,19 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Sydney Skydivers',
-    lat: -34.2205,
-    lng: 150.67036,
+    lat: -34.22116,
+    lng: 150.67108,
+    direction: 215,
     region: 'New South Wales',
     country: 'Australia',
-    website: 'https://www.sydneyskydivers.com.au/'
+    website: 'https://www.sydneyskydivers.com.au/',
+    modes: {
+      swoop: {
+        lat: -34.22342,
+        lng: 150.67178,
+        direction: 30
+      },
+    },
   },
   {
     name: 'Tandem Cairns',
@@ -2339,30 +2268,41 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Texas Skydiving',
-    lat: 30.417,
-    lng: -96.968,
+    lat: 30.41602,
+    lng: -96.96657,
+    direction: 171,
     town: 'Lexington',
     region: 'Texas',
-    country: 'United States'
+    country: 'United States',
+    modes: {
+      swoop: {
+        lat: 30.41739,
+        lng: -96.96622,
+        direction: 166
+      },
+    },
   },
   {
     name: 'Thai Sky Adventures, Ltd.',
-    lat: 13.14181,
-    lng: 101.04855,
+    lat: 13.14125,
+    lng: 101.04679,
+    direction: 58,
     country: 'Thailand',
     website: 'https://www.thaiskyadventures.com/'
   },
   {
     name: 'TNT-Brothers Dropzone',
-    lat: 44.35883,
-    lng: 25.92513,
+    lat: 44.35805,
+    lng: 25.93,
+    direction: 257,
     country: 'Romania',
     website: 'https://www.tnt-brothers.ro/'
   },
   {
     name: 'Tournus Cuisery Parachutisme',
-    lat: 46.56293,
-    lng: 4.97632,
+    lat: 46.56243,
+    lng: 4.97634,
+    direction: 52,
     country: 'France'
   },
   {
@@ -2374,23 +2314,9 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Vannes Parachutisme',
-    lat: 47.727,
-    lng: -2.72122,
-    country: 'France'
-  },
-  {
-    name: 'Varde Faldskærmsklub',
-    lat: 55.60868,
-    lng: 8.44343,
-    region: 'Region Syddanmark',
-    country: 'Denmark',
-    website: 'https://vaf13.dk/'
-  },
-  {
-    name: 'Vendee Chute Libre',
-    lat: 46.4775,
-    lng: -1.62803,
-    town: 'Talmont-Saint-Hilaire',
+    lat: 47.72554,
+    lng: -2.72459,
+    direction: 85,
     country: 'France'
   },
   {
@@ -2403,8 +2329,9 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Vzone S.S.D.',
-    lat: 45.31133,
-    lng: 8.42324,
+    lat: 45.31079,
+    lng: 8.42176,
+    direction: 85,
     country: 'Italy',
     website: 'https://www.vzone.it/'
   },
@@ -2412,16 +2339,24 @@ export const DROPZONES: Dropzone[] = [
     name: 'West Jump Denmark',
     lat: 56.551,
     lng: 9.168,
+    direction: 318,
     country: 'Denmark'
   },
   {
     name: 'West Tennessee Skydiving',
-    lat: 35.22037,
-    lng: -89.18982,
+    lat: 35.22061,
+    lng: -89.1887,
     region: 'Tennessee',
     country: 'United States',
     direction: 182,
-    nearbyStations: ['KM08'] // Bolivar/Whitehurst Field AWOS — not in NWS gridpoints
+    nearbyStations: ['KM08'], // Bolivar/Whitehurst Field AWOS — not in NWS gridpoints
+    modes: {
+      swoop: {
+        lat: 35.22063,
+        lng: -89.18982,
+        direction: 182
+      },
+    },
   },
   {
     name: 'Whistler Skydiving Pemberton',
@@ -2440,6 +2375,7 @@ export const DROPZONES: Dropzone[] = [
     name: 'Wisconsin Skydiving Center',
     lat: 42.962,
     lng: -88.818,
+    direction: 214,
     town: 'East Troy',
     region: 'Wisconsin',
     country: 'United States'
