@@ -97,7 +97,8 @@ export function buildPlaces(
         lat: dz.lat,
         lng: dz.lng,
         direction: dz.direction,
-        modes: dz.modes
+        modes: dz.modes,
+        website: dz.website
       })),
     ...customLocations.map((loc): Place => ({
       id: customPlaceId(loc.name),
@@ -118,7 +119,8 @@ export function buildPlaces(
       lat: dz.lat,
       lng: dz.lng,
       direction: dz.direction,
-      modes: dz.modes
+      modes: dz.modes,
+      website: dz.website
     }));
 
   return [...saved, ...rest];

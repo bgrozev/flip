@@ -197,6 +197,8 @@ export interface Dropzone {
    */
   direction?: number;
   nearbyStations?: string[]; // ICAO station IDs not in NWS gridpoints (e.g. AWOS at small airports)
+  /** The dropzone's own site, linked from the place picker. */
+  website?: string;
   /**
    * Per-mode starting configuration, keyed by mode id (`pattern` / `swoop` /
    * `flocking` — a plain string key because `types` cannot import `modes`
@@ -249,6 +251,8 @@ export interface Place {
   direction?: number;
   /** Per-mode starting config, for places that come from the DZ database. */
   modes?: Record<string, DropzoneModeConfig>;
+  /** The dropzone's own site, where one is known. */
+  website?: string;
 }
 
 /** A manoeuvre track saved by the user ("My tracks"); keyed by name. */

@@ -66,6 +66,14 @@ describe('DROPZONES', () => {
     });
   });
 
+  it('has plausible websites', () => {
+    DROPZONES.forEach(dz => {
+      if (dz.website !== undefined) {
+        expect(dz.website, dz.name).toMatch(/^https:\/\/[^\s]+$/);
+      }
+    });
+  });
+
   it('is sorted for display', () => {
     const sorted = [...DROPZONES].sort((a, b) => a.name.localeCompare(b.name));
 

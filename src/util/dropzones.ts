@@ -68,7 +68,8 @@ export const DROPZONES: Dropzone[] = [
   {
     name: 'Mile-Hi Skydiving Center',
     lat: 40.164,
-    lng: -105.163
+    lng: -105.163,
+    website: 'https://www.milehiskydiving.com/'
   },
   {
     name: 'Netheravon',
@@ -98,6 +99,7 @@ export const DROPZONES: Dropzone[] = [
   },
   {
     name: 'Skydive Arizona',
+    website: 'https://skydiveaz.com/',
     lat: 32.80799,
     lng: -111.58167,
     direction: 216
@@ -133,6 +135,7 @@ export const DROPZONES: Dropzone[] = [
     lat: 28.21887,
     lng: -82.15122,
     direction: 270,
+    website: 'https://www.skydivecity.com/',
     // No nearbyStations supplement needed: KZPH (Zephyrhills Municipal AWOS)
     // is returned by NWS gridpoint discovery for this location — verified
     // against gridpoints/TBW/82,110/stations, where it is the nearest of 51.

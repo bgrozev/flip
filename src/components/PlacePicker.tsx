@@ -15,6 +15,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PlaceIcon from '@mui/icons-material/Place';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
@@ -240,6 +241,7 @@ function PlaceGroup({
       {places.map(place => (
         <ListItemButton key={place.id} onClick={() => onSelect(place)}>
           <ListItemText primary={place.name} />
+          {place.website && <WebsiteLink place={place} />}
           {place.kind === 'custom' ? (
             <CustomPlaceMenu
               place={place}
@@ -257,6 +259,25 @@ function PlaceGroup({
         </ListItemButton>
       ))}
     </>
+  );
+}
+
+/** Opens the dropzone's own site. Stops the click so the row doesn't select. */
+function WebsiteLink({ place }: { place: Place }) {
+  return (
+    <Tooltip title={`Open the ${place.name} website`}>
+      <IconButton
+        size="small"
+        component="a"
+        href={place.website}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${place.name} website`}
+        onClick={event => event.stopPropagation()}
+      >
+        <OpenInNewIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
   );
 }
 
