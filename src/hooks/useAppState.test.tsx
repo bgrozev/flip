@@ -99,6 +99,43 @@ describe('useAppState settings touch tracking', () => {
   });
 });
 
+describe('useAppState default place', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  // Owner report: fresh load sits at ZHills' coordinates (DEFAULT_TARGET)
+  // but showed no courses — activePlaceId defaulted to null, so
+  // DZ-scoped data (courses, the swoop pond, flocking's corridors) had
+  // nothing to match against until ZHills was reselected by hand.
+  it('starts at ZHills, matching where DEFAULT_TARGET actually sits', () => {
+    const { result } = renderAppState();
+
+    expect(result.current.activePlaceId).toBe('dz:Skydive City (ZHills)');
+  });
+
+  it('does not override a place the user already chose', () => {
+    window.localStorage.setItem('flip.place.active', 'dz:Skydive Arizona');
+
+    const { result } = renderAppState();
+
+    expect(result.current.activePlaceId).toBe('dz:Skydive Arizona');
+  });
+
+  it('restores the ZHills default after resetAll', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(
+      { target: { lat: 32.8035, lng: -111.57985 }, finalHeading: 181 },
+      { id: 'dz:Skydive Arizona' }
+    ));
+    act(() => result.current.resetAll());
+
+    expect(result.current.activePlaceId).toBe('dz:Skydive City (ZHills)');
+    expect(result.current.target).toEqual(result.current.targetForMode('pattern'));
+  });
+});
+
 describe('useAppState targets', () => {
   const ZHILLS = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
   const DELAND = { target: { lat: 29.06402, lng: -81.27847 }, finalHeading: 125 };

@@ -32,7 +32,7 @@ import {
 import { createVersionedCodec } from '../util/storage';
 import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
-import { dropzoneForPlaceId, placeModeTargets } from '../core/places';
+import { dropzoneForPlaceId, dropzonePlaceId, placeModeTargets } from '../core/places';
 import { BUILT_IN_PARAMS, courseIsAtPlace } from '../core/courses';
 import { DROPZONES } from '../util/dropzones';
 import { samples } from '../samples';
@@ -68,6 +68,9 @@ const TOUCHED_SETTINGS_CODEC = createVersionedCodec<TouchedSettings | null>(
   SCHEMA_VERSION,
   migrateTouchedSettings
 );
+
+/** The place `DEFAULT_TARGET`'s coordinates belong to (see its use below). */
+const DEFAULT_ACTIVE_PLACE_ID = dropzonePlaceId('Skydive City (ZHills)');
 
 function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
   let path: FlightPath;
@@ -191,8 +194,15 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   // says the DZ is; the spot a user shift-clicks to is where they actually
   // land. Recording the latter against the place means a trip to another DZ
   // and back restores their spot instead of snapping to the database's.
+  //
+  // Defaults to ZHills, not null: DEFAULT_TARGET's coordinates are ZHills'
+  // (predating the dropzone database), but nothing ever set a matching place
+  // for it. Left null, a fresh user's target sits at a real dropzone with no
+  // place attached, so DZ-scoped data — courses, the swoop pond, flocking's
+  // corridors — silently has nothing to show until they reselect it from the
+  // picker. This only applies before any explicit choice is ever stored.
   const [storedActivePlaceId, setStoredActivePlaceId] =
-    useLocalStorageState<string | null>('flip.place.active', null);
+    useLocalStorageState<string | null>('flip.place.active', DEFAULT_ACTIVE_PLACE_ID);
   const activePlaceId = storedActivePlaceId ?? null;
 
   const [storedTargetsByPlace, setStoredTargetsByPlace] =
@@ -501,7 +511,8 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     setStoredTarget(DEFAULT_TARGET);
     setStoredTargetsByMode({});
     setStoredTargetsByPlace({});
-    setStoredActivePlaceId(null);
+    // DEFAULT_TARGET is ZHills' coordinates — see DEFAULT_ACTIVE_PLACE_ID.
+    setStoredActivePlaceId(DEFAULT_ACTIVE_PLACE_ID);
     setStoredPatternParams(DEFAULT_PATTERN_PARAMS);
     setStoredPatternByMode({});
     setStoredFlockingParams(DEFAULT_FLOCKING_PARAMS);

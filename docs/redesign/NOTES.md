@@ -1041,3 +1041,30 @@ the preset's own target together. One dead end worth recording:
 re-selecting the *already active* preset is a deliberate no-op in
 `PresetSelector` (`if (id !== activePresetId)`), which looked at first
 like the preset load being broken.
+
+### Fresh-load bug found the same day: no place to match the default target
+
+Owner report: on initial load the target sits at ZHills, but the Courses
+panel is empty; picking ZHills from the Target panel fixes it.
+
+Root cause predates this session. `DEFAULT_TARGET` (`core/model.ts`) is
+28.21887, -82.15122 — ZHills' coordinates almost exactly (its lat is an
+exact match for the dropzone's own `swoop`-mode override) — but nothing
+ever set a matching `activePlaceId` for it; that field has defaulted to
+`null` since the per-place system was built, because until today nothing
+read it before a place was chosen. Course scoping was the first consumer
+that cared whether `activePlaceId` matched where the target actually was,
+which is what surfaced it.
+
+Fix: `flip.place.active`'s default (in `useAppState.tsx`) is now ZHills'
+place id, not `null`, applying only when nothing has ever been explicitly
+stored there — a user who already picked a different dropzone is
+untouched, since their key already holds a real value. `resetAll` sets
+the same default rather than `null`, for the same reason it restores
+`DEFAULT_TARGET` rather than clearing it.
+
+Confirmed the bug with `localStorage.clear()` before the fix (Courses
+panel empty at a target sitting exactly on ZHills) and after (lists
+ZHills' three built-ins). Two tests pin it in `useAppState.test.tsx`
+("starts at ZHills…", "restores the ZHills default after resetAll") and
+were confirmed to fail against the pre-fix code.

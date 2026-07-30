@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **777 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **780 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -134,6 +134,13 @@ is offered everywhere (that is every custom course saved before this), and
 `PlaceSelection.useGivenTarget` so the preset's target still beats what the
 place remembers. Built-in ids are unchanged so stored selections resolve;
 their names lost the DZ prefix. Owner decisions are recorded below.
+
+Owner report the same day: a fresh load sat at ZHills (`DEFAULT_TARGET`'s
+coordinates) but showed no courses — `flip.place.active` defaulted to
+`null`, and courses now filter on it. Fixed by defaulting that key to
+ZHills' place id (`DEFAULT_ACTIVE_PLACE_ID` in `useAppState.tsx`) rather
+than null; `resetAll` restores the same pairing. Only applies before any
+place is ever explicitly stored.
 
 **Nerd mode** (`5ea378c`), and the design decision inside it: it is a
 **flag, not a fourth mode**. A mode answers "what jump am I planning";
