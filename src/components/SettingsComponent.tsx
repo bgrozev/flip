@@ -37,6 +37,8 @@ interface CheckboxOption {
   key: keyof Settings;
   label: string;
   tooltip: string;
+  /** Only offered under nerd mode; forced to its everyday value otherwise. */
+  nerd?: boolean;
 }
 
 interface SettingsGroup {
@@ -71,13 +73,15 @@ const settingsGroups: SettingsGroup[] = [
       {
         key: 'showPomTooltips',
         label: 'Show tooltips on pattern points',
-        tooltip: 'Show detailed information when hovering over pattern points on the map.'
+        tooltip: 'Show detailed information when hovering over pattern points on the map.',
+        nerd: true
       },
       {
         key: 'highlightCorrespondingPoints',
         label: 'Highlight corresponding pre-wind point',
         tooltip:
-          'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.'
+          'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.',
+        nerd: true
       },
       {
         key: 'showCrabArrow',
@@ -198,13 +202,37 @@ export default function SettingsComponent({
     setSettings({ ...settings, units: { ...settings.units, [unitKey]: value } });
   };
 
+  // Nerd rows are dropped entirely, not disabled: the point of the mode is
+  // a shorter panel. Their effect is suppressed separately (applyNerdGate).
+  const visible = (options: CheckboxOption[]) =>
+    options.filter(o => !o.nerd || settings.nerd);
+
   return (
     <Stack direction="column" spacing={0.5} alignItems="flex-start" sx={{ width: '100%', textAlign: 'left' }}>
+      {/* First, because toggling it makes rows appear BELOW — at the bottom
+          of the panel the change would happen off-screen. */}
+      <SectionHeader>Nerd mode</SectionHeader>
+      <SettingRow
+        label="Nerd mode"
+        tooltip="Unlocks manual wind entry, exports and extra map detail, and adds more options to this panel."
+      >
+        <Switch
+          checked={settings.nerd}
+          onChange={() => handleCheckboxChange('nerd')}
+          slotProps={{ input: { 'aria-label': 'Nerd mode' } }}
+        />
+      </SettingRow>
+      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'left', pb: 0.5 }}>
+        Extra tools most jumpers never need: manual wind entry, exports and
+        extra map detail.
+      </Typography>
+
+      <Divider sx={{ width: '100%', mt: 1 }} />
       <SectionHeader>Appearance</SectionHeader>
       <SettingRow label="Light / Dark theme">
         <ThemeSwitcher />
       </SettingRow>
-      {settingsGroups[0].options.map(({ key, label, tooltip }) => (
+      {visible(settingsGroups[0].options).map(({ key, label, tooltip }) => (
         <SettingRow key={key} label={label} tooltip={tooltip}>
           <Switch checked={Boolean(settings[key])} onChange={() => handleCheckboxChange(key)} />
         </SettingRow>
@@ -214,7 +242,7 @@ export default function SettingsComponent({
         <React.Fragment key={group.title}>
           <Divider sx={{ width: '100%', mt: 1 }} />
           <SectionHeader>{group.title}</SectionHeader>
-          {group.options.map(({ key, label, tooltip }) => (
+          {visible(group.options).map(({ key, label, tooltip }) => (
             <SettingRow key={key} label={label} tooltip={tooltip}>
               <Switch
                 checked={Boolean(settings[key])}

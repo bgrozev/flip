@@ -63,6 +63,11 @@ interface WindsComponentProps {
   fetch: (ft?: Date | null, opts?: { force?: boolean }) => void;
   forecastTime: Date | null;
   onForecastTimeChange: (t: Date | null) => void;
+  /**
+   * Whether hand-editing the profile is offered at all (nerd mode). With
+   * it off the table is read-only and the Unlock button is not rendered.
+   */
+  allowManualEdit?: boolean;
   stations?: ObservedWindStation[];
   stationsFetched?: boolean;
   fetchingObserved?: boolean;
@@ -203,6 +208,7 @@ export default function WindsComponent({
   fetch,
   forecastTime,
   onForecastTimeChange,
+  allowManualEdit = false,
   stations = [],
   stationsFetched = false,
   fetchingObserved = false,
@@ -228,7 +234,12 @@ export default function WindsComponent({
   const densityAltFt = tryDensityAltitudeFt(elevationFt, tempC, humidityPct);
   const densitySeverity = daSeverity(densityAltFt, elevationFt);
 
+  // Without the manual-wind feature the table is always read-only, even if
+  // the stored profile is already manual (entered in a previous nerd
+  // session). The values are kept — masking the editor does not discard
+  // data — and Refresh still replaces them with the forecast.
   const lock =
+    !allowManualEdit ||
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
 
   const reset = useCallback(() => {
@@ -637,7 +648,7 @@ export default function WindsComponent({
               </Stack>
             )}
 
-            {lock && (
+            {lock && allowManualEdit && (
               <Button sx={{ mt: 2 }} variant="outlined" size="small" onClick={unlock}>
                   Unlock
               </Button>

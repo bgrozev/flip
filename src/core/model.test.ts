@@ -392,6 +392,14 @@ describe('migrateSettings', () => {
     expect(migrateSettings({}).windModel).toBe('best_match');
   });
 
+  it('leaves nerd mode off for a stored doc that predates it', () => {
+    // Upgrading users get the everyday UI too — nerd is opt-in for
+    // everyone, so an older settings doc must not arrive with it on.
+    expect(migrateSettings({ showPoms: true }).nerd).toBe(false);
+    expect(migrateSettings({ nerd: 'yes' }).nerd).toBe(false);
+    expect(migrateSettings({ nerd: true }).nerd).toBe(true);
+  });
+
   it('defaults a missing or invalid map provider to google', () => {
     expect(migrateSettings({}).mapProvider).toBe('google');
     expect(migrateSettings({ mapProvider: 'openlayers' }).mapProvider).toBe('google');

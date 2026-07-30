@@ -51,6 +51,8 @@ interface CoursesComponentProps {
   editOpen: boolean;
   onEditOpenChange: (open: boolean) => void;
   altitudeUnit: AltitudeUnit;
+  /** KMZ export is nerd-only, like every other export. */
+  showExport?: boolean;
 }
 
 function CoursesComponent({
@@ -60,7 +62,8 @@ function CoursesComponent({
   onTargetChange,
   editOpen,
   onEditOpenChange,
-  altitudeUnit
+  altitudeUnit,
+  showExport = false
 }: CoursesComponentProps) {
   const { customParams, createCourse, updateCourse, removeCourse } = useCustomCourses();
 
@@ -287,7 +290,7 @@ function CoursesComponent({
       </FormControl>
 
       {/* ── Course actions ── */}
-      {selectedCourseParams && (
+      {selectedCourseParams && showExport && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
           <Button
             size="small"

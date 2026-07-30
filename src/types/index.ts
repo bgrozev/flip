@@ -136,6 +136,13 @@ export interface Settings {
   showPresets: boolean;
   highlightCorrespondingPoints: boolean;
   showCrabArrow: boolean;
+  /**
+   * Nerd mode: exposes the tools an everyday jumper never needs on the day
+   * they fly (manual wind entry, exports, extra map detail). Orthogonal to
+   * the mode — it answers "how much UI", not "what jump" — so it is a
+   * single global flag rather than a fourth Mode. See modes/nerd.ts.
+   */
+  nerd: boolean;
   units: UnitPreferences;
 }
 

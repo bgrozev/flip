@@ -39,6 +39,7 @@ import {
   panelPath
 } from './app/routing';
 import { applyModeDefaults, hasFeature, migrateModeId } from './modes';
+import { applyNerdGate, withNerd } from './modes/nerd';
 
 import {
   CoursesComponent,
@@ -213,7 +214,13 @@ function DashboardContent() {
   // is persisted below; otherwise the stored choice (or first-run) rules.
   const rawUrlMode = router.searchParams.get('mode');
   const urlModeId = migrateModeId(rawUrlMode);
-  const { mode, setModeId, firstRun } = useMode(urlModeId);
+  const { mode: baseMode, setModeId, firstRun } = useMode(urlModeId);
+
+  // Nerd mode widens whatever the active mode exposes. Read from the
+  // *stored* settings, not `modeSettings` below — nerd is global, so no
+  // mode may default it, and resolving it here breaks the cycle (the
+  // settings resolution needs the mode, which needs the flag).
+  const mode = useMemo(() => withNerd(baseMode, settings.nerd), [baseMode, settings.nerd]);
 
   // Each mode plans against its own target; modes with none yet share the
   // legacy one, so existing setups carry over on first switch.
@@ -258,9 +265,11 @@ function DashboardContent() {
   }, [router.pathname, mode, navigate]);
 
   // Effective settings: mode defaults fill in the settings the user never
-  // touched; the Settings panel still edits the stored values.
+  // touched; the Settings panel still edits the stored values. The nerd
+  // gate runs last and ignores "touched" — with nerd off the user cannot
+  // see those controls, so an old choice must not keep them in effect.
   const modeSettings = useMemo(
-    () => applyModeDefaults(settings, mode, touchedSettings),
+    () => applyNerdGate(applyModeDefaults(settings, mode, touchedSettings), settings.nerd),
     [settings, mode, touchedSettings]
   );
 
@@ -719,6 +728,7 @@ function DashboardContent() {
         fetch={handleFetchWinds}
         forecastTime={forecastTime}
         onForecastTimeChange={onForecastTimeChange}
+        allowManualEdit={hasFeature(mode, 'manualWind')}
         stations={stations}
         stationsFetched={stationsFetched}
         fetchingObserved={fetchingObserved}
@@ -735,6 +745,7 @@ function DashboardContent() {
         editOpen={courseEditOpen}
         onEditOpenChange={setCourseEditOpen}
         altitudeUnit={modeSettings.units.altitude}
+        showExport={hasFeature(mode, 'export')}
       />
     );
   } else if (activePanel === 'help') {
@@ -934,6 +945,9 @@ function DashboardContent() {
     fetching,
     onRefreshWindsClick: () => handleFetchWinds(undefined, { force: true }),
     onExportClick: () => setExportOpen(true),
+    showExport: hasFeature(mode, 'export'),
+    nerd: settings.nerd,
+    onNerdOff: () => setSettings({ ...settings, nerd: false }),
     showPresets: modeSettings.showPresets && hasFeature(mode, 'presets'),
     presets,
     activePresetId,

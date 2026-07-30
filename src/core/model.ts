@@ -141,6 +141,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showPresets: true,
   highlightCorrespondingPoints: true,
   showCrabArrow: true,
+  // Off for everyone, including upgrades: the everyday UI is the default.
+  nerd: false,
   units: DEFAULT_UNIT_PREFERENCES
 };
 
@@ -496,6 +498,7 @@ export function migrateSettings(raw: unknown): Settings {
     showPresets: booleanOr(r.showPresets, d.showPresets),
     highlightCorrespondingPoints: booleanOr(r.highlightCorrespondingPoints, d.highlightCorrespondingPoints),
     showCrabArrow: booleanOr(r.showCrabArrow, d.showCrabArrow),
+    nerd: booleanOr(r.nerd, d.nerd),
     units: migrateUnits(r.units)
   };
 }

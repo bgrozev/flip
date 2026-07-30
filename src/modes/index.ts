@@ -9,9 +9,15 @@ import { MapLayerId, PanelId, Settings } from '../types';
 
 export type ModeId = 'pattern' | 'swoop' | 'flocking';
 
-/** Coarse feature switches for gates that are neither nav nor a map layer. */
+/**
+ * Coarse feature switches for gates that are neither nav nor a map layer.
+ *
+ * Some are granted by the mode, some only by nerd mode (see nerd.ts) —
+ * both arrive through the same `mode.features` list, so a gate never has
+ * to know which.
+ */
 export const FEATURE_IDS = [
-  'manoeuvre', 'courses', 'presets', 'export', 'patternLegCount'
+  'manoeuvre', 'courses', 'presets', 'export', 'patternLegCount', 'manualWind'
 ] as const;
 export type FeatureId = typeof FEATURE_IDS[number];
 
@@ -59,7 +65,7 @@ export const MODES: readonly Mode[] = [
     // No 'patternLegCount': NONE/1/2/3 is a swooper's control. A regular
     // jumper always flies the full downwind-base-final, so this mode fixes
     // the pattern at three legs (App) instead of offering the choice.
-    features: ['presets', 'export']
+    features: ['presets']
   },
   {
     id: 'swoop',
@@ -69,7 +75,7 @@ export const MODES: readonly Mode[] = [
     nav: ALL_PANELS,
     mapLayers: ALL_LAYERS,
     defaults: {},
-    features: ['manoeuvre', 'courses', 'presets', 'export', 'patternLegCount']
+    features: ['manoeuvre', 'courses', 'presets', 'patternLegCount']
   },
   {
     id: 'flocking',
@@ -79,7 +85,8 @@ export const MODES: readonly Mode[] = [
     nav: ['flocking', 'target', 'wind', 'settings', 'help'],
     mapLayers: ['flocking', 'stations', 'targetEdit'],
     defaults: {},
-    features: ['export'],
+    // Export and manual wind entry are nerd-only in every mode (nerd.ts).
+    features: [],
     // The flocking picture (descent + 3 nm jumprun) spans several miles
     defaultZoom: 12
   }
