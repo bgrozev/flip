@@ -553,6 +553,29 @@ function DashboardContent() {
     fetchWinds();
   }, [trust.level, target.target, fetchWinds]);
 
+  // Refetch when the wind SOURCE changes — the model, or forecast vs
+  // sounding. Nothing did this before: changing the model in Settings
+  // stored the choice and left the old profile on screen until the user
+  // hit refresh, and the comparison table's "use this one" would have had
+  // the same dead feel. The click cannot do the fetch itself, because
+  // `fetchWinds` closes over the settings it is replacing.
+  const lastSourceRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${modeSettings.windAloftSource}:${modeSettings.windModel}`;
+
+    // Skip the initial value: the auto-fetch above already covers load.
+    if (lastSourceRef.current === null) {
+      lastSourceRef.current = key;
+
+      return;
+    }
+    if (lastSourceRef.current === key) {
+      return;
+    }
+    lastSourceRef.current = key;
+    handleFetchWinds(undefined, { force: true });
+  }, [modeSettings.windAloftSource, modeSettings.windModel, handleFetchWinds]);
+
   // Heading that lands into wind: the ground wind's direction (it is where
   // the wind comes FROM), or null when there is no wind to land into. Drives
   // the Upwind button and stands in for a missing dropzone landing direction.

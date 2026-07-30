@@ -4,7 +4,10 @@
  * and behind a toggle — the active wind profile is never touched. First
  * pass for owner feedback; the visualization is expected to iterate.
  */
-import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import {
+  ExpandMore as ExpandMoreIcon,
+  OpenInNew as OpenInNewIcon
+} from '@mui/icons-material';
 import {
   Box,
   CircularProgress,
@@ -35,6 +38,8 @@ import { WindProfile, forecastHourOffset, soundingStationUrl } from '../core/win
 const DISAGREE_ROW_SX = { bgcolor: 'rgba(255, 152, 0, 0.18)' } as const;
 
 const CELL_SX = { px: 0.5, whiteSpace: 'nowrap' } as const;
+/** Headers wrap — "OpenMeteo Best" does not fit a narrow panel on one line. */
+const HEAD_CELL_SX = { px: 0.5, whiteSpace: 'normal', lineHeight: 1.2 } as const;
 
 function CellArrow({ direction }: { direction: number }) {
   return (
@@ -69,21 +74,53 @@ function sourceDescription(source: ComparisonSourceResult): string {
     `(${source.station}) · opens the station page`;
 }
 
-/** Column header: the sounding's links out to its station page. */
-function SourceHeaderLabel({ source }: { source: ComparisonSourceResult }) {
-  if (source.id !== 'sounding' || !source.station) {
-    return <>{source.label}</>;
-  }
-
+/**
+ * Column header: picks this source as the active one for the whole app.
+ * The sounding's station page moves to a separate small icon, so the
+ * label itself means one thing everywhere — "use this one".
+ */
+function SourceHeader({
+  source,
+  active,
+  onSelect
+}: {
+  source: ComparisonSourceResult;
+  active: boolean;
+  onSelect: () => void;
+}) {
   return (
-    <Link
-      href={soundingStationUrl(source.station)}
-      target="_blank"
-      rel="noopener noreferrer"
-      color="inherit"
-    >
-      {source.label}
-    </Link>
+    <Stack direction="row" spacing={0.25} alignItems="center" justifyContent="flex-end">
+      <Box
+        component="span"
+        role="button"
+        aria-label={`Use ${source.label}`}
+        aria-pressed={active}
+        onClick={onSelect}
+        sx={{
+          cursor: 'pointer',
+          textAlign: 'right',
+          fontWeight: active ? 700 : 400,
+          color: active ? 'primary.main' : 'inherit',
+          textDecoration: active ? 'underline' : 'none',
+          '&:hover': { textDecoration: 'underline' }
+        }}
+      >
+        {source.label}
+      </Box>
+      {source.id === 'sounding' && source.station && (
+        <Link
+          href={soundingStationUrl(source.station)}
+          target="_blank"
+          rel="noopener noreferrer"
+          color="inherit"
+          aria-label="Open the sounding station page"
+          sx={{ display: 'inline-flex', opacity: 0.6 }}
+          onClick={e => e.stopPropagation()}
+        >
+          <OpenInNewIcon sx={{ fontSize: 12 }} />
+        </Link>
+      )}
+    </Stack>
   );
 }
 
@@ -101,7 +138,7 @@ interface WindComparisonProps {
 }
 
 export default function WindComparison({ forecastTime = null }: WindComparisonProps) {
-  const { target } = useAppState();
+  const { target, settings, setSettings } = useAppState();
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const { loading, results, load, clear } = useWindComparison();
   const [open, setOpen] = useState(false);
@@ -135,6 +172,24 @@ export default function WindComparison({ forecastTime = null }: WindComparisonPr
       clear();
     }
     setOpen(!open);
+  };
+
+  // Which source the app is actually flying on, so the comparison shows
+  // where you are as well as what the alternatives say.
+  const isActiveSource = (source: ComparisonSourceResult) =>
+    source.id === 'sounding'
+      ? settings.windAloftSource === 'sounding'
+      : settings.windAloftSource === 'forecast' && settings.windModel === source.id;
+
+  // Selecting only writes the setting; App refetches when it changes, so
+  // the click cannot race the fetch with the settings it replaced.
+  const selectSource = (source: ComparisonSourceResult) => {
+    if (source.id === 'sounding') {
+      setSettings({ ...settings, windAloftSource: 'sounding' });
+      return;
+    }
+
+    setSettings({ ...settings, windAloftSource: 'forecast', windModel: source.id });
   };
 
   // The ONLY loader: opening and changing the hour both go through here.
@@ -209,8 +264,12 @@ export default function WindComparison({ forecastTime = null }: WindComparisonPr
                             title={`${sourceDescription(source)} · valid ` +
                               `${validTimeLabel(source.profile as WindProfile)}`}
                           >
-                            <TableCell align="right" sx={CELL_SX}>
-                              <SourceHeaderLabel source={source} />
+                            <TableCell align="right" sx={HEAD_CELL_SX}>
+                              <SourceHeader
+                                source={source}
+                                active={isActiveSource(source)}
+                                onSelect={() => selectSource(source)}
+                              />
                             </TableCell>
                           </Tooltip>
                         ))}
@@ -278,7 +337,8 @@ export default function WindComparison({ forecastTime = null }: WindComparisonPr
                 color="text.secondary"
                 sx={{ display: 'block', mt: 0.5 }}
               >
-                Every forecast model plus the nearest radiosonde
+                Tap a column to plan on that source. Every forecast model
+                plus the nearest radiosonde
                 (&ldquo;Sounding&rdquo;), in {windSpeedLabel}, sampled at{' '}
                 {forecastTime ? validTimeLabel({ validTime: forecastTime } as WindProfile) : 'the current hour'}.
                 A sounding is whatever was last launched, so its column

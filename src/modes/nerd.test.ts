@@ -158,21 +158,34 @@ describe('applyNerdGate', () => {
     }
   });
 
-  it('reverts the wind source and model to the defaults', () => {
-    // "Otherwise the default settings apply" — a sounding or an exotic
-    // model chosen in nerd mode must not keep driving the everyday app.
+  it('reverts the gated settings to the defaults', () => {
+    // "Otherwise the default settings apply."
     const gated = applyNerdGate({
       ...DEFAULT_SETTINGS,
-      windAloftSource: 'sounding',
-      windModel: 'icon_seamless',
       mapProvider: 'maplibre',
-      useDzGroundWind: false
+      useDzGroundWind: false,
+      interpolateWind: false
     }, false);
 
-    expect(gated.windAloftSource).toBe(DEFAULT_SETTINGS.windAloftSource);
-    expect(gated.windModel).toBe(DEFAULT_SETTINGS.windModel);
     expect(gated.mapProvider).toBe(DEFAULT_SETTINGS.mapProvider);
     expect(gated.useDzGroundWind).toBe(DEFAULT_SETTINGS.useDzGroundWind);
+    expect(gated.interpolateWind).toBe(DEFAULT_SETTINGS.interpolateWind);
+  });
+
+  it('leaves the wind source and model alone in every state', () => {
+    // The comparison table lets ANY user pick the active source, so these
+    // two must survive nerd being off — masking them would make that
+    // click silently do nothing.
+    const chosen: Settings = {
+      ...DEFAULT_SETTINGS,
+      windAloftSource: 'sounding',
+      windModel: 'icon_seamless'
+    };
+
+    expect(applyNerdGate(chosen, false).windAloftSource).toBe('sounding');
+    expect(applyNerdGate(chosen, false).windModel).toBe('icon_seamless');
+    expect(NERD_SETTING_KEYS).not.toContain('windAloftSource');
+    expect(NERD_SETTING_KEYS).not.toContain('windModel');
   });
 
   it('restores every gated value when nerd comes back', () => {

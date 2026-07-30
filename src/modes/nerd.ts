@@ -42,10 +42,16 @@ export const NERD_SETTING_KEYS: readonly (keyof Settings)[] = [
   'straightenLegs',
   'interpolateWind',
   'useDzGroundWind',
-  'windAloftSource',
-  'windModel',
   'mapProvider'
 ];
+
+// NOT here, deliberately: `windAloftSource` and `windModel`. Their
+// Settings dropdowns are still nerd-only, but the value must not be
+// masked, because the wind table's comparison lets ANY user pick the
+// active source — and the whole justification for masking a gated
+// setting is that the user cannot see or change it. Masking these would
+// make that click silently do nothing.
+
 
 /**
  * The exceptions: nerd-gated settings whose everyday value is *not* the
