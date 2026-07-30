@@ -951,15 +951,15 @@ repro would be unverifiable.
 
 ### Round 6, same day (`c5beefa`) — two small reversals
 
-**A wind glyph for Windy.** The globe said nothing. MUI has no Windy
-mark, and using their real one would mean fetching it from windy.com on
-every render — a third-party request from a PWA that is meant to work
-offline, and one that tells windy.com every time the panel opens — or
-shipping their trademark artwork in the bundle. So: `Cyclone`, the
-closest glyph to Windy's own swirling flow maps, and unused elsewhere
-(`Air` is the Wind nav item, and one icon meaning two things in the same
-app is worse than a slightly abstract one). Owner may prefer `Air` or
-`WindPower`; it is a one-word change.
+**A wind glyph for Windy — tried and reverted.** `Cyclone` (closest glyph
+to Windy's swirling flow maps) went in and the owner preferred the globe,
+so the globe it is. What stands either way: MUI has no Windy mark, and
+using their real one would mean fetching it from windy.com on every
+render — a third-party request from a PWA meant to work offline, and one
+that tells windy.com every time the panel opens — or shipping their
+trademark artwork in the bundle. `Air`, the obvious wind glyph, is the
+Wind nav item's icon, and one icon meaning two things in the same app is
+worse than an abstract one.
 
 **"OpenMeteo Best" went back to "Best".** Round 5 put the provider in the
 header; the header is the one place in that table that cannot afford
