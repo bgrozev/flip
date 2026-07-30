@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **744 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **757 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -179,6 +179,27 @@ actions:
   settings apply" — owner), with `NERD_OFF_OVERRIDES` holding only the
   exceptions. That is what keeps the geometry-affecting ones honest:
   leaving nerd mode gives the same paths as never entering it.
+
+A third pass (`a07c8d6`) reworked the wind table and the comparison:
+
+- **The Wind panel table opens as the map indicator's summary** (GND +
+  the plan bands) and expands to every level and back. The sampling is
+  pure `core/wind.sampleWindBands()`, called by *both* surfaces with the
+  same band list from App, so "the same summary" is structural.
+- **Comparison**: the sounding column was headed with its raw station id
+  ("_TBW"), which told nobody the column was the radiosonde — it is
+  "Sounding" now, station in the tooltip, and the footnote says what the
+  comparison contains. It ignored the forecast time entirely
+  (`fetchOpenMeteoComparison` hardcoded hourOffset 0, and the view only
+  loaded on open); it now follows it. The self-renaming button became a
+  chevron disclosure row.
+- **Off-by-one in the forecast hour** (found because the new footnote
+  printed the sampled hour next to the profile's valid time): the offset
+  indexes an hourly series whose row 0 is the *current hour*, but was
+  measured from the wall clock, so at 11:55 a request for 13:00 rounded
+  to 1 and returned the 12:00 forecast. `forecastHourOffset` in
+  `core/wind` is now the one definition, shared by the main fetch and the
+  comparison.
 
 Owner ruled these **out** of nerd, recorded so they are not
 re-proposed: model selection/comparison, unit pickers, `showPreWind`,

@@ -137,7 +137,8 @@ long legs describe their canopy, not the student pattern next to it.
 
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
-forecast time selection + hour scrubber, model/sounding comparison,
+forecast time selection + hour scrubber, model/sounding comparison (which
+follows the selected hour),
 persisted winds, KMZ and FlySight 2 export. On the map: a compact
 by-altitude **winds indicator** (`WindMiniIndicator`, corner overlay,
 ground-wind detail on hover), a **wind-trust banner** (`WindTrustBanner` +
@@ -191,7 +192,7 @@ user can force a mode-overridden setting back to the global default.
 | `core/geometry.ts` | `translate()`, `reposition()`, `addWind()`, `averageWind()`, `straightenLegs()`, `mirror()` |
 | `core/pattern.ts` | `makePatternByType()` — landing pattern from parameters |
 | `core/manoeuvre.ts` | `createManoeuvrePath()`, initiation-altitude scaling |
-| `core/wind.ts` | `WindProfile` data + pure helpers (`getWindAt`, vector interpolation, Beaufort, row provenance) |
+| `core/wind.ts` | `WindProfile` data + pure helpers (`getWindAt`, vector interpolation, Beaufort, row provenance, `sampleWindBands` for the shared by-altitude summary, `forecastHourOffset`) |
 | `core/flocking.ts` | Flocking math: path, into-wind, drift vectors, FWC spot description, jumprun line helpers |
 | `core/flockingSolve.ts` | Analytic corridor solver: tiers + into-wind preference |
 | `core/courses.ts` | Course geometry (buoys, gates, lines) |

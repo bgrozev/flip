@@ -817,3 +817,56 @@ as someone who never entered it. Gating the whole Pattern section also
 surfaced a small rendering bug in the first version: a group whose every
 row is nerd-only left a bare header and divider behind, so empty groups
 are now dropped.
+
+### Round 3, same day (`a07c8d6`) — the wind table and the comparison
+
+**"The wind table should display the same summary as the panel on the
+map."** Taken literally: the by-altitude sampling moved into pure
+`core/wind.sampleWindBands()` and *both* the map indicator and the Wind
+panel call it, with App handing the panel the same band list it hands the
+map. Duplicating the loop in the panel would have looked identical on the
+day and drifted the first time either side changed. The panel then
+expands to the source's full level list and back; unlocking forces the
+full table, because editing needs real levels rather than sampled bands.
+
+A unit test caught the edge case: with no bands in range the "summary"
+degenerates to a single GND row, which would have hidden every level
+behind an expander. It falls back to the full table now.
+
+**The comparison had three separate problems, and the owner named all
+three.**
+
+- *"What's _TBW?"* — the sounding column was headed with
+  `profile.meta.station`, the raw IEM station id. A column header is the
+  worst place for an identifier nobody outside the code recognises,
+  especially when the owner's next question was "does it include the
+  sounding?" — it did, and the header was the only thing that could have
+  said so. Now labelled "Sounding", station in the tooltip, and the
+  footnote states the contents outright.
+- *It didn't follow the forecast time* — two causes, both needed fixing:
+  `fetchOpenMeteoComparison` hardcoded `hourOffset` 0 ("the comparison
+  answers what the sources say about now" — a deliberate choice that was
+  simply wrong once the panel grew an hour scrubber), and the view only
+  loaded on open. The sounding genuinely cannot follow the hour, so
+  rather than hide that, the footnote says it.
+- *The show/hide felt weird* — a button that renames itself gives no clue
+  that a section is about to appear below it, and none that it is already
+  open. A chevron disclosure row does both, and matches the other section
+  headers in the panel.
+
+**An off-by-one the new footnote exposed.** Printing the sampled hour next
+to the profile's "valid" line made it obvious that asking for 13:00 at
+11:55 returned the **12:00** forecast. The offset indexes an hourly series
+whose row 0 is the *current hour* (`prefetchedIndexFor` floors `now` to
+the hour), but it was computed from the wall clock, so 1.08 h rounded to
+1. Wrong for most of every hour, and invisible until two clocks appeared
+side by side. `forecastHourOffset` now measures from the current hour and
+is the single definition shared by the main fetch and the comparison.
+Test written first, confirmed failing, then fixed.
+
+**One bug the browser caught that the tests did not** (the pattern keeps
+paying): loading from both the toggle and the new "follow the forecast
+time" effect raced — the second call aborts the first controller — and
+the sounding column came back as "signal is aborted without reason". The
+effect is the only loader now. The tests were green throughout, because
+none of them exercise two loads in one tick.
