@@ -201,6 +201,13 @@ A third pass (`a07c8d6`) reworked the wind table and the comparison:
   `core/wind` is now the one definition, shared by the main fetch and the
   comparison.
 
+A fourth pass (`d26307e`): the comparison's sounding column links to
+IEM's station page, Windy became an icon on the conditions row, and the
+panel body lost 32px of dead space above its title. Verification note
+worth keeping: `/archive/raob/?station=<sid>` returns 200 and **ignores**
+the parameter — only loading it in a browser showed the station select
+still on KABR. Curl would have passed it.
+
 Owner ruled these **out** of nerd, recorded so they are not
 re-proposed: model selection/comparison, unit pickers, `showPreWind`,
 `showCrabArrow`. The full 41k ft wind table still needs addressing, but

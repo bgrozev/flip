@@ -870,3 +870,39 @@ time" effect raced — the second call aborts the first controller — and
 the sounding column came back as "signal is aborted without reason". The
 effect is the only loader now. The tests were green throughout, because
 none of them exercise two loads in one tick.
+
+### Round 4, same day (`d26307e`) — the sounding link, and two bits of chrome
+
+**"Is there a link we can include for the sounding?"** Yes, but not the
+obvious one, and checking first changed the answer twice:
+
+- `https://mesonet.agron.iastate.edu/archive/raob/?station=_TBW` returns
+  **200 and ignores the parameter**. Loaded in a real browser the station
+  select still reads KABR (Aberdeen, SD). Curl alone would have passed
+  it: the status code is fine, the page is the right page, and only the
+  form state gives it away. This is the exact failure mode the "verify
+  before building" rule exists for, and it needed the browser, not curl.
+- Autoplot **#150** — linked from the archive page and tempting because
+  it takes a station — is "Single Sounding Mandatory Level Percentile
+  Ranks", a climatology plot. Not the sounding.
+
+What works is `/sites/site.php?station=<sid>&network=RAOB`, whose page
+title names the station. `soundingStationUrl` now lives in `core/wind`
+and is shared with the Wind panel's own sounding caption, which had been
+pointing at `networks.php` (same family, less specific page).
+
+**The underscore ids are real.** Fetching IEM's RAOB network GeoJSON:
+346 stations, **26 with a leading underscore** — aggregates, e.g. `_TBW`
+= "Tampa Bay Area -- KTPA KTBW", distinct from the plain `KTBW`. So the
+owner's "_TBW" was not corruption, it was the nearest station and it was
+an aggregate of two sites. The tooltip now gives the name and the id
+together, which is the only form in which either is useful.
+
+**Windy** was a line of prose ("Open this location in Windy") occupying a
+row of its own for what is a side door out of the app. It is a globe icon
+at the end of the conditions row now; the wording survives as its
+tooltip.
+
+**Panel top padding** was `py: 4` — 32px of nothing between the app bar
+and the panel title. Now `pt: 1.5`. Small, but it was costing a row of
+content on every panel at every width.
