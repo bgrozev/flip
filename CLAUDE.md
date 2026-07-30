@@ -87,12 +87,16 @@ nerd answers "how much UI do I want", and they cross. It is applied as a
 transform over the active mode — `withNerd()` widens `features`/`nav`, so
 `hasFeature`, the nav, the map layers and the keymap gate on it for free
 — plus `applyNerdGate()`, which forces the nerd-only settings to their
-everyday values at App's `modeSettings` choke point (an explicit table,
-so hiding a switch never silently changes the path math, and unlike mode
-defaults it ignores `flip.settings.touched`). Behind it: manual wind
-entry, both exports, and two map settings. Toggle at the top of Settings;
-a NERD chip in the toolbar while it is on. Adding an item to it is one
-line in `NERD_FEATURES` or `NERD_OFF_SETTINGS`.
+everyday values at App's `modeSettings` choke point. That value is
+`DEFAULT_SETTINGS` unless listed in `NERD_OFF_OVERRIDES`, so hiding a
+switch never silently changes the path math; unlike mode defaults the
+gate ignores `flip.settings.touched`. Behind it: manual wind entry
+(Unlock / Invert / Reset), both exports, pattern-point hover tooltips
+(`pointTooltips` — POM hover used to ignore its setting), and nine
+settings including the wind source/model, interpolation, leg
+straightening and the map provider. Toggle at the top of Settings; a NERD
+chip in the toolbar while it is on. Adding an item is one line in
+`NERD_FEATURES` or `NERD_SETTING_KEYS`.
 
 **Modes** (`src/modes/`) decide which of this is exposed — panels, map
 layers, coarse `features`, setting defaults. The three are *Standard

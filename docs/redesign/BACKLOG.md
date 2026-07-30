@@ -40,13 +40,19 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   swooper's stored choice survives a trip through the simple mode). The
   pattern path is now derived in App rather than `useAppState`, which had
   no way to know the mode.
-- ☐ **P4 / F1 · Mode-filter the Settings panel** — modes gate nav + map
-  layers but not Settings; a Standard-Pattern student sees forecast model,
-  interpolate, drift arrows, map provider, etc. Gate settings rows by
-  mode/feature.
-- ☐ **P3 / F3 · Wind panel read-only-first** — the empty state shows an
-  editable manual row alongside FETCH FORECAST; ambiguous which is intended.
-  Same ask as the existing "Winds tab: read-only first" (Bugs).
+- ◐ **P4 / F1 · Mode-filter the Settings panel** — LARGELY SOLVED, but by
+  the *other* axis: Nerd Mode (2026-07-29) removed forecast model,
+  interpolate, map provider, wind source, straighten legs, correct-heading
+  and both tooltip rows from the everyday panel, which is most of what
+  this item was pointing at. A Standard-Pattern student now sees five
+  rows plus units. Still open ✎: whether anything remaining needs gating
+  by *mode* rather than by nerd (drift arrows are the obvious candidate —
+  the owner kept them everyday for now).
+- ☑ **P3 / F3 · Wind panel read-only-first** — DONE by Nerd Mode
+  (2026-07-29). Editing the profile at all is nerd-only, so the everyday
+  panel is a read-only table; FETCH FORECAST is gone entirely (a refresh
+  icon in the panel header replaced it), which is what made the empty
+  state ambiguous in the first place.
 - ☐ **P5 · Surface course Type up front** — "+ NEW" makes a generic course;
   the Distance/Zone/Speed Type selector is buried two levels into Edit.
   Type is the first real decision. Also label Depth/Offset/Approach-angle
@@ -112,18 +118,23 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   orthogonal to the mode: "how much UI" vs "what jump", and manual wind
   matters in flocking too. That also retires the old explore / "Winds
   Aloft & Data" mode idea — there is no `explore` stub to reframe.
-  Behind it today: manual wind (Unlock + invert + row editing), both
-  exports (FlySight CSV, course KMZ), and two Settings rows
-  (`showPomTooltips`, `highlightCorrespondingPoints`). Off for everyone
-  by default. (Coach stays *not* a mode — parked unless a projector
+  Behind it today: manual wind (Unlock + Invert + Reset + row editing),
+  both exports (FlySight CSV, course KMZ), pattern-point hover tooltips
+  (`pointTooltips` — the POM hover ignored its own setting), and nine
+  Settings entries: the two tooltip ones, correct-heading, straighten
+  legs, interpolate winds, observed ground wind, winds aloft source,
+  forecast model and the map provider. Their everyday value is
+  `DEFAULT_SETTINGS` unless listed in `NERD_OFF_OVERRIDES`. Off for
+  everyone by default. Also in that pass: "Fetch forecast" and the
+  toolbar refresh-wind button were replaced by a refresh icon in the Wind
+  panel's header. (Coach stays *not* a mode — parked unless a projector
   layout is wanted.)
   - ✎ **Candidates the owner explicitly kept OUT**, recorded so they are
     not re-proposed: forecast-model selection and comparison, all unit
     pickers, `showPreWind` (the dashed pre-wind line), `showCrabArrow`.
     The full 41k ft wind table needs addressing but **outside** nerd.
-  - ☐ Candidates not yet ruled on: map provider, `straightenLegs`,
-    `correctPatternHeading`, custom course *authoring*. Adding one is a
-    single line in `NERD_OFF_SETTINGS` or `NERD_FEATURES`.
+  - ☐ Candidates not yet ruled on: custom course *authoring*. Adding one
+    is a single line in `NERD_SETTING_KEYS` or `NERD_FEATURES`.
   - ☐ Nerd's own positive content, so it is not only a gate: a
     diagnostics view (per-row wind provenance, fetch times, station ids,
     raw JSON, "copy diagnostics" for bug reports) and numeric path stats
@@ -170,11 +181,12 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   → /wind. Follow-ups ✎: hide when winds are the empty manual default;
   owner may want different default bands.
 - ☐ **Wind table number field too narrow** — custom values don't fit.
-- ☐ **Winds tab: read-only first** — in the vast majority of uses the tab is
-  read-only; the "unlock" button is used very rarely. Redesign around
-  viewing (colors, source badges, summary); editing becomes an explicit,
-  secondary mode. (Partly served: Beaufort dots + source badges landed;
-  per-row source indicators landed too — see below.)
+- ☑ **Winds tab: read-only first** — DONE 2026-07-29. Nerd Mode is the
+  "explicit, secondary mode" this asked for: with it off there is no
+  Unlock, no Reset and no editing UI at all, and an already-manual
+  profile locks back to read-only (the values are kept, and Refresh
+  replaces them). The viewing side landed earlier — Beaufort dots, source
+  badges, per-row provenance icons.
 - ☑ **Per-row source indication in the wind table** — DONE. Read-only rows
   show a muted provenance icon (cloud = forecast/sounding, pencil =
   manually entered) and the observed-station ground row a green sensors

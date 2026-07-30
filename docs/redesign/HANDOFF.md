@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **734 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **744 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -133,14 +133,14 @@ It is applied as a *transform over the active mode* (`modes/nerd.ts`):
 the map layers and the keymap all gate on nerd **for free** — the `E`
 shortcut and its overlay entry vanish with the Export button without
 knowing nerd exists. Adding an item to nerd is one line in
-`NERD_FEATURES` or `NERD_OFF_SETTINGS`.
+`NERD_FEATURES` or `NERD_SETTING_KEYS`.
 
 Two rules keep the gate real rather than cosmetic:
 
 - **Hiding a control also suppresses its effect** — `applyNerdGate` at
-  App's single `modeSettings` choke point. `NERD_OFF_SETTINGS` is an
-  explicit table of everyday values, *not* "force false" and *not* "fall
-  back to DEFAULT_SETTINGS": `interpolateWind` and `straightenLegs`
+  App's single `modeSettings` choke point. The everyday value is
+  `DEFAULT_SETTINGS`, *not* "force false", with `NERD_OFF_OVERRIDES`
+  holding the few exceptions: `interpolateWind` and `straightenLegs`
   default to true and must stay true, because hiding a switch must never
   silently change the path math. A test pins exactly that.
 - **The gate ignores `flip.settings.touched`**, unlike mode defaults.
@@ -155,6 +155,30 @@ including upgrades. The toggle is at the **top** of Settings (toggling it
 makes rows appear *below*; at the bottom the change would be off-screen)
 and its only footprint outside Settings is a **NERD chip** in the
 toolbar, shown only while on, which turns it off when clicked.
+
+A second pass the same day (`3e86140`) widened it and reworked the wind
+actions:
+
+- **"Fetch forecast" and the toolbar's refresh-wind button are both
+  gone.** Fetching is a refresh icon in the *Wind panel's header* (beside
+  the `?`), costing no layout space; refreshing now lives next to what it
+  changes, there and on the map indicator.
+- **Reset moved down beside Unlock** and is nerd-only — it clears the
+  profile, so it belongs with the editing actions.
+- **Pattern-point hover is nerd-only** (`pointTooltips`). This was not
+  just a settings row: `FlightPathsLayer` made POMs hoverable
+  *regardless* of `showPomTooltips` ("POMs always have hover"), so gating
+  the setting alone still left everyday users with tooltips.
+  `showPomTooltips` keeps its old meaning — whether hover extends to the
+  non-POM points — and now only applies when the feature is on.
+- **Seven more settings** behind the flag: correct-heading, straighten
+  legs, winds aloft source, forecast model, interpolate winds, observed
+  ground wind, map provider. Pattern became entirely nerd-only, so an
+  empty section is now dropped rather than left as a bare header.
+- Their everyday value is **`DEFAULT_SETTINGS`** ("otherwise the default
+  settings apply" — owner), with `NERD_OFF_OVERRIDES` holding only the
+  exceptions. That is what keeps the geometry-affecting ones honest:
+  leaving nerd mode gives the same paths as never entering it.
 
 Owner ruled these **out** of nerd, recorded so they are not
 re-proposed: model selection/comparison, unit pickers, `showPreWind`,

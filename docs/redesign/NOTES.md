@@ -733,9 +733,12 @@ Two things that were nearly wrong, both worth remembering:
 - **But the mask must not be "force false".** The first instinct was to
   gate `interpolateWind` and `straightenLegs` too — both default to
   `true`, so forcing them false would have silently changed everyone's
-  path geometry the moment they left nerd mode. `NERD_OFF_SETTINGS` is
-  therefore an explicit table of everyday values rather than a rule, and
-  a test asserts the three math-affecting settings are untouched by it.
+  path geometry the moment they left nerd mode. The everyday value is
+  therefore the **app default**, which is exactly the rule the owner
+  stated in the follow-up round ("otherwise default settings should
+  apply") and which made gating those two safe when he asked for them.
+  `NERD_OFF_OVERRIDES` holds only the exceptions, and a test asserts the
+  math-affecting settings never appear in it.
 
 **The gate ignores `flip.settings.touched`** — deliberately unlike
 `applyModeDefaults`. Touched means "the user chose this", and mode
@@ -772,3 +775,45 @@ were also confirmed to fail with the gate removed.
 **MUI 7 gotcha:** `inputProps={{ 'aria-label': ... }}` on `Switch` is
 silently dropped — no warning, no attribute. `slotProps={{ input: {...} }}`
 is the live path. Cost a debug round-trip.
+
+### Round 2, same day (`3e86140`)
+
+The owner came back with a second list. Most of it was one line per item
+in the nerd tables, which is the payoff of the transform design. Three
+things were not:
+
+**The wind actions moved rather than being gated.** "Fetch forecast" was
+a full-width button and there was a second refresh in the app toolbar;
+the owner wanted the button gone, an icon "somewhere near the top, not
+wasting space", and the toolbar one gone too. The shared panel header
+(title + `?`) already existed for every panel, so the refresh icon went
+*there*: it costs no layout space, sits next to the thing it refreshes,
+and leaves the global toolbar for genuinely global actions. Refreshing
+now exists in exactly two places, both next to what they change — that
+header and the map indicator's own refresh.
+
+**Reset joined Unlock.** It clears the profile, so it is an editing
+action, and having it as the second thing an everyday user met in the
+panel was backwards. Locked, the row is Unlock / Reset; unlocked, it is
+add / Invert / Reset.
+
+**"The hover over pattern points should go under NERD" was not a settings
+row.** `FlightPathsLayer` had `enableHover = isPom || showTooltip` with
+the comment "POMs always have hover/tooltip" — i.e. pattern points were
+hoverable *regardless* of `showPomTooltips`, which only ever controlled
+whether hover extended to the non-POM points as well. Gating the setting
+alone (round 1) therefore did nothing for the pattern points themselves,
+which is exactly what the owner was looking at. It needed a real feature
+(`pointTooltips`) above the setting. A layer test pins all three states,
+and was confirmed to fail with the gate removed. Worth remembering as a
+category: **a setting can be gated and the behaviour still leak, when the
+code treats the setting as an extension rather than the switch.**
+
+The seven new settings arrived with the rule that resolved a question
+left open in round 1: their everyday value is `DEFAULT_SETTINGS`, so
+`interpolateWind`, `straightenLegs` and `correctPatternHeading` could be
+gated safely after all — someone who leaves nerd mode gets the same paths
+as someone who never entered it. Gating the whole Pattern section also
+surfaced a small rendering bug in the first version: a group whose every
+row is nerd-only left a bare header and divider behind, so empty groups
+are now dropped.
