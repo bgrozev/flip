@@ -142,7 +142,15 @@ long legs describe their canopy, not the student pattern next to it.
 pond, so `CourseParams.placeId` (a `Place.id`) scopes both the shipped
 courses in `core/courses.BUILT_IN_PARAMS` and the user's own — one field,
 one filter, no special-casing. The Courses panel lists only what is at
-the active place, grouped under its name; "New" creates a course there.
+the active place, grouped under its name, as a **radio list** rather than
+a dropdown (there are only ever a handful, and Duplicate/Delete then live
+on the rows instead of inside an open menu). **"New" is a type menu** —
+Distance / Zone Accuracy / Speed — which creates the course already named
+for its type (`defaultCourseName`, numbered if taken) and pointed along
+the target's final heading, because the type is the first real decision
+and used to be two levels down inside Edit. A selected custom course is
+draggable on the map whenever the panel is open, with no editor to open
+first (the same reasoning that retired the target's "Edit on map" mode).
 Choosing another dropzone drops a selection that belongs to the one being
 left (`selectPlaceTarget`), since it is meaningless there and the map
 camera would chase it. Two escapes keep that lossless: a course with no
@@ -212,10 +220,10 @@ user can force a mode-overridden setting back to the global default.
 | `core/wind.ts` | `WindProfile` data + pure helpers (`getWindAt`, vector interpolation, Beaufort, row provenance, `sampleWindBands` for the shared by-altitude summary, `forecastHourOffset`) |
 | `core/flocking.ts` | Flocking math: path, into-wind, drift vectors, FWC spot description, jumprun line helpers |
 | `core/flockingSolve.ts` | Analytic corridor solver: tiers + into-wind preference |
-| `core/courses.ts` | Course geometry (buoys, gates, lines); `BUILT_IN_PARAMS` + the per-place filter (`coursesForPlace`, `courseIsAtPlace`) |
+| `core/courses.ts` | Course geometry (buoys, gates, lines); `BUILT_IN_PARAMS`, the per-place filter (`coursesForPlace`, `courseIsAtPlace`) and naming (`courseTypeLabel`, `defaultCourseName`) |
 | `core/pathStats.ts` | Per-leg/manoeuvre stats, `driftAngle`, `groundSpeedKts`, `cumulativeTurnDeg` |
 | `core/units.ts` | Unit conversions + preferences (incl. mi/nm/km distances) |
-| `core/validation.ts` | `LIMITS`, clamping, direction normalization |
+| `core/validation.ts` | `LIMITS`, clamping, direction normalization (`normalizeDirection` absolute, `normalizeRelativeAngle` signed) |
 | `core/model.ts` | Versioned document defaults + `migrate*` loaders |
 | `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`); place ids (`dropzonePlaceId`, `placeNameFromId`) |
 | `core/regions.ts` | State/country short forms, so "az" finds Arizona |

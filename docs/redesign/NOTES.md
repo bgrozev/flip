@@ -1068,3 +1068,69 @@ panel empty at a target sitting exactly on ZHills) and after (lists
 ZHills' three built-ins). Two tests pin it in `useAppState.test.tsx`
 ("starts at ZHills…", "restores the ZHills default after resetAll") and
 were confirmed to fail against the pre-fix code.
+
+### Courses panel rework, same day (P5 closed)
+
+Owner: "There's only a handful available, so we should display them with
+something like a radio button. The 'new' interface is awkward."
+
+**Radio list, not a dropdown.** Per-DZ scoping made the list short by
+construction — three or four rows at a dropzone — so a `Select` was
+spending two clicks to reveal what fits on screen. It is now a `List` of
+`ListItemButton` + `Radio`, with "None" as the first row. The
+`ListItem`/`secondaryAction` form was chosen over `RadioGroup` +
+`FormControlLabel` specifically to have somewhere to put the row actions:
+Duplicate used to be an icon *inside a MenuItem*, so it only existed while
+the dropdown happened to be open, and Delete only existed at the bottom of
+the Edit accordion. Both are row actions now (Delete on custom rows only,
+since a shipped course cannot be removed).
+
+That also retires a standing backlog item for free: a stale
+`flip.courses.selected` used to render its raw id, because `Select`'s
+`renderValue` fell through to it. A radio list has no `renderValue` — an
+id matching no row just leaves nothing checked.
+
+**"New" asks the type first**, which is the actual content of P5. It is a
+three-item menu (Distance / Zone Accuracy / Speed) rather than a dialog:
+the only other field a dialog would collect is the name, and the name is
+almost always just the type. So the course is created already named for
+its type — `defaultCourseName`, numbering to "Speed 2" when the built-in
+"Speed" is already there — which is consistent now that the shipped
+courses dropped their DZ prefix and are called "Distance" / "Speed" /
+"Zone Accuracy".
+
+Two defaults changed with it:
+
+- **Direction is the target's final heading, not 0.** A course laid out
+  due north through the target is never what anyone means; courses are set
+  into the prevailing wind, which is what the final heading already tracks.
+- **Speed courses get `carveDirection: 'left'` at creation**, rather than
+  being defaulted later on first read. `handleDuplicate` also carries
+  `carveDirection` now — it was dropping it, so duplicating a right-carve
+  speed course silently produced a left-carve one.
+
+**The Edit accordion is titled with the course name**, not the word
+"Edit", and opens automatically for a just-created course, which by
+definition still needs positioning. Type and Carve sit on one row.
+
+**Map handles are no longer gated on the accordion** (`courseEditTarget`
+in App). Opening a *form* to make the map interactive is the same
+indirection the target's "Edit on map" mode was deleted for; a selected
+custom course is now draggable whenever the panel is open, and the
+accordion is purely a form. `courseEditOpen` still exists but only drives
+the accordion.
+
+**Approach angle: a real readout bug.** `direction - finalHeading` was
+never folded, so it could show -270 for what is +90 the other way (the UX
+pass noticed the number, not the cause). New pure
+`normalizeRelativeAngle` in `core/validation` folds to (-180, 180],
+keeping +180 rather than -180. Depth / Offset / Approach Angle also got
+tooltips saying what they measure from — the second half of P5.
+
+**Verification.** The map-handle change was checked in *both* directions,
+which mattered: with the old `courseEditOpen &&` condition put back, the
+orange move handle vanishes from the screenshot while the blue target
+handle stays, so the check distinguishes the two states rather than just
+finding some marker. The -270 fold was exercised from both sides
+(ZA course at 270.308 against final headings 180 and 0, reading 90 and
+-90).

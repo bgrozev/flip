@@ -53,10 +53,12 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   panel is a read-only table; FETCH FORECAST is gone entirely (a refresh
   icon in the panel header replaced it), which is what made the empty
   state ambiguous in the first place.
-- ☐ **P5 · Surface course Type up front** — "+ NEW" makes a generic course;
-  the Distance/Zone/Speed Type selector is buried two levels into Edit.
-  Type is the first real decision. Also label Depth/Offset/Approach-angle
-  meanings.
+- ☑ **P5 · Surface course Type up front** — DONE. "New" is a type menu
+  (Distance / Zone Accuracy / Speed) that creates the course already named
+  and typed, so Type is the first thing asked rather than two levels into
+  Edit. Depth / Offset / Approach Angle now carry tooltips saying what they
+  measure from, and the approach angle is folded to (-180, 180] — it used
+  to read -270 for what is really +90.
 
 ### Harder-than-necessary
 
@@ -721,10 +723,10 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   versioned-codec migration above unblocked them. `deepMerge` went too
   (it was `createSafeCodec`'s private helper). `createVersionedCodec` kept.
 - ☑ `CODEC_JSON` — removed with its tests (`8a9f2f5`, 2026-07-16).
-- ☐ A stale `flip.courses.selected` id renders the raw id in the Courses
-  Select (`renderValue` falls through to the id) instead of "None".
-  Cosmetic and pre-existing; not fixable by a codec — needs the course list
-  cross-referenced at load time.
+- ☑ A stale `flip.courses.selected` id rendered the raw id in the Courses
+  Select (`renderValue` fell through to the id) instead of "None" — FIXED
+  by the radio list, which has no `renderValue`: an id matching no row
+  simply leaves nothing checked.
 - (Same-path nav toggle flakiness — already covered by Phase 3 router work.)
 
 ## Phase-2 follow-ups (found during implementation, 2026-07-14)

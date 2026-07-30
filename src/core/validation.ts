@@ -79,6 +79,18 @@ export function normalizeDirection(deg: number): number {
 }
 
 /**
+ * Normalize a *relative* angle to (-180, 180] — the form a person reads as
+ * "how far off, and which way". A difference between two headings taken
+ * plainly can land anywhere in (-360, 360): the Courses panel's approach
+ * angle used to show -270° for what is really +90° to the right.
+ */
+export function normalizeRelativeAngle(deg: number): number {
+  const wrapped = normalizeDirection(deg);
+
+  return wrapped > 180 ? wrapped - 360 : wrapped;
+}
+
+/**
  * Check if a number is within optional min/max bounds.
  */
 export function isNumberInRange(num: number, min?: number, max?: number): boolean {

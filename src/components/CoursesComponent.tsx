@@ -16,13 +16,18 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
-  ListSubheader,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Menu,
   MenuItem,
   OutlinedInput,
+  Radio,
   Select,
-  SelectChangeEvent,
   Stack,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
@@ -32,14 +37,21 @@ import { CourseParams, CourseType, LatLng, Target } from '../types';
 import {
   BUILT_IN_PARAMS,
   buildCourse,
+  courseTypeLabel,
   coursesForPlace,
+  defaultCourseName,
+  duplicateCourseParams,
   fromCourseRelative,
   getTargetRelativeToCourse
 } from '../core/courses';
+import { normalizeRelativeAngle } from '../core/validation';
 import { downloadCourseKmz } from '../util/exportKmz';
 import { AltitudeUnit } from '../core/units';
 
 const M_PER_FT = 0.3048;
+
+/** The three course types, in the order the New menu offers them. */
+const COURSE_TYPES: readonly CourseType[] = ['distance', 'zone-accuracy', 'speed'];
 
 function metersToDisplay(m: number, unit: AltitudeUnit): number {
   return unit === 'ft' ? m / M_PER_FT : m;
@@ -111,7 +123,11 @@ function CoursesComponent({
     const toDisp = (m: number) => metersToDisplay(m, altitudeUnit);
     setDepthStr(String(Math.round(toDisp(rel.depth) * 10) / 10));
     setOffsetStr(String(Math.round(toDisp(rel.offset) * 10) / 10));
-    const approachAngle = selectedCourseParams.direction - target.finalHeading;
+    // Folded to (-180, 180]: a plain subtraction reads "-270" for what is
+    // really 90 degrees the other way, which is what the UX pass flagged.
+    const approachAngle = normalizeRelativeAngle(
+      selectedCourseParams.direction - target.finalHeading
+    );
     setDirStr(String(Math.round(approachAngle)));
   // Re-sync when the selected course changes OR when the course is moved/rotated.
   // Deliberately excludes target changes to avoid feedback loops.
@@ -207,70 +223,109 @@ function CoursesComponent({
   };
 
   // ── Shared actions ───────────────────────────────────────────────────────────
-  // A duplicate keeps the original's place, not the active one: the copy sits
-  // on top of the buoys it was copied from, so it belongs to the same pond.
-  // (They can only differ for an unassigned course or one from a preset.)
   const handleDuplicate = (params: CourseParams) => {
-    const newId = createCourse({
-      name: `${params.name} (copy)`,
-      type: params.type,
-      lat: params.lat,
-      lng: params.lng,
-      direction: params.direction,
-      placeId: params.placeId
-    });
-    onSelect(newId);
+    onSelect(createCourse(duplicateCourseParams(params)));
+    onEditOpenChange(true);
   };
 
-  const handleNew = () => {
+  // "New" asks for the type first: it is the first real decision, and it used
+  // to be two levels down inside Edit behind a generic "New Course".
+  const [newMenuAnchor, setNewMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const handleNew = (type: CourseType) => {
+    setNewMenuAnchor(null);
     const newId = createCourse({
-      name: 'New Course',
-      type: 'distance',
+      name: defaultCourseName(type, [...atPlace, ...unassigned].map(c => c.name)),
+      type,
       lat: target.target.lat,
       lng: target.target.lng,
-      direction: 0,
+      // The target's final heading, not 0: a course laid out due north
+      // through the target is never what anyone means, and courses are
+      // normally set into the prevailing wind — which is what the heading
+      // already tracks.
+      direction: target.finalHeading,
+      ...(type === 'speed' ? { carveDirection: 'left' as const } : {}),
       // Undefined with no place active, which is what "belongs nowhere" is
       // stored as — such a course is then offered at every dropzone.
       placeId: placeId ?? undefined
     });
     onSelect(newId);
+    // A new course is unpositioned by definition, so open the editor with it.
+    onEditOpenChange(true);
   };
 
-  const handleDelete = () => {
-    if (selectedCourseId) {
-      removeCourse(selectedCourseId);
+  const handleDelete = (id: string) => {
+    removeCourse(id);
+    if (id === selectedCourseId) {
       onSelect(null);
     }
   };
 
-  const courseTypeLabel = (type: CourseType) =>
-    type === 'distance' ? 'Distance' : type === 'speed' ? 'Speed' : 'Zone Accuracy';
+  // One row per course. The actions live here rather than inside a dropdown,
+  // where Duplicate was only reachable while the menu happened to be open.
+  const courseRow = (params: CourseParams) => {
+    const isCustom = customParams.some(c => c.id === params.id);
+    // Built-in courses are named for their type, so the caption would just
+    // repeat the name; custom ones are called whatever the user chose.
+    const typeCaption = params.name === courseTypeLabel(params.type)
+      ? null
+      : courseTypeLabel(params.type);
 
-  // The built-in courses are named for their type, since the dropzone is
-  // already the group they sit under — so the type caption would just repeat
-  // the name. Custom ones are named whatever the user called them.
-  const courseRow = (params: CourseParams) => (
-    <MenuItem key={params.id} value={params.id} sx={{ pr: 0.5 }}>
-      <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', minWidth: 0 }}>
-        <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {params.name}
-          {params.name !== courseTypeLabel(params.type) && (
-            <Typography component="span" variant="caption" sx={{ ml: 0.75, opacity: 0.55 }}>
-              {courseTypeLabel(params.type)}
-            </Typography>
-          )}
-        </Box>
-        <IconButton
-          size="small"
-          title="Duplicate"
-          onMouseDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); handleDuplicate(params); }}
-          sx={{ ml: 0.5, p: 0.25, flexShrink: 0 }}
+    return (
+      <ListItem
+        key={params.id}
+        disablePadding
+        secondaryAction={
+          <Stack direction="row" spacing={0.25}>
+            <Tooltip title="Duplicate">
+              <IconButton size="small" edge="end" onClick={() => handleDuplicate(params)}>
+                <ContentCopyIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            </Tooltip>
+            {isCustom && (
+              <Tooltip title="Delete">
+                <IconButton size="small" edge="end" onClick={() => handleDelete(params.id)}>
+                  <DeleteIcon sx={{ fontSize: 15 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        }
+      >
+        <ListItemButton
+          dense
+          selected={params.id === selectedCourseId}
+          onClick={() => onSelect(params.id)}
+          sx={{ py: 0.25 }}
         >
-          <ContentCopyIcon sx={{ fontSize: 13 }} />
-        </IconButton>
-      </Box>
-    </MenuItem>
+          <Radio
+            size="small"
+            checked={params.id === selectedCourseId}
+            tabIndex={-1}
+            disableRipple
+            sx={{ p: 0.5, mr: 0.5 }}
+          />
+          <ListItemText
+            primary={params.name}
+            secondary={typeCaption}
+            slotProps={{
+              primary: { variant: 'body2', noWrap: true },
+              secondary: { variant: 'caption' }
+            }}
+          />
+        </ListItemButton>
+      </ListItem>
+    );
+  };
+
+  const groupHeader = (text: string) => (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      sx={{ display: 'block', px: 1, pt: 1, pb: 0.25 }}
+    >
+      {text}
+    </Typography>
   );
 
   const inputSx = { width: '11ch' };
@@ -279,46 +334,60 @@ function CoursesComponent({
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
         <Typography variant="h6">Courses</Typography>
-        <Button size="small" startIcon={<AddIcon />} onClick={handleNew}>New</Button>
+        <Button
+          size="small"
+          startIcon={<AddIcon />}
+          onClick={e => setNewMenuAnchor(e.currentTarget)}
+        >
+          New
+        </Button>
+        <Menu
+          anchorEl={newMenuAnchor}
+          open={newMenuAnchor !== null}
+          onClose={() => setNewMenuAnchor(null)}
+        >
+          {COURSE_TYPES.map(type => (
+            <MenuItem key={type} onClick={() => handleNew(type)}>
+              {courseTypeLabel(type)}
+            </MenuItem>
+          ))}
+        </Menu>
       </Stack>
 
-      {/* ── Course selector ── */}
-      <FormControl fullWidth size="small">
-        <InputLabel>Course</InputLabel>
-        <Select
-          value={selectedCourseId ?? ''}
-          label="Course"
-          onChange={(e: SelectChangeEvent<string>) =>
-            onSelect(e.target.value === '' ? null : e.target.value)
-          }
-          renderValue={id => {
-            if (!id) return <em>None</em>;
-            const found = [...customParams, ...BUILT_IN_PARAMS].find(c => c.id === id);
-            return found ? found.name : id;
-          }}
-        >
-          <MenuItem value=""><em>None</em></MenuItem>
+      {/* ── Course selector: a radio list, not a dropdown. There are only ever
+          a handful at one dropzone, so showing them all costs less than the
+          two clicks a Select needs to reveal the same thing. ── */}
+      <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+        <ListItem disablePadding>
+          <ListItemButton
+            dense
+            selected={selectedCourseId === null}
+            onClick={() => onSelect(null)}
+            sx={{ py: 0.25 }}
+          >
+            <Radio
+              size="small"
+              checked={selectedCourseId === null}
+              tabIndex={-1}
+              disableRipple
+              sx={{ p: 0.5, mr: 0.5 }}
+            />
+            <ListItemText
+              primary={<em>None</em>}
+              slotProps={{ primary: { variant: 'body2' } }}
+            />
+          </ListItemButton>
+        </ListItem>
 
-          {atPlace.length > 0 && (
-            <ListSubheader disableSticky>{placeName ?? 'Here'}</ListSubheader>
-          )}
-          {atPlace.map(courseRow)}
+        {atPlace.length > 0 && groupHeader(placeName ?? 'Here')}
+        {atPlace.map(courseRow)}
 
-          {atPlace.length > 0 && unassigned.length > 0 && <Divider />}
+        {unassigned.length > 0 && groupHeader('Not at a dropzone')}
+        {unassigned.map(courseRow)}
 
-          {unassigned.length > 0 && (
-            <ListSubheader disableSticky>Not at a dropzone</ListSubheader>
-          )}
-          {unassigned.map(courseRow)}
-
-          {elsewhere.length > 0 && <Divider />}
-
-          {elsewhere.length > 0 && (
-            <ListSubheader disableSticky>From another dropzone</ListSubheader>
-          )}
-          {elsewhere.map(courseRow)}
-        </Select>
-      </FormControl>
+        {elsewhere.length > 0 && groupHeader('From another dropzone')}
+        {elsewhere.map(courseRow)}
+      </List>
 
       {/* Courses are per-dropzone, so an empty list is normal and needs
           saying — otherwise it reads as the panel being broken. */}
@@ -348,50 +417,61 @@ function CoursesComponent({
         <>
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle1" gutterBottom>Target</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+            Where you land, measured from the course.
+          </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0 }}>
-            <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
-              <OutlinedInput
-                value={depthStr}
-                onChange={handleDepth}
-                type="number"
-                endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
-                inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
-              />
-              <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
-                Depth
-              </Box>
-            </FormControl>
+            <Tooltip title="Distance back from the course centre along the course axis. Positive is away from the course, in the direction you fly it from.">
+              <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
+                <OutlinedInput
+                  value={depthStr}
+                  onChange={handleDepth}
+                  type="number"
+                  endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
+                  inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
+                />
+                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
+                  Depth
+                </Box>
+              </FormControl>
+            </Tooltip>
 
-            <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
-              <OutlinedInput
-                value={offsetStr}
-                onChange={handleOffset}
-                type="number"
-                endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
-                inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
-              />
-              <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
-                Offset
-              </Box>
-            </FormControl>
+            <Tooltip title="Distance across the course from its centreline. Positive is to the right of the course direction.">
+              <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
+                <OutlinedInput
+                  value={offsetStr}
+                  onChange={handleOffset}
+                  type="number"
+                  endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
+                  inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
+                />
+                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
+                  Offset
+                </Box>
+              </FormControl>
+            </Tooltip>
 
-            <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
-              <OutlinedInput
-                value={dirStr}
-                onChange={handleApproachAngle}
-                type="number"
-                endAdornment={<InputAdornment position="end">°</InputAdornment>}
-                inputProps={{ step: 0.5 }}
-              />
-              <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
-                Approach Angle
-              </Box>
-            </FormControl>
+            <Tooltip title="How far your final heading is turned from the course direction. 0 flies straight down the course; positive means the course runs to the right of your approach.">
+              <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
+                <OutlinedInput
+                  value={dirStr}
+                  onChange={handleApproachAngle}
+                  type="number"
+                  endAdornment={<InputAdornment position="end">°</InputAdornment>}
+                  inputProps={{ step: 0.5 }}
+                />
+                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
+                  Approach Angle
+                </Box>
+              </FormControl>
+            </Tooltip>
           </Box>
         </>
       )}
 
-      {/* ── Edit section (custom courses only, collapsible) ── */}
+      {/* ── Edit section (custom courses only, collapsible). Titled with the
+          course name: "Edit" said nothing about which course it edits, and
+          the panel can show several. ── */}
       {selectedCustom && (
         <Accordion
           expanded={editOpen}
@@ -401,7 +481,7 @@ function CoursesComponent({
           sx={{ mt: 1, '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
         >
           <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-            <Typography variant="subtitle2">Edit</Typography>
+            <Typography variant="subtitle2" noWrap>{selectedCustom.name}</Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ pt: 0, pb: 1.5, px: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
 
@@ -415,38 +495,40 @@ function CoursesComponent({
               onKeyDown={e => { if (e.key === 'Enter') commitName(); }}
             />
 
-            <FormControl size="small" fullWidth>
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={selectedCustom.type}
-                label="Type"
-                onChange={e => {
-                  const t = e.target.value as CourseType;
-                  updateCourse(selectedCustom.id, {
-                    type: t,
-                    ...(t === 'speed' && !selectedCustom.carveDirection ? { carveDirection: 'left' } : {})
-                  });
-                }}
-              >
-                <MenuItem value="distance">Distance</MenuItem>
-                <MenuItem value="zone-accuracy">Zone Accuracy</MenuItem>
-                <MenuItem value="speed">Speed</MenuItem>
-              </Select>
-            </FormControl>
-
-            {selectedCustom.type === 'speed' && (
-              <FormControl size="small" fullWidth>
-                <InputLabel>Carve Direction</InputLabel>
+            <Stack direction="row" spacing={1}>
+              <FormControl size="small" sx={{ flex: 1 }}>
+                <InputLabel>Type</InputLabel>
                 <Select
-                  value={selectedCustom.carveDirection ?? 'left'}
-                  label="Carve Direction"
-                  onChange={e => updateCourse(selectedCustom.id, { carveDirection: e.target.value as 'left' | 'right' })}
+                  value={selectedCustom.type}
+                  label="Type"
+                  onChange={e => {
+                    const t = e.target.value as CourseType;
+                    updateCourse(selectedCustom.id, {
+                      type: t,
+                      ...(t === 'speed' && !selectedCustom.carveDirection ? { carveDirection: 'left' } : {})
+                    });
+                  }}
                 >
-                  <MenuItem value="left">Left</MenuItem>
-                  <MenuItem value="right">Right</MenuItem>
+                  {COURSE_TYPES.map(type => (
+                    <MenuItem key={type} value={type}>{courseTypeLabel(type)}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
-            )}
+
+              {selectedCustom.type === 'speed' && (
+                <FormControl size="small" sx={{ flex: 1 }}>
+                  <InputLabel>Carve</InputLabel>
+                  <Select
+                    value={selectedCustom.carveDirection ?? 'left'}
+                    label="Carve"
+                    onChange={e => updateCourse(selectedCustom.id, { carveDirection: e.target.value as 'left' | 'right' })}
+                  >
+                    <MenuItem value="left">Left</MenuItem>
+                    <MenuItem value="right">Right</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </Stack>
 
             <Stack direction="row" spacing={1}>
               <TextField
@@ -491,15 +573,9 @@ function CoursesComponent({
               </Box>
             </FormControl>
 
-            <Button
-              color="error"
-              size="small"
-              variant="outlined"
-              startIcon={<DeleteIcon />}
-              onClick={handleDelete}
-            >
-              Delete Course
-            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Drag the course on the map to move it, or its handle to rotate.
+            </Typography>
           </AccordionDetails>
         </Accordion>
       )}

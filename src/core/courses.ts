@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 
-import { Course, CourseElement, CourseParams, LatLng } from '../types';
+import { Course, CourseElement, CourseParams, CourseType, LatLng } from '../types';
 
 import { dropzonePlaceId } from './places';
 
@@ -437,6 +437,57 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
 ];
 
 export const COURSES: Course[] = BUILT_IN_PARAMS.map(buildCourse);
+
+/** Display name of a course type. */
+export function courseTypeLabel(type: CourseType): string {
+  if (type === 'distance') return 'Distance';
+  if (type === 'speed') return 'Speed';
+
+  return 'Zone Accuracy';
+}
+
+/**
+ * The name a newly created course gets: its type, which is what the built-in
+ * courses are called now that the dropzone is the group above them. A second
+ * one of the same type at the same place is numbered rather than made a
+ * duplicate name the user has to tell apart ("Speed 2").
+ *
+ * `taken` is the names already in use where the course is going, so the
+ * numbering only counts what the user will actually see beside it.
+ */
+export function defaultCourseName(type: CourseType, taken: readonly string[]): string {
+  const base = courseTypeLabel(type);
+  const used = new Set(taken);
+
+  if (!used.has(base)) {
+    return base;
+  }
+
+  let n = 2;
+
+  while (used.has(`${base} ${n}`)) {
+    n += 1;
+  }
+
+  return `${base} ${n}`;
+}
+
+/**
+ * The parameters for a copy of a course, minus the id its store assigns.
+ *
+ * Everything that describes the layout comes across — including
+ * `carveDirection`, which a hand-written copy of this object dropped, so
+ * duplicating a right-carve speed course silently produced a left-carve one.
+ *
+ * The place comes from the original rather than from wherever the user
+ * happens to be: the copy sits on top of the buoys it was copied from, so it
+ * belongs to the same pond.
+ */
+export function duplicateCourseParams(params: CourseParams): Omit<CourseParams, 'id'> {
+  const { id: _id, name, ...rest } = params;
+
+  return { ...rest, name: `${name} (copy)` };
+}
 
 /**
  * Whether a course should be offered at a given place.

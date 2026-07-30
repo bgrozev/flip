@@ -910,9 +910,13 @@ function DashboardContent() {
     }
   }, [selectedCourseId, courseCenter, targetLat, targetLng]);
 
+  // A selected custom course is draggable whenever its panel is open — the
+  // Edit accordion used to gate this, which made the map handles appear and
+  // vanish for a reason nothing on screen explained. Same reasoning that
+  // retired the target's "Edit on map" mode.
   const selectedCustomParam = customParams.find(c => c.id === selectedCourseId) ?? null;
   const courseEditTarget: CourseEditTarget | undefined =
-    courseEditOpen && selectedCustomParam && activePanel === 'courses'
+    selectedCustomParam && activePanel === 'courses'
       ? {
         center: { lat: selectedCustomParam.lat, lng: selectedCustomParam.lng } as LatLng,
         direction: selectedCustomParam.direction,

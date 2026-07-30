@@ -3,7 +3,8 @@ import {
   clampNumber,
   getRangeErrorText,
   isNumberInRange,
-  normalizeDirection
+  normalizeDirection,
+  normalizeRelativeAngle
 } from './validation';
 
 describe('clampNumber', () => {
@@ -62,6 +63,30 @@ describe('normalizeDirection', () => {
   it('returns 0 for non-finite input', () => {
     expect(normalizeDirection(NaN)).toBe(0);
     expect(normalizeDirection(Infinity)).toBe(0);
+  });
+});
+
+describe('normalizeRelativeAngle', () => {
+  it('keeps values already in range', () => {
+    expect(normalizeRelativeAngle(0)).toBe(0);
+    expect(normalizeRelativeAngle(90)).toBe(90);
+    expect(normalizeRelativeAngle(-90)).toBe(-90);
+  });
+
+  // The Courses panel's approach angle: 0 - 270 read as -270 rather than +90.
+  it('folds the long way round into the short one', () => {
+    expect(normalizeRelativeAngle(-270)).toBe(90);
+    expect(normalizeRelativeAngle(270)).toBe(-90);
+    expect(normalizeRelativeAngle(-350)).toBe(10);
+  });
+
+  it('keeps 180 positive and never returns -180', () => {
+    expect(normalizeRelativeAngle(180)).toBe(180);
+    expect(normalizeRelativeAngle(-180)).toBe(180);
+  });
+
+  it('returns 0 for non-finite input', () => {
+    expect(normalizeRelativeAngle(NaN)).toBe(0);
   });
 });
 

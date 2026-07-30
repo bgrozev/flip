@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { CourseParams } from '../types';
 
-import { BUILT_IN_PARAMS, courseIsAtPlace, coursesForPlace } from './courses';
+import {
+  BUILT_IN_PARAMS,
+  courseIsAtPlace,
+  courseTypeLabel,
+  coursesForPlace,
+  defaultCourseName,
+  duplicateCourseParams
+} from './courses';
 
 function course(id: string, placeId?: string): CourseParams {
   return { id, name: id, type: 'distance', lat: 0, lng: 0, direction: 0, placeId };
@@ -80,5 +87,78 @@ describe('course scoping', () => {
       expect(atPlace).toEqual([]);
       expect(unassigned.map(c => c.id)).toEqual(['nowhere']);
     });
+  });
+});
+
+describe('defaultCourseName', () => {
+  it('names a course after its type, matching the built-ins', () => {
+    expect(defaultCourseName('distance', [])).toBe('Distance');
+    expect(defaultCourseName('zone-accuracy', [])).toBe('Zone Accuracy');
+    expect(defaultCourseName('speed', [])).toBe('Speed');
+  });
+
+  // A second speed course at one dropzone must be tellable from the first.
+  it('numbers a name that is already in use', () => {
+    expect(defaultCourseName('speed', ['Speed'])).toBe('Speed 2');
+    expect(defaultCourseName('speed', ['Speed', 'Speed 2'])).toBe('Speed 3');
+  });
+
+  it('fills a gap left by a deleted course', () => {
+    expect(defaultCourseName('speed', ['Speed', 'Speed 3'])).toBe('Speed 2');
+  });
+
+  it('ignores names of other types', () => {
+    expect(defaultCourseName('speed', ['Distance', 'Zone Accuracy'])).toBe('Speed');
+  });
+});
+
+describe('courseTypeLabel', () => {
+  it('labels every type', () => {
+    expect(courseTypeLabel('distance')).toBe('Distance');
+    expect(courseTypeLabel('speed')).toBe('Speed');
+    expect(courseTypeLabel('zone-accuracy')).toBe('Zone Accuracy');
+  });
+
+  // The built-in courses are named for their type, which is what lets the
+  // list drop the redundant caption on their rows.
+  it('matches what the built-in courses are called', () => {
+    BUILT_IN_PARAMS.forEach(course => {
+      expect(course.name).toBe(courseTypeLabel(course.type));
+    });
+  });
+});
+
+describe('duplicateCourseParams', () => {
+  const speed: CourseParams = {
+    id: 'skydive-arizona-speed',
+    name: 'Speed',
+    type: 'speed',
+    lat: 32.808,
+    lng: -111.5818,
+    direction: 163.722,
+    carveDirection: 'right',
+    placeId: ELOY
+  };
+
+  // The hand-written copy this replaced listed its fields, and carveDirection
+  // was not among them: duplicating Eloy's right-carve speed course produced
+  // a left-carve one, since buildCourse defaults the missing value to 'left'.
+  it('carries the carve direction', () => {
+    expect(duplicateCourseParams(speed).carveDirection).toBe('right');
+  });
+
+  it('keeps the original place, not wherever the user is', () => {
+    expect(duplicateCourseParams(speed).placeId).toBe(ELOY);
+  });
+
+  it('marks the name and drops the id', () => {
+    const copy = duplicateCourseParams(speed);
+
+    expect(copy.name).toBe('Speed (copy)');
+    expect(copy).not.toHaveProperty('id');
+  });
+
+  it('leaves an unassigned course unassigned', () => {
+    expect(duplicateCourseParams(course('a')).placeId).toBeUndefined();
   });
 });
