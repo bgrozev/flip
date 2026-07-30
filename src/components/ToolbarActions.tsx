@@ -1,8 +1,5 @@
-import {
-  FileDownload as FileDownloadIcon,
-  Refresh as RefreshIcon
-} from '@mui/icons-material';
-import { Chip, CircularProgress, Divider, IconButton, Stack, Tooltip } from '@mui/material';
+import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
+import { Chip, Divider, IconButton, Stack, Tooltip } from '@mui/material';
 import React from 'react';
 
 import { ModeId } from '../modes';
@@ -14,14 +11,12 @@ import PresetSelector from './PresetSelector';
 interface ToolbarActionsProps {
   modeId: ModeId;
   onModeChange: (id: ModeId) => void;
-  onRefreshWindsClick: () => void;
   onExportClick: () => void;
   /** Export is nerd-only; the button is absent otherwise. */
   showExport: boolean;
   /** Nerd mode is on — shown as a chip so the state is never invisible. */
   nerd: boolean;
   onNerdOff: () => void;
-  fetching: boolean;
   showPresets: boolean;
   presets: Preset[];
   activePresetId: string | null;
@@ -37,12 +32,10 @@ interface ToolbarActionsProps {
 export default function ToolbarActions({
   modeId,
   onModeChange,
-  onRefreshWindsClick,
   onExportClick,
   showExport,
   nerd,
   onNerdOff,
-  fetching,
   showPresets,
   presets,
   activePresetId,
@@ -58,9 +51,10 @@ export default function ToolbarActions({
       {nerd && <NerdChip onOff={onNerdOff} />}
       <ModeSwitcher modeId={modeId} onChange={onModeChange} />
       <Divider orientation="vertical" flexItem />
-      <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
+      {/* Refreshing the winds lives in the Wind panel header and on the map
+          indicator, next to what it changes — not in the global toolbar. */}
       {showExport && <ExportButton onClick={onExportClick} />}
-      <Divider orientation="vertical" flexItem />
+      {showExport && <Divider orientation="vertical" flexItem />}
       {showPresets && (
         <PresetSelector
           presets={presets}
@@ -109,20 +103,3 @@ function ExportButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function RefreshWindsButton({
-  onClick,
-  fetching
-}: {
-  onClick: () => void;
-  fetching: boolean;
-}) {
-  const child = fetching ? (
-    <CircularProgress size={24} />
-  ) : (
-    <IconButton type="button" aria-label="refresh-wind" onClick={() => onClick()}>
-      <RefreshIcon />
-    </IconButton>
-  );
-
-  return <Tooltip title="Refresh wind">{child}</Tooltip>;
-}

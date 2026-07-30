@@ -23,8 +23,15 @@ function renderSettings(overrides: Partial<Settings> = {}) {
 
 const NERD_ONLY_LABELS = [
   'Show tooltips on pattern points',
-  'Highlight corresponding pre-wind point'
+  'Highlight corresponding pre-wind point',
+  'Use observed ground wind',
+  'Interpolate winds',
+  'Correct heading for rectangular turn',
+  'Straighten legs'
 ];
+
+/** Nerd-only dropdowns, which sit outside the checkbox tables. */
+const NERD_ONLY_SELECTS = ['Map provider', 'Winds aloft source', 'Forecast model'];
 
 describe('SettingsComponent nerd gating', () => {
   beforeEach(() => {
@@ -45,6 +52,32 @@ describe('SettingsComponent nerd gating', () => {
     for (const label of NERD_ONLY_LABELS) {
       expect(screen.getByText(label)).toBeTruthy();
     }
+  });
+
+  it('hides the nerd-only dropdowns when nerd mode is off', () => {
+    renderSettings({ nerd: false });
+
+    for (const label of NERD_ONLY_SELECTS) {
+      expect(screen.queryByLabelText(label)).toBeNull();
+    }
+  });
+
+  it('shows the dropdowns when nerd mode is on', () => {
+    renderSettings({ nerd: true, windAloftSource: 'forecast' });
+
+    for (const label of NERD_ONLY_SELECTS) {
+      expect(screen.getByLabelText(label)).toBeTruthy();
+    }
+  });
+
+  it('drops a section whose every row is nerd-only', () => {
+    // Pattern is entirely nerd-gated; with nerd off it must not leave a
+    // bare header and divider behind.
+    renderSettings({ nerd: false });
+    expect(screen.queryByText('Pattern')).toBeNull();
+
+    renderSettings({ nerd: true });
+    expect(screen.getByText('Pattern')).toBeTruthy();
   });
 
   it('keeps the everyday rows in both states', () => {

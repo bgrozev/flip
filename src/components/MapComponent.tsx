@@ -43,6 +43,8 @@ interface MapComponentProps {
   pathA: FlightPath;
   pathB: FlightPath;
   settings: Settings;
+  /** Point hover tooltips exist at all (nerd mode's `pointTooltips`). */
+  pointTooltips?: boolean;
   courses?: Course[];
   courseEditTarget?: CourseEditTarget;
   targetEditTarget?: TargetEditTarget;
@@ -85,6 +87,7 @@ function MapComponent({
   pathA,
   pathB,
   settings,
+  pointTooltips = false,
   courses = [],
   courseEditTarget,
   targetEditTarget,
@@ -117,6 +120,7 @@ function MapComponent({
           showPomTooltips={showPomTooltips}
           highlightCorrespondingPoints={highlightCorrespondingPoints}
           showCrabArrow={showCrabArrow}
+          enableTooltips={pointTooltips}
         />
       )}
 

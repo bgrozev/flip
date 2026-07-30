@@ -8,6 +8,7 @@ import {
   Groups as GroupsIcon,
   HelpOutline as HelpOutlineIcon,
   Info as InfoIcon,
+  Refresh as RefreshIcon,
   RotateLeft as RotateLeftIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
@@ -15,6 +16,7 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Box,
+  CircularProgress,
   Divider,
   IconButton,
   Paper,
@@ -786,6 +788,22 @@ function DashboardContent() {
             <Typography variant="h6" sx={{ fontSize: '1rem', flex: 1, textAlign: 'left' }}>
               {PANEL_NAV[activePanel].title}
             </Typography>
+            {/* Fetching the forecast is the Wind panel's own action, so it
+                sits in its header rather than costing a full-width button
+                in the panel or a permanent slot in the app toolbar. */}
+            {activePanel === 'wind' && (
+              <Tooltip title="Fetch the latest forecast">
+                <IconButton
+                  size="small"
+                  aria-label="refresh-wind"
+                  onClick={() => handleFetchWinds(undefined, { force: true })}
+                >
+                  {fetching
+                    ? <CircularProgress size={18} />
+                    : <RefreshIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            )}
             {helpTopic && (
               <Tooltip title={`What do these mean? (${helpTopic.title})`}>
                 <IconButton
@@ -870,6 +888,7 @@ function DashboardContent() {
       pathA={paths.ideal}
       pathB={paths.display}
       settings={modeSettings}
+      pointTooltips={hasFeature(mode, 'pointTooltips')}
       layers={mode.mapLayers}
       shortcutHint={{
         show: !isMobile && !focusMap,
@@ -942,8 +961,6 @@ function DashboardContent() {
   toolbarPropsRef.current = {
     modeId: mode.id,
     onModeChange: setModeId,
-    fetching,
-    onRefreshWindsClick: () => handleFetchWinds(undefined, { force: true }),
     onExportClick: () => setExportOpen(true),
     showExport: hasFeature(mode, 'export'),
     nerd: settings.nerd,

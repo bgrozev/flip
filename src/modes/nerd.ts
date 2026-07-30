@@ -13,34 +13,51 @@
  * the day they fly. Anything failing that test is a Settings-organisation
  * problem, not a Nerd one.
  */
+import { DEFAULT_SETTINGS } from '../core/model';
 import { PanelId, Settings } from '../types';
 
 import { FeatureId, Mode } from './index';
 
 /** Features that exist only under nerd mode. */
-export const NERD_FEATURES: readonly FeatureId[] = ['export', 'manualWind'];
+export const NERD_FEATURES: readonly FeatureId[] =
+  ['export', 'manualWind', 'pointTooltips'];
 
 /** Panels that exist only under nerd mode (none yet — the Export panel is next). */
 export const NERD_PANELS: readonly PanelId[] = [];
 
 /**
- * Settings whose *control* is hidden when nerd is off, together with the
- * value that applies while it is.
+ * Settings whose control only appears in the Settings panel under nerd
+ * mode. With nerd off each one reverts to its everyday value — the app
+ * default, unless listed in NERD_OFF_OVERRIDES below.
  *
- * Deliberately an explicit table rather than "force false" or "fall back
- * to DEFAULT_SETTINGS": several settings that could be gated here (e.g.
- * `interpolateWind`) default to `true` and should stay true for everyday
- * users — hiding a control must not silently change the path math. Each
- * entry states the everyday value outright.
+ * Most of these describe *how the plan is computed or sourced* rather
+ * than clutter (wind source, model, interpolation, leg straightening),
+ * which is why the everyday value is the default rather than `false`:
+ * hiding a switch must never silently change the path math.
  */
-export const NERD_OFF_SETTINGS: Readonly<Partial<Settings>> = {
+export const NERD_SETTING_KEYS: readonly (keyof Settings)[] = [
+  'showPomTooltips',
+  'highlightCorrespondingPoints',
+  'correctPatternHeading',
+  'straightenLegs',
+  'interpolateWind',
+  'useDzGroundWind',
+  'windAloftSource',
+  'windModel',
+  'mapProvider'
+];
+
+/**
+ * The exceptions: nerd-gated settings whose everyday value is *not* the
+ * app default. Both of these default to `true` but belong to the
+ * hover-tooltip machinery, which everyday users do not get at all (the
+ * `pointTooltips` feature is the real gate — this only makes sure the
+ * map cannot render them either way).
+ */
+export const NERD_OFF_OVERRIDES: Readonly<Partial<Settings>> = {
   showPomTooltips: false,
   highlightCorrespondingPoints: false
 };
-
-/** Settings keys that only appear in the Settings panel under nerd mode. */
-export const NERD_SETTING_KEYS: readonly (keyof Settings)[] =
-  Object.keys(NERD_OFF_SETTINGS) as (keyof Settings)[];
 
 /**
  * The active mode as nerd mode leaves it. Identity (`id`) is preserved —
@@ -72,5 +89,11 @@ export function applyNerdGate(settings: Settings, nerd: boolean): Settings {
     return settings;
   }
 
-  return { ...settings, ...NERD_OFF_SETTINGS };
+  const gated = { ...settings } as Record<keyof Settings, unknown>;
+
+  for (const key of NERD_SETTING_KEYS) {
+    gated[key] = key in NERD_OFF_OVERRIDES ? NERD_OFF_OVERRIDES[key] : DEFAULT_SETTINGS[key];
+  }
+
+  return gated as Settings;
 }

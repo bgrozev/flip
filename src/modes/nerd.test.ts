@@ -6,7 +6,7 @@ import { Settings } from '../types';
 import { FEATURE_IDS, MODES, getMode, hasFeature } from './index';
 import {
   NERD_FEATURES,
-  NERD_OFF_SETTINGS,
+  NERD_OFF_OVERRIDES,
   NERD_SETTING_KEYS,
   applyNerdGate,
   withNerd
@@ -104,7 +104,7 @@ describe('applyNerdGate', () => {
     expect(applyNerdGate(touchedOn, true)).toBe(touchedOn);
   });
 
-  it('forces the everyday value when nerd is off', () => {
+  it('forces the everyday value for the tooltip settings when nerd is off', () => {
     const gated = applyNerdGate(touchedOn, false);
 
     expect(gated.showPomTooltips).toBe(false);
@@ -138,13 +138,52 @@ describe('applyNerdGate', () => {
   });
 
   it('never silently changes path math', () => {
-    // Gating a setting hides a control; it must not alter how the plan is
-    // computed. These three feed the geometry and are not nerd-gated.
-    const gated = applyNerdGate(DEFAULT_SETTINGS, false);
+    // These are gated, but hiding a control must not alter how the plan is
+    // computed: their everyday value is the app default, so a user who
+    // leaves nerd mode gets the same paths as one who never entered it.
+    // They must therefore never appear in the overrides table.
+    const gated = applyNerdGate({
+      ...DEFAULT_SETTINGS,
+      interpolateWind: false,
+      straightenLegs: false,
+      correctPatternHeading: false
+    }, false);
 
     expect(gated.interpolateWind).toBe(DEFAULT_SETTINGS.interpolateWind);
     expect(gated.straightenLegs).toBe(DEFAULT_SETTINGS.straightenLegs);
     expect(gated.correctPatternHeading).toBe(DEFAULT_SETTINGS.correctPatternHeading);
-    expect(NERD_OFF_SETTINGS).not.toHaveProperty('interpolateWind');
+
+    for (const key of ['interpolateWind', 'straightenLegs', 'correctPatternHeading']) {
+      expect(NERD_OFF_OVERRIDES).not.toHaveProperty(key);
+    }
+  });
+
+  it('reverts the wind source and model to the defaults', () => {
+    // "Otherwise the default settings apply" — a sounding or an exotic
+    // model chosen in nerd mode must not keep driving the everyday app.
+    const gated = applyNerdGate({
+      ...DEFAULT_SETTINGS,
+      windAloftSource: 'sounding',
+      windModel: 'icon_seamless',
+      mapProvider: 'maplibre',
+      useDzGroundWind: false
+    }, false);
+
+    expect(gated.windAloftSource).toBe(DEFAULT_SETTINGS.windAloftSource);
+    expect(gated.windModel).toBe(DEFAULT_SETTINGS.windModel);
+    expect(gated.mapProvider).toBe(DEFAULT_SETTINGS.mapProvider);
+    expect(gated.useDzGroundWind).toBe(DEFAULT_SETTINGS.useDzGroundWind);
+  });
+
+  it('restores every gated value when nerd comes back', () => {
+    const chosen: Settings = {
+      ...DEFAULT_SETTINGS,
+      windAloftSource: 'sounding',
+      mapProvider: 'maplibre',
+      showPomTooltips: false
+    };
+
+    // Nothing is written back, so the user's own values survive the trip.
+    expect(applyNerdGate(chosen, true)).toEqual(chosen);
   });
 });

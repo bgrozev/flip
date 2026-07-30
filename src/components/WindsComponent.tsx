@@ -413,15 +413,9 @@ export default function WindsComponent({
           )}
         </Box>}
 
-        {/* Action buttons */}
-        <Stack direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
-          <Button variant="outlined" size="small" onClick={() => fetch(undefined, { force: true })}>
-              Fetch forecast
-          </Button>
-          <Button variant="outlined" size="small" onClick={reset}>
-              Reset
-          </Button>
-        </Stack>
+        {/* Fetching lives in the panel header's refresh icon (App), not in a
+            full-width button down here; Reset moved down next to Unlock,
+            since both are editing actions and both are nerd-only. */}
 
         {/* Second opinion: the same spot on Windy's own maps. */}
         <Link
@@ -635,23 +629,29 @@ export default function WindsComponent({
               </Table>
             </TableContainer>
 
-            {!lock && (
-              <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
-                <Tooltip title="Add row">
-                  <IconButton size="small" onClick={addRow} color="primary">
-                    <AddIcon />
-                  </IconButton>
-                </Tooltip>
-                <Button variant="outlined" size="small" onClick={invertWind}>
-                    Invert
+            {/* Every editing action in one row, all of it nerd-only. */}
+            {allowManualEdit && (
+              <Stack direction="row" spacing={1} sx={{ mt: 2, alignItems: 'center' }}>
+                {lock ? (
+                  <Button variant="outlined" size="small" onClick={unlock}>
+                      Unlock
+                  </Button>
+                ) : (
+                  <>
+                    <Tooltip title="Add row">
+                      <IconButton size="small" onClick={addRow} color="primary">
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Button variant="outlined" size="small" onClick={invertWind}>
+                        Invert
+                    </Button>
+                  </>
+                )}
+                <Button variant="outlined" size="small" onClick={reset}>
+                    Reset
                 </Button>
               </Stack>
-            )}
-
-            {lock && allowManualEdit && (
-              <Button sx={{ mt: 2 }} variant="outlined" size="small" onClick={unlock}>
-                  Unlock
-              </Button>
             )}
           </>
         )}

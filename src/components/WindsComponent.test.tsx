@@ -73,4 +73,21 @@ describe('WindsComponent manual-wind gating', () => {
     expect(screen.getByText(/Altitude/)).toBeTruthy();
     expect(SOURCE_MANUAL).toBeTruthy();
   });
+
+  it('keeps Reset with the other editing actions, behind the feature', () => {
+    // Reset clears the profile, so it belongs with Unlock rather than at
+    // the top of the panel where everyday users would meet it first.
+    renderWinds({ allowManualEdit: false });
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull();
+
+    renderWinds({ allowManualEdit: true });
+    expect(screen.getByRole('button', { name: 'Reset' })).toBeTruthy();
+  });
+
+  it('no longer offers a Fetch forecast button', () => {
+    // Fetching moved to the panel header's refresh icon (App).
+    renderWinds({ allowManualEdit: true });
+
+    expect(screen.queryByRole('button', { name: 'Fetch forecast' })).toBeNull();
+  });
 });

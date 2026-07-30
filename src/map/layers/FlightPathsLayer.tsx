@@ -232,6 +232,8 @@ interface InteractivePointProps {
   pathStats: PathStats;
   style: MapCircleStyle;
   showTooltip: boolean;
+  /** Whether tooltips exist at all (nerd mode's `pointTooltips`). */
+  enableTooltips: boolean;
   showDrift: boolean;
   showCrabArrow: boolean;
   isHovered: boolean;
@@ -283,10 +285,11 @@ const POM_STYLE: Record<'manoeuvre' | 'pattern', MapCircleStyle> = {
 const HOVER_RADIUS = 15;
 const HOVER_RADIUS_POM_ONLY = 30;
 
-function InteractivePoint({ point, pointIndex, path, manoeuvreInitTime, pathStats, style, showTooltip, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel, turnDeg }: InteractivePointProps) {
-  // POMs always have hover/tooltip, non-POMs respect the showTooltip setting
+function InteractivePoint({ point, pointIndex, path, manoeuvreInitTime, pathStats, style, showTooltip, enableTooltips, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel, turnDeg }: InteractivePointProps) {
+  // Without the tooltip feature nothing is hoverable. With it, POMs always
+  // are and non-POMs respect the showTooltip setting.
   const isPom = Boolean(point.pom);
-  const enableHover = isPom || showTooltip;
+  const enableHover = enableTooltips && (isPom || showTooltip);
 
   // Drift angle arrow: shown on leg POMs when drift angle > 10°
   const segStats = isPom ? getPointSegmentStats(pointIndex, pathStats) : null;
@@ -365,6 +368,13 @@ export interface FlightPathsLayerProps {
   showPomTooltips: boolean;
   highlightCorrespondingPoints: boolean;
   showCrabArrow: boolean;
+  /**
+   * Whether point tooltips exist at all (the `pointTooltips` feature —
+   * nerd mode). Off, nothing on the path is hoverable: pattern points
+   * used to be hoverable regardless of `showPomTooltips`, which is the
+   * setting for extending it to the non-POM points as well.
+   */
+  enableTooltips?: boolean;
 }
 
 export default function FlightPathsLayer({
@@ -375,7 +385,8 @@ export default function FlightPathsLayer({
   showPomAltitudes,
   showPomTooltips,
   highlightCorrespondingPoints,
-  showCrabArrow
+  showCrabArrow,
+  enableTooltips = false
 }: FlightPathsLayerProps) {
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
@@ -461,6 +472,7 @@ export default function FlightPathsLayer({
             strokeOpacity: (showPoms && point.pom) ? 0.7 : 0
           }}
           showTooltip={showPomTooltips}
+          enableTooltips={enableTooltips}
           showDrift={false}
           showCrabArrow={false}
           isHovered={hoveredPreWindIndex === i}
@@ -503,6 +515,7 @@ export default function FlightPathsLayer({
             strokeOpacity: (showPoms && point.pom) ? 1 : 0
           }}
           showTooltip={showPomTooltips}
+          enableTooltips={enableTooltips}
           showDrift={true}
           showCrabArrow={showCrabArrow}
           isHovered={hoveredPointIndex === i}

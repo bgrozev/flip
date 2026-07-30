@@ -96,12 +96,14 @@ const settingsGroups: SettingsGroup[] = [
       {
         key: 'useDzGroundWind',
         label: 'Use observed ground wind',
-        tooltip: 'Use real-time ground wind observations. Only available for certain locations.'
+        tooltip: 'Use real-time ground wind observations. Only available for certain locations.',
+        nerd: true
       },
       {
         key: 'interpolateWind',
         label: 'Interpolate winds',
-        tooltip: 'Smooth out wind changes across altitudes by interpolating.'
+        tooltip: 'Smooth out wind changes across altitudes by interpolating.',
+        nerd: true
       },
       {
         key: 'displayWindSummary',
@@ -122,13 +124,15 @@ const settingsGroups: SettingsGroup[] = [
         key: 'correctPatternHeading',
         label: 'Correct heading for rectangular turn',
         tooltip:
-          'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.'
+          'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.',
+        nerd: true
       },
       {
         key: 'straightenLegs',
         label: 'Straighten legs',
         tooltip:
-          'Redistribute intermediate points on each leg so they lie on a straight line between the leg endpoints. Removes visual curves caused by wind shear without changing the wind drift calculation.'
+          'Redistribute intermediate points on each leg so they lie on a straight line between the leg endpoints. Removes visual curves caused by wind shear without changing the wind drift calculation.',
+        nerd: true
       }
     ]
   }
@@ -207,6 +211,13 @@ export default function SettingsComponent({
   const visible = (options: CheckboxOption[]) =>
     options.filter(o => !o.nerd || settings.nerd);
 
+  // The Map and Wind groups also carry nerd-only dropdowns below their
+  // rows, so a group is empty only when both are gone — otherwise Pattern
+  // would leave a bare header behind with nerd off.
+  const groupVisible = (group: SettingsGroup) =>
+    visible(group.options).length > 0 ||
+    (settings.nerd && (group.title === 'Map' || group.title === 'Wind'));
+
   return (
     <Stack direction="column" spacing={0.5} alignItems="flex-start" sx={{ width: '100%', textAlign: 'left' }}>
       {/* First, because toggling it makes rows appear BELOW — at the bottom
@@ -238,7 +249,7 @@ export default function SettingsComponent({
         </SettingRow>
       ))}
 
-      {settingsGroups.slice(1).map(group => (
+      {settingsGroups.slice(1).filter(groupVisible).map(group => (
         <React.Fragment key={group.title}>
           <Divider sx={{ width: '100%', mt: 1 }} />
           <SectionHeader>{group.title}</SectionHeader>
@@ -250,7 +261,7 @@ export default function SettingsComponent({
               />
             </SettingRow>
           ))}
-          {group.title === 'Map' && (
+          {group.title === 'Map' && settings.nerd && (
             <Box sx={{ pt: 0.5, width: '100%' }}>
               <FormControl fullWidth size="small">
                 <InputLabel id="map-provider-label">Map provider</InputLabel>
@@ -268,7 +279,7 @@ export default function SettingsComponent({
               </FormControl>
             </Box>
           )}
-          {group.title === 'Wind' && (
+          {group.title === 'Wind' && settings.nerd && (
             <Box sx={{ pt: 0.5, width: '100%' }}>
               <FormControl fullWidth size="small">
                 <InputLabel id="wind-aloft-label">Winds aloft source</InputLabel>
