@@ -109,7 +109,12 @@ function MapComponent({
   } = settings;
 
   return (
-    <MapContainer center={cameraCenter ?? center} initialZoom={initialZoom} provider={settings.mapProvider}>
+    <MapContainer
+      center={cameraCenter ?? center}
+      initialZoom={initialZoom}
+      provider={settings.mapProvider}
+      showLabels={settings.showMapLabels}
+    >
       {has('flightPaths') && (
         <FlightPathsLayer
           pathA={pathA}

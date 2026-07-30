@@ -123,6 +123,8 @@ export interface Settings {
   displayWindSummary: boolean;
   /** Show the compact winds indicator overlaid on the map corner. */
   displayMapWinds: boolean;
+  /** Show place/road labels over the satellite imagery (Google only). */
+  showMapLabels: boolean;
   interpolateWind: boolean;
   correctPatternHeading: boolean;
   straightenLegs: boolean;

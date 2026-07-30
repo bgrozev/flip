@@ -87,6 +87,11 @@ const settingsGroups: SettingsGroup[] = [
         key: 'showCrabArrow',
         label: 'Show drift angle arrows',
         tooltip: 'Show a heading arrow on pattern points where the drift angle (heading vs. ground track) exceeds 10°.'
+      },
+      {
+        key: 'showMapLabels',
+        label: 'Show map labels',
+        tooltip: 'Show place names, roads and other labels over the satellite imagery.'
       }
     ]
   },
@@ -245,7 +250,11 @@ export default function SettingsComponent({
       </SettingRow>
       {visible(settingsGroups[0].options).map(({ key, label, tooltip }) => (
         <SettingRow key={key} label={label} tooltip={tooltip}>
-          <Switch checked={Boolean(settings[key])} onChange={() => handleCheckboxChange(key)} />
+          <Switch
+            checked={Boolean(settings[key])}
+            onChange={() => handleCheckboxChange(key)}
+            slotProps={{ input: { 'aria-label': label } }}
+          />
         </SettingRow>
       ))}
 
@@ -258,6 +267,7 @@ export default function SettingsComponent({
               <Switch
                 checked={Boolean(settings[key])}
                 onChange={() => handleCheckboxChange(key)}
+                slotProps={{ input: { 'aria-label': label } }}
               />
             </SettingRow>
           ))}

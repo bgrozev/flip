@@ -33,7 +33,12 @@ interface ClickEntry {
  * JS API, renders the map, provides the adapter contexts (interactions,
  * view state, control host) and manages camera centering.
  */
-export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM, children }: MapContainerProps) {
+export default function GoogleMapContainer({
+  center,
+  initialZoom = DEFAULT_ZOOM,
+  showLabels = false,
+  children
+}: MapContainerProps) {
   const mapRef = useRef<google.maps.Map | null>(null);
   const [zoom, setZoom] = useState<number>(initialZoom);
   const [controlHost, setControlHost] = useState<HTMLElement | null>(null);
@@ -163,18 +168,23 @@ export default function GoogleMapContainer({ center, initialZoom = DEFAULT_ZOOM,
 
   // Move the fullscreen control to the bottom-right so it doesn't collide
   // with the winds indicator in the top-right corner. ControlPosition is
-  // only available once the API has loaded.
+  // only available once the API has loaded. `hybrid` is `satellite` plus
+  // Google's labels layer, so the labels setting is just the map type.
   const mapOptions = useMemo(
-    () =>
-      isLoaded
+    () => {
+      const mapTypeId = showLabels ? 'hybrid' : 'satellite';
+
+      return isLoaded
         ? {
           ...DEFAULT_MAP_OPTIONS,
+          mapTypeId,
           fullscreenControlOptions: {
             position: google.maps.ControlPosition.BOTTOM_RIGHT
           }
         }
-        : DEFAULT_MAP_OPTIONS,
-    [isLoaded]
+        : { ...DEFAULT_MAP_OPTIONS, mapTypeId };
+    },
+    [isLoaded, showLabels]
   );
 
   return isLoaded ? (

@@ -38,6 +38,12 @@ export interface MapContainerProps {
    * between is left alone.
    */
   initialZoom?: number;
+  /**
+   * Show place/road labels over the satellite imagery. Only the Google
+   * provider has a labeled variant (`hybrid`); MapLibre's raster style has
+   * no label layer, so it has nothing to toggle.
+   */
+  showLabels?: boolean;
   children?: React.ReactNode;
 }
 

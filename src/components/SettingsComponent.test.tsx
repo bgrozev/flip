@@ -86,6 +86,19 @@ describe('SettingsComponent nerd gating', () => {
     expect(screen.getByText('Show pre-wind pattern')).toBeTruthy();
     expect(screen.getByText('Show drift angle arrows')).toBeTruthy();
     expect(screen.getByText('Show pattern point altitudes')).toBeTruthy();
+    expect(screen.getByText('Show map labels')).toBeTruthy();
+  });
+
+  it('defaults map labels off and toggles it on click', () => {
+    const setSettings = renderSettings({ nerd: false });
+
+    const toggle = screen.getByLabelText('Show map labels') as HTMLInputElement;
+
+    expect(toggle.checked).toBe(false);
+
+    fireEvent.click(toggle);
+
+    expect(setSettings).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, showMapLabels: true });
   });
 
   it('offers the nerd toggle itself even when off', () => {
