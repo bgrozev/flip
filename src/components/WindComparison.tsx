@@ -8,6 +8,7 @@ import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import {
   Box,
   CircularProgress,
+  Link,
   Stack,
   Table,
   TableBody,
@@ -28,7 +29,7 @@ import {
   compareProfiles,
   comparisonAltitudes
 } from '../core/windCompare';
-import { WindProfile, forecastHourOffset } from '../core/wind';
+import { WindProfile, forecastHourOffset, soundingStationUrl } from '../core/wind';
 
 /** Highlight for bands where sources disagree (works in both themes). */
 const DISAGREE_ROW_SX = { bgcolor: 'rgba(255, 152, 0, 0.18)' } as const;
@@ -57,9 +58,33 @@ function sourceDescription(source: ComparisonSourceResult): string {
     return `${source.label} forecast model`;
   }
 
-  return source.station
-    ? `Radiosonde sounding · station ${source.station}`
-    : 'Radiosonde sounding';
+  if (!source.station) {
+    return 'Radiosonde sounding';
+  }
+
+  // Both the id and the name: IEM ids like "_TBW" mean nothing on their
+  // own, and the name ("Tampa Bay Area -- KTPA KTBW") is what tells you
+  // which balloon this is.
+  return `Radiosonde sounding · ${source.stationName ?? source.station} ` +
+    `(${source.station}) · opens the station page`;
+}
+
+/** Column header: the sounding's links out to its station page. */
+function SourceHeaderLabel({ source }: { source: ComparisonSourceResult }) {
+  if (source.id !== 'sounding' || !source.station) {
+    return <>{source.label}</>;
+  }
+
+  return (
+    <Link
+      href={soundingStationUrl(source.station)}
+      target="_blank"
+      rel="noopener noreferrer"
+      color="inherit"
+    >
+      {source.label}
+    </Link>
+  );
 }
 
 function validTimeLabel(profile: WindProfile): string {
@@ -184,7 +209,9 @@ export default function WindComparison({ forecastTime = null }: WindComparisonPr
                             title={`${sourceDescription(source)} · valid ` +
                               `${validTimeLabel(source.profile as WindProfile)}`}
                           >
-                            <TableCell align="right" sx={CELL_SX}>{source.label}</TableCell>
+                            <TableCell align="right" sx={CELL_SX}>
+                              <SourceHeaderLabel source={source} />
+                            </TableCell>
                           </Tooltip>
                         ))}
                       </TableRow>

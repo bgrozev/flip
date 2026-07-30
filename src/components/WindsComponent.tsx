@@ -2,6 +2,7 @@ import {
   Add as AddIcon,
   Close as CloseIcon,
   ExpandMore as ExpandMoreIcon,
+  Public as PublicIcon,
   CloudOutlined as CloudOutlinedIcon,
   DeviceThermostat as DeviceThermostatIcon,
   EditOutlined as EditOutlinedIcon,
@@ -54,6 +55,7 @@ import {
   createWindRow,
   groundConditions,
   sampleWindBands,
+  soundingStationUrl,
   windModelLabel,
   windRowSourceKind
 } from '../core/wind';
@@ -102,14 +104,6 @@ function selectOnFocus(e: React.FocusEvent<HTMLInputElement>): void {
 /** Windy deep link for a location: `?lat,lng,zoom`. */
 function windyUrl({ lat, lng }: LatLng): string {
   return `https://www.windy.com/?${lat.toFixed(4)},${lng.toFixed(4)},11`;
-}
-
-/**
- * IEM's page for a RAOB station (metadata + archive links), keyed on the same
- * station id our sounding source already carries.
- */
-function soundingStationUrl(station: string): string {
-  return `https://mesonet.agron.iastate.edu/sites/networks.php?station=${encodeURIComponent(station)}&network=RAOB`;
 }
 
 function toDateTimeLocalString(date: Date): string {
@@ -437,18 +431,7 @@ export default function WindsComponent({
             full-width button down here; Reset moved down next to Unlock,
             since both are editing actions and both are nerd-only. */}
 
-        {/* Second opinion: the same spot on Windy's own maps. */}
-        <Link
-          href={windyUrl(target.target)}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="caption"
-          sx={{ mb: 2, textAlign: 'left', width: 'fit-content' }}
-        >
-          Open this location in Windy
-        </Link>
-
-        <Stack direction="row" spacing={2.5} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
+        <Stack direction="row" spacing={2.5} sx={{ mb: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
           <ConditionStat
             icon={<DeviceThermostatIcon fontSize="small" />}
             label="Temperature"
@@ -466,6 +449,21 @@ export default function WindsComponent({
             value={densityAltFt !== undefined ? `${Math.round(formatAltitude(densityAltFt).value)} ${altitudeLabel}` : null}
             severity={densitySeverity}
           />
+          {/* Second opinion: the same spot on Windy's own maps. An icon on
+              this row rather than its own line of prose — it is a side
+              door, not a step in the workflow. */}
+          <Tooltip title="Open this location in Windy">
+            <IconButton
+              size="small"
+              aria-label="Open this location in Windy"
+              href={windyUrl(target.target)}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: 'text.secondary' }}
+            >
+              <PublicIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
 
         {fetching ? (

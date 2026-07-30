@@ -775,7 +775,10 @@ function DashboardContent() {
       <Box
         sx={{
           px: 4,
-          py: 4,
+          // Tight at the top: the panel title is the first thing under the
+          // app bar, and a 32px gap above it was just lost screen.
+          pt: 1.5,
+          pb: 4,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'left',

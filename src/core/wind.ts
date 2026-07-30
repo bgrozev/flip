@@ -287,6 +287,20 @@ export function groundConditions(profile: WindProfile): {
   };
 }
 
+/**
+ * IEM's site page for a RAOB station: metadata, period of record and the
+ * links on to the archive. Verified to resolve the station itself (the
+ * page title names it) — unlike `/archive/raob/?station=...`, which
+ * silently ignores the parameter and shows whichever station is first.
+ *
+ * Station ids are IEM `sid`s, which include aggregate stations written
+ * with a leading underscore (`_TBW` = "Tampa Bay Area -- KTPA KTBW").
+ */
+export function soundingStationUrl(station: string): string {
+  return 'https://mesonet.agron.iastate.edu/sites/site.php' +
+    `?station=${encodeURIComponent(station)}&network=RAOB`;
+}
+
 /** One line of the by-altitude wind summary. */
 export interface WindBandSample {
   altFt: number;

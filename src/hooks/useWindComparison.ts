@@ -12,6 +12,8 @@ export interface ComparisonSourceResult {
   label: string;
   /** Sounding station id, when this source is a sounding. */
   station?: string;
+  /** Human-readable station name, when known. */
+  stationName?: string;
   /** The fetched profile, or null when this source failed. */
   profile: WindProfile | null;
   /** Failure reason when profile is null. */
@@ -87,6 +89,7 @@ export function useWindComparison(): UseWindComparisonResult {
         // lives in the header tooltip instead.
         label: 'Sounding',
         station: profile.meta?.station,
+        stationName: profile.meta?.stationName,
         profile
       }))
       .catch(err => ({
