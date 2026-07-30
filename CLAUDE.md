@@ -93,8 +93,11 @@ switch never silently changes the path math; unlike mode defaults the
 gate ignores `flip.settings.touched`. Behind it: manual wind entry
 (Unlock / Invert / Reset), both exports, pattern-point hover tooltips
 (`pointTooltips` — POM hover used to ignore its setting), and nine
-settings including the wind source/model, interpolation, leg
-straightening and the map provider. Toggle at the top of Settings; a NERD
+settings including interpolation, leg straightening and the map
+provider. The wind source/model dropdowns are nerd-only too, but their
+*values* are deliberately not masked — the comparison table lets any user
+pick the active source, and a setting may only be masked while every
+control that writes it is behind the same gate. Toggle at the top of Settings; a NERD
 chip in the toolbar while it is on. Adding an item is one line in
 `NERD_FEATURES` or `NERD_SETTING_KEYS`.
 

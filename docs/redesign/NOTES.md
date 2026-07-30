@@ -906,3 +906,45 @@ tooltip.
 **Panel top padding** was `py: 4` — 32px of nothing between the app bar
 and the panel title. Now `pt: 1.5`. Small, but it was costing a row of
 content on every panel at every width.
+
+### Round 5, same day (`5379653`) — picking the source from the table
+
+"Best" became "OpenMeteo Best": it is OpenMeteo's own auto-pick, not a
+named model like GFS, and the bare word implied a judgement the app was
+not making.
+
+**The comparison's column headers are now controls** — tap one to plan on
+that source, sounding included. Comparing sources and then having to go
+to Settings to act on the comparison was the gap. The sounding's station
+link moved to a small icon beside the label so that the label means one
+thing in every column.
+
+**This forced `windAloftSource` and `windModel` back OUT of the nerd
+settings mask, and the reasoning is worth keeping**, because it is the
+first time the masking rule had to give way. The rule ("hiding a control
+must also suppress its effect") rests on a premise: with nerd off the
+user cannot see or change the setting, so a stored value is stale by
+definition. The comparison table breaks that premise — it is available to
+everyone and now writes both settings. Leaving the mask on would have
+made a non-nerd user's click write the setting and have it silently
+reverted on the next read: the worst kind of dead UI, because it looks
+like it worked. The Settings dropdowns stay nerd-only; only the masking
+went. **The general form: a gated setting may only be masked while every
+control that writes it is behind the same gate.**
+
+**Selecting could not do its own refetch.** `fetchWinds` closes over the
+settings it is replacing, so fetching from the click handler would have
+fetched the model you just left — the classic setState-then-read race.
+App refetches on a source-key change instead, skipping the initial value.
+That also fixed a papercut nobody had reported: changing the model in
+Settings stored the choice and left the previous profile on screen until
+the user hit refresh.
+
+**One unresolved observation.** Twice, a screenshot taken after selecting
+a source showed the comparison section collapsed, though `aria-expanded`
+read true moments earlier. It did not reproduce across five further
+attempts, including a 30-second watch, with GFS, ECMWF and the sounding.
+`WindComparison` is deliberately outside the `fetching` ternary (verified
+again), so a fetch should not unmount it. Recorded rather than "fixed":
+chasing it further would have been a phantom hunt, and a fix with no
+repro would be unverifiable.

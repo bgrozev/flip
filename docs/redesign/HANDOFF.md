@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **757 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **758 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -207,6 +207,23 @@ panel body lost 32px of dead space above its title. Verification note
 worth keeping: `/archive/raob/?station=<sid>` returns 200 and **ignores**
 the parameter — only loading it in a browser showed the station select
 still on KABR. Curl would have passed it.
+
+A fifth pass (`5379653`): the comparison's column headers pick the active
+wind source (sounding included), and "Best" is now "OpenMeteo Best". This
+is also the first time the nerd masking rule had to give way —
+`windAloftSource` and `windModel` are gated in Settings but no longer
+masked, because the comparison table writes them and is available to
+everyone. **The general form: a gated setting may only be masked while
+every control that writes it is behind the same gate.** Selecting cannot
+refetch from the click handler (`fetchWinds` closes over the settings it
+is replacing), so App refetches on a source change — which also fixed
+Settings' model picker leaving the old profile on screen until a manual
+refresh.
+
+⚠️ Unresolved: twice a screenshot after selecting a source showed the
+comparison collapsed, though `aria-expanded` read true seconds earlier;
+not reproducible across five attempts and a 30 s watch. Worth a look if
+the owner sees it.
 
 Owner ruled these **out** of nerd, recorded so they are not
 re-proposed: model selection/comparison, unit pickers, `showPreWind`,
