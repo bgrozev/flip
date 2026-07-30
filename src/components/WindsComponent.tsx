@@ -440,7 +440,7 @@ export default function WindsComponent({
           />
           <ConditionStat
             icon={<WaterDropIcon fontSize="small" />}
-            label="Humidity"
+            label="Relative Humidity"
             value={humidityPct !== undefined ? `${Math.round(humidityPct)}%` : null}
           />
           <ConditionStat
@@ -892,9 +892,9 @@ function StationCard({ station, formatWindSpeed, windSpeedLabel, formatTemperatu
         <DataRow label="Heat index" value={`${formatTemperature(station.heatIndexC).value} ${formatTemperature(station.heatIndexC).label}`} />
       )}
       {station.humidityPct !== undefined ? (
-        <DataRow label="Humidity" value={`${Math.round(station.humidityPct)}%`} />
+        <DataRow label="Relative Humidity" value={`${Math.round(station.humidityPct)}%`} />
       ) : (
-        <DataRow label="Humidity" value={null} />
+        <DataRow label="Relative Humidity" value={null} />
       )}
       {(station.seaLevelPressureHpa !== undefined || station.pressureHpa !== undefined) ? (
         <DataRow

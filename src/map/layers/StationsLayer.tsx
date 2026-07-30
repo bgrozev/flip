@@ -103,8 +103,8 @@ export function StationDetails({ station }: { station: ObservedWindStation }) {
           <div>Heat index: {formatTemperature(station.heatIndexC).value} {formatTemperature(station.heatIndexC).label}</div>
         )}
         {station.humidityPct !== undefined
-          ? <div>Humidity: {Math.round(station.humidityPct)}%</div>
-          : <div style={{ color: '#666' }}>Humidity: —</div>
+          ? <div>Relative Humidity: {Math.round(station.humidityPct)}%</div>
+          : <div style={{ color: '#666' }}>Relative Humidity: —</div>
         }
       </div>
 
