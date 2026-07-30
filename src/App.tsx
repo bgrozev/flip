@@ -84,6 +84,8 @@ import {
   vectorCardinalDirection
 } from './core/flocking';
 import { COURSES } from './core/courses';
+import { dropzoneForPlaceId, placeNameFromId } from './core/places';
+import { DROPZONES } from './util/dropzones';
 import { makePatternByType, withFullPattern } from './core/pattern';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
@@ -197,7 +199,8 @@ function DashboardContent() {
     setSettings,
     touchedSettings,
     selectedCourseId,
-    setSelectedCourseId
+    setSelectedCourseId,
+    activePlaceId
   } = useAppState();
 
   const [courseEditOpen, setCourseEditOpen] = useState(false);
@@ -333,6 +336,26 @@ function DashboardContent() {
     [target.target, selectPlaceTarget, invalidateWinds]
   );
 
+  // Loading a preset is a place selection too — a preset names the dropzone
+  // it was saved at, so that the course it names is still one the Courses
+  // panel lists. `useGivenTarget` keeps the preset's own target: the preset
+  // IS the remembered setup for that place.
+  const applyPresetTarget = useCallback(
+    (newTarget: Target, placeId: string | null) => {
+      selectPlace(
+        newTarget,
+        placeId
+          ? {
+            id: placeId,
+            modes: dropzoneForPlaceId(DROPZONES, placeId)?.modes,
+            useGivenTarget: true
+          }
+          : undefined
+      );
+    },
+    [selectPlace]
+  );
+
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const {
@@ -348,7 +371,8 @@ function DashboardContent() {
     patternParams: modePatternParams,
     manoeuvreConfig,
     selectedCourseId,
-    applyTarget: selectPlace,
+    activePlaceId,
+    applyTarget: applyPresetTarget,
     setPatternParams: setModePatternParams,
     setManoeuvreConfig,
     setSelectedCourseId
@@ -773,6 +797,8 @@ function DashboardContent() {
         onEditOpenChange={setCourseEditOpen}
         altitudeUnit={modeSettings.units.altitude}
         showExport={hasFeature(mode, 'export')}
+        placeId={activePlaceId}
+        placeName={placeNameFromId(activePlaceId)}
       />
     );
   } else if (activePanel === 'help') {

@@ -29,6 +29,22 @@ export function customPlaceId(name: string): string {
 }
 
 /**
+ * The name a place id was built from. Both id forms carry it verbatim after
+ * the prefix, so this works for custom places too — which is the point: a
+ * course can be created at one, and the Courses panel has to be able to name
+ * the group it lands in.
+ */
+export function placeNameFromId(placeId: string | null): string | null {
+  if (!placeId) {
+    return null;
+  }
+
+  const separator = placeId.indexOf(':');
+
+  return separator < 0 ? placeId : placeId.slice(separator + 1) || null;
+}
+
+/**
  * The dropzone a place id refers to, if it refers to one at all: custom
  * places and geocoder hits have no entry in the database.
  */

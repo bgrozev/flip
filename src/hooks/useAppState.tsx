@@ -33,8 +33,11 @@ import { createVersionedCodec } from '../util/storage';
 import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
 import { mirror } from '../core/geometry';
 import { dropzoneForPlaceId, placeModeTargets } from '../core/places';
+import { BUILT_IN_PARAMS, courseIsAtPlace } from '../core/courses';
 import { DROPZONES } from '../util/dropzones';
 import { samples } from '../samples';
+
+import { useCustomCourses } from './useCustomCourses';
 
 // Canonical defaults live in core/model; re-exported here for existing users
 export { DEFAULT_PATTERN_PARAMS, DEFAULT_MANOEUVRE_CONFIG };
@@ -50,6 +53,13 @@ type TouchedSettings = (keyof Settings)[];
 export interface PlaceSelection {
   id: string;
   modes?: Record<string, DropzoneModeConfig>;
+  /**
+   * Use the target passed in rather than whatever was remembered at this
+   * place. For loading a preset, which names both a place and its own target:
+   * the preset IS the remembered setup, so it must not be overwritten by the
+   * last thing the user did at that dropzone.
+   */
+  useGivenTarget?: boolean;
 }
 
 // The codec's type is widened to include null (the "never stored" state the
@@ -95,6 +105,11 @@ interface AppStateContextValue {
   /** Settings keys the user has explicitly changed (mode defaults skip these). */
   touchedSettings: readonly (keyof Settings)[];
   selectedCourseId: string | null;
+  /**
+   * The place the user is at (a `Place.id`), or null for a target that
+   * belongs to no place. Courses are scoped to it, and presets record it.
+   */
+  activePlaceId: string | null;
 
   // Setters
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
@@ -246,6 +261,11 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
   const selectedCourseId = storedSelectedCourseId ?? null;
 
+  // Courses belong to a place, so choosing a place has to be able to drop a
+  // selection that belongs to another one — which means knowing the user's
+  // own courses, not just the built-in list.
+  const { customParams } = useCustomCourses();
+
   // Derived paths — computed from configs, not stored. The pattern path is
   // NOT derived here: how many legs it has depends on the mode (Standard
   // Pattern always flies three), and modes are App's concern, so App owns
@@ -358,12 +378,37 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     (value: Target, place?: PlaceSelection) => {
       const remembered = place ? targetsByPlace[place.id] : undefined;
       const declared = place?.modes;
+      const nextPlaceId = place?.id ?? null;
+      // A preset carries its own target and overrides every mode with it, so
+      // it ignores what was remembered here — but only for the target. The
+      // place's Spot Reference and corridors still apply: a preset says
+      // nothing about either, and dropping them would lose the user's
+      // corridor setup for the dropzone it just took them to.
+      const useRememberedTarget = remembered !== undefined && !place?.useGivenTarget;
 
-      setStoredActivePlaceId(place?.id ?? null);
-      setStoredTarget(remembered?.shared ?? value);
+      // A course is a set of buoys in one pond, so a selection made at another
+      // dropzone is meaningless here — and worse than meaningless, because the
+      // map pans to the selected course. Unassigned courses (no place of their
+      // own) survive the move: they are offered everywhere.
+      if (nextPlaceId !== activePlaceId && selectedCourseId) {
+        const selected = [...customParams, ...BUILT_IN_PARAMS]
+          .find(c => c.id === selectedCourseId);
+
+        if (selected && !courseIsAtPlace(selected, nextPlaceId)) {
+          setStoredSelectedCourseId(null);
+        }
+      }
+
+      setStoredActivePlaceId(nextPlaceId);
+      setStoredTarget(useRememberedTarget ? remembered.shared : value);
       // What the user did here wins; failing that, what the dropzone says
-      // this mode starts from; failing that, the shared target.
-      setStoredTargetsByMode(remembered?.byMode ?? placeModeTargets(declared, value));
+      // this mode starts from; failing that, the shared target. A preset
+      // clears the per-mode entries so its own target reaches every mode.
+      setStoredTargetsByMode(
+        useRememberedTarget
+          ? remembered.byMode
+          : place?.useGivenTarget ? {} : placeModeTargets(declared, value)
+      );
 
       // A Spot Reference left pinned at the old dropzone would be measured
       // against the new one — the flat-earth projection the spot text uses
@@ -395,7 +440,11 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       setStoredTarget,
       setStoredTargetsByMode,
       flockingParams,
-      setStoredFlockingParams
+      setStoredFlockingParams,
+      activePlaceId,
+      selectedCourseId,
+      customParams,
+      setStoredSelectedCourseId
     ]
   );
 
@@ -471,6 +520,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       settings,
       touchedSettings,
       selectedCourseId,
+      activePlaceId,
       setManoeuvreConfig,
       setPatternParams,
       patternParamsForMode,
@@ -495,6 +545,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       settings,
       touchedSettings,
       selectedCourseId,
+      activePlaceId,
       setManoeuvreConfig,
       setPatternParams,
       patternParamsForMode,

@@ -138,6 +138,20 @@ Pattern params are per-mode too (`flip.pattern.byMode`, falling back to
 the shared legacy `flip.pattern.params`): a swooper's descent rate and
 long legs describe their canopy, not the student pattern next to it.
 
+**Courses belong to a place.** A course is a fixed set of buoys in one
+pond, so `CourseParams.placeId` (a `Place.id`) scopes both the shipped
+courses in `core/courses.BUILT_IN_PARAMS` and the user's own — one field,
+one filter, no special-casing. The Courses panel lists only what is at
+the active place, grouped under its name; "New" creates a course there.
+Choosing another dropzone drops a selection that belongs to the one being
+left (`selectPlaceTarget`), since it is meaningless there and the map
+camera would chase it. Two escapes keep that lossless: a course with no
+`placeId` — every custom course saved before this existed — belongs
+nowhere and is offered everywhere, and a preset records the place it was
+saved at (`Preset.placeId`), restoring dropzone and course together with
+`PlaceSelection.useGivenTarget` so the preset's own target still wins over
+what that place remembers.
+
 Additional features: presets, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
 forecast time selection + hour scrubber, model/sounding comparison (which
@@ -198,12 +212,12 @@ user can force a mode-overridden setting back to the global default.
 | `core/wind.ts` | `WindProfile` data + pure helpers (`getWindAt`, vector interpolation, Beaufort, row provenance, `sampleWindBands` for the shared by-altitude summary, `forecastHourOffset`) |
 | `core/flocking.ts` | Flocking math: path, into-wind, drift vectors, FWC spot description, jumprun line helpers |
 | `core/flockingSolve.ts` | Analytic corridor solver: tiers + into-wind preference |
-| `core/courses.ts` | Course geometry (buoys, gates, lines) |
+| `core/courses.ts` | Course geometry (buoys, gates, lines); `BUILT_IN_PARAMS` + the per-place filter (`coursesForPlace`, `courseIsAtPlace`) |
 | `core/pathStats.ts` | Per-leg/manoeuvre stats, `driftAngle`, `groundSpeedKts`, `cumulativeTurnDeg` |
 | `core/units.ts` | Unit conversions + preferences (incl. mi/nm/km distances) |
 | `core/validation.ts` | `LIMITS`, clamping, direction normalization |
 | `core/model.ts` | Versioned document defaults + `migrate*` loaders |
-| `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`) |
+| `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`); place ids (`dropzonePlaceId`, `placeNameFromId`) |
 | `core/regions.ts` | State/country short forms, so "az" finds Arizona |
 | `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
 | `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |

@@ -2,7 +2,13 @@ import { describe, it, expect } from 'vitest';
 
 import { CustomLocation, Dropzone } from '../types';
 
-import { buildPlaces, normalizeForSearch, placeModeTargets, rankPlaces } from './places';
+import {
+  buildPlaces,
+  normalizeForSearch,
+  placeModeTargets,
+  placeNameFromId,
+  rankPlaces
+} from './places';
 
 const DZS: Dropzone[] = [
   { name: 'Århus Faldskærm Club', lat: 56.313, lng: 10.615, country: 'Denmark' },
@@ -199,5 +205,17 @@ describe('rankPlaces location fields', () => {
 
   it('still matches initials when nothing else does', () => {
     expect(names('sdaz')).toEqual(['Skydive Arizona']);
+  });
+});
+
+describe('placeNameFromId', () => {
+  it('reads the name back out of either id form', () => {
+    expect(placeNameFromId('dz:Skydive City (ZHills)')).toBe('Skydive City (ZHills)');
+    expect(placeNameFromId('custom:Back pasture')).toBe('Back pasture');
+  });
+
+  it('has no name for no place', () => {
+    expect(placeNameFromId(null)).toBeNull();
+    expect(placeNameFromId('dz:')).toBeNull();
   });
 });

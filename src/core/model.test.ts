@@ -483,6 +483,18 @@ describe('migratePresets', () => {
     expect(result[1].patternParams).toEqual(DEFAULT_PATTERN_PARAMS);
     expect(result[1].manoeuvre).toEqual({ type: 'none' });
   });
+
+  it('keeps the place a preset was saved at, and nulls a missing one', () => {
+    const result = migratePresets([
+      { id: 'p1', placeId: 'dz:Skydive Arizona' },
+      { id: 'p2' },
+      { id: 'p3', placeId: '' },
+      { id: 'p4', placeId: 42 }
+    ]);
+
+    expect(result.map(p => p.placeId))
+      .toEqual(['dz:Skydive Arizona', null, null, null]);
+  });
 });
 
 describe('migrateCustomCourses', () => {
@@ -509,6 +521,20 @@ describe('migrateCustomCourses', () => {
     ]);
 
     expect(result).toEqual([valid]);
+  });
+
+  // Courses saved before they were dropzone-scoped have no place. Leaving it
+  // absent is what makes them show up everywhere instead of vanishing.
+  it('keeps a course place, and leaves a legacy course unassigned', () => {
+    const result = migrateCustomCourses([
+      { id: 'c1', lat: 1, lng: 2, placeId: 'dz:Skydive Arizona' },
+      { id: 'c2', lat: 1, lng: 2 },
+      { id: 'c3', lat: 1, lng: 2, placeId: '' },
+      { id: 'c4', lat: 1, lng: 2, placeId: 7 }
+    ]);
+
+    expect(result.map(c => c.placeId))
+      .toEqual(['dz:Skydive Arizona', undefined, undefined, undefined]);
   });
 
   it('defaults invalid type and carveDirection', () => {

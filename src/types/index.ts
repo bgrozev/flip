@@ -292,6 +292,17 @@ export interface CourseParams {
   lat: number;
   lng: number;
   direction: number;
+  /**
+   * The place this course belongs to (a `Place.id`, e.g. `dz:Skydive
+   * Arizona`). A course is a set of buoys in a particular pond, so the
+   * picker only offers the ones at the dropzone you are at — built-in and
+   * custom alike, which is why this is one field rather than two mechanisms.
+   *
+   * Absent means "belongs to no place": the custom courses of users from
+   * before courses were dropzone-scoped, which are offered everywhere rather
+   * than guessed at.
+   */
+  placeId?: string;
   /** Speed courses only */
   carveDirection?: 'left' | 'right';
 }
@@ -382,5 +393,16 @@ export interface Preset {
   patternParams: PatternParams;
   manoeuvre: ManoeuvreConfig;
   selectedCourseId?: string | null;
+  /**
+   * The place that was active when the preset was saved (a `Place.id`).
+   * Courses belong to a place, so a preset that names a course has to name
+   * the place too — otherwise loading it would select a course the picker no
+   * longer lists. The preset's own target still wins over whatever was
+   * remembered at that place: the preset IS the remembered setup.
+   *
+   * Absent for presets saved before this existed, and for a setup built on a
+   * geocoder hit, which belongs to no place.
+   */
+  placeId?: string | null;
   createdAt: number;
 }

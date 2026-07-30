@@ -551,6 +551,10 @@ export function migratePresets(raw: unknown): Preset[] {
       patternParams: migratePatternParams(entry.patternParams),
       manoeuvre: migrateManoeuvreConfig(entry.manoeuvre),
       selectedCourseId: typeof entry.selectedCourseId === 'string' ? entry.selectedCourseId : null,
+      // Null for presets saved before presets named a place, and for a setup
+      // built on a geocoder hit — both mean "no place", which is exactly what
+      // loading one restores.
+      placeId: typeof entry.placeId === 'string' && entry.placeId !== '' ? entry.placeId : null,
       createdAt: finiteNumber(entry.createdAt, 0)
     });
   });
@@ -586,6 +590,13 @@ export function migrateCustomCourses(raw: unknown): CourseParams[] {
       lng: clampNumber(entry.lng, -180, 180),
       direction: normalizeDirection(finiteNumber(entry.direction, 0))
     };
+
+    // Left absent for courses stored before they were dropzone-scoped: an
+    // unassigned course is offered everywhere, which is lossless. Guessing a
+    // dropzone from its coordinates would be a write we could not undo.
+    if (typeof entry.placeId === 'string' && entry.placeId !== '') {
+      course.placeId = entry.placeId;
+    }
 
     if (entry.carveDirection === 'left' || entry.carveDirection === 'right') {
       course.carveDirection = entry.carveDirection;

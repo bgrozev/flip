@@ -2,6 +2,8 @@ import * as turf from '@turf/turf';
 
 import { Course, CourseElement, CourseParams, LatLng } from '../types';
 
+import { dropzonePlaceId } from './places';
+
 function dest(lat: number, lng: number, distanceM: number, bearing: number): LatLng {
   const pt = turf.destination([lng, lat], distanceM, bearing, { units: 'meters' });
   return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
@@ -359,11 +361,27 @@ export function buildCourse(params: CourseParams): Course {
   return makeZACourse(params.id, params.name, params.lat, params.lng, params.direction);
 }
 
-/** Parameters for the pre-built courses (also the template for duplicates). */
+/**
+ * Parameters for the courses FliP ships with (also the template for
+ * duplicates).
+ *
+ * Every one names the dropzone it is at (`placeId`, a `Place.id` from
+ * `core/places`) — a course is a fixed set of buoys in a particular pond, so
+ * it is only offered at that dropzone. The names are therefore the course
+ * type alone: the DZ is already the group they appear under.
+ *
+ * The ids keep their original `skydive-arizona-distance` form so that a
+ * stored `flip.courses.selected` and any preset saved before this still
+ * resolve.
+ */
+const SKYDIVE_ARIZONA = dropzonePlaceId('Skydive Arizona');
+const SKYDIVE_CITY = dropzonePlaceId('Skydive City (ZHills)');
+
 export const BUILT_IN_PARAMS: CourseParams[] = [
   {
     id: 'skydive-arizona-distance',
-    name: 'Skydive Arizona: Distance',
+    name: 'Distance',
+    placeId: SKYDIVE_ARIZONA,
     type: 'distance',
     lat: 32.80799563593153,
     lng: -111.58165927116396,
@@ -371,7 +389,8 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
   },
   {
     id: 'skydive-arizona-speed',
-    name: 'Skydive Arizona: Speed',
+    name: 'Speed',
+    placeId: SKYDIVE_ARIZONA,
     type: 'speed',
     lat: 32.808047486484774,
     lng: -111.58182489757063,
@@ -380,7 +399,8 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
   },
   {
     id: 'skydive-arizona-za',
-    name: 'Skydive Arizona: Zone Accuracy',
+    name: 'Zone Accuracy',
+    placeId: SKYDIVE_ARIZONA,
     type: 'zone-accuracy',
     lat: 32.80799563593153,
     lng: -111.58165927116396,
@@ -388,7 +408,8 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
   },
   {
     id: 'skydive-city-distance',
-    name: 'Skydive City: Distance',
+    name: 'Distance',
+    placeId: SKYDIVE_CITY,
     type: 'distance',
     lat: 28.2187820,
     lng: -82.1514716,
@@ -396,7 +417,8 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
   },
   {
     id: 'skydive-city-speed',
-    name: 'Skydive City: Speed',
+    name: 'Speed',
+    placeId: SKYDIVE_CITY,
     type: 'speed',
     lat: 28.2187600,
     lng: -82.1514781,
@@ -405,7 +427,8 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
   },
   {
     id: 'skydive-city-za',
-    name: 'Skydive City: Zone Accuracy',
+    name: 'Zone Accuracy',
+    placeId: SKYDIVE_CITY,
     type: 'zone-accuracy',
     lat: 28.2188610,
     lng: -82.1512317,
@@ -414,3 +437,46 @@ export const BUILT_IN_PARAMS: CourseParams[] = [
 ];
 
 export const COURSES: Course[] = BUILT_IN_PARAMS.map(buildCourse);
+
+/**
+ * Whether a course should be offered at a given place.
+ *
+ * A course with no `placeId` belongs to no dropzone — the custom courses of
+ * users from before courses were scoped — and is offered everywhere rather
+ * than hidden or guessed at.
+ */
+export function courseIsAtPlace(course: CourseParams, placeId: string | null): boolean {
+  return course.placeId === undefined || course.placeId === placeId;
+}
+
+/**
+ * The courses to offer at a place, split into the ones that belong to it and
+ * the unassigned ones — the picker groups them under the place's name and
+ * "Other", so it needs them apart.
+ *
+ * `alsoInclude` keeps a course in the list even when it belongs elsewhere.
+ * It exists for the currently selected course: a selection restored from a
+ * preset, or one that outlived a change of dropzone, must still render as
+ * the picker's value rather than falling back to its raw id.
+ */
+export function coursesForPlace(
+  courses: readonly CourseParams[],
+  placeId: string | null,
+  alsoInclude?: string | null
+): { atPlace: CourseParams[]; unassigned: CourseParams[]; elsewhere: CourseParams[] } {
+  const atPlace: CourseParams[] = [];
+  const unassigned: CourseParams[] = [];
+  const elsewhere: CourseParams[] = [];
+
+  courses.forEach(course => {
+    if (course.placeId === undefined) {
+      unassigned.push(course);
+    } else if (course.placeId === placeId) {
+      atPlace.push(course);
+    } else if (alsoInclude && course.id === alsoInclude) {
+      elsewhere.push(course);
+    }
+  });
+
+  return { atPlace, unassigned, elsewhere };
+}

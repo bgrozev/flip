@@ -209,6 +209,10 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
         text: 'A course draws competition gates and buoys on the map so you can plan an approach against the real layout.'
       },
       {
+        kind: 'paragraph',
+        text: 'Courses belong to a dropzone, so the list only shows the ones at the place you are at, and "New" adds a course there. Switching dropzone clears a course that belongs to the one you left. A preset remembers both, so loading it brings back the dropzone and its course together.'
+      },
+      {
         kind: 'terms',
         items: [
           { term: 'Distance', text: 'Entry gate and a measured run — how far you carry the swoop.' },

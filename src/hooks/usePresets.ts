@@ -15,11 +15,15 @@ interface UsePresetsParams {
   patternParams: PatternParams;
   manoeuvreConfig: ManoeuvreConfig;
   selectedCourseId: string | null;
+  /** The place the user is at, snapshotted with the preset (see `Preset`). */
+  activePlaceId: string | null;
   /**
    * Applies a loaded preset's target. A preset names a place, so this is the
-   * place-level setter (every mode), not the per-mode one — see App.
+   * place-level setter (every mode), not the per-mode one — see App. The
+   * place id goes with it so that the preset's course is still one the
+   * Courses panel lists.
    */
-  applyTarget: (target: Target) => void;
+  applyTarget: (target: Target, placeId: string | null) => void;
   setPatternParams: (params: PatternParams) => void;
   setManoeuvreConfig: (config: ManoeuvreConfig) => void;
   setSelectedCourseId: (id: string | null) => void;
@@ -40,6 +44,7 @@ export function usePresets({
   patternParams,
   manoeuvreConfig,
   selectedCourseId,
+  activePlaceId,
   applyTarget,
   setPatternParams,
   setManoeuvreConfig,
@@ -66,13 +71,14 @@ export function usePresets({
         patternParams,
         manoeuvre: manoeuvreConfig,
         selectedCourseId,
+        placeId: activePlaceId,
         createdAt: Date.now()
       };
 
       setStoredPresets([...presets, newPreset]);
       setActivePresetId(newPreset.id);
     },
-    [target, patternParams, manoeuvreConfig, selectedCourseId, presets, setStoredPresets, setActivePresetId]
+    [target, patternParams, manoeuvreConfig, selectedCourseId, activePlaceId, presets, setStoredPresets, setActivePresetId]
   );
 
   const loadPreset = useCallback(
@@ -84,7 +90,7 @@ export function usePresets({
       const preset = presets.find(p => p.id === id);
       if (!preset) return;
 
-      applyTarget(preset.target);
+      applyTarget(preset.target, preset.placeId ?? null);
       setPatternParams(preset.patternParams);
       setManoeuvreConfig(preset.manoeuvre);
       setSelectedCourseId(preset.selectedCourseId ?? null);
@@ -96,11 +102,13 @@ export function usePresets({
     (id: string) => {
       setStoredPresets(
         presets.map(p =>
-          p.id === id ? { ...p, target, patternParams, manoeuvre: manoeuvreConfig, selectedCourseId } : p
+          p.id === id
+            ? { ...p, target, patternParams, manoeuvre: manoeuvreConfig, selectedCourseId, placeId: activePlaceId }
+            : p
         )
       );
     },
-    [target, patternParams, manoeuvreConfig, selectedCourseId, presets, setStoredPresets]
+    [target, patternParams, manoeuvreConfig, selectedCourseId, activePlaceId, presets, setStoredPresets]
   );
 
   const deletePreset = useCallback(

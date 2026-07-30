@@ -37,6 +37,7 @@ function renderPresets(
         patternParams: overrides.patternParams ?? DEFAULT_PATTERN_PARAMS,
         manoeuvreConfig: DEFAULT_MANOEUVRE_CONFIG,
         selectedCourseId: null as string | null,
+        activePlaceId: null as string | null,
         ...setters
       }
     }
@@ -76,10 +77,34 @@ describe('usePresets', () => {
     // ...and loading it pushes the snapshot into the app setters
     act(() => second.result.current.loadPreset(preset.id));
 
-    expect(setters.applyTarget).toHaveBeenCalledWith(OTHER_TARGET);
+    expect(setters.applyTarget).toHaveBeenCalledWith(OTHER_TARGET, null);
     expect(setters.setPatternParams).toHaveBeenCalledWith(DEFAULT_PATTERN_PARAMS);
     expect(setters.setManoeuvreConfig).toHaveBeenCalledWith(DEFAULT_MANOEUVRE_CONFIG);
     expect(setters.setSelectedCourseId).toHaveBeenCalledWith(null);
+  });
+
+  // Courses belong to a dropzone, so a preset that names a course has to name
+  // the place too — otherwise loading it selects one the panel no longer lists.
+  it('round-trips the place a preset was saved at', () => {
+    const setters = makeSetters();
+    const { result, rerender } = renderPresets(setters);
+
+    rerender({
+      target: OTHER_TARGET,
+      patternParams: DEFAULT_PATTERN_PARAMS,
+      manoeuvreConfig: DEFAULT_MANOEUVRE_CONFIG,
+      selectedCourseId: 'skydive-arizona-distance',
+      activePlaceId: 'dz:Skydive Arizona',
+      ...setters
+    });
+    act(() => result.current.createPreset('Eloy distance'));
+
+    expect(result.current.presets[0].placeId).toBe('dz:Skydive Arizona');
+
+    act(() => result.current.loadPreset(result.current.presets[0].id));
+
+    expect(setters.applyTarget).toHaveBeenCalledWith(OTHER_TARGET, 'dz:Skydive Arizona');
+    expect(setters.setSelectedCourseId).toHaveBeenCalledWith('skydive-arizona-distance');
   });
 
   it('updatePreset overwrites the snapshot with the current config', () => {
@@ -95,6 +120,7 @@ describe('usePresets', () => {
       patternParams: DEFAULT_PATTERN_PARAMS,
       manoeuvreConfig: DEFAULT_MANOEUVRE_CONFIG,
       selectedCourseId: null,
+      activePlaceId: null,
       ...setters
     });
     act(() => result.current.updatePreset(id));

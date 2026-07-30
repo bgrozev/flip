@@ -401,3 +401,66 @@ describe('useAppState pattern params', () => {
     expect(second.result.current.patternParamsForMode('swoop').descentRateMph).toBe(30);
   });
 });
+
+describe('useAppState course selection', () => {
+  const ELOY_ID = 'dz:Skydive Arizona';
+  const ZHILLS_ID = 'dz:Skydive City (ZHills)';
+  const ELOY = { target: { lat: 32.8035, lng: -111.57985 }, finalHeading: 181 };
+  const ZHILLS = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  // A course is a set of buoys in one pond. Left selected, it also drags the
+  // map camera to a dropzone the user just left.
+  it('drops a course that belongs to the dropzone being left', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ELOY, { id: ELOY_ID }));
+    act(() => result.current.setSelectedCourseId('skydive-arizona-distance'));
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: ZHILLS_ID }));
+
+    expect(result.current.selectedCourseId).toBeNull();
+  });
+
+  it('keeps a course when the dropzone does not change', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ELOY, { id: ELOY_ID }));
+    act(() => result.current.setSelectedCourseId('skydive-arizona-distance'));
+    act(() => result.current.selectPlaceTarget(ELOY, { id: ELOY_ID }));
+
+    expect(result.current.selectedCourseId).toBe('skydive-arizona-distance');
+  });
+
+  it('keeps a course that belongs to no dropzone', () => {
+    store('flip.courses.custom', [
+      { id: 'custom-1', name: 'Legacy', type: 'distance', lat: 1, lng: 2, direction: 0 }
+    ]);
+
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ELOY, { id: ELOY_ID }));
+    act(() => result.current.setSelectedCourseId('custom-1'));
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: ZHILLS_ID }));
+
+    expect(result.current.selectedCourseId).toBe('custom-1');
+  });
+
+  // A preset restores its own target and its own place; what the user last
+  // did at that dropzone must not overwrite either.
+  it('uses the preset target rather than what the place remembers', () => {
+    const adjusted = { target: { lat: 32.81, lng: -111.58 }, finalHeading: 90 };
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ELOY, { id: ELOY_ID }));
+    act(() => result.current.setTargetForMode('swoop', adjusted));
+
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: ZHILLS_ID }));
+    act(() => result.current.selectPlaceTarget(ELOY, { id: ELOY_ID, useGivenTarget: true }));
+
+    expect(result.current.targetForMode('swoop')).toEqual(ELOY);
+    expect(result.current.targetForMode('pattern')).toEqual(ELOY);
+  });
+});

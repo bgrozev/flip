@@ -29,7 +29,13 @@ import React, { useEffect, useState } from 'react';
 
 import { useCustomCourses } from '../hooks';
 import { CourseParams, CourseType, LatLng, Target } from '../types';
-import { BUILT_IN_PARAMS, buildCourse, fromCourseRelative, getTargetRelativeToCourse } from '../core/courses';
+import {
+  BUILT_IN_PARAMS,
+  buildCourse,
+  coursesForPlace,
+  fromCourseRelative,
+  getTargetRelativeToCourse
+} from '../core/courses';
 import { downloadCourseKmz } from '../util/exportKmz';
 import { AltitudeUnit } from '../core/units';
 
@@ -53,6 +59,14 @@ interface CoursesComponentProps {
   altitudeUnit: AltitudeUnit;
   /** KMZ export is nerd-only, like every other export. */
   showExport?: boolean;
+  /**
+   * The place the user is at. A course is a set of buoys in one pond, so the
+   * list only offers the ones that belong here — and a new course is created
+   * here. Null when the target belongs to no place (a geocoder hit).
+   */
+  placeId: string | null;
+  /** That place's name, for the group header. */
+  placeName: string | null;
 }
 
 function CoursesComponent({
@@ -63,7 +77,9 @@ function CoursesComponent({
   editOpen,
   onEditOpenChange,
   altitudeUnit,
-  showExport = false
+  showExport = false,
+  placeId,
+  placeName
 }: CoursesComponentProps) {
   const { customParams, createCourse, updateCourse, removeCourse } = useCustomCourses();
 
@@ -71,6 +87,17 @@ function CoursesComponent({
   const selectedBuiltIn = BUILT_IN_PARAMS.find(c => c.id === selectedCourseId) ?? null;
   // Unified course params for the Target section (works for both custom and built-in)
   const selectedCourseParams: CourseParams | null = selectedBuiltIn ?? selectedCustom;
+
+  // Custom courses first within each group, as before: the user's own work is
+  // what they came here for. `elsewhere` normally holds nothing — choosing a
+  // place drops a selection that belongs to another one — but a preset can
+  // still name a course from somewhere else, and it has to stay renderable.
+  const custom = coursesForPlace(customParams, placeId, selectedCourseId);
+  const builtIn = coursesForPlace(BUILT_IN_PARAMS, placeId, selectedCourseId);
+  const atPlace = [...custom.atPlace, ...builtIn.atPlace];
+  const unassigned = [...custom.unassigned, ...builtIn.unassigned];
+  const elsewhere = [...custom.elsewhere, ...builtIn.elsewhere];
+  const hasAny = atPlace.length + unassigned.length + elsewhere.length > 0;
 
   // ── Target-relative section ──────────────────────────────────────────────────
   const [depthStr, setDepthStr] = useState('0');
@@ -180,13 +207,17 @@ function CoursesComponent({
   };
 
   // ── Shared actions ───────────────────────────────────────────────────────────
+  // A duplicate keeps the original's place, not the active one: the copy sits
+  // on top of the buoys it was copied from, so it belongs to the same pond.
+  // (They can only differ for an unassigned course or one from a preset.)
   const handleDuplicate = (params: CourseParams) => {
     const newId = createCourse({
       name: `${params.name} (copy)`,
       type: params.type,
       lat: params.lat,
       lng: params.lng,
-      direction: params.direction
+      direction: params.direction,
+      placeId: params.placeId
     });
     onSelect(newId);
   };
@@ -197,7 +228,10 @@ function CoursesComponent({
       type: 'distance',
       lat: target.target.lat,
       lng: target.target.lng,
-      direction: 0
+      direction: 0,
+      // Undefined with no place active, which is what "belongs nowhere" is
+      // stored as — such a course is then offered at every dropzone.
+      placeId: placeId ?? undefined
     });
     onSelect(newId);
   };
@@ -211,6 +245,33 @@ function CoursesComponent({
 
   const courseTypeLabel = (type: CourseType) =>
     type === 'distance' ? 'Distance' : type === 'speed' ? 'Speed' : 'Zone Accuracy';
+
+  // The built-in courses are named for their type, since the dropzone is
+  // already the group they sit under — so the type caption would just repeat
+  // the name. Custom ones are named whatever the user called them.
+  const courseRow = (params: CourseParams) => (
+    <MenuItem key={params.id} value={params.id} sx={{ pr: 0.5 }}>
+      <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', minWidth: 0 }}>
+        <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {params.name}
+          {params.name !== courseTypeLabel(params.type) && (
+            <Typography component="span" variant="caption" sx={{ ml: 0.75, opacity: 0.55 }}>
+              {courseTypeLabel(params.type)}
+            </Typography>
+          )}
+        </Box>
+        <IconButton
+          size="small"
+          title="Duplicate"
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); handleDuplicate(params); }}
+          sx={{ ml: 0.5, p: 0.25, flexShrink: 0 }}
+        >
+          <ContentCopyIcon sx={{ fontSize: 13 }} />
+        </IconButton>
+      </Box>
+    </MenuItem>
+  );
 
   const inputSx = { width: '11ch' };
 
@@ -232,62 +293,42 @@ function CoursesComponent({
           }
           renderValue={id => {
             if (!id) return <em>None</em>;
-            const custom = customParams.find(c => c.id === id);
-            if (custom) return custom.name;
-            const builtin = BUILT_IN_PARAMS.find(c => c.id === id);
-            return builtin ? builtin.name : id;
+            const found = [...customParams, ...BUILT_IN_PARAMS].find(c => c.id === id);
+            return found ? found.name : id;
           }}
         >
           <MenuItem value=""><em>None</em></MenuItem>
 
-          {customParams.length > 0 && (
-            <ListSubheader disableSticky>Custom</ListSubheader>
+          {atPlace.length > 0 && (
+            <ListSubheader disableSticky>{placeName ?? 'Here'}</ListSubheader>
           )}
-          {customParams.map(params => (
-            <MenuItem key={params.id} value={params.id} sx={{ pr: 0.5 }}>
-              <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', minWidth: 0 }}>
-                <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {params.name}
-                  <Typography component="span" variant="caption" sx={{ ml: 0.75, opacity: 0.55 }}>
-                    {courseTypeLabel(params.type)}
-                  </Typography>
-                </Box>
-                <IconButton
-                  size="small"
-                  title="Duplicate"
-                  onMouseDown={e => e.stopPropagation()}
-                  onClick={e => { e.stopPropagation(); handleDuplicate(params); }}
-                  sx={{ ml: 0.5, p: 0.25, flexShrink: 0 }}
-                >
-                  <ContentCopyIcon sx={{ fontSize: 13 }} />
-                </IconButton>
-              </Box>
-            </MenuItem>
-          ))}
+          {atPlace.map(courseRow)}
 
-          {customParams.length > 0 && <Divider />}
+          {atPlace.length > 0 && unassigned.length > 0 && <Divider />}
 
-          <ListSubheader disableSticky>Built-in</ListSubheader>
-          {BUILT_IN_PARAMS.map(params => (
-            <MenuItem key={params.id} value={params.id} sx={{ pr: 0.5 }}>
-              <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', minWidth: 0 }}>
-                <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {params.name}
-                </Box>
-                <IconButton
-                  size="small"
-                  title="Duplicate"
-                  onMouseDown={e => e.stopPropagation()}
-                  onClick={e => { e.stopPropagation(); handleDuplicate(params); }}
-                  sx={{ ml: 0.5, p: 0.25, flexShrink: 0 }}
-                >
-                  <ContentCopyIcon sx={{ fontSize: 13 }} />
-                </IconButton>
-              </Box>
-            </MenuItem>
-          ))}
+          {unassigned.length > 0 && (
+            <ListSubheader disableSticky>Not at a dropzone</ListSubheader>
+          )}
+          {unassigned.map(courseRow)}
+
+          {elsewhere.length > 0 && <Divider />}
+
+          {elsewhere.length > 0 && (
+            <ListSubheader disableSticky>From another dropzone</ListSubheader>
+          )}
+          {elsewhere.map(courseRow)}
         </Select>
       </FormControl>
+
+      {/* Courses are per-dropzone, so an empty list is normal and needs
+          saying — otherwise it reads as the panel being broken. */}
+      {!hasAny && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          {placeName
+            ? `No courses at ${placeName}. "New" adds one here.`
+            : 'Courses belong to a dropzone. Pick one in the Target panel, or add a course here and it will be offered everywhere.'}
+        </Typography>
+      )}
 
       {/* ── Course actions ── */}
       {selectedCourseParams && showExport && (

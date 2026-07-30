@@ -973,3 +973,71 @@ highest for that location, not a judgement FliP is making.
 The general shape of both: the smallest surface should carry the shortest
 label that is unambiguous *in context*, and the explanation belongs one
 hover away.
+
+## Courses belong to a dropzone (2026-07-29)
+
+Owner: "move the Courses to be DZ specific. The app will ship with certain
+courses in certain DZs. The user can add new courses to a specific DZ
+locally. The UI only lists the courses available for the current DZ, and
+the choice is saved in a preset."
+
+**One field, not two mechanisms.** The obvious reading — shipped courses
+are dropzone *data*, so they go in `Dropzone.modes.swoop`, next to
+flocking's `solveCorridors` — was rejected. Custom courses need the same
+scoping, and hanging them off the dropzone entry is impossible (a user
+cannot edit `util/dropzones.ts`), so that route ends with two parallel
+lookups. Instead `CourseParams.placeId` carries a `Place.id` and is
+filled in for *both* kinds. `coursesForPlace` then filters one flat list
+and nothing downstream knows which courses were shipped. It also keeps
+`core/courses.ts` free of `util/dropzones.ts`, which pure `core/` may not
+import anyway.
+
+The built-in ids are unchanged (`skydive-arizona-distance`, …) so a
+stored `flip.courses.selected` and any preset saved earlier still
+resolve. Their *names* dropped the DZ prefix — "Skydive Arizona:
+Distance" is now "Distance", because the dropzone is the group header
+above it. That is why the type caption in the picker is conditional:
+printing "Distance · Distance" was the first thing the browser showed.
+
+**Three decisions the owner made** (all as recommended):
+
+- **Legacy custom courses stay unassigned.** `placeId` absent means
+  "belongs nowhere", and such a course is offered at *every* dropzone,
+  under "Not at a dropzone". The alternative — guess the nearest DZ from
+  the coordinates on first load — is a storage write that cannot be
+  undone if the guess is wrong, and there is no coordinate radius that is
+  right for both a pond 200 m from the LZ and a course at a boogie site.
+- **Changing dropzone drops a foreign selection.** A ZHills course at
+  Eloy is not merely useless, it drags the map camera 2000 mi
+  (`App`'s "jump to course" effect). Unassigned courses survive the move,
+  because they belong here as much as anywhere.
+- **A preset records its place.** Presets already stored
+  `selectedCourseId`; with scoping, restoring that id without the place
+  would select a course the panel no longer lists. `Preset.placeId` is
+  the fix, and it needed `PlaceSelection.useGivenTarget`: the normal
+  place-selection path prefers what the place *remembers* over the target
+  passed in, which for a preset is backwards — the preset IS the
+  remembered setup. `useGivenTarget` overrides the target only; the
+  place's Spot Reference and corridors still apply, since a preset says
+  nothing about either and dropping them would lose the corridor setup
+  for the dropzone it just took the user to.
+
+**Where the clearing lives.** In `selectPlaceTarget`, not in an effect
+watching `activePlaceId`. Choosing a place is an event with a known
+before and after; an effect would have to distinguish "the place changed"
+from "the app just loaded", which is exactly the shape that clears a
+user's selection on every refresh. It costs `AppStateProvider` a call to
+`useCustomCourses` — a course's place is stored with the course, so
+deciding this needs the user's own list, not just `BUILT_IN_PARAMS`.
+
+**Verified in the browser** (both directions, per the standing rule): the
+picker at Eloy lists Practice gates / Distance / Speed / Zone Accuracy
+under "Skydive Arizona" and the legacy course under "Not at a dropzone",
+with the ZHills custom course absent; selecting Distance then picking
+ZHills in the place picker left `flip.courses.selected` null; "New" at
+Skydive Atlanta wrote `placeId: 'dz:Skydive Atlanta'`; and saving a
+preset there, moving to Eloy, then loading it restored place, course and
+the preset's own target together. One dead end worth recording:
+re-selecting the *already active* preset is a deliberate no-op in
+`PresetSelector` (`if (id !== activePresetId)`), which looked at first
+like the preset load being broken.

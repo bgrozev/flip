@@ -19,6 +19,12 @@ export function useCustomCourses() {
 
   const customCourses = useMemo(() => customParams.map(buildCourse), [customParams]);
 
+  /**
+   * `params.placeId` is the dropzone the course belongs to — the caller
+   * passes the active place, so a course is created where the user is. Omit
+   * it (or pass undefined, which is what "no place is active" looks like) and
+   * the course belongs to no dropzone and is offered at all of them.
+   */
   const createCourse = (params: Omit<CourseParams, 'id'>): string => {
     const id = `custom-${Date.now()}`;
     setStored([...customParams, { ...params, id }]);

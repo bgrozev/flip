@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { MODES } from '../modes';
+import { BUILT_IN_PARAMS } from '../core/courses';
+import { dropzoneForPlaceId } from '../core/places';
 
 import { DROPZONES, findClosestDropzone } from './dropzones';
 
@@ -97,6 +99,15 @@ describe('DROPZONES', () => {
     const sorted = [...DROPZONES].sort((a, b) => a.name.localeCompare(b.name));
 
     expect(DROPZONES.map(dz => dz.name)).toEqual(sorted.map(dz => dz.name));
+  });
+
+  // A course is only offered at the dropzone it names, so a typo or a rename
+  // here does not fail loudly — the course just silently stops appearing.
+  it('has a dropzone for every built-in course', () => {
+    BUILT_IN_PARAMS.forEach(course => {
+      expect(dropzoneForPlaceId(DROPZONES, course.placeId ?? null), course.id)
+        .toBeDefined();
+    });
   });
 });
 

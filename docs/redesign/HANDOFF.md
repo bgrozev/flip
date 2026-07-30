@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **758 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **777 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -119,6 +119,21 @@ Shortcuts / About. The `about` panel is gone; About is a topic and
 "What's next".
 
 ### Session 2026-07-29 (most recent)
+
+**Courses are per-dropzone.** `CourseParams.placeId` (a `Place.id`) scopes
+the shipped courses and the user's own with *one* field — the alternative,
+putting shipped courses in `Dropzone.modes.swoop` beside flocking's
+corridors, would have needed a second mechanism for custom ones, since a
+user cannot edit `util/dropzones.ts`. The Courses panel lists only what is
+at the active place, grouped under its name; "New" creates a course there;
+choosing another dropzone drops a selection belonging to the one being
+left (in `selectPlaceTarget`, not an effect — see NOTES for why). Two
+escapes keep it lossless: a course with no `placeId` belongs nowhere and
+is offered everywhere (that is every custom course saved before this), and
+`Preset.placeId` restores dropzone and course together, with
+`PlaceSelection.useGivenTarget` so the preset's target still beats what the
+place remembers. Built-in ids are unchanged so stored selections resolve;
+their names lost the DZ prefix. Owner decisions are recorded below.
 
 **Nerd mode** (`5ea378c`), and the design decision inside it: it is a
 **flag, not a fourth mode**. A mode answers "what jump am I planning";
@@ -605,6 +620,16 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
 ## Owner decisions recorded (most recent first)
 
 Recorded here because they were judgement calls, not deductions.
+
+**2026-07-29 (courses):**
+
+- Custom courses saved before scoping stay **unassigned** and are offered
+  at every dropzone — not auto-assigned to the nearest one, which would be
+  an unundoable guess.
+- Changing dropzone **clears** a course selection that belongs to the one
+  being left.
+- A preset **records the dropzone** it was saved at, so its course is
+  still one the panel lists when it is loaded.
 
 **2026-07-28:**
 
