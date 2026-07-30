@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **780 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **794 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -141,6 +141,17 @@ coordinates) but showed no courses — `flip.place.active` defaulted to
 ZHills' place id (`DEFAULT_ACTIVE_PLACE_ID` in `useAppState.tsx`) rather
 than null; `resetAll` restores the same pairing. Only applies before any
 place is ever explicitly stored.
+
+**The Courses panel was reworked** on top of that: the list is a radio
+list (only ever a handful at one DZ), "New" is a type menu that names and
+orients the course for you, the selected course's fields render inline
+under its row, and "Target" became "Relative Position" with one field per
+line. Positioning a course on the map is an explicit "Position on map"
+mode which suppresses target dragging while on — a course centre is
+metres from the landing spot, so their handles overlap. That last part
+*reverses* a same-day decision to make courses always draggable; see
+NOTES for why the analogy with the target's retired "Edit on map" mode
+did not hold. Closes P5 and the stale-course-id backlog item.
 
 **Nerd mode** (`5ea378c`), and the design decision inside it: it is a
 **flag, not a fourth mode**. A mode answers "what jump am I planning";

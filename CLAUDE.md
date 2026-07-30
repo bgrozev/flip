@@ -148,9 +148,15 @@ on the rows instead of inside an open menu). **"New" is a type menu** —
 Distance / Zone Accuracy / Speed — which creates the course already named
 for its type (`defaultCourseName`, numbered if taken) and pointed along
 the target's final heading, because the type is the first real decision
-and used to be two levels down inside Edit. A selected custom course is
-draggable on the map whenever the panel is open, with no editor to open
-first (the same reasoning that retired the target's "Edit on map" mode).
+and used to be two levels down inside Edit. The selected course's own
+controls render **inline under its row**, not in a section further down.
+Positioning a course on the map is an **explicit mode** ("Position on
+map"): a course centre is usually within metres of where you land, so
+its drag handles sit on top of the target's and one set has to yield —
+while it is on the target is not draggable. It is off by default and
+resets whenever the selection changes. Below the list, **Relative
+Position** (depth / offset / approach angle, one field per line) places
+the turn against the course.
 Choosing another dropzone drops a selection that belongs to the one being
 left (`selectPlaceTarget`), since it is meaningless there and the map
 camera would chase it. Two escapes keep that lossless: a course with no

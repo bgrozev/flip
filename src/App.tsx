@@ -910,13 +910,15 @@ function DashboardContent() {
     }
   }, [selectedCourseId, courseCenter, targetLat, targetLng]);
 
-  // A selected custom course is draggable whenever its panel is open — the
-  // Edit accordion used to gate this, which made the map handles appear and
-  // vanish for a reason nothing on screen explained. Same reasoning that
-  // retired the target's "Edit on map" mode.
+  // Positioning a course is an explicit mode, because its handles sit on top
+  // of the target's — a course centre is usually within metres of where you
+  // land, so with both live you cannot tell which one you are grabbing. While
+  // it is on the target is not draggable (below); it is off by default and
+  // turns off again when the selection changes.
   const selectedCustomParam = customParams.find(c => c.id === selectedCourseId) ?? null;
+  const editingCourse = courseEditOpen && selectedCustomParam !== null && activePanel === 'courses';
   const courseEditTarget: CourseEditTarget | undefined =
-    selectedCustomParam && activePanel === 'courses'
+    editingCourse && selectedCustomParam
       ? {
         center: { lat: selectedCustomParam.lat, lng: selectedCustomParam.lng } as LatLng,
         direction: selectedCustomParam.direction,
@@ -925,18 +927,19 @@ function DashboardContent() {
       }
       : undefined;
 
-  // Flocking ignores the target heading, so its target is always draggable
-  // and only the move handle renders; other modes keep the explicit
-  // "Edit on Map" toggle with the heading handle.
-  // The target is always draggable, in every mode. Flocking hides the
-  // final-heading rotate handle (it has its own jumprun/canopy controls).
-  const targetEditTarget: TargetEditTarget = {
-    target: target.target,
-    heading: target.finalHeading,
-    onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
-    onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
-    headingEditable: !isFlocking
-  };
+  // The target is draggable in every mode. Flocking hides the final-heading
+  // rotate handle (it has its own jumprun/canopy controls). The one time it
+  // is withheld is while a course is being positioned: the two handle sets
+  // overlap, so one of them has to yield.
+  const targetEditTarget: TargetEditTarget | undefined = editingCourse
+    ? undefined
+    : {
+      target: target.target,
+      heading: target.finalHeading,
+      onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
+      onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
+      headingEditable: !isFlocking
+    };
 
   const map = (
     <MapComponent

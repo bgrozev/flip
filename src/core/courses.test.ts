@@ -122,8 +122,8 @@ describe('courseTypeLabel', () => {
   // The built-in courses are named for their type, which is what lets the
   // list drop the redundant caption on their rows.
   it('matches what the built-in courses are called', () => {
-    BUILT_IN_PARAMS.forEach(course => {
-      expect(course.name).toBe(courseTypeLabel(course.type));
+    BUILT_IN_PARAMS.forEach(builtIn => {
+      expect(builtIn.name).toBe(courseTypeLabel(builtIn.type));
     });
   });
 });

@@ -2,13 +2,10 @@ import {
   Add as AddIcon,
   ContentCopy as ContentCopyIcon,
   Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
+  EditLocationAlt as EditLocationIcon,
   FileDownload as FileDownloadIcon
 } from '@mui/icons-material';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Box,
   Button,
   Divider,
@@ -22,11 +19,11 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  OutlinedInput,
   Radio,
   Select,
   Stack,
   TextField,
+  ToggleButton,
   Tooltip,
   Typography
 } from '@mui/material';
@@ -225,6 +222,7 @@ function CoursesComponent({
   // ── Shared actions ───────────────────────────────────────────────────────────
   const handleDuplicate = (params: CourseParams) => {
     onSelect(createCourse(duplicateCourseParams(params)));
+    // A copy sits exactly on top of its original, so it needs moving.
     onEditOpenChange(true);
   };
 
@@ -261,10 +259,154 @@ function CoursesComponent({
     }
   };
 
+  // Positioning is a mode, so it must not survive a change of course: leaving
+  // it on would hand the next course's handles the map without being asked.
+  const handleSelect = (id: string | null) => {
+    if (id !== selectedCourseId) {
+      onEditOpenChange(false);
+    }
+    onSelect(id);
+  };
+
+  /**
+   * The selected course's own controls, shown under its row rather than in a
+   * section below — with the list this short, a detail panel further down
+   * made you look away from the thing you had just picked.
+   */
+  const courseDetails = (params: CourseParams, isCustom: boolean) => (
+    <Box sx={{ px: 1.5, pb: 1.5, pt: 0.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      {isCustom && (
+        <>
+          {/* An explicit mode: the course handles land on top of the target's
+              (a course centre is usually metres from where you land), so the
+              target stops being draggable while this is on. */}
+          <ToggleButton
+            value="edit"
+            size="small"
+            selected={editOpen}
+            onChange={() => onEditOpenChange(!editOpen)}
+            color="primary"
+            sx={{ textTransform: 'none' }}
+          >
+            <EditLocationIcon sx={{ fontSize: 18, mr: 0.75 }} />
+            {editOpen ? 'Done positioning' : 'Position on map'}
+          </ToggleButton>
+
+          {editOpen && (
+            <Typography variant="caption" color="text.secondary">
+              Drag the course to move it, or its handle to rotate. The target
+              stays put until you are done.
+            </Typography>
+          )}
+
+          <TextField
+            label="Name"
+            size="small"
+            fullWidth
+            value={editName}
+            onChange={e => setEditName(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={e => { if (e.key === 'Enter') commitName(); }}
+          />
+
+          <Stack direction="row" spacing={1}>
+            <FormControl size="small" sx={{ flex: 1 }}>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={params.type}
+                label="Type"
+                onChange={e => {
+                  const t = e.target.value as CourseType;
+                  updateCourse(params.id, {
+                    type: t,
+                    ...(t === 'speed' && !params.carveDirection ? { carveDirection: 'left' } : {})
+                  });
+                }}
+              >
+                {COURSE_TYPES.map(type => (
+                  <MenuItem key={type} value={type}>{courseTypeLabel(type)}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {params.type === 'speed' && (
+              <FormControl size="small" sx={{ flex: 1 }}>
+                <InputLabel>Carve</InputLabel>
+                <Select
+                  value={params.carveDirection ?? 'left'}
+                  label="Carve"
+                  onChange={e => updateCourse(params.id, { carveDirection: e.target.value as 'left' | 'right' })}
+                >
+                  <MenuItem value="left">Left</MenuItem>
+                  <MenuItem value="right">Right</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+          </Stack>
+
+          <Stack direction="row" spacing={1}>
+            <TextField
+              label="Lat"
+              size="small"
+              value={editLat}
+              onChange={e => setEditLat(e.target.value)}
+              onFocus={() => { latFocusedRef.current = true; }}
+              onBlur={() => { latFocusedRef.current = false; commitLat(); }}
+              onKeyDown={e => { if (e.key === 'Enter') commitLat(); }}
+              sx={{ flex: 1 }}
+            />
+            <TextField
+              label="Lng"
+              size="small"
+              value={editLng}
+              onChange={e => setEditLng(e.target.value)}
+              onFocus={() => { lngFocusedRef.current = true; }}
+              onBlur={() => { lngFocusedRef.current = false; commitLng(); }}
+              onKeyDown={e => { if (e.key === 'Enter') commitLng(); }}
+              sx={{ flex: 1 }}
+            />
+          </Stack>
+
+          <TextField
+            label="Direction"
+            size="small"
+            fullWidth
+            value={editCourseDir}
+            onChange={e => {
+              const s = e.target.value;
+              setEditCourseDir(s);
+              const v = parseFloat(s);
+              if (!isNaN(v)) updateCourse(params.id, { direction: v });
+            }}
+            onFocus={() => { dirFocusedRef.current = true; }}
+            onBlur={() => { dirFocusedRef.current = false; commitCourseDir(); }}
+            onKeyDown={e => { if (e.key === 'Enter') commitCourseDir(); }}
+            slotProps={{
+              input: { endAdornment: <InputAdornment position="end">°</InputAdornment> },
+              htmlInput: { type: 'number', step: 0.1 }
+            }}
+          />
+        </>
+      )}
+
+      {showExport && (
+        <Button
+          size="small"
+          startIcon={<FileDownloadIcon />}
+          onClick={() => downloadCourseKmz(buildCourse(params))}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          Export KMZ
+        </Button>
+      )}
+    </Box>
+  );
+
   // One row per course. The actions live here rather than inside a dropdown,
   // where Duplicate was only reachable while the menu happened to be open.
   const courseRow = (params: CourseParams) => {
     const isCustom = customParams.some(c => c.id === params.id);
+    const isSelected = params.id === selectedCourseId;
     // Built-in courses are named for their type, so the caption would just
     // repeat the name; custom ones are called whatever the user chose.
     const typeCaption = params.name === courseTypeLabel(params.type)
@@ -272,49 +414,53 @@ function CoursesComponent({
       : courseTypeLabel(params.type);
 
     return (
-      <ListItem
-        key={params.id}
-        disablePadding
-        secondaryAction={
-          <Stack direction="row" spacing={0.25}>
-            <Tooltip title="Duplicate">
-              <IconButton size="small" edge="end" onClick={() => handleDuplicate(params)}>
-                <ContentCopyIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </Tooltip>
-            {isCustom && (
-              <Tooltip title="Delete">
-                <IconButton size="small" edge="end" onClick={() => handleDelete(params.id)}>
-                  <DeleteIcon sx={{ fontSize: 15 }} />
+      <React.Fragment key={params.id}>
+        <ListItem
+          disablePadding
+          secondaryAction={
+            <Stack direction="row" spacing={0.25}>
+              <Tooltip title="Duplicate">
+                <IconButton size="small" edge="end" onClick={() => handleDuplicate(params)}>
+                  <ContentCopyIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               </Tooltip>
-            )}
-          </Stack>
-        }
-      >
-        <ListItemButton
-          dense
-          selected={params.id === selectedCourseId}
-          onClick={() => onSelect(params.id)}
-          sx={{ py: 0.25 }}
+              {isCustom && (
+                <Tooltip title="Delete">
+                  <IconButton size="small" edge="end" onClick={() => handleDelete(params.id)}>
+                    <DeleteIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+          }
         >
-          <Radio
-            size="small"
-            checked={params.id === selectedCourseId}
-            tabIndex={-1}
-            disableRipple
-            sx={{ p: 0.5, mr: 0.5 }}
-          />
-          <ListItemText
-            primary={params.name}
-            secondary={typeCaption}
-            slotProps={{
-              primary: { variant: 'body2', noWrap: true },
-              secondary: { variant: 'caption' }
-            }}
-          />
-        </ListItemButton>
-      </ListItem>
+          <ListItemButton
+            dense
+            selected={isSelected}
+            onClick={() => handleSelect(params.id)}
+            sx={{ py: 0.25 }}
+          >
+            <Radio
+              size="small"
+              checked={isSelected}
+              tabIndex={-1}
+              disableRipple
+              sx={{ p: 0.5, mr: 0.5 }}
+            />
+            <ListItemText
+              primary={params.name}
+              secondary={typeCaption}
+              slotProps={{
+                primary: { variant: 'body2', noWrap: true },
+                secondary: { variant: 'caption' }
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+        {/* A built-in course with nothing exportable has no details at all;
+            rendering the block anyway left an unexplained gap under its row. */}
+        {isSelected && (isCustom || showExport) && courseDetails(params, isCustom)}
+      </React.Fragment>
     );
   };
 
@@ -327,8 +473,6 @@ function CoursesComponent({
       {text}
     </Typography>
   );
-
-  const inputSx = { width: '11ch' };
 
   return (
     <>
@@ -362,7 +506,7 @@ function CoursesComponent({
           <ListItemButton
             dense
             selected={selectedCourseId === null}
-            onClick={() => onSelect(null)}
+            onClick={() => handleSelect(null)}
             sx={{ py: 0.25 }}
           >
             <Radio
@@ -399,186 +543,63 @@ function CoursesComponent({
         </Typography>
       )}
 
-      {/* ── Course actions ── */}
-      {selectedCourseParams && showExport && (
-        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
-          <Button
-            size="small"
-            startIcon={<FileDownloadIcon />}
-            onClick={() => downloadCourseKmz(buildCourse(selectedCourseParams))}
-          >
-            Export KMZ
-          </Button>
-        </Stack>
-      )}
-
-      {/* ── Target-relative section (all courses) ── */}
+      {/* ── Relative position (all courses) ── */}
       {selectedCourseParams && (
         <>
           <Divider sx={{ my: 2 }} />
-          <Typography variant="subtitle1" gutterBottom>Target</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            Where you land, measured from the course.
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0 }}>
+          <Tooltip title="Your turn position relative to the course">
+            <Typography variant="subtitle1" gutterBottom sx={{ display: 'inline-block' }}>
+              Relative Position
+            </Typography>
+          </Tooltip>
+          {/* One field per line: three side by side wrapped unpredictably in a
+              narrow panel, and the labels are too long to read at a glance. */}
+          <Stack spacing={2} sx={{ mt: 1 }}>
             <Tooltip title="Distance back from the course centre along the course axis. Positive is away from the course, in the direction you fly it from.">
-              <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
-                <OutlinedInput
-                  value={depthStr}
-                  onChange={handleDepth}
-                  type="number"
-                  endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
-                  inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
-                />
-                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
-                  Depth
-                </Box>
-              </FormControl>
+              <TextField
+                label="Depth"
+                size="small"
+                fullWidth
+                value={depthStr}
+                onChange={handleDepth}
+                slotProps={{
+                  input: { endAdornment: <InputAdornment position="end">{altitudeUnit}</InputAdornment> },
+                  htmlInput: { type: 'number', step: altitudeUnit === 'ft' ? 1 : 0.5 }
+                }}
+              />
             </Tooltip>
 
             <Tooltip title="Distance across the course from its centreline. Positive is to the right of the course direction.">
-              <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
-                <OutlinedInput
-                  value={offsetStr}
-                  onChange={handleOffset}
-                  type="number"
-                  endAdornment={<InputAdornment position="end">{altitudeUnit}</InputAdornment>}
-                  inputProps={{ step: altitudeUnit === 'ft' ? 1 : 0.5 }}
-                />
-                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
-                  Offset
-                </Box>
-              </FormControl>
+              <TextField
+                label="Offset"
+                size="small"
+                fullWidth
+                value={offsetStr}
+                onChange={handleOffset}
+                slotProps={{
+                  input: { endAdornment: <InputAdornment position="end">{altitudeUnit}</InputAdornment> },
+                  htmlInput: { type: 'number', step: altitudeUnit === 'ft' ? 1 : 0.5 }
+                }}
+              />
             </Tooltip>
 
             <Tooltip title="How far your final heading is turned from the course direction. 0 flies straight down the course; positive means the course runs to the right of your approach.">
-              <FormControl sx={{ m: 1, ...inputSx }} variant="outlined" size="small">
-                <OutlinedInput
-                  value={dirStr}
-                  onChange={handleApproachAngle}
-                  type="number"
-                  endAdornment={<InputAdornment position="end">°</InputAdornment>}
-                  inputProps={{ step: 0.5 }}
-                />
-                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, ml: 0.5 }}>
-                  Approach Angle
-                </Box>
-              </FormControl>
+              <TextField
+                label="Approach Angle"
+                size="small"
+                fullWidth
+                value={dirStr}
+                onChange={handleApproachAngle}
+                slotProps={{
+                  input: { endAdornment: <InputAdornment position="end">°</InputAdornment> },
+                  htmlInput: { type: 'number', step: 0.5 }
+                }}
+              />
             </Tooltip>
-          </Box>
+          </Stack>
         </>
       )}
 
-      {/* ── Edit section (custom courses only, collapsible). Titled with the
-          course name: "Edit" said nothing about which course it edits, and
-          the panel can show several. ── */}
-      {selectedCustom && (
-        <Accordion
-          expanded={editOpen}
-          onChange={(_, isExpanded) => onEditOpenChange(isExpanded)}
-          disableGutters
-          elevation={0}
-          sx={{ mt: 1, '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-            <Typography variant="subtitle2" noWrap>{selectedCustom.name}</Typography>
-          </AccordionSummary>
-          <AccordionDetails sx={{ pt: 0, pb: 1.5, px: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-
-            <TextField
-              label="Name"
-              size="small"
-              fullWidth
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-              onBlur={commitName}
-              onKeyDown={e => { if (e.key === 'Enter') commitName(); }}
-            />
-
-            <Stack direction="row" spacing={1}>
-              <FormControl size="small" sx={{ flex: 1 }}>
-                <InputLabel>Type</InputLabel>
-                <Select
-                  value={selectedCustom.type}
-                  label="Type"
-                  onChange={e => {
-                    const t = e.target.value as CourseType;
-                    updateCourse(selectedCustom.id, {
-                      type: t,
-                      ...(t === 'speed' && !selectedCustom.carveDirection ? { carveDirection: 'left' } : {})
-                    });
-                  }}
-                >
-                  {COURSE_TYPES.map(type => (
-                    <MenuItem key={type} value={type}>{courseTypeLabel(type)}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {selectedCustom.type === 'speed' && (
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel>Carve</InputLabel>
-                  <Select
-                    value={selectedCustom.carveDirection ?? 'left'}
-                    label="Carve"
-                    onChange={e => updateCourse(selectedCustom.id, { carveDirection: e.target.value as 'left' | 'right' })}
-                  >
-                    <MenuItem value="left">Left</MenuItem>
-                    <MenuItem value="right">Right</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            </Stack>
-
-            <Stack direction="row" spacing={1}>
-              <TextField
-                label="Lat"
-                size="small"
-                value={editLat}
-                onChange={e => setEditLat(e.target.value)}
-                onFocus={() => { latFocusedRef.current = true; }}
-                onBlur={() => { latFocusedRef.current = false; commitLat(); }}
-                onKeyDown={e => { if (e.key === 'Enter') commitLat(); }}
-                sx={{ flex: 1 }}
-              />
-              <TextField
-                label="Lng"
-                size="small"
-                value={editLng}
-                onChange={e => setEditLng(e.target.value)}
-                onFocus={() => { lngFocusedRef.current = true; }}
-                onBlur={() => { lngFocusedRef.current = false; commitLng(); }}
-                onKeyDown={e => { if (e.key === 'Enter') commitLng(); }}
-                sx={{ flex: 1 }}
-              />
-            </Stack>
-
-            <FormControl variant="outlined" size="small" fullWidth>
-              <OutlinedInput
-                value={editCourseDir}
-                onChange={e => {
-                  const s = e.target.value;
-                  setEditCourseDir(s);
-                  const v = parseFloat(s);
-                  if (!isNaN(v) && selectedCustom) updateCourse(selectedCustom.id, { direction: v });
-                }}
-                onFocus={() => { dirFocusedRef.current = true; }}
-                onBlur={() => { dirFocusedRef.current = false; commitCourseDir(); }}
-                onKeyDown={e => { if (e.key === 'Enter') commitCourseDir(); }}
-                endAdornment={<InputAdornment position="end">°</InputAdornment>}
-                inputProps={{ type: 'number', step: 0.1 }}
-              />
-              <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
-                Direction
-              </Box>
-            </FormControl>
-
-            <Typography variant="caption" color="text.secondary">
-              Drag the course on the map to move it, or its handle to rotate.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-      )}
     </>
   );
 }

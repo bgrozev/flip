@@ -1134,3 +1134,62 @@ handle stays, so the check distinguishes the two states rather than just
 finding some marker. The -270 fold was exercised from both sides
 (ZA course at 270.308 against final headings 180 and 0, reading 90 and
 -90).
+
+### Courses panel, second pass: positioning is a mode again
+
+Owner: "Dragging the target vs the course clash. I want an 'edit' mode
+for the course, which then gets disabled once it's set."
+
+**This reverses the previous pass's decision, and the reversal is right.**
+That pass removed the gate on the course's map handles, reasoning by
+analogy with the target's retired "Edit on map" mode. The analogy was
+wrong, and the owner found the reason within the hour: the target has no
+*rival*. A course does. A course centre is usually within metres of the
+landing spot — at ZHills the ZA course and the target are about 10 m
+apart — so both handle sets land on the same pixels and you cannot tell
+which one you are grabbing. "Always draggable" is only a good default for
+the single thing on the map that nothing else overlaps.
+
+So `courseEditOpen` gates the handles again, but as an **explicit
+"Position on map" toggle** in the panel rather than a side effect of an
+accordion being open — which is what was actually wrong with the original
+arrangement, and is a different complaint from "there should be no mode".
+While it is on, `targetEditTarget` is `undefined`, so the target is not
+draggable at all: two overlapping handle sets is the bug, and hiding one
+of them is the fix. It resets on a change of selection (`handleSelect`),
+because a positioning mode left on would hand the *next* course's handles
+the map without being asked, and it is switched on automatically for a
+course that was just created or duplicated, both of which sit
+un-positioned on top of something else.
+
+**Details moved inline.** The selected course's controls render under its
+own row instead of in a section below the Relative Position block. With
+the list this short the old arrangement made you look away from the row
+you had just clicked to find its fields. A built-in course with nothing
+exportable renders no block at all — the first cut left an unexplained
+gap under its row.
+
+**"Target" is "Relative Position"**, with the explanation as a tooltip on
+the heading rather than a caption line under it (the caption was reading
+as a section subtitle, i.e. as more chrome, and it cost a line in a panel
+that has none to spare). Its three fields are one per line: side by side
+they wrapped unpredictably at panel width and "Approach Angle" does not
+fit an 11ch column.
+
+**Verification note worth keeping.** The first attempt to check the
+handle exclusion was worthless and looked fine: with the course sitting
+on top of the target, "positioning on" showed a cyan dot and an orange
+dot, and it was tempting to read the cyan one as the target's handle
+still being there. It is not — `CourseEditLayer` draws a **cyan centre**
+and an **orange rotation handle**, so both dots were the course's. The
+check only became real after moving the course ~250 m off the target so
+the two objects could not be confused: positioning off = handle on the
+target, nothing on the course; positioning on = both handles on the
+course, nothing on the target. Overlapping subjects make a screenshot
+prove less than it appears to.
+
+Also fixed here: a lint error (`'_id' is assigned a value but never
+used`, from the destructure in `duplicateCourseParams`) and a `no-shadow`
+warning in `courses.test.ts` were committed in the previous pass, because
+the check read only eslint's last line — which reports the *fixable*
+count, not the total. Read the "✖ N problems" line.

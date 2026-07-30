@@ -484,9 +484,14 @@ export function defaultCourseName(type: CourseType, taken: readonly string[]): s
  * belongs to the same pond.
  */
 export function duplicateCourseParams(params: CourseParams): Omit<CourseParams, 'id'> {
-  const { id: _id, name, ...rest } = params;
+  const copy: Omit<CourseParams, 'id'> & { id?: string } = {
+    ...params,
+    name: `${params.name} (copy)`
+  };
 
-  return { ...rest, name: `${name} (copy)` };
+  delete copy.id;
+
+  return copy;
 }
 
 /**
