@@ -45,6 +45,11 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
   const [revealed, setRevealed] = useState(false);
   const [movingTarget, setMovingTarget] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Google occasionally fires a spurious mouseout on the handle mid-drag (the
+  // marker icon lags a frame behind a fast pointer). Guard the hide timer so
+  // it never unmounts the handle — losing the DOM node mid-drag aborts the
+  // native drag, which reads as "the handle jumps back and dragging stops".
+  const draggingHeading = useRef(false);
 
   const show = useCallback(() => {
     if (hideTimer.current) {
@@ -54,6 +59,9 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
   }, []);
 
   const hideSoon = useCallback(() => {
+    if (draggingHeading.current) {
+      return;
+    }
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
     }
@@ -127,10 +135,12 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
           onMouseOver={show}
           onMouseOut={hideSoon}
           onDrag={pos => {
+            draggingHeading.current = true;
             show();
             setLiveHeadingPos(pos);
           }}
           onDragEnd={pos => {
+            draggingHeading.current = false;
             setLiveHeadingPos(null);
             edit.onHeadingChange(bearingBetween(edit.target, pos));
           }}

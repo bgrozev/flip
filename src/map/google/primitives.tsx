@@ -81,8 +81,12 @@ export function MapCircle({
 }
 
 export function MapOverlay({ position, children }: MapOverlayProps) {
+  // overlayLayer sits below markerLayer/overlayLayer-optimized marker icons
+  // in the fixed Google Maps pane stack, so tooltips and labels never cover
+  // a draggable handle no matter their relative zIndex (panes ignore it —
+  // overlayMouseTarget, used previously, sits ABOVE every marker pane).
   return (
-    <OverlayView position={position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+    <OverlayView position={position} mapPaneName={OverlayView.OVERLAY_LAYER}>
       {children}
     </OverlayView>
   );
@@ -158,6 +162,13 @@ export function MapDragHandle({
       cursor={cursor}
       zIndex={zIndex}
       icon={icon}
+      // Optimized (the default) markers are baked into a single shared
+      // canvas in the overlayLayer pane, in DOM/paint order with our own
+      // OverlayView content (tooltips, altitude labels) in that same pane —
+      // so a tooltip mounted after the marker paints over it regardless of
+      // zIndex. Un-optimizing puts the handle in its own DOM node in the
+      // markerLayer pane, which sits above overlayLayer unconditionally.
+      options={{ optimized: false }}
       onLoad={m => {
         markerRef.current = m;
       }}
