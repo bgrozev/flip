@@ -287,6 +287,77 @@ export function groundConditions(profile: WindProfile): {
   };
 }
 
+/** One line of the by-altitude wind summary. */
+export interface WindBandSample {
+  altFt: number;
+  direction: number;
+  speedKts: number;
+  /** True for the profile's own ground row (shown as GND, not an altitude). */
+  ground: boolean;
+}
+
+/**
+ * The by-altitude summary shared by the map indicator and the Wind panel:
+ * the profile's ground row, then each requested band that lies inside the
+ * profile, de-duplicated and ascending. Band values are sampled from the
+ * profile (optionally interpolated) rather than being real levels, which
+ * is why they carry no provenance of their own.
+ */
+export function sampleWindBands(
+  profile: WindProfile,
+  altitudesFt: readonly number[],
+  interpolate: boolean
+): WindBandSample[] {
+  const rows = profile.winds;
+
+  if (!rows || rows.length === 0) {
+    return [];
+  }
+
+  const ground = rows[0];
+  const maxAltFt = rows[rows.length - 1].altFt;
+  const seen = new Set<number>([Math.round(ground.altFt)]);
+  const out: WindBandSample[] = [
+    { altFt: ground.altFt, direction: ground.direction, speedKts: ground.speedKts, ground: true }
+  ];
+
+  altitudesFt
+    .filter(a => a > ground.altFt + 1 && a <= maxAltFt + 1)
+    .map(a => Math.round(a))
+    .sort((x, y) => x - y)
+    .forEach(altFt => {
+      if (seen.has(altFt)) {
+        return;
+      }
+      seen.add(altFt);
+      const w = getWindAt(profile, altFt, interpolate);
+
+      out.push({ altFt, direction: w.direction, speedKts: w.speedKts, ground: false });
+    });
+
+  return out;
+}
+
+/**
+ * Whole hours from the CURRENT HOUR to the planned forecast time, floored
+ * at 0 (the models only go forward). One definition, shared by the main
+ * fetch and the comparison sweep so they can never sample different hours.
+ *
+ * Measured from the current hour rather than the wall clock because that
+ * is what it indexes: row 0 of an hourly forecast is the current hour, so
+ * measuring from 11:55 made "13:00" round to 1 and select the 12:00 row.
+ */
+export function forecastHourOffset(forecastTime: Date | null | undefined, now = Date.now()): number {
+  if (!forecastTime) {
+    return 0;
+  }
+
+  const HOUR_MS = 3600000;
+  const currentHour = Math.floor(now / HOUR_MS) * HOUR_MS;
+
+  return Math.max(0, Math.round((forecastTime.getTime() - currentHour) / HOUR_MS));
+}
+
 /**
  * Evenly-spaced altitude bands from a base step up to (and including)
  * `maxFt`, used by the compact winds indicator. The step is chosen from a

@@ -1,6 +1,7 @@
 import {
   Add as AddIcon,
   Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
   CloudOutlined as CloudOutlinedIcon,
   DeviceThermostat as DeviceThermostatIcon,
   EditOutlined as EditOutlinedIcon,
@@ -52,6 +53,7 @@ import {
   createWindProfile,
   createWindRow,
   groundConditions,
+  sampleWindBands,
   windModelLabel,
   windRowSourceKind
 } from '../core/wind';
@@ -73,6 +75,13 @@ interface WindsComponentProps {
   fetchingObserved?: boolean;
   /** Hours from now covered by the local forecast cache (scrubber range). */
   scrubHours?: number | null;
+  /**
+   * Altitude bands for the collapsed summary — the same list the map's
+   * winds indicator uses, so both surfaces show the same summary.
+   */
+  bandAltitudesFt?: readonly number[];
+  /** Whether band values are interpolated between levels (effective setting). */
+  interpolate?: boolean;
 }
 
 /** Format a Date to the value string required by datetime-local inputs (YYYY-MM-DDTHH:mm) */
@@ -209,6 +218,8 @@ export default function WindsComponent({
   forecastTime,
   onForecastTimeChange,
   allowManualEdit = false,
+  bandAltitudesFt = [],
+  interpolate = false,
   stations = [],
   stationsFetched = false,
   fetchingObserved = false,
@@ -241,6 +252,15 @@ export default function WindsComponent({
   const lock =
     !allowManualEdit ||
     winds.groundSource !== SOURCE_MANUAL || winds.aloftSource !== SOURCE_MANUAL;
+
+  // The table opens as the same by-altitude summary the map indicator
+  // shows, and expands to every level the source returned (~35 rows).
+  // Editing needs the real levels, so unlocking forces the full table.
+  const [showAllLevels, setShowAllLevels] = useState(false);
+  const summary = sampleWindBands(winds, bandAltitudesFt, interpolate);
+  // A summary of nothing but GND is not a summary — fall back to the full
+  // table rather than hiding every level behind an expander.
+  const fullTable = showAllLevels || !lock || summary.length < 2;
 
   const reset = useCallback(() => {
     setWinds(createWindProfile());
@@ -541,7 +561,47 @@ export default function WindsComponent({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {winds.winds.map((row, i) => (
+                  {!fullTable && summary.map(band => (
+                    <TableRow
+                      key={`band-${band.altFt}`}
+                      sx={band.ground ? { bgcolor: 'action.selected' } : undefined}
+                    >
+                      <TableCell padding="none" sx={{ pl: 1 }}>
+                        {/* Only the ground row is a real level here; the bands
+                            are sampled, so they carry no provenance icon. */}
+                        {band.ground && <RowSourceIndicator row={winds.winds[0]} />}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {band.ground
+                            ? 'GND'
+                            : Math.round(formatAltitude(band.altFt).value)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{Math.round(band.direction)}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={0.75} alignItems="center">
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              flexShrink: 0,
+                              bgcolor: beaufortColor(band.speedKts),
+                              border: '1px solid rgba(0,0,0,0.25)'
+                            }}
+                          />
+                          <Typography variant="body2">
+                            {formatWindSpeed(band.speedKts).value.toFixed(1)}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {fullTable && winds.winds.map((row, i) => (
                     <TableRow
                       key={`tr-${i}`}
                       sx={i === 0 ? { bgcolor: 'action.selected' } : undefined}
@@ -629,6 +689,28 @@ export default function WindsComponent({
               </Table>
             </TableContainer>
 
+            {lock && summary.length > 1 && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setShowAllLevels(v => !v)}
+                startIcon={
+                  <ExpandMoreIcon
+                    fontSize="small"
+                    sx={{
+                      transform: showAllLevels ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 150ms'
+                    }}
+                  />
+                }
+                sx={{ mt: 0.5, alignSelf: 'flex-start', textTransform: 'none' }}
+              >
+                {showAllLevels
+                  ? 'Show summary'
+                  : `Show all ${winds.winds.length} levels`}
+              </Button>
+            )}
+
             {/* Every editing action in one row, all of it nerd-only. */}
             {allowManualEdit && (
               <Stack direction="row" spacing={1} sx={{ mt: 2, alignItems: 'center' }}>
@@ -659,7 +741,7 @@ export default function WindsComponent({
         {/* Read-only model/sounding comparison, behind its own toggle.
             Outside the fetching branch so a main-profile fetch does not
             unmount it (which would silently close an open comparison). */}
-        <WindComparison />
+        <WindComparison forecastTime={forecastTime} />
 
         {forecastTime === null && (fetchingObserved || stationsFetched) && (
           <>

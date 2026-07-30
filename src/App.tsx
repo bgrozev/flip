@@ -731,6 +731,8 @@ function DashboardContent() {
         forecastTime={forecastTime}
         onForecastTimeChange={onForecastTimeChange}
         allowManualEdit={hasFeature(mode, 'manualWind')}
+        bandAltitudesFt={keyWindAltitudesFt}
+        interpolate={modeSettings.interpolateWind}
         stations={stations}
         stationsFetched={stationsFetched}
         fetchingObserved={fetchingObserved}

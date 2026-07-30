@@ -4,9 +4,9 @@
  * and behind a toggle — the active wind profile is never touched. First
  * pass for owner feedback; the visualization is expected to iterate.
  */
+import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import {
   Box,
-  Button,
   CircularProgress,
   Stack,
   Table,
@@ -18,16 +18,17 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppState, useUnits, useWindComparison } from '../hooks';
+import { ComparisonSourceResult } from '../hooks/useWindComparison';
 import {
   COMPARISON_CEILING_FT,
   ComparisonBand,
   compareProfiles,
   comparisonAltitudes
 } from '../core/windCompare';
-import { WindProfile } from '../core/wind';
+import { WindProfile, forecastHourOffset } from '../core/wind';
 
 /** Highlight for bands where sources disagree (works in both themes). */
 const DISAGREE_ROW_SX = { bgcolor: 'rgba(255, 152, 0, 0.18)' } as const;
@@ -50,6 +51,17 @@ function CellArrow({ direction }: { direction: number }) {
   );
 }
 
+/** What a column IS, for its header tooltip. */
+function sourceDescription(source: ComparisonSourceResult): string {
+  if (source.id !== 'sounding') {
+    return `${source.label} forecast model`;
+  }
+
+  return source.station
+    ? `Radiosonde sounding · station ${source.station}`
+    : 'Radiosonde sounding';
+}
+
 function validTimeLabel(profile: WindProfile): string {
   return profile.validTime
     ? profile.validTime.toLocaleString([], {
@@ -58,7 +70,12 @@ function validTimeLabel(profile: WindProfile): string {
     : 'unknown time';
 }
 
-export default function WindComparison() {
+interface WindComparisonProps {
+  /** The hour the app is planning for; null = now. */
+  forecastTime?: Date | null;
+}
+
+export default function WindComparison({ forecastTime = null }: WindComparisonProps) {
   const { target } = useAppState();
   const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
   const { loading, results, load, clear } = useWindComparison();
@@ -81,21 +98,68 @@ export default function WindComparison() {
     );
   }, [sources]);
 
+  // Read at call time rather than as an effect dependency: the comparison
+  // must follow the forecast hour, but re-fetching four models on every
+  // frame of a target drag would be a fetch storm.
+  const targetRef = useRef(target.target);
+
+  targetRef.current = target.target;
+
   const toggle = () => {
     if (open) {
-      setOpen(false);
       clear();
-    } else {
-      setOpen(true);
-      load(target.target);
     }
+    setOpen(!open);
   };
+
+  // The ONLY loader: opening and changing the hour both go through here.
+  // Loading from the toggle as well raced the effect's load — the second
+  // call aborts the first controller, and the sounding column came back
+  // as "signal is aborted without reason".
+  //
+  // Following the forecast time is the point: the table used to keep
+  // showing the hour it was opened at, silently, while the rest of the
+  // panel moved on.
+  const forecastMs = forecastTime ? forecastTime.getTime() : null;
+
+  useEffect(() => {
+    if (open) {
+      load(targetRef.current, forecastHourOffset(forecastMs === null ? null : new Date(forecastMs)));
+    }
+  }, [open, forecastMs, load]);
 
   return (
     <Box sx={{ mt: 2 }}>
-      <Button variant="outlined" size="small" onClick={toggle}>
-        {open ? 'Hide comparison' : 'Compare sources'}
-      </Button>
+      {/* A disclosure row, not a button that renames itself: the old
+          "Compare sources" / "Hide comparison" toggle gave no hint that a
+          section was about to appear below it, or that it was already open. */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={0.5}
+        onClick={toggle}
+        role="button"
+        aria-expanded={open}
+        aria-label="Compare sources"
+        sx={{ cursor: 'pointer', userSelect: 'none', width: 'fit-content' }}
+      >
+        <ExpandMoreIcon
+          fontSize="small"
+          sx={{
+            color: 'text.secondary',
+            transform: open ? 'none' : 'rotate(-90deg)',
+            transition: 'transform 150ms'
+          }}
+        />
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}
+        >
+          Compare sources
+        </Typography>
+        {open && loading && <CircularProgress size={12} />}
+      </Stack>
 
       {open && (
         <Box sx={{ mt: 1 }}>
@@ -117,7 +181,8 @@ export default function WindComparison() {
                         {sources.map(source => (
                           <Tooltip
                             key={source.id}
-                            title={`${source.label} · valid ${validTimeLabel(source.profile as WindProfile)}`}
+                            title={`${sourceDescription(source)} · valid ` +
+                              `${validTimeLabel(source.profile as WindProfile)}`}
                           >
                             <TableCell align="right" sx={CELL_SX}>{source.label}</TableCell>
                           </Tooltip>
@@ -186,9 +251,13 @@ export default function WindComparison() {
                 color="text.secondary"
                 sx={{ display: 'block', mt: 0.5 }}
               >
-                Speeds in {windSpeedLabel}, sampled at the current hour.
-                Highlighted rows disagree (&gt;15° or &gt;5 kts). Read-only —
-                the active profile is unchanged.
+                Every forecast model plus the nearest radiosonde
+                (&ldquo;Sounding&rdquo;), in {windSpeedLabel}, sampled at{' '}
+                {forecastTime ? validTimeLabel({ validTime: forecastTime } as WindProfile) : 'the current hour'}.
+                A sounding is whatever was last launched, so its column
+                ignores the forecast time. Highlighted rows disagree
+                (&gt;15° or &gt;5 kts). Read-only — the active profile is
+                unchanged.
               </Typography>
             </>
           )}

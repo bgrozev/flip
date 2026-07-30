@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,12 +10,19 @@ import WindsComponent from './WindsComponent';
 
 function renderWinds({
   allowManualEdit,
-  manual = false
+  manual = false,
+  bands = []
 }: {
   allowManualEdit: boolean;
   manual?: boolean;
+  bands?: number[];
 }) {
-  const rows = [createWindRow(0, 270, 8), createWindRow(3000, 280, 15)];
+  const rows = [
+    createWindRow(0, 270, 8),
+    createWindRow(1000, 275, 11),
+    createWindRow(2000, 280, 15),
+    createWindRow(3000, 285, 18)
+  ];
   const winds = manual
     ? createWindProfile(rows)
     : { ...createWindProfile(rows), groundSource: 'forecast', aloftSource: 'forecast' };
@@ -30,6 +37,7 @@ function renderWinds({
         forecastTime={null}
         onForecastTimeChange={vi.fn()}
         allowManualEdit={allowManualEdit}
+        bandAltitudesFt={bands}
       />
     </AppStateProvider>
   );
@@ -72,6 +80,39 @@ describe('WindsComponent manual-wind gating', () => {
 
     expect(screen.getByText(/Altitude/)).toBeTruthy();
     expect(SOURCE_MANUAL).toBeTruthy();
+  });
+
+  it('opens as the summary and expands to every level', () => {
+    // Same bands the map indicator shows: GND + the requested altitudes,
+    // not the source's full level list.
+    renderWinds({ allowManualEdit: false, bands: [1000, 3000] });
+
+    expect(screen.getByText('GND')).toBeTruthy();
+    expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show all 4 levels/ }));
+
+    expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(4);
+    expect(screen.queryByText('GND')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Show summary/ }));
+
+    expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(3);
+  });
+
+  it('shows every level when there are no bands to summarise', () => {
+    renderWinds({ allowManualEdit: false });
+
+    expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+  });
+
+  it('forces the full table while the profile is unlocked', () => {
+    // Editing needs the real levels, not sampled bands.
+    renderWinds({ allowManualEdit: true, manual: true, bands: [1000, 3000] });
+
+    expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
   });
 
   it('keeps Reset with the other editing actions, behind the feature', () => {

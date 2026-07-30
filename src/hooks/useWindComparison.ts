@@ -8,8 +8,10 @@ import { OPEN_METEO_MODELS, WindProfile } from '../core/wind';
 /** One comparison source: a model or the nearest sounding. */
 export interface ComparisonSourceResult {
   id: string;
-  /** Short column label (model name or sounding station id). */
+  /** Short column label ('GFS', 'Sounding', ...). */
   label: string;
+  /** Sounding station id, when this source is a sounding. */
+  station?: string;
   /** The fetched profile, or null when this source failed. */
   profile: WindProfile | null;
   /** Failure reason when profile is null. */
@@ -20,8 +22,8 @@ interface UseWindComparisonResult {
   loading: boolean;
   /** Null until the first load; then one entry per attempted source. */
   results: ComparisonSourceResult[] | null;
-  /** Fetch all sources concurrently for the location. */
-  load: (target: LatLng) => void;
+  /** Fetch all sources concurrently for the location and planned hour. */
+  load: (target: LatLng, hourOffset?: number) => void;
   /** Abort and drop the results (closing the compare view). */
   clear: () => void;
 }
@@ -55,7 +57,7 @@ export function useWindComparison(): UseWindComparisonResult {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const load = useCallback((target: LatLng) => {
+  const load = useCallback((target: LatLng, hourOffset = 0) => {
     abortRef.current?.abort();
     const controller = new AbortController();
 
@@ -63,7 +65,7 @@ export function useWindComparison(): UseWindComparisonResult {
     setLoading(true);
 
     const modelTasks = OPEN_METEO_MODELS.map(model =>
-      fetchOpenMeteoComparison(target, model.id, controller.signal)
+      fetchOpenMeteoComparison(target, model.id, { hourOffset, signal: controller.signal })
         .then(profile => ({
           id: model.id,
           label: MODEL_SHORT_LABELS[model.id] ?? model.label,
@@ -80,7 +82,11 @@ export function useWindComparison(): UseWindComparisonResult {
     const soundingTask = fetchSoundingProfile(target, { signal: controller.signal })
       .then(profile => ({
         id: 'sounding',
-        label: profile.meta?.station ?? 'Sounding',
+        // Labelled by what it IS, not by its station id: "_TBW" as a column
+        // header told nobody that this column is the radiosonde. The station
+        // lives in the header tooltip instead.
+        label: 'Sounding',
+        station: profile.meta?.station,
         profile
       }))
       .catch(err => ({

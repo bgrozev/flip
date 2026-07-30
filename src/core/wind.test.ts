@@ -8,6 +8,8 @@ import {
   copyWindRow,
   createWindProfile,
   createWindRow,
+  forecastHourOffset,
+  sampleWindBands,
   getWindAt,
   prepWind,
   setGroundWind,
@@ -350,6 +352,88 @@ describe('windRowSourceKind', () => {
     // A manually edited row loses its provenance (createWindRow without
     // extras), which is exactly what marks it as manual in the UI.
     expect(windRowSourceKind(createWindRow(0, 0, 0).source)).toBe('manual');
+  });
+});
+
+describe('sampleWindBands', () => {
+  const profile = createWindProfile([
+    createWindRow(0, 270, 8),
+    createWindRow(1000, 280, 12),
+    createWindRow(2000, 290, 16),
+    createWindRow(5000, 300, 24)
+  ]);
+
+  it('starts with the profile ground row, flagged as ground', () => {
+    const bands = sampleWindBands(profile, [1000, 2000], false);
+
+    expect(bands[0]).toEqual({ altFt: 0, direction: 270, speedKts: 8, ground: true });
+    expect(bands.slice(1).every(b => !b.ground)).toBe(true);
+  });
+
+  it('samples each requested band', () => {
+    const bands = sampleWindBands(profile, [1000, 2000], false);
+
+    expect(bands.map(b => b.altFt)).toEqual([0, 1000, 2000]);
+    expect(bands[2].speedKts).toBe(16);
+  });
+
+  it('drops bands above the profile and duplicates of the ground row', () => {
+    // 40000 is beyond the top level; 0 would repeat GND.
+    const bands = sampleWindBands(profile, [0, 2000, 2000, 40000], false);
+
+    expect(bands.map(b => b.altFt)).toEqual([0, 2000]);
+  });
+
+  it('sorts ascending regardless of the input order', () => {
+    const bands = sampleWindBands(profile, [5000, 1000, 2000], false);
+
+    expect(bands.map(b => b.altFt)).toEqual([0, 1000, 2000, 5000]);
+  });
+
+  it('interpolates between levels when asked', () => {
+    const plain = sampleWindBands(profile, [1500], false);
+    const smooth = sampleWindBands(profile, [1500], true);
+
+    expect(smooth[1].speedKts).toBeGreaterThan(12);
+    expect(smooth[1].speedKts).toBeLessThan(16);
+    expect(smooth[1].speedKts).not.toBe(plain[1].speedKts);
+  });
+
+  it('returns nothing for an empty profile', () => {
+    expect(sampleWindBands(createWindProfile([]), [1000], false)).toEqual([]);
+  });
+});
+
+describe('forecastHourOffset', () => {
+  const now = new Date('2026-07-29T12:00:00Z').getTime();
+
+  it('is zero for no forecast time', () => {
+    expect(forecastHourOffset(null, now)).toBe(0);
+    expect(forecastHourOffset(undefined, now)).toBe(0);
+  });
+
+  it('counts whole hours forward', () => {
+    expect(forecastHourOffset(new Date('2026-07-29T15:00:00Z'), now)).toBe(3);
+    expect(forecastHourOffset(new Date('2026-07-29T15:20:00Z'), now)).toBe(3);
+    expect(forecastHourOffset(new Date('2026-07-29T15:40:00Z'), now)).toBe(4);
+  });
+
+  it('never goes backwards', () => {
+    expect(forecastHourOffset(new Date('2026-07-29T09:00:00Z'), now)).toBe(0);
+  });
+
+  it('counts from the current hour, not from the current minute', () => {
+    // The offset indexes an hourly forecast whose row 0 is the CURRENT
+    // HOUR, so it must be measured from that hour too. Measured from the
+    // wall clock, asking for 13:00 at 11:55 rounds 1.08h to 1 and returns
+    // the 12:00 forecast — off by one for most of every hour.
+    const late = new Date('2026-07-29T11:55:00Z').getTime();
+
+    expect(forecastHourOffset(new Date('2026-07-29T13:00:00Z'), late)).toBe(2);
+    expect(forecastHourOffset(new Date('2026-07-29T12:00:00Z'), late)).toBe(1);
+    // Still rounds to the NEAREST hourly row, so 11:59 belongs to 12:00.
+    expect(forecastHourOffset(new Date('2026-07-29T11:59:00Z'), late)).toBe(1);
+    expect(forecastHourOffset(new Date('2026-07-29T11:20:00Z'), late)).toBe(0);
   });
 });
 

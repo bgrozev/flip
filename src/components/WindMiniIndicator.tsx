@@ -15,7 +15,7 @@ import {
   temperatureSeverity,
   tryDensityAltitudeFt
 } from '../core/atmosphere';
-import { beaufortColor, getWindAt, groundConditions, WindProfile } from '../core/wind';
+import { beaufortColor, groundConditions, sampleWindBands, WindProfile } from '../core/wind';
 import { useUnits } from '../hooks';
 import { StationDetails } from '../map/layers';
 import { ObservedWindStation } from '../types';
@@ -157,7 +157,6 @@ export default function WindMiniIndicator({
   }
 
   const ground = winds.winds[0];
-  const maxAltFt = winds.winds[winds.winds.length - 1].altFt;
 
   const { tempC, humidityPct, elevationFt } = groundConditions(winds);
   const densityAltFt = tryDensityAltitudeFt(elevationFt, tempC, humidityPct);
@@ -169,27 +168,13 @@ export default function WindMiniIndicator({
       ? ` Elevation ${Math.round(formatAltitude(elevationFt).value)} ${altitudeLabel}.`
       : '');
 
-  // Ground + the plan bands within the profile, de-duplicated and ascending.
-  const seen = new Set<number>([Math.round(ground.altFt)]);
-  const rows: Row[] = [
-    { label: 'GND', direction: ground.direction, speedKts: ground.speedKts }
-  ];
-  altitudesFt
-    .filter(a => a > ground.altFt + 1 && a <= maxAltFt + 1)
-    .map(a => Math.round(a))
-    .sort((x, y) => x - y)
-    .forEach(altFt => {
-      if (seen.has(altFt)) {
-        return;
-      }
-      seen.add(altFt);
-      const w = getWindAt(winds, altFt, interpolate);
-      rows.push({
-        label: String(formatAltitude(altFt).value),
-        direction: w.direction,
-        speedKts: w.speedKts
-      });
-    });
+  // Ground + the plan bands within the profile. Shared with the Wind
+  // panel's collapsed table (core/wind), so the two summaries cannot drift.
+  const rows: Row[] = sampleWindBands(winds, altitudesFt, interpolate).map(band => ({
+    label: band.ground ? 'GND' : String(formatAltitude(band.altFt).value),
+    direction: band.direction,
+    speedKts: band.speedKts
+  }));
 
   const forecastLabel = forecastTime
     ? forecastTime.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' })

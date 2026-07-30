@@ -221,21 +221,24 @@ export async function fetchOpenMeteo(
  * match (same model, location, fresh) but NEVER stores its response, so a
  * comparison sweep cannot evict the window the rest of the app relies on.
  *
- * Always samples the current hour (hourOffset 0): the comparison view
- * answers "what do the sources say about now".
+ * Samples the same hour the app is planning for (`hourOffset`, default
+ * now), so the comparison answers "what do the sources say about the hour
+ * I am looking at" rather than always about now.
  */
 export async function fetchOpenMeteoComparison(
   point: LatLng,
   model: string,
-  signal?: AbortSignal
+  opts: { hourOffset?: number; signal?: AbortSignal } = {}
 ): Promise<WindProfile> {
+  const { hourOffset = 0, signal } = opts;
+
   if (
     prefetched &&
     prefetched.model === model &&
     Date.now() - prefetched.fetchedAt < PREFETCH_TTL_MS &&
     !hasTargetMovedTooFar(prefetched.location, point)
   ) {
-    const index = prefetchedIndexFor(prefetched, 0);
+    const index = prefetchedIndexFor(prefetched, hourOffset);
 
     if (index !== null) {
       return buildProfile(prefetched, index);
@@ -243,7 +246,8 @@ export async function fetchOpenMeteoComparison(
   }
 
   const elevationFt = await fetchElevationFt(point, signal);
-  const response = await fetchWindow(point, MIN_PREFETCH_HOURS, model, signal);
+  const hours = Math.max(MIN_PREFETCH_HOURS, Math.ceil((hourOffset + 1) / 24) * 24);
+  const response = await fetchWindow(point, hours, model, signal);
   const window: PrefetchedWindow = {
     location: point,
     model,
@@ -251,7 +255,8 @@ export async function fetchOpenMeteoComparison(
     elevationFt,
     hourly: response.hourly
   };
-  const index = prefetchedIndexFor(window, 0) ?? 0;
+  const index = prefetchedIndexFor(window, hourOffset) ??
+    Math.min(hourOffset, response.hourly.time.length - 1);
 
   return buildProfile(window, index);
 }

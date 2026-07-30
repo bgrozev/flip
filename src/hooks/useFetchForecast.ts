@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { fetchForecast } from '../data/wind';
 import { LatLng, Settings } from '../types';
 import { SCHEMA_VERSION, migrateStoredWinds } from '../core/model';
-import { WindProfile, createWindProfile } from '../core/wind';
+import { WindProfile, createWindProfile, forecastHourOffset } from '../core/wind';
 import { createVersionedCodec } from '../util/storage';
 
 /**
@@ -81,9 +81,7 @@ export function useFetchForecast({
       return;
     }
 
-    const hourOffset = forecastTime
-      ? Math.max(0, Math.round((forecastTime.getTime() - Date.now()) / 3600000))
-      : 0;
+    const hourOffset = forecastHourOffset(forecastTime);
 
     console.log(`Fetching winds for: ${JSON.stringify(target)}, hourOffset=${hourOffset}`);
 
