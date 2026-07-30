@@ -948,3 +948,28 @@ attempts, including a 30-second watch, with GFS, ECMWF and the sounding.
 again), so a fetch should not unmount it. Recorded rather than "fixed":
 chasing it further would have been a phantom hunt, and a fix with no
 repro would be unverifiable.
+
+### Round 6, same day (`c5beefa`) — two small reversals
+
+**A wind glyph for Windy.** The globe said nothing. MUI has no Windy
+mark, and using their real one would mean fetching it from windy.com on
+every render — a third-party request from a PWA that is meant to work
+offline, and one that tells windy.com every time the panel opens — or
+shipping their trademark artwork in the bundle. So: `Cyclone`, the
+closest glyph to Windy's own swirling flow maps, and unused elsewhere
+(`Air` is the Wind nav item, and one icon meaning two things in the same
+app is worse than a slightly abstract one). Owner may prefer `Air` or
+`WindPower`; it is a one-word change.
+
+**"OpenMeteo Best" went back to "Best".** Round 5 put the provider in the
+header; the header is the one place in that table that cannot afford
+words — five or six columns in a ~380px panel — and it started wrapping.
+The provider belongs in the tooltip, which has room, and it is now on
+*every* column ("GFS forecast model, via OpenMeteo") rather than implied
+by whichever one carries the provider's name. The "Best" tooltip also
+explains what it actually is: OpenMeteo's own pick of the model it rates
+highest for that location, not a judgement FliP is making.
+
+The general shape of both: the smallest surface should carry the shortest
+label that is unambiguous *in context*, and the explanation belongs one
+hover away.
