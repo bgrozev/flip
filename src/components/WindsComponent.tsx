@@ -1,8 +1,8 @@
 import {
   Add as AddIcon,
   Close as CloseIcon,
-  Cyclone as CycloneIcon,
   ExpandMore as ExpandMoreIcon,
+  Public as PublicIcon,
   CloudOutlined as CloudOutlinedIcon,
   DeviceThermostat as DeviceThermostatIcon,
   EditOutlined as EditOutlinedIcon,
@@ -451,11 +451,11 @@ export default function WindsComponent({
           />
           {/* Second opinion: the same spot on Windy's own maps. An icon on
               this row rather than its own line of prose — it is a side
-              door, not a step in the workflow. A swirl rather than
-              Windy's own mark: their logo would mean either fetching it
-              from windy.com on every render (a third-party request from
-              a PWA that is meant to work offline) or shipping their
-              trademark artwork. `Air` is taken by the Wind nav item. */}
+              door, not a step in the workflow. A globe rather than a wind
+              glyph: `Air` is the Wind nav item's icon, and Windy's own
+              mark would mean either fetching it from windy.com on every
+              render (a third-party request from a PWA meant to work
+              offline) or shipping their trademark artwork. */}
           <Tooltip title="Open this location in Windy">
             <IconButton
               size="small"
@@ -465,7 +465,7 @@ export default function WindsComponent({
               rel="noopener noreferrer"
               sx={{ color: 'text.secondary' }}
             >
-              <CycloneIcon fontSize="small" />
+              <PublicIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Stack>
