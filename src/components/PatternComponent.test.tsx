@@ -96,4 +96,118 @@ describe('PatternComponent', () => {
     expect(screen.queryByLabelText('Descent Rate')).toBeNull();
     expect(screen.queryByText('Final leg')).toBeNull();
   });
+
+  describe('per-leg vs. pattern-wide turn controls', () => {
+    it('gives a swooper the per-leg switches, no pattern-wide one', () => {
+      renderPattern(); // legCountSelectable defaults true (swoop-like)
+
+      expect(screen.queryByText('Pattern turns')).toBeNull();
+      expect(screen.getAllByRole('button', { name: 'Left' })).toHaveLength(2);
+    });
+
+    it('gives Standard Pattern (non-nerd) the pattern-wide switch only', () => {
+      render(
+        <AppStateProvider>
+          <PatternComponent
+            params={DEFAULT_PATTERN_PARAMS}
+            onParamsChange={vi.fn()}
+            legCountSelectable={false}
+            nerd={false}
+          />
+        </AppStateProvider>
+      );
+
+      expect(screen.getByText('Pattern turns')).toBeTruthy();
+      // Only the pattern-wide switch's own Left/Right pair, not one per leg.
+      expect(screen.getAllByRole('button', { name: 'Left' })).toHaveLength(1);
+    });
+
+    it('restores the per-leg switches for Standard Pattern under nerd mode', () => {
+      render(
+        <AppStateProvider>
+          <PatternComponent
+            params={DEFAULT_PATTERN_PARAMS}
+            onParamsChange={vi.fn()}
+            legCountSelectable={false}
+            nerd={true}
+          />
+        </AppStateProvider>
+      );
+
+      expect(screen.queryByText('Pattern turns')).toBeNull();
+      expect(screen.getAllByRole('button', { name: 'Left' })).toHaveLength(2);
+    });
+
+    it('hides the pattern-wide switch when the pattern has no turns', () => {
+      render(
+        <AppStateProvider>
+          <PatternComponent
+            params={{ ...DEFAULT_PATTERN_PARAMS, type: 'one-leg' }}
+            onParamsChange={vi.fn()}
+            legCountSelectable={false}
+          />
+        </AppStateProvider>
+      );
+
+      expect(screen.queryByText('Pattern turns')).toBeNull();
+    });
+  });
+
+  describe('the pattern-wide switch (Standard Pattern, non-nerd)', () => {
+    function renderStandard(params: typeof DEFAULT_PATTERN_PARAMS, onParamsChange = vi.fn()) {
+      render(
+        <AppStateProvider>
+          <PatternComponent
+            params={params}
+            onParamsChange={onParamsChange}
+            legCountSelectable={false}
+            nerd={false}
+          />
+        </AppStateProvider>
+      );
+
+      return onParamsChange;
+    }
+
+    it('flips two right turns to two left turns', () => {
+      // DEFAULT_PATTERN_PARAMS is two right turns. DirectionSwitch's display
+      // is inverted (a known, separate issue) so the *inactive* button here
+      // reads "Right" — either button triggers the same flip regardless.
+      const onParamsChange = renderStandard(DEFAULT_PATTERN_PARAMS);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+
+      expect(onParamsChange).toHaveBeenCalledWith({
+        ...DEFAULT_PATTERN_PARAMS,
+        legs: [
+          DEFAULT_PATTERN_PARAMS.legs[0],
+          { ...DEFAULT_PATTERN_PARAMS.legs[1], direction: 90 },
+          { ...DEFAULT_PATTERN_PARAMS.legs[2], direction: 90 }
+        ]
+      });
+    });
+
+    it('resolves a mixed (Z) pattern to left-hand', () => {
+      const zParams = {
+        ...DEFAULT_PATTERN_PARAMS,
+        legs: [
+          DEFAULT_PATTERN_PARAMS.legs[0],
+          { ...DEFAULT_PATTERN_PARAMS.legs[1], direction: 90 },
+          { ...DEFAULT_PATTERN_PARAMS.legs[2], direction: 270 }
+        ]
+      };
+      const onParamsChange = renderStandard(zParams);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+
+      expect(onParamsChange).toHaveBeenCalledWith({
+        ...zParams,
+        legs: [
+          zParams.legs[0],
+          { ...zParams.legs[1], direction: 90 },
+          { ...zParams.legs[2], direction: 90 }
+        ]
+      });
+    });
+  });
 });

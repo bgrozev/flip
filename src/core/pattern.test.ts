@@ -4,10 +4,12 @@ import {
   PATTERN_THREE_LEG,
   PATTERN_TWO_LEG,
   booleanToDirection,
+  flipPatternSides,
   getPatternLegCount,
   isLeftTurn,
   makePattern,
   makePatternByType,
+  setPatternSide,
   withFullPattern
 } from './pattern';
 
@@ -150,6 +152,107 @@ describe('booleanToDirection', () => {
 
   it('returns 270 for false (right turn)', () => {
     expect(booleanToDirection(false)).toBe(270);
+  });
+});
+
+describe('setPatternSide', () => {
+  const baseParams = {
+    descentRateMph: 12,
+    glideRatio: 2.6,
+    type: PATTERN_THREE_LEG,
+    legs: [
+      { altitude: 300, direction: 0 },
+      { altitude: 600, direction: 90 },
+      { altitude: 900, direction: 270 }
+    ]
+  };
+
+  it('sets both turns left', () => {
+    const result = setPatternSide(baseParams, true);
+
+    expect(result.legs[1].direction).toBe(90);
+    expect(result.legs[2].direction).toBe(90);
+  });
+
+  it('sets both turns right', () => {
+    const result = setPatternSide(baseParams, false);
+
+    expect(result.legs[1].direction).toBe(270);
+    expect(result.legs[2].direction).toBe(270);
+  });
+
+  it('leaves leg 0 (the final leg) untouched', () => {
+    expect(setPatternSide(baseParams, true).legs[0]).toEqual(baseParams.legs[0]);
+  });
+
+  it('does not mutate the input', () => {
+    const before = JSON.parse(JSON.stringify(baseParams));
+
+    setPatternSide(baseParams, true);
+    expect(baseParams).toEqual(before);
+  });
+});
+
+describe('flipPatternSides', () => {
+  const rightRight = {
+    descentRateMph: 12,
+    glideRatio: 2.6,
+    type: PATTERN_THREE_LEG,
+    legs: [
+      { altitude: 300, direction: 0 },
+      { altitude: 600, direction: 270 },
+      { altitude: 900, direction: 270 }
+    ]
+  };
+  const leftLeft = { ...rightRight, legs: [rightRight.legs[0], { ...rightRight.legs[1], direction: 90 }, { ...rightRight.legs[2], direction: 90 }] };
+  const zLeftRight = { ...rightRight, legs: [rightRight.legs[0], { ...rightRight.legs[1], direction: 90 }, { ...rightRight.legs[2], direction: 270 }] };
+  const zRightLeft = { ...rightRight, legs: [rightRight.legs[0], { ...rightRight.legs[1], direction: 270 }, { ...rightRight.legs[2], direction: 90 }] };
+
+  it('turns two right turns into two left turns', () => {
+    const flipped = flipPatternSides(rightRight);
+
+    expect(isLeftTurn(flipped.legs[1].direction)).toBe(true);
+    expect(isLeftTurn(flipped.legs[2].direction)).toBe(true);
+  });
+
+  it('turns two left turns into two right turns', () => {
+    const flipped = flipPatternSides(leftLeft);
+
+    expect(isLeftTurn(flipped.legs[1].direction)).toBe(false);
+    expect(isLeftTurn(flipped.legs[2].direction)).toBe(false);
+  });
+
+  it('resolves a mixed (Z) pattern to left-hand, whichever leg was on which side', () => {
+    for (const z of [zLeftRight, zRightLeft]) {
+      const flipped = flipPatternSides(z);
+
+      expect(isLeftTurn(flipped.legs[1].direction)).toBe(true);
+      expect(isLeftTurn(flipped.legs[2].direction)).toBe(true);
+    }
+  });
+
+  it('is a toggle only starting from a uniform pattern', () => {
+    expect(flipPatternSides(flipPatternSides(rightRight))).toEqual(rightRight);
+    expect(flipPatternSides(flipPatternSides(leftLeft))).toEqual(leftLeft);
+  });
+
+  it('leaves leg 0 (the final leg) untouched', () => {
+    expect(flipPatternSides(rightRight).legs[0]).toEqual(rightRight.legs[0]);
+  });
+
+  it('leaves altitudes and other params untouched', () => {
+    const flipped = flipPatternSides(rightRight);
+
+    expect(flipped.legs.map(l => l.altitude)).toEqual(rightRight.legs.map(l => l.altitude));
+    expect(flipped.descentRateMph).toBe(rightRight.descentRateMph);
+    expect(flipped.type).toBe(rightRight.type);
+  });
+
+  it('does not mutate the input', () => {
+    const before = JSON.parse(JSON.stringify(rightRight));
+
+    flipPatternSides(rightRight);
+    expect(rightRight).toEqual(before);
   });
 });
 

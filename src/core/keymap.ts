@@ -11,11 +11,12 @@
  */
 import { PanelId } from '../types';
 
-export type ShortcutCategory = 'app' | 'panels' | 'winds' | 'target' | 'gestures';
+export type ShortcutCategory = 'app' | 'panels' | 'pattern' | 'winds' | 'target' | 'gestures';
 
 export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutCategory, string> = {
   app: 'App',
   panels: 'Panels',
+  pattern: 'Pattern',
   winds: 'Winds',
   target: 'Target',
   gestures: 'On the map'
@@ -65,6 +66,12 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { id: 'panel.courses', keys: ['c'], label: 'Courses', category: 'panels', panel: 'courses' },
   { id: 'panel.flocking', keys: ['g'], label: 'Flocking', category: 'panels', panel: 'flocking' },
   { id: 'panel.settings', keys: [','], label: 'Settings', category: 'panels', panel: 'settings' },
+
+  // Pattern
+  {
+    id: 'pattern.flipSides', keys: ['x'],
+    label: 'Flip pattern left/right', category: 'pattern', panel: 'pattern'
+  },
 
   // Winds
   { id: 'winds.refresh', keys: ['r'], label: 'Refresh the forecast', category: 'winds' },
@@ -138,7 +145,7 @@ export function visibleShortcuts(
 
 /** Group them for display, in the order the categories are declared. */
 export function groupShortcuts(shortcuts: readonly Shortcut[]): [ShortcutCategory, Shortcut[]][] {
-  const order: ShortcutCategory[] = ['panels', 'winds', 'target', 'gestures', 'app'];
+  const order: ShortcutCategory[] = ['panels', 'pattern', 'winds', 'target', 'gestures', 'app'];
 
   return order
     .map((category): [ShortcutCategory, Shortcut[]] =>

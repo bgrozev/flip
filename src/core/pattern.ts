@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import { FlightPath, FlightPoint, PatternType } from '../types';
+import { FlightPath, FlightPoint, PatternParams, PatternType } from '../types';
 import { mphToFps } from './units';
 
 // Pattern type constants
@@ -73,6 +73,34 @@ export function isLeftTurn(direction: number): boolean {
  */
 export function booleanToDirection(isLeft: boolean): number {
   return isLeft ? 90 : 270;
+}
+
+/**
+ * Set every turn (base, downwind) to the same side. Leg 0 (the final leg)
+ * has no turn of its own — its `direction` is unused — so it is left
+ * untouched.
+ */
+export function setPatternSide(params: PatternParams, left: boolean): PatternParams {
+  const direction = booleanToDirection(left);
+
+  return {
+    ...params,
+    legs: params.legs.map((leg, i) => (i === 0 ? leg : { ...leg, direction }))
+  };
+}
+
+/**
+ * Switch a pattern between left-hand and right-hand. A pattern with mixed
+ * turns (a "Z" — one left, one right) is not a toggle between two states,
+ * so there is no well-defined "opposite" to flip to; it resolves to
+ * left-hand, same as every other non-all-left starting point. Only a
+ * pattern that is already uniformly left or right toggles to its true
+ * opposite.
+ */
+export function flipPatternSides(params: PatternParams): PatternParams {
+  const allLeft = isLeftTurn(params.legs[1].direction) && isLeftTurn(params.legs[2].direction);
+
+  return setPatternSide(params, !allLeft);
 }
 
 export function makePattern({

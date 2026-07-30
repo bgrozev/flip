@@ -24,6 +24,7 @@ import {
   PATTERN_THREE_LEG,
   PATTERN_TWO_LEG,
   booleanToDirection,
+  flipPatternSides,
   isLeftTurn,
   PatternLeg
 } from '../core/pattern';
@@ -41,12 +42,20 @@ interface PatternComponentProps {
    * is a swooper's decision, not something a regular jumper should face.
    */
   legCountSelectable?: boolean;
+  /**
+   * Nerd mode. A swooper always gets the per-leg left/right switches (their
+   * pattern can be asymmetric); the everyday Standard Pattern jumper gets a
+   * single pattern-wide left/right control instead, unless nerd mode is on,
+   * which restores the per-leg switches for them too.
+   */
+  nerd?: boolean;
 }
 
 export default function PatternComponent({
   params,
   onParamsChange,
-  legCountSelectable = true
+  legCountSelectable = true,
+  nerd = false
 }: PatternComponentProps) {
   const {
     formatDescentRate,
@@ -67,6 +76,13 @@ export default function PatternComponent({
       legs: params.legs.map((leg, i) => (i === legIndex ? { ...leg, [key]: value } : leg))
     });
   };
+
+  // Swoop always gets the per-leg switches (an asymmetric "Z" pattern is a
+  // swooper's call); Standard Pattern gets them only under nerd mode, and
+  // the single pattern-wide control otherwise.
+  const showPerLegSwitches = legCountSelectable || nerd;
+  const showPatternWideSwitch = !showPerLegSwitches;
+  const patternIsAllLeft = isLeftTurn(params.legs[1].direction) && isLeftTurn(params.legs[2].direction);
 
   return (
     <Box display="flex" flexDirection="column" gap={2}>
@@ -100,32 +116,21 @@ export default function PatternComponent({
           <Divider orientation="vertical" flexItem />
         </>
       )}
-      {params.type !== PATTERN_NONE && (
+      {showPatternWideSwitch && (params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (
         <>
-          <Stack direction="row" spacing={2}>
-            <NumberInput
-              title="Vertical speed in the pattern."
-              label="Descent Rate"
-              initialValue={formatDescentRate(params.descentRateMph).value}
-              step={1}
-              min={formatDescentRate(LIMITS.descentRateMph.min).value}
-              max={formatDescentRate(LIMITS.descentRateMph.max).value}
-              unit={descentRateLabel}
-              onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
-            />
-            <NumberInput
-              title="Glide ratio in the pattern with no wind."
-              label="Glide Ratio"
-              initialValue={params.glideRatio}
-              step={0.1}
-              min={LIMITS.glideRatio.min}
-              max={LIMITS.glideRatio.max}
-              unit=""
-              onChange={value => handleChange('glideRatio', value)}
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography sx={{ flexGrow: 1, textAlign: 'left' }}>Pattern turns</Typography>
+            <DirectionSwitch
+              title="Left-hand or right-hand pattern: both turns switch together (shortcut: X). A mixed pattern resolves to left."
+              value={patternIsAllLeft}
+              onChange={() => onParamsChange(flipPatternSides(params))}
             />
           </Stack>
-
           <Divider />
+        </>
+      )}
+      {params.type !== PATTERN_NONE && (
+        <>
           <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Final leg</Typography>
           <Stack direction="row" spacing={2}>
             <LegAltitudeSelector
@@ -156,14 +161,16 @@ export default function PatternComponent({
               parseAltitude={parseAltitude}
               altitudeLabel={altitudeLabel}
             />
-            <DirectionSwitch
-              title="Direction for the turn after this pattern leg."
-              value={isLeftTurn(params.legs[1].direction)}
-              onChange={() => {
-                const wasChecked = isLeftTurn(params.legs[1].direction);
-                handleLegChange(1, 'direction', booleanToDirection(!wasChecked));
-              }}
-            />
+            {showPerLegSwitches && (
+              <DirectionSwitch
+                title="Direction for the turn after this pattern leg."
+                value={isLeftTurn(params.legs[1].direction)}
+                onChange={() => {
+                  const wasChecked = isLeftTurn(params.legs[1].direction);
+                  handleLegChange(1, 'direction', booleanToDirection(!wasChecked));
+                }}
+              />
+            )}
           </Stack>
         </>
       )}
@@ -183,13 +190,44 @@ export default function PatternComponent({
               parseAltitude={parseAltitude}
               altitudeLabel={altitudeLabel}
             />
-            <DirectionSwitch
-              title="Direction for the turn after this pattern leg."
-              value={isLeftTurn(params.legs[2].direction)}
-              onChange={() => {
-                const wasChecked = isLeftTurn(params.legs[2].direction);
-                handleLegChange(2, 'direction', booleanToDirection(!wasChecked));
-              }}
+            {showPerLegSwitches && (
+              <DirectionSwitch
+                title="Direction for the turn after this pattern leg."
+                value={isLeftTurn(params.legs[2].direction)}
+                onChange={() => {
+                  const wasChecked = isLeftTurn(params.legs[2].direction);
+                  handleLegChange(2, 'direction', booleanToDirection(!wasChecked));
+                }}
+              />
+            )}
+          </Stack>
+        </>
+      )}
+
+      {params.type !== PATTERN_NONE && (
+        <>
+          <Divider orientation="vertical" flexItem />
+          <Divider />
+          <Stack direction="row" spacing={2}>
+            <NumberInput
+              title="Vertical speed in the pattern."
+              label="Descent Rate"
+              initialValue={formatDescentRate(params.descentRateMph).value}
+              step={1}
+              min={formatDescentRate(LIMITS.descentRateMph.min).value}
+              max={formatDescentRate(LIMITS.descentRateMph.max).value}
+              unit={descentRateLabel}
+              onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
+            />
+            <NumberInput
+              title="Glide ratio in the pattern with no wind."
+              label="Glide Ratio"
+              initialValue={params.glideRatio}
+              step={0.1}
+              min={LIMITS.glideRatio.min}
+              max={LIMITS.glideRatio.max}
+              unit=""
+              onChange={value => handleChange('glideRatio', value)}
             />
           </Stack>
         </>

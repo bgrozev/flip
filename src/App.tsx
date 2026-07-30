@@ -86,7 +86,7 @@ import {
 import { COURSES } from './core/courses';
 import { dropzoneForPlaceId, placeNameFromId } from './core/places';
 import { DROPZONES } from './util/dropzones';
-import { makePatternByType, withFullPattern } from './core/pattern';
+import { flipPatternSides, makePatternByType, withFullPattern } from './core/pattern';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
 import { visibleShortcuts } from './core/keymap';
@@ -691,6 +691,7 @@ function DashboardContent() {
     'panel.courses': () => router.navigate(panelPath('courses')),
     'panel.flocking': () => router.navigate(panelPath('flocking')),
     'panel.settings': () => router.navigate(panelPath('settings')),
+    'pattern.flipSides': () => setModePatternParams(flipPatternSides(modePatternParams)),
     'winds.refresh': () => handleFetchWinds(undefined, { force: true }),
     'winds.hourBack': () => stepForecastHour(-1),
     'winds.hourForward': () => stepForecastHour(1),
@@ -707,7 +708,7 @@ function DashboardContent() {
   }), [
     focusMap, openPanel, navigate, router, setModeId, handleFetchWinds,
     applyForecastTime, stepForecastHour, nudgeTarget, rotateHeading,
-    upwindHeading, setTarget, target
+    upwindHeading, setTarget, target, setModePatternParams, modePatternParams
   ]);
 
   // The mode picker owns the keyboard on first run; the `?` dialog and any
@@ -737,6 +738,7 @@ function DashboardContent() {
         params={effectivePatternParams}
         onParamsChange={setModePatternParams}
         legCountSelectable={hasFeature(mode, 'patternLegCount')}
+        nerd={settings.nerd}
       />
     );
   } else if (activePanel === 'flocking') {
