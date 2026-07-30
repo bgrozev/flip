@@ -33,7 +33,7 @@ interface UseWindComparisonResult {
 /* eslint-disable camelcase -- keys are OpenMeteo model ids */
 /** Short column labels for the comparison table. */
 const MODEL_SHORT_LABELS: Record<string, string> = {
-  best_match: 'OpenMeteo Best',
+  best_match: 'Best',
   gfs_seamless: 'GFS',
   icon_seamless: 'ICON',
   ecmwf_ifs025: 'ECMWF'

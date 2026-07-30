@@ -38,8 +38,6 @@ import { WindProfile, forecastHourOffset, soundingStationUrl } from '../core/win
 const DISAGREE_ROW_SX = { bgcolor: 'rgba(255, 152, 0, 0.18)' } as const;
 
 const CELL_SX = { px: 0.5, whiteSpace: 'nowrap' } as const;
-/** Headers wrap — "OpenMeteo Best" does not fit a narrow panel on one line. */
-const HEAD_CELL_SX = { px: 0.5, whiteSpace: 'normal', lineHeight: 1.2 } as const;
 
 function CellArrow({ direction }: { direction: number }) {
   return (
@@ -57,10 +55,19 @@ function CellArrow({ direction }: { direction: number }) {
   );
 }
 
-/** What a column IS, for its header tooltip. */
+/**
+ * What a column IS, for its header tooltip. The headers themselves stay
+ * short — they have to fit a narrow panel four or five across — so this
+ * is where the provider and, for "Best", what it actually means get said.
+ */
 function sourceDescription(source: ComparisonSourceResult): string {
+  if (source.id === 'best_match') {
+    return 'OpenMeteo Best match — OpenMeteo picks the model it rates ' +
+      'highest for this location, rather than one you name';
+  }
+
   if (source.id !== 'sounding') {
-    return `${source.label} forecast model`;
+    return `${source.label} forecast model, via OpenMeteo`;
   }
 
   if (!source.station) {
@@ -264,7 +271,7 @@ export default function WindComparison({ forecastTime = null }: WindComparisonPr
                             title={`${sourceDescription(source)} · valid ` +
                               `${validTimeLabel(source.profile as WindProfile)}`}
                           >
-                            <TableCell align="right" sx={HEAD_CELL_SX}>
+                            <TableCell align="right" sx={CELL_SX}>
                               <SourceHeader
                                 source={source}
                                 active={isActiveSource(source)}
