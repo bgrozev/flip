@@ -37,7 +37,7 @@ and record friction per surface.
 | 4 | **Coach** | Teach, usually several students. | Presets for multiple students. Compare wind models. Manipulate pattern/wind/GR *live* as a teaching tool. Plan the spot for a long-spot jump. **Not planned as its own mode** — see below. |
 | 5 | **Demo jumper** | Plan a landing at a custom location. | Clean custom-location UI + save location. Winds aloft matter. Wants a saved/shareable report for the team. Drawing hazards on the map is of interest (possibly monetizable). No dedicated features yet. |
 | 6 | **Flocker** | Figure out the spot; communicate it to DZ/pilot. | Wants the jumprun description to hand off, a visual of the expected ground track, and quick "what-if" wind scenarios (e.g. 70 kt up high, calm low). |
-| 7 | **Nerd** | Play with the data. | Export, invert wind, model/sounding compare, manual per-level wind. Higher effort threshold is acceptable — mode opt-in *is* that threshold. |
+| 7 | **Nerd** | Play with the data. | Export, invert wind, model/sounding compare, manual per-level wind. Higher effort threshold is acceptable — the Nerd Mode toggle *is* that threshold. |
 
 ---
 
@@ -110,9 +110,20 @@ This is architecture-relevant (needs a design session, not just a panel).
 Modes are declarative UI profiles over one engine (`src/modes/index.ts`).
 Today: `pattern`, `swoop`, `flocking`.
 
-### Explore / Data mode — **reconsidered, leaning yes**
+### Explore / Data mode — **RESOLVED 2026-07-29: no such mode**
 
-Previously discarded; back under consideration. The case for it:
+Settled by shipping Nerd Mode as a **flag**, not a mode (`5ea378c`,
+`src/modes/nerd.ts`). The reason this idea kept reading as "swoop with a
+bigger export button" is that its content was never a *kind of jump*:
+modes answer "what jump am I planning", nerd answers "how much UI do I
+want". Those are different axes and they cross — manual wind entry
+matters in flocking as much as under canopy — so a mode would have needed
+nerd × 3 combinations. The flag is applied as a transform over the active
+mode instead, and everything below is preserved as the reasoning that led
+there. The "Winds Aloft & Data" framing is dead; the demo-jumper half of
+it is still unserved and belongs with `UIUX.md` #1.
+
+The case that was made for it:
 
 - Nerd tasks (invert wind, model/sounding compare, raw per-level edit, export)
   are **orthogonal to flying a pattern** and today are scattered across the Wind
@@ -271,6 +282,11 @@ owner interest.
 2. **Explore/Data mode.** Approve the "Winds Aloft & Data" framing (serving nerd
    + demo)? If yes, next step is the concrete `Mode` object + panel.
    Approve "Nerd Mode" (and I want the name). It enables manual wind selection/invert, the "export" function (both kmz and csv). And we'll see what else.
+   **DONE 2026-07-29** — shipped as a flag rather than a mode, name kept.
+   Also behind it: `showPomTooltips` and `highlightCorrespondingPoints`.
+   Owner ruled out gating model selection/comparison, unit pickers,
+   `showPreWind` and `showCrabArrow`; the full wind table gets addressed
+   outside nerd. See BACKLOG for what is still open under it.
 3. **Coach presentation layout.** Any interest in a projector/teaching layout —
    the one thing that would justify a coach mode?
    Keep it as an idea here, we'll merge with the main backlogs later.

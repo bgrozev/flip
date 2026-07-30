@@ -3,15 +3,16 @@
 Entry point for a new session picking up the FliP redesign. Rewritten
 2026-07-25 (winds indicator, trust banner, target + flocking map
 interactions); updated 2026-07-28 at the end of the density-altitude,
-per-place-memory and dropzone-data session, and again same-day after the
-dropzone import (59 -> 339 entries). The 2026-07-27 revision covered DZ
+per-place-memory and dropzone-data session, again same-day after the
+dropzone import (59 -> 339 entries), and 2026-07-29 for the owner's
+dropzone curation pass and nerd mode. The 2026-07-27 revision covered DZ
 discovery, shortcuts and in-app help; 2026-07-19 covered the architecture
 review, the wind-UX batch, and Phase 6 flocking.
 
-**The dropzone import landed; curating the list is still open and is the
-natural next task, together with the owner.** Read "Next up: the dropzone
-import" below before anything else — the invariants and conventions there
-still apply during curation.
+**The owner's first dropzone curation pass landed** (`aa3c041`, `00e4ad4`):
+212 entries promoted to hand-checked positions/headings, 69 removed, 4
+renamed, 2 added — 339 -> **272 entries**. The conventions in "The
+dropzone import" below still govern any further curation.
 
 ## Read order
 
@@ -36,12 +37,12 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **709 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **734 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
 unfiltered place-list render (still no grouping/limit — BACKLOG) scales
-with dropzone count and jsdom is slow at 339 of them.
+with dropzone count and jsdom is slow at 272 of them.
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
@@ -117,7 +118,56 @@ Shortcuts / About. The `about` panel is gone; About is a topic and
 `?` deep-linking to its own topic. **The prose is placeholder** — see
 "What's next".
 
-### Session 2026-07-28 (most recent)
+### Session 2026-07-29 (most recent)
+
+**Nerd mode** (`5ea378c`), and the design decision inside it: it is a
+**flag, not a fourth mode**. A mode answers "what jump am I planning";
+nerd answers "how much UI do I want", and they cross — manual wind entry
+matters in flocking as much as under canopy, so as a mode it would have
+needed nerd × 3 combinations. That also **retires the old explore /
+"Winds Aloft & Data" mode** idea in BACKLOG and the roles doc; there is
+no `explore` stub left to reframe.
+
+It is applied as a *transform over the active mode* (`modes/nerd.ts`):
+`withNerd(mode, nerd)` widens `features`/`nav`, so `hasFeature`, the nav,
+the map layers and the keymap all gate on nerd **for free** — the `E`
+shortcut and its overlay entry vanish with the Export button without
+knowing nerd exists. Adding an item to nerd is one line in
+`NERD_FEATURES` or `NERD_OFF_SETTINGS`.
+
+Two rules keep the gate real rather than cosmetic:
+
+- **Hiding a control also suppresses its effect** — `applyNerdGate` at
+  App's single `modeSettings` choke point. `NERD_OFF_SETTINGS` is an
+  explicit table of everyday values, *not* "force false" and *not* "fall
+  back to DEFAULT_SETTINGS": `interpolateWind` and `straightenLegs`
+  default to true and must stay true, because hiding a switch must never
+  silently change the path math. A test pins exactly that.
+- **The gate ignores `flip.settings.touched`**, unlike mode defaults.
+  Touched means "the user chose this", but with nerd off they cannot see
+  the control, so a stale choice must not keep the advanced behaviour
+  alive. Nothing is written back — the value is masked on read and
+  returns when nerd does.
+
+Behind it: manual wind (Unlock, Invert, row editing), both exports
+(FlySight CSV, course KMZ), and two Settings rows. Off for everyone,
+including upgrades. The toggle is at the **top** of Settings (toggling it
+makes rows appear *below*; at the bottom the change would be off-screen)
+and its only footprint outside Settings is a **NERD chip** in the
+toolbar, shown only while on, which turns it off when clicked.
+
+Owner ruled these **out** of nerd, recorded so they are not
+re-proposed: model selection/comparison, unit pickers, `showPreWind`,
+`showCrabArrow`. The full 41k ft wind table still needs addressing, but
+outside nerd. See BACKLOG for what is still open under it.
+
+Verification note worth keeping: every browser check was run in **both**
+states, so the pairing itself proves the gate rather than one green
+reading (the same discipline as "re-run the check against the pre-change
+code"). The two new component test files were also confirmed to fail with
+the gate removed.
+
+### Session 2026-07-28
 
 Five commits, `7c3b867`..`779afff`. Every one browser-verified before
 committing, and the browser caught two things the unit tests could not
@@ -376,7 +426,6 @@ before all of these — it is already agreed):
 | **Dropzone `timezone`** | Deferred by the owner this session. Forecast times render in *browser* local time, so a coach planning a DZ two zones away reads the wrong clock |
 | **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), course Type up front (P5), mobile panels page-swap the map (P7), jumprun handoff copy/share (P8) |
 | **Trust state — finish it** | `◐`: out-of-bounds "silly value" call-out, stale-age tuning |
-| **Nerd mode** | Owner-approved data-first mode; reframes the disabled `explore` stub |
 | ⭐ **Shareable setup links** | Needs a *design session with the owner*; fragment-encoding proposal parked in BACKLOG |
 | **Better wind visualization** | windy.com-like particle/flow rendering. ✎ design |
 | **Phase 7 — documents & logbook** | Prerequisite for the backend tier and the whole Review pillar |

@@ -696,3 +696,79 @@ Decisions worth keeping:
 the Courses entry (distance / zone-accuracy / speed) was inferred from
 type names and geometry rather than from how the disciplines are judged —
 flagged to the owner as the least trustworthy part.
+
+## Session 2026-07-29 — Nerd mode (`5ea378c`)
+
+The owner asked for a way to unlock rarely-used features so the everyday
+UI stays simple, and explicitly asked for advice on the shape: "maybe not
+a mode in itself but a Nerd Mode enable/disable option somewhere?"
+
+**It is a flag, not a mode, and that is the whole design.** A mode
+answers *what jump am I planning* (pattern / swoop / flocking); nerd
+answers *how much UI do I want*. Those are different axes, and they
+cross — the owner's own list spans both ("mostly landing, but manual
+wind applies to flocking too"). As a fourth mode it would have needed
+nerd × 3 combinations, which the `Mode` object cannot express, and it
+would have fought the per-mode target and pattern storage. This also
+kills the old **explore / "Winds Aloft & Data" mode** that BACKLOG and
+`docs/ux/roles-and-tasks.md` had been circling since 2026-07-22: the
+reason that idea kept feeling like "swoop-minus" is that its content was
+never a *kind of jump*.
+
+**Applied as a transform over the active mode**, which is what made it
+cheap. Every existing gate already keys off the `Mode` object — nav, map
+layers, `hasFeature`, and the keymap context — so `withNerd(mode, nerd)`
+widening `features`/`nav` gates all four at once. The alternative,
+threading `settings.nerd` into each component, would have put the same
+boolean in fifteen places and missed the keymap entirely. Confirmed in
+the browser: the `E` shortcut and its overlay row disappear with the
+Export button, and nothing in `core/keymap.ts` knows nerd exists.
+
+Two things that were nearly wrong, both worth remembering:
+
+- **Hiding a control is not enough.** The owner's wording was "enabled
+  iff nerd mode is on": a hidden switch still stored as `true` would keep
+  its behaviour and there would be no simplification. So `applyNerdGate`
+  masks the value at App's single `modeSettings` choke point.
+- **But the mask must not be "force false".** The first instinct was to
+  gate `interpolateWind` and `straightenLegs` too — both default to
+  `true`, so forcing them false would have silently changed everyone's
+  path geometry the moment they left nerd mode. `NERD_OFF_SETTINGS` is
+  therefore an explicit table of everyday values rather than a rule, and
+  a test asserts the three math-affecting settings are untouched by it.
+
+**The gate ignores `flip.settings.touched`** — deliberately unlike
+`applyModeDefaults`. Touched means "the user chose this", and mode
+defaults respect it so a user can force a mode-overridden setting back.
+With nerd off the control is not rendered at all, so an old choice is
+stale by definition and must not keep the advanced behaviour alive.
+Nothing is written back: the stored value returns when nerd does.
+
+**Placement detail that is not cosmetic:** the toggle is the *first*
+thing in Settings because switching it on makes rows appear *below* it.
+At the bottom of the panel — the obvious place for an "advanced" switch —
+the change happens off-screen and the toggle reads as broken.
+
+**Why the chip.** Nerd's only footprint outside Settings, and only while
+it is on. Without it the extra tools appear with nothing to explain them,
+and "why does my FliP look different from yours" has no answer. Clicking
+it turns nerd off; no confirmation, since it is fully reversible.
+
+**Scope, from the owner.** In: manual wind (Unlock/invert/row editing),
+both exports, `showPomTooltips`, `highlightCorrespondingPoints`. Ruled
+out, so they are not re-proposed: forecast-model selection and comparison,
+unit pickers, `showPreWind`, `showCrabArrow`. The full 41k ft wind table
+needs work but outside nerd. Left open: map provider, `straightenLegs`,
+`correctPatternHeading`, custom course authoring.
+
+**Verification.** Every browser check was run in *both* states, so the
+pairing is the evidence rather than one green reading — the same
+discipline as re-running a check against the pre-change code. It caught
+nothing this time, but it is what makes "the KMZ button is absent"
+meaningful (it was absent for a while because no course was selected,
+which the paired check exposed immediately). The two component test files
+were also confirmed to fail with the gate removed.
+
+**MUI 7 gotcha:** `inputProps={{ 'aria-label': ... }}` on `Switch` is
+silently dropped — no warning, no attribute. `slotProps={{ input: {...} }}`
+is the live path. Cost a debug round-trip.

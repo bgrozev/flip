@@ -106,13 +106,32 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   behind an identity; anchor case = swooper's laptop→phone loop. Needs a
   backend/auth/account model (none exist). Candidate paywall; free/paid line
   TBD. Ties into share-links (49), saved reports (47), annotations (48).
-- ☐ **"Nerd" mode** (owner-approved, name = **Nerd Mode**) — a data-first
-  mode enabling manual wind selection/invert and export (KMZ + FlySight
-  CSV), and more TBD. Reframes the disabled `explore` stub around
-  winds-aloft + data rather than "swoop-minus"; pairs with the trust
-  indicator. Next step: the concrete `Mode` object + a winds-aloft/data
-  panel. (Coach stays *not* a mode — parked unless a projector layout is
-  wanted.)
+- ☑ **Nerd Mode** — LANDED 2026-07-29 (`5ea378c`), and **not as a mode**.
+  It is a flag (`settings.nerd`) applied as a transform over the active
+  mode (`modes/nerd.ts` — `withNerd`, `applyNerdGate`), because it is
+  orthogonal to the mode: "how much UI" vs "what jump", and manual wind
+  matters in flocking too. That also retires the old explore / "Winds
+  Aloft & Data" mode idea — there is no `explore` stub to reframe.
+  Behind it today: manual wind (Unlock + invert + row editing), both
+  exports (FlySight CSV, course KMZ), and two Settings rows
+  (`showPomTooltips`, `highlightCorrespondingPoints`). Off for everyone
+  by default. (Coach stays *not* a mode — parked unless a projector
+  layout is wanted.)
+  - ✎ **Candidates the owner explicitly kept OUT**, recorded so they are
+    not re-proposed: forecast-model selection and comparison, all unit
+    pickers, `showPreWind` (the dashed pre-wind line), `showCrabArrow`.
+    The full 41k ft wind table needs addressing but **outside** nerd.
+  - ☐ Candidates not yet ruled on: map provider, `straightenLegs`,
+    `correctPatternHeading`, custom course *authoring*. Adding one is a
+    single line in `NERD_OFF_SETTINGS` or `NERD_FEATURES`.
+  - ☐ Nerd's own positive content, so it is not only a gate: a
+    diagnostics view (per-row wind provenance, fetch times, station ids,
+    raw JSON, "copy diagnostics" for bug reports) and numeric path stats
+    from `core/pathStats`. The planned Export panel lands in
+    `NERD_PANELS`, which is wired and currently empty.
+  - The guard rule for what belongs: **gate only what a jumper never
+    needs on the day they fly.** Anything failing that test is a
+    Settings-organisation problem, not a Nerd one.
 
 ### New monetizable/report items (owner interest)
 

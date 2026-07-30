@@ -81,6 +81,19 @@ Deploy: GitHub Pages via `.github/workflows/static.yml` (lint + test + build).
    - Dashed line: Original path without wind
    - Solid line: Wind-corrected path
 
+**Nerd mode** (`src/modes/nerd.ts`) is a global flag (`settings.nerd`,
+off by default), *not* a mode: a mode answers "what jump am I planning",
+nerd answers "how much UI do I want", and they cross. It is applied as a
+transform over the active mode — `withNerd()` widens `features`/`nav`, so
+`hasFeature`, the nav, the map layers and the keymap gate on it for free
+— plus `applyNerdGate()`, which forces the nerd-only settings to their
+everyday values at App's `modeSettings` choke point (an explicit table,
+so hiding a switch never silently changes the path math, and unlike mode
+defaults it ignores `flip.settings.touched`). Behind it: manual wind
+entry, both exports, and two map settings. Toggle at the top of Settings;
+a NERD chip in the toolbar while it is on. Adding an item to it is one
+line in `NERD_FEATURES` or `NERD_OFF_SETTINGS`.
+
 **Modes** (`src/modes/`) decide which of this is exposed — panels, map
 layers, coarse `features`, setting defaults. The three are *Standard
 Pattern*, *High Performance Landing* (adds manoeuvre + CP courses) and
@@ -186,7 +199,8 @@ user can force a mode-overridden setting back to the global default.
 | `core/regions.ts` | State/country short forms, so "az" finds Arizona |
 | `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
 | `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |
-| `util/dropzones.ts` | Dropzone database (339 entries; `direction`, `website`, `town`/`region`/`country` and per-mode config only where known) |
+| `modes/nerd.ts` | Nerd-mode flag: `withNerd()` mode transform, `applyNerdGate()` settings mask |
+| `util/dropzones.ts` | Dropzone database (272 entries; `direction`, `website`, `town`/`region`/`country` and per-mode config only where known) |
 | `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports (DOM/download side effects, so not in core) |
 
 ## Wind System (`src/data/wind/`)
