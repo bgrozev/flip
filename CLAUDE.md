@@ -124,8 +124,11 @@ be inserted at each joint as well as at both ends. Those directions are the
 four axes of the final-approach frame, so between them they absorb any
 displacement — a deep setup stretches the final approach, a negative offset
 stretches the entry, a 270 starting past the target becomes turn-straight-
-turn. Two straights always suffice, so the solver takes the valid pair with
-the least total length. The radius is tightened (by bisection) only when
+turn. Two straights always suffice, and the solver takes the LATEST valid
+pair (length only breaks ties), so slack lands on the final approach rather
+than partway round. Pairs must be at least 5 degrees apart and the total is
+capped: near a half turn the entry heading is the reverse of the final one,
+and solving that pair used to run away past the edge of the globe. The radius is tightened (by bisection) only when
 the setup is smaller than the nominal. Some setups cannot be drawn at all —
 a 90 can neither start past the target nor across the final line — and
 `reaches` reports that for the panel to warn about. Past 270 the radius
