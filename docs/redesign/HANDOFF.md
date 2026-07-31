@@ -650,6 +650,11 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
   on their line (no flicker), the free finish doesn't drift across repeated
   middle-handle rotations, the classic exit translates everything, and the
   camera never scrolls while dragging any handle.
+- **The manoeuvre's initiation handle** (swoop, parametric turns): drag to
+  set depth and offset. Confirm it tracks the pointer rather than springing
+  back (the wind-drift correction), that it clamps at the edge of what can
+  be drawn instead of jumping, and that it withdraws rather than stealing
+  the target's drags when the two are close or the map is zoomed out.
 - **Target handle** (all modes): drag to move, hover to reveal the
   heading-rotate handle, shift-click the map to jump it. The map must stay
   put while dragging.

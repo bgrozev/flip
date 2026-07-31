@@ -152,9 +152,19 @@ edge, and the binding edge is spelled out under the field.
 `correctPatternHeading` applies only to tracks and samples, which are often
 a few degrees off; a parametric turn knows its entry heading exactly.
 
+**The initiation point is a drag handle** (`ManoeuvreEditLayer`), and is
+the primary way to set a turn up — depth and offset are a position, and a
+position is a thing you point at. Always live, parametric turns only. The
+handle sits on the drifted path but the numbers describe the turn through
+the air, so `placeInitiation` is fed the position with the wind drift taken
+back out; it projects onto the final-approach axis and clamps to the same
+feasible bounds the fields use, one axis at a time. The handle withdraws
+within 26 px of the target's so it never eats its drags.
+
 `describeManoeuvrePath` measures all of this back OFF a path, so recorded
-tracks and samples are described the same way, and `ManoeuvreHintLayer`
-draws it (final axis, entry arrow, rotation label; `showManoeuvreHint`).
+tracks and samples are described the same way. `ManoeuvreHintLayer` draws
+the entry arrow and rotation (`showManoeuvreHint`) and the final approach
+line (`showFinalApproachLine`), each separately switchable.
 
 **Modes** (`src/modes/`) decide which of this is exposed — panels, map
 layers, coarse `features`, setting defaults. The three are *Standard
