@@ -85,8 +85,6 @@ export const DEFAULT_PATTERN_PARAMS: PatternParams = {
   ]
 };
 
-export const DEFAULT_MANOEUVRE_CONFIG: ManoeuvreConfig = { type: 'parameters' };
-
 // A left 270 — the everyday swoop turn — rolling out 300 ft short of the
 // target from a 150 ft radius.
 export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
@@ -96,6 +94,14 @@ export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
   depthFt: 300,
   offsetFt: 150,
   duration: 8
+};
+
+// Carries its params: a 'parameters' config without them describes no turn
+// at all, and now that this is the DEFAULT type (rather than the retired
+// 'none') that would mean a fresh setup silently flies no manoeuvre.
+export const DEFAULT_MANOEUVRE_CONFIG: ManoeuvreConfig = {
+  type: 'parameters',
+  params: DEFAULT_MANOEUVRE_PARAMS
 };
 
 // FWC's defaults: classic mode, 12k -> 4k ft, the "Flow" preset, into wind
@@ -136,6 +142,7 @@ export const DEFAULT_SETTINGS: Settings = {
   displayWindSummary: true,
   displayMapWinds: true,
   showMapLabels: false,
+  showManoeuvreHint: true,
   interpolateWind: true,
   correctPatternHeading: true,
   straightenLegs: true,
@@ -341,7 +348,9 @@ export function migrateManoeuvreConfig(raw: unknown): ManoeuvreConfig {
     type: oneOf(r.type, MANOEUVRE_TYPES, DEFAULT_MANOEUVRE_CONFIG.type)
   };
 
-  if (r.params !== undefined) {
+  // Always present for a parameters config, defaulted field by field: the
+  // path derivation has nothing to build from otherwise.
+  if (config.type === 'parameters' || r.params !== undefined) {
     config.params = migrateManoeuvreParams(r.params);
   }
   if (typeof r.trackName === 'string') {
@@ -506,6 +515,7 @@ export function migrateSettings(raw: unknown): Settings {
     displayWindSummary: booleanOr(r.displayWindSummary, d.displayWindSummary),
     displayMapWinds: booleanOr(r.displayMapWinds, d.displayMapWinds),
     showMapLabels: booleanOr(r.showMapLabels, d.showMapLabels),
+    showManoeuvreHint: booleanOr(r.showManoeuvreHint, d.showManoeuvreHint),
     interpolateWind: booleanOr(r.interpolateWind, d.interpolateWind),
     correctPatternHeading: booleanOr(r.correctPatternHeading, d.correctPatternHeading),
     straightenLegs: booleanOr(r.straightenLegs, d.straightenLegs),

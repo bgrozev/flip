@@ -1,6 +1,11 @@
 import * as turf from '@turf/turf';
 
-import { applyInitiationAltitudeOffset, createManoeuvrePath, solveManoeuvre } from './manoeuvre';
+import {
+  applyInitiationAltitudeOffset,
+  createManoeuvrePath,
+  describeManoeuvrePath,
+  solveManoeuvre
+} from './manoeuvre';
 import { FlightPath, FlightPoint, ManoeuvreParams } from '../types';
 
 // Helper to create a turf point with properties
@@ -222,6 +227,52 @@ describe('createManoeuvrePath', () => {
 
     expect(path[0].properties.time).toBe(20000);
     expect(path[path.length - 1].properties.time).toBe(0);
+  });
+});
+
+describe('describeManoeuvrePath', () => {
+  it('reads back the rotation and the headings a turn was built from', () => {
+    for (const turnDirection of ['left', 'right'] as const) {
+      for (const rotationDeg of [90, 135, 270, 450]) {
+        const path = createManoeuvrePath({ ...TURN, turnDirection, rotationDeg });
+        const described = describeManoeuvrePath(path);
+        const expectedSign = turnDirection === 'right' ? 1 : -1;
+
+        expect(described).not.toBeNull();
+        expect(described!.rotationDeg).toBeCloseTo(expectedSign * rotationDeg, 1);
+        expect(bearingDelta(described!.finalHeadingDeg, described!.entryHeadingDeg))
+          .toBeCloseTo(bearingDelta(0, -expectedSign * rotationDeg), 1);
+      }
+    }
+  });
+
+  it('does not care which end of the path it is handed', () => {
+    const path = createManoeuvrePath(TURN);
+    const forwards = describeManoeuvrePath(path);
+    const backwards = describeManoeuvrePath([...path].reverse());
+
+    expect(backwards).toEqual(forwards);
+  });
+
+  it('measures a recorded track it never generated', () => {
+    // A hand-built right-angle turn: east, then south. Nothing here came
+    // from createManoeuvrePath, which is the point — tracks and samples get
+    // described the same way.
+    const legs: FlightPath = [
+      createPoint(0, 0, { alt: 600, time: 0 }),
+      createPoint(0.002, 0, { alt: 300, time: 5000 }),
+      createPoint(0.002, -0.002, { alt: 0, time: 10000 })
+    ];
+    const described = describeManoeuvrePath(legs);
+
+    expect(described!.entryHeadingDeg).toBeCloseTo(90, 1);
+    expect(described!.finalHeadingDeg).toBeCloseTo(180, 1);
+    expect(described!.rotationDeg).toBeCloseTo(90, 1);
+  });
+
+  it('returns null for a path too short to have a direction', () => {
+    expect(describeManoeuvrePath([])).toBeNull();
+    expect(describeManoeuvrePath([createPoint(0, 0)])).toBeNull();
   });
 });
 

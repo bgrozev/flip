@@ -1,5 +1,7 @@
 import * as turf from '@turf/turf';
-import { FlightPath, FlightPoint, ManoeuvreParams } from '../types';
+import { FlightPath, FlightPoint, LatLng, ManoeuvreParams } from '../types';
+import { cumulativeTurnDeg } from './pathStats';
+import { normalizeBearing } from './geometry';
 
 /**
  * Shortest rollout (ft) kept between the end of the turn and the landing
@@ -202,6 +204,58 @@ export function createManoeuvrePath(params: ManoeuvreParams): FlightPath {
   });
 
   return points.reverse();
+}
+
+/** What a manoeuvre looks like on the ground, measured from its path. */
+export interface ManoeuvreDescription {
+  /** Where the turn starts. */
+  initiation: LatLng;
+  /** Where it ends — the landing point. */
+  landing: LatLng;
+  /** Heading flown at initiation. */
+  entryHeadingDeg: number;
+  /** Heading flown on final approach. */
+  finalHeadingDeg: number;
+  /** Total rotation flown, signed: positive is a right (clockwise) turn. */
+  rotationDeg: number;
+  /** Straight-line distance from initiation to landing (ft). */
+  spanFt: number;
+  /** Bearing from the landing point out to the initiation point. */
+  spanBearingDeg: number;
+}
+
+/**
+ * Describe a manoeuvre from its path rather than its parameters, so a
+ * recorded track or a sample can be described the same way a parametric
+ * turn is — the map hint has no business knowing which kind it is.
+ *
+ * Points are ordered by time, so this does not care whether the caller
+ * hands over the app's landing-first order or flight order.
+ */
+export function describeManoeuvrePath(path: FlightPath): ManoeuvreDescription | null {
+  if (path.length < 2) {
+    return null;
+  }
+
+  const flown = [...path].sort((a, b) => a.properties.time - b.properties.time);
+  const last = flown.length - 1;
+  const at = (point: FlightPoint): LatLng => ({
+    lng: point.geometry.coordinates[0],
+    lat: point.geometry.coordinates[1]
+  });
+  const turns = cumulativeTurnDeg(
+    flown.map(point => ({ lat: at(point).lat, lng: at(point).lng }))
+  );
+
+  return {
+    initiation: at(flown[0]),
+    landing: at(flown[last]),
+    entryHeadingDeg: normalizeBearing(turf.bearing(flown[0], flown[1])),
+    finalHeadingDeg: normalizeBearing(turf.bearing(flown[last - 1], flown[last])),
+    rotationDeg: turns[last],
+    spanFt: turf.distance(flown[0], flown[last], { units: 'feet' }),
+    spanBearingDeg: normalizeBearing(turf.bearing(flown[last], flown[0]))
+  };
 }
 
 /**

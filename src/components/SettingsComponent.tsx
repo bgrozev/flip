@@ -92,6 +92,11 @@ const settingsGroups: SettingsGroup[] = [
         key: 'showMapLabels',
         label: 'Show map labels',
         tooltip: 'Show place names, roads and other labels over the satellite imagery.'
+      },
+      {
+        key: 'showManoeuvreHint',
+        label: 'Show turn direction hint',
+        tooltip: 'Draw the final approach line, the heading you start the turn on, and how far round it goes.'
       }
     ]
   },

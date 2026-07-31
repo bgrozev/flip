@@ -4,6 +4,7 @@ import React, { createContext, useContext, useCallback, ReactNode, useMemo } fro
 import {
   DEFAULT_FLOCKING_PARAMS,
   DEFAULT_MANOEUVRE_CONFIG,
+  DEFAULT_MANOEUVRE_PARAMS,
   DEFAULT_PATTERN_PARAMS,
   DEFAULT_SETTINGS,
   DEFAULT_TARGET,
@@ -77,7 +78,7 @@ function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
 
   switch (config.type) {
     case 'parameters':
-      return config.params ? createManoeuvrePath(config.params) : [];
+      return createManoeuvrePath(config.params ?? DEFAULT_MANOEUVRE_PARAMS);
     case 'track':
       path = config.trackData ?? [];
       break;

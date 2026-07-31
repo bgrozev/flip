@@ -4,6 +4,7 @@ export { default as CourseLayer } from './CourseLayer';
 export { default as FlightPathsLayer } from './FlightPathsLayer';
 export { PATH_COLORS } from './FlightPathsLayer';
 export { default as FlockingLayer } from './FlockingLayer';
+export { default as ManoeuvreHintLayer } from './ManoeuvreHintLayer';
 export type { FlockingLayerProps } from './FlockingLayer';
 export { default as StationsLayer, StationDetails } from './StationsLayer';
 export { default as TargetEditLayer } from './TargetEditLayer';

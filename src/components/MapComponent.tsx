@@ -9,6 +9,7 @@ import {
   FlightPathsLayer,
   FlockingLayer,
   FlockingLayerProps,
+  ManoeuvreHintLayer,
   StationsLayer,
   TargetEditLayer,
   TargetEditTarget
@@ -137,6 +138,8 @@ function MapComponent({
           showPomAltitudes={showPomAltitudes}
         />
       )}
+
+      {has('manoeuvreHint') && settings.showManoeuvreHint && <ManoeuvreHintLayer path={pathB} idealPath={pathA} />}
 
       {has('courses') && <CourseLayer courses={courses} />}
 

@@ -152,6 +152,12 @@ export interface Settings {
   displayMapWinds: boolean;
   /** Show place/road labels over the satellite imagery (Google only). */
   showMapLabels: boolean;
+  /**
+   * Draw the turn hint on the map: the final approach axis, the heading you
+   * start on, and how far round you go. The manoeuvre's numbers are all
+   * measured against an axis that is otherwise invisible.
+   */
+  showManoeuvreHint: boolean;
   interpolateWind: boolean;
   correctPatternHeading: boolean;
   straightenLegs: boolean;
@@ -195,7 +201,8 @@ export const MAP_LAYER_IDS = [
   'stations',
   'targetEdit',
   'courseEdit',
-  'flocking'
+  'flocking',
+  'manoeuvreHint'
 ] as const;
 export type MapLayerId = typeof MAP_LAYER_IDS[number];
 

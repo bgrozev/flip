@@ -51,7 +51,7 @@ const ALL_PANELS: readonly PanelId[] = [
   'pattern', 'manoeuvre', 'target', 'wind', 'courses', 'settings', 'help'
 ];
 const ALL_LAYERS: readonly MapLayerId[] = [
-  'flightPaths', 'courses', 'stations', 'targetEdit', 'courseEdit'
+  'flightPaths', 'courses', 'stations', 'targetEdit', 'courseEdit', 'manoeuvreHint'
 ];
 
 export const MODES: readonly Mode[] = [
