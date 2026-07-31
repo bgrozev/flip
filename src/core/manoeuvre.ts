@@ -506,6 +506,43 @@ export function describeManoeuvrePath(path: FlightPath): ManoeuvreDescription | 
 }
 
 /**
+ * Describe a manoeuvre for display, given both the path as drawn
+ * (wind-corrected) and the same path without wind.
+ *
+ * The split matters. Positions have to come from the drawn path, or the
+ * hint floats off the line it is annotating. But BEARINGS along a
+ * wind-corrected path are ground tracks, not headings: a canopy crabs, so
+ * the final segment of a drifted path does not point down the final
+ * approach. Taking the headings from the drifted path made the drawn
+ * approach axis rotate as soon as wind was loaded, which is exactly the
+ * thing the axis exists to deny — the final heading is a property of the
+ * target, and the entry heading of the turn.
+ */
+export function describeManoeuvreForDisplay(
+  drawn: FlightPath,
+  ideal: FlightPath
+): ManoeuvreDescription | null {
+  const drawnDescription = describeManoeuvrePath(drawn);
+
+  if (!drawnDescription) {
+    return null;
+  }
+
+  const idealDescription = describeManoeuvrePath(ideal);
+
+  if (!idealDescription) {
+    return drawnDescription;
+  }
+
+  return {
+    ...drawnDescription,
+    entryHeadingDeg: idealDescription.entryHeadingDeg,
+    finalHeadingDeg: idealDescription.finalHeadingDeg,
+    rotationDeg: idealDescription.rotationDeg
+  };
+}
+
+/**
  * How far the initiation altitude may be moved from the recorded one, as a
  * fraction of it. A track or sample describes one particular turn; rescaling
  * it far beyond what was flown would not describe that turn any more.

@@ -3,6 +3,7 @@ import * as turf from '@turf/turf';
 import {
   applyInitiationAltitudeOffset,
   createManoeuvrePath,
+  describeManoeuvreForDisplay,
   describeManoeuvrePath,
   solveManoeuvre
 } from './manoeuvre';
@@ -357,6 +358,16 @@ describe('wind drift over the turn', () => {
   });
 });
 
+/** A brisk crosswind to the final heading below, so drift shows up. */
+const CROSSWIND = createWindProfile([
+  createWindRow(0, 180, 20),
+  createWindRow(1500, 180, 30)
+]);
+const DRIFT_TARGET: Target = {
+  target: { lat: 28.21887, lng: -82.15122 },
+  finalHeading: 270
+};
+
 describe('describeManoeuvrePath', () => {
   it('reads back the rotation and the headings a turn was built from', () => {
     for (const turnDirection of ['left', 'right'] as const) {
@@ -397,9 +408,55 @@ describe('describeManoeuvrePath', () => {
     expect(described!.rotationDeg).toBeCloseTo(90, 1);
   });
 
+  it('measures a drifted path as ground track, not as heading', () => {
+    // Why describeManoeuvreForDisplay exists: under wind the canopy crabs,
+    // so the bearings along the corrected path are not the headings flown.
+    const ideal = reposition(createManoeuvrePath(TURN), [], DRIFT_TARGET, false);
+    const corrected = addWind(ideal, CROSSWIND, true);
+
+    expect(describeManoeuvrePath(ideal)!.finalHeadingDeg)
+      .toBeCloseTo(DRIFT_TARGET.finalHeading, 3);
+    expect(
+      Math.abs(describeManoeuvrePath(corrected)!.finalHeadingDeg - DRIFT_TARGET.finalHeading)
+    ).toBeGreaterThan(1);
+  });
+
   it('returns null for a path too short to have a direction', () => {
     expect(describeManoeuvrePath([])).toBeNull();
     expect(describeManoeuvrePath([createPoint(0, 0)])).toBeNull();
+  });
+});
+
+describe('describeManoeuvreForDisplay', () => {
+  const ideal = () => reposition(createManoeuvrePath(TURN), [], DRIFT_TARGET, false);
+  const drifted = () => addWind(ideal(), CROSSWIND, true);
+
+  it('keeps the headings and the rotation free of wind', () => {
+    // The drawn approach axis used to swing round as soon as wind was
+    // loaded, because it was measured off the drifted ground track.
+    const shown = describeManoeuvreForDisplay(drifted(), ideal())!;
+
+    expect(shown.finalHeadingDeg).toBeCloseTo(DRIFT_TARGET.finalHeading, 3);
+    expect(shown.entryHeadingDeg)
+      .toBeCloseTo(describeManoeuvrePath(ideal())!.entryHeadingDeg, 3);
+    expect(shown.rotationDeg).toBeCloseTo(-TURN.rotationDeg, 1);
+  });
+
+  it('takes the positions from the path as drawn', () => {
+    // The hint annotates the line on screen, so it has to sit on it.
+    const shown = describeManoeuvreForDisplay(drifted(), ideal())!;
+    const drawn = describeManoeuvrePath(drifted())!;
+
+    expect(shown.initiation).toEqual(drawn.initiation);
+    expect(shown.landing).toEqual(drawn.landing);
+    expect(shown.spanFt).toBeCloseTo(drawn.spanFt, 6);
+  });
+
+  it('falls back to the drawn path when there is no wind-free one', () => {
+    const drawn = describeManoeuvrePath(drifted())!;
+
+    expect(describeManoeuvreForDisplay(drifted(), [])).toEqual(drawn);
+    expect(describeManoeuvreForDisplay([], ideal())).toBeNull();
   });
 });
 

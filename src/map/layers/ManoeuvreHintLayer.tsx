@@ -14,7 +14,7 @@ import React from 'react';
 
 import { MapOverlay, MapPolyline } from '..';
 import { FlightPath, LatLng } from '../../types';
-import { describeManoeuvrePath } from '../../core/manoeuvre';
+import { describeManoeuvreForDisplay } from '../../core/manoeuvre';
 import { destinationPoint } from '../../core/geometry';
 import { metersToFeet } from '../../core/units';
 
@@ -49,9 +49,9 @@ interface ManoeuvreHintLayerProps {
   /** The path as drawn (wind-corrected); the hint is anchored to it. */
   path: FlightPath;
   /**
-   * The same path without wind. The rotation is read from here: wind bends
-   * the ground track, so a turn entered as 270 measures 271 on the map, and
-   * a number the pilot typed must read back as the number they typed.
+   * The same path without wind. Every heading and the rotation are read
+   * from here: bearings along a drifted path are ground tracks, not
+   * headings (see `describeManoeuvreForDisplay`).
    */
   idealPath: FlightPath;
 }
@@ -89,15 +89,15 @@ const manoeuvreOf = (path: FlightPath) =>
   path.filter(point => point.properties.phase === 'manoeuvre');
 
 export default function ManoeuvreHintLayer({ path, idealPath }: ManoeuvreHintLayerProps) {
-  const described = describeManoeuvrePath(manoeuvreOf(path));
-  const ideal = describeManoeuvrePath(manoeuvreOf(idealPath));
+  const described = describeManoeuvreForDisplay(manoeuvreOf(path), manoeuvreOf(idealPath));
 
   if (!described) {
     return null;
   }
 
-  const { initiation, landing, entryHeadingDeg, finalHeadingDeg, spanFt, spanBearingDeg } = described;
-  const rotationDeg = ideal ? ideal.rotationDeg : described.rotationDeg;
+  const {
+    initiation, landing, entryHeadingDeg, finalHeadingDeg, rotationDeg, spanFt, spanBearingDeg
+  } = described;
 
   // The axis runs through the landing point along the final heading, drawn
   // far enough back to pass the initiation point.
