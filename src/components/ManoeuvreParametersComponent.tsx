@@ -124,6 +124,22 @@ export default function ManoeuvreParametersComponent({
     onParamsChange({ ...params, [key]: value });
   };
 
+  /**
+   * Changing the rotation moves the goalposts: a depth a 270 was happy with
+   * may be one a 90 cannot start from. Pull both into the new turn's range
+   * rather than leaving numbers the map has to disagree with.
+   */
+  const changeRotation = (rotationDeg: number) => {
+    const next = { ...params, rotationDeg };
+    const allowed = manoeuvreBounds(next);
+
+    onParamsChange({
+      ...next,
+      depthFt: clampNumber(next.depthFt, allowed.depthFt.min, allowed.depthFt.max),
+      offsetFt: clampNumber(next.offsetFt, allowed.offsetFt.min, allowed.offsetFt.max)
+    });
+  };
+
   // Length limits are stored in feet but entered in the display unit.
   const lengthLimits = (limits: NumericLimits): NumericLimits => ({
     min: Math.round(formatAltitude(limits.min).value),
@@ -178,7 +194,7 @@ export default function ManoeuvreParametersComponent({
               return;
             }
             setRotationCustom(false);
-            change('rotationDeg', Number(value));
+            changeRotation(Number(value));
           }}
         >
           {ROTATION_PRESETS.map(deg => (
@@ -196,7 +212,7 @@ export default function ManoeuvreParametersComponent({
           unit="°"
           step={5}
           limits={LIMITS.manoeuvreRotationDeg}
-          onChange={value => change('rotationDeg', value)}
+          onChange={changeRotation}
         />
       )}
 

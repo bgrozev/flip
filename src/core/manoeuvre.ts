@@ -40,19 +40,20 @@ const SPIRAL_MAX_SHRINK = 0.5;
  * rollout would leave the heading undefined or reversed, which is exactly
  * how the old model managed to spin an entire manoeuvre by 180 degrees.
  *
- * Long enough to exceed one sample of the finished track (see
- * TRACK_SAMPLES), so the last segment lies wholly inside it and carries the
- * final heading exactly. A pilot rolls out with something in hand anyway.
+ * Only a token length: the finished track's end segments are laid back onto
+ * the exact headings after resampling, so this no longer has to outrun the
+ * sample spacing. It used to be 40 ft, which put a floor under how shallow
+ * a quarter turn could be set up — an implementation detail leaking into
+ * the numbers a pilot is allowed to type.
  */
-const MIN_ROLLOUT_FT = 40;
+const MIN_ROLLOUT_FT = 2;
 
 /**
- * Straight flown on the entry heading before the turn begins (ft). Same
- * reason as the rollout at the other end: `reposition` reads the first
- * segment as the heading to build the pattern's final leg on, and it has to
- * be longer than one sample of the finished track for that read to be exact.
+ * Straight flown on the entry heading before the turn begins (ft). As with
+ * the rollout, a token length — the end segments are laid back onto the
+ * exact headings after resampling.
  */
-const ENTRY_STUB_FT = 40;
+const ENTRY_STUB_FT = 2;
 
 /** Arc sampling step (degrees of turn per point). */
 const ARC_STEP_DEG = 5;
@@ -166,16 +167,42 @@ function buildArc(
 }
 
 /**
+ * Two straight directions must be at least this far apart to be solved
+ * against each other.
+ *
+ * Nearly-parallel pairs are the sharp edge here. As the rotation approaches
+ * a half turn the entry heading becomes the reverse of the final one, and
+ * the solution for that pair runs away to infinity: at 180.5 degrees it
+ * asked for thirty miles of straight, and closer in it left the globe
+ * entirely and took the map renderer with it. A pair that shallow describes
+ * no turn worth drawing anyway.
+ */
+const MIN_PAIR_ANGLE_DEG = 5;
+
+/**
+ * Longest total straight worth drawing (ft). Depth and offset are each
+ * capped at 3000, so a real setup needs a fraction of this; anything beyond
+ * it is the arithmetic running away rather than a turn.
+ */
+const MAX_STRAIGHT_FT = 12000;
+
+/**
  * Choose which straights take up the slack.
  *
- * Two of them are enough to reach anywhere (any two non-parallel directions
- * span the plane), so this solves each candidate pair and keeps the valid
- * one with the least total straight — the shortest way to join the ends,
- * which is also the one that looks least contrived.
+ * Two of them are enough to reach anywhere (any two directions that are not
+ * parallel span the plane), so this solves each candidate pair and keeps
+ * the best valid one.
+ *
+ * "Best" is the LATEST pair — the one whose straights sit nearest the end
+ * of the turn — rather than the shortest. Slack belongs on the final
+ * approach, not partway round: a 450 with a lot of depth should read as a
+ * 450 followed by a long final, not as a quarter turn, a long straight and
+ * then the rest of the rotation. Length only breaks ties.
  */
 function solveStraights(residual: Vec, directions: Vec[]): { lengths: number[]; reaches: boolean } {
   const lengths = directions.map(() => 0);
-  let best: { lengths: number[]; total: number } | null = null;
+  const minDet = Math.sin(rad(MIN_PAIR_ANGLE_DEG));
+  let best: { lengths: number[]; i: number; j: number; total: number } | null = null;
 
   for (let i = 0; i < directions.length; i++) {
     for (let j = i + 1; j < directions.length; j++) {
@@ -183,7 +210,7 @@ function solveStraights(residual: Vec, directions: Vec[]): { lengths: number[]; 
       const v = directions[j];
       const det = u.x * v.y - u.y * v.x;
 
-      if (Math.abs(det) < 1e-9) {
+      if (Math.abs(det) < minDet) {
         continue;
       }
 
@@ -196,12 +223,23 @@ function solveStraights(residual: Vec, directions: Vec[]): { lengths: number[]; 
 
       const total = lu + lv;
 
-      if (!best || total < best.total) {
+      if (total > MAX_STRAIGHT_FT) {
+        continue;
+      }
+
+      // Later beats shorter; among equals, shorter wins.
+      const beatsBest =
+        !best ||
+        j > best.j ||
+        (j === best.j && i > best.i) ||
+        (j === best.j && i === best.i && total < best.total);
+
+      if (beatsBest) {
         const candidate = directions.map(() => 0);
 
         candidate[i] = lu;
         candidate[j] = lv;
-        best = { lengths: candidate, total };
+        best = { lengths: candidate, i, j, total };
       }
     }
   }
@@ -513,6 +551,20 @@ export function createManoeuvrePath(params: ManoeuvreParams): FlightPath {
   // segments it is given, so this is what makes the drift over the turn a
   // property of the altitude and the duration alone.
   const track = resample(manoeuvreTrack(params), TRACK_SAMPLES);
+  const geometry = solveManoeuvre(params);
+
+  // Lay the two end segments back onto the exact entry and final headings.
+  // `reposition` reads them as the headings to build the pattern's final leg
+  // on and to align the whole path with the target, so they have to be
+  // exact — and resampling otherwise cuts the corner off a short stub.
+  // Position-only: altitude and time come from the point's index, so this
+  // cannot disturb the drift invariant below.
+  if (track.length > 3) {
+    const last = track.length - 1;
+
+    track[1] = add(track[0], scale(dir(geometry.entryHeadingRelDeg), dist(track[0], track[1])));
+    track[last - 1] = sub(track[last], scale(dir(0), dist(track[last - 1], track[last])));
+  }
   // The local origin is arbitrary — `reposition` re-anchors the whole path
   // on the target — but it must not be a pole or the antimeridian.
   const origin = turf.point([0.1, -0.1]) as FlightPoint;

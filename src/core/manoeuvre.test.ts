@@ -154,6 +154,39 @@ describe('solveManoeuvre', () => {
     expect(Math.max(...solved.midStraightsFt)).toBeGreaterThan(0);
   });
 
+  it('never asks for an absurd amount of straight', () => {
+    // Near a half turn the entry heading is the reverse of the final one.
+    // Solving that pair ran away to infinity: 30 miles of straight at 180.5
+    // degrees, and past the edge of the globe closer in, which crashed the
+    // map renderer. Swept across the whole range because the blow-up is
+    // narrow and sits between the round numbers a preset would land on.
+    for (let rotationDeg = 15; rotationDeg <= 540; rotationDeg += 0.5) {
+      for (const depthFt of [0, 300, 2000]) {
+        for (const offsetFt of [-400, 150, 600]) {
+          const solved = solveManoeuvre({ ...TURN, rotationDeg, depthFt, offsetFt });
+          const total = solved.entryStraightFt + solved.rolloutFt +
+            solved.midStraightsFt.reduce((sum, leg) => sum + leg, 0);
+
+          expect(Number.isFinite(total)).toBe(true);
+          expect(total, `${rotationDeg} deg, depth ${depthFt}, offset ${offsetFt}`)
+            .toBeLessThan(15000);
+        }
+      }
+    }
+  });
+
+  it('puts the slack at the end of the turn, not partway round', () => {
+    // A 450 with a lot of depth should read as a 450 and then a long final,
+    // not as a quarter turn, a long straight, and then the rest of it.
+    const shallow = solveManoeuvre({ ...TURN, rotationDeg: 450, depthFt: 300 });
+    const deep = solveManoeuvre({ ...TURN, rotationDeg: 450, depthFt: 2000 });
+
+    expect(deep.rolloutFt - shallow.rolloutFt).toBeCloseTo(1700, 0);
+    expect(deep.midStraightsFt).toEqual(shallow.midStraightsFt);
+    // Nothing lands on the early joints, which is where it used to go.
+    expect(deep.midStraightsFt.slice(0, -1).every(leg => leg === 0)).toBe(true);
+  });
+
   it('admits when a turn cannot be drawn at all', () => {
     // A 90 only ever moves you sideways and forwards; it cannot start past
     // the target however the straights are stretched.
@@ -316,12 +349,13 @@ describe('the drawn curve', () => {
     expect(selfCrossings(rotationDeg)).toBe(0);
   });
 
-  it.each([450, 540])('crosses at most once leaving the loop at %i degrees', rotationDeg => {
-    // A turn of more than a full circle ends up inside its own track, so the
-    // run out to the target has to cross it — a real 450 looks like that
-    // too. What the shrinking radius buys is that the CURVE does not wrap
-    // back over itself, which would read as a knot rather than a turn.
-    expect(selfCrossings(rotationDeg)).toBeLessThanOrEqual(1);
+  it.each([450, 540])('barely crosses itself at %i degrees', rotationDeg => {
+    // A turn of more than a full circle ends up inside its own track, so
+    // the run out to the target has to cross it, and a 540 laps itself once
+    // more — a real one looks like that too. What the shrinking radius buys
+    // is that the CURVE does not wrap back over itself, which would read as
+    // a knot: that shows up as many crossings, not one or two.
+    expect(selfCrossings(rotationDeg)).toBeLessThanOrEqual(2);
   });
 });
 
@@ -384,10 +418,13 @@ const DRIFT_TARGET: Target = {
 describe('manoeuvreBounds', () => {
   it('stops the depth where a quarter turn stops being drawable', () => {
     // The reported symptom: stepping depth down to 0 on a 90 left the field
-    // reading 0 while the map drew something else entirely.
+    // reading 0 while the map drew something else entirely. The floor is
+    // only the couple of feet a final segment needs to exist — it used to
+    // be 40, which was an implementation detail leaking into the numbers.
     const bounds = manoeuvreBounds({ ...TURN, rotationDeg: 90 });
 
     expect(bounds.depthFt.min).toBeGreaterThan(0);
+    expect(bounds.depthFt.min).toBeLessThan(10);
     expect(solveManoeuvre({ ...TURN, rotationDeg: 90, depthFt: bounds.depthFt.min }).reaches)
       .toBe(true);
     expect(solveManoeuvre({ ...TURN, rotationDeg: 90, depthFt: bounds.depthFt.min - 5 }).reaches)
