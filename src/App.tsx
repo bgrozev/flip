@@ -60,7 +60,7 @@ import {
   WindSummary,
   WindsComponent
 } from './components';
-import { CourseEditTarget, TargetEditTarget } from './map/layers';
+import { CourseEditTarget, ManoeuvreEditTarget, TargetEditTarget } from './map/layers';
 import {
   AppStateProvider,
   DEFAULT_TARGET,
@@ -75,7 +75,7 @@ import {
   usePresets,
   useWinds
 } from './hooks';
-import { Course, LatLng, PanelId, PatternParams, Target, WindSummaryData } from './types';
+import { Course, FlightPath, LatLng, PanelId, PatternParams, Target, WindSummaryData } from './types';
 import { destinationPoint, hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
 import {
   exitForFixedEnd,
@@ -87,6 +87,8 @@ import { COURSES } from './core/courses';
 import { dropzoneForPlaceId, placeNameFromId } from './core/places';
 import { DROPZONES } from './util/dropzones';
 import { flipPatternSides, makePatternByType, withFullPattern } from './core/pattern';
+import { describeManoeuvrePath, placeInitiation } from './core/manoeuvre';
+import { DEFAULT_MANOEUVRE_PARAMS } from './core/model';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
 import { visibleShortcuts } from './core/keymap';
@@ -433,6 +435,41 @@ function DashboardContent() {
     interpolateWind: modeSettings.interpolateWind,
     altitudeUnit: modeSettings.units.altitude
   });
+
+  /**
+   * The initiation handle. Dragging it is meant to be the primary way to
+   * set a turn up, so it is live whenever a parametric turn is being flown
+   * — no edit mode, the way the target handle works. A recorded track has
+   * no depth and offset to write back to, so it gets no handle.
+   */
+  const manoeuvreEditTarget: ManoeuvreEditTarget | undefined = useMemo(() => {
+    if (isFlocking || !hasFeature(mode, 'manoeuvre') || manoeuvreConfig.type !== 'parameters') {
+      return undefined;
+    }
+
+    const ofManoeuvre = (path: FlightPath) =>
+      path.filter(point => point.properties.phase === 'manoeuvre');
+    const drawn = describeManoeuvrePath(ofManoeuvre(paths.display));
+    const ideal = describeManoeuvrePath(ofManoeuvre(paths.ideal));
+
+    if (!drawn || !ideal) {
+      return undefined;
+    }
+
+    return {
+      target: (target ?? DEFAULT_TARGET).target,
+      initiation: drawn.initiation,
+      idealInitiation: ideal.initiation,
+      onMove: (point: LatLng) => {
+        const params = manoeuvreConfig.params ?? DEFAULT_MANOEUVRE_PARAMS;
+
+        setManoeuvreConfig({
+          ...manoeuvreConfig,
+          params: { ...params, ...placeInitiation(point, target ?? DEFAULT_TARGET, params) }
+        });
+      }
+    };
+  }, [isFlocking, mode, manoeuvreConfig, paths.display, paths.ideal, target, setManoeuvreConfig]);
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
@@ -985,6 +1022,7 @@ function DashboardContent() {
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}
+      manoeuvreEditTarget={manoeuvreEditTarget}
       observedStations={forecastTime === null ? stations : []}
       flocking={isFlocking ? {
         ideal: flocking.ideal,

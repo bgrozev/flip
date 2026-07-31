@@ -9,6 +9,8 @@ import {
   FlightPathsLayer,
   FlockingLayer,
   FlockingLayerProps,
+  ManoeuvreEditLayer,
+  ManoeuvreEditTarget,
   ManoeuvreHintLayer,
   StationsLayer,
   TargetEditLayer,
@@ -49,6 +51,8 @@ interface MapComponentProps {
   courses?: Course[];
   courseEditTarget?: CourseEditTarget;
   targetEditTarget?: TargetEditTarget;
+  /** Drag handle for the turn's initiation point (parametric turns only). */
+  manoeuvreEditTarget?: ManoeuvreEditTarget;
   observedStations?: ObservedWindStation[];
   /** Flocking layer data (only provided in flocking mode). */
   flocking?: Omit<FlockingLayerProps, 'showPreWind' | 'showPoms' | 'showPomAltitudes'>;
@@ -92,6 +96,7 @@ function MapComponent({
   courses = [],
   courseEditTarget,
   targetEditTarget,
+  manoeuvreEditTarget,
   observedStations = [],
   flocking,
   layers = MAP_LAYER_IDS,
@@ -146,6 +151,10 @@ function MapComponent({
           showTurnHint={settings.showManoeuvreHint}
           showFinalApproachLine={settings.showFinalApproachLine}
         />
+      )}
+
+      {has('manoeuvreEdit') && manoeuvreEditTarget && (
+        <ManoeuvreEditLayer edit={manoeuvreEditTarget} />
       )}
 
       {has('courses') && <CourseLayer courses={courses} />}

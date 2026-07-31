@@ -39,7 +39,7 @@ const LABEL_STYLE: React.CSSProperties = {
   background: 'rgba(0, 0, 0, 0.72)',
   padding: '1px 6px',
   borderRadius: '3px',
-  fontSize: '12px',
+  fontSize: '14px',
   fontWeight: 'bold',
   color: PATH_COLORS.manoeuvre,
   display: 'inline-block',

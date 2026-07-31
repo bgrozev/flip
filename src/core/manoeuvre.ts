@@ -1,8 +1,8 @@
 import * as turf from '@turf/turf';
-import { FlightPath, FlightPoint, LatLng, ManoeuvreParams } from '../types';
+import { FlightPath, FlightPoint, LatLng, ManoeuvreParams, Target } from '../types';
 import { cumulativeTurnDeg } from './pathStats';
 import { normalizeBearing } from './geometry';
-import { LIMITS, NumericLimits } from './validation';
+import { LIMITS, NumericLimits, clampNumber } from './validation';
 
 /**
  * The drawn turn is an ILLUSTRATION, not a flight model.
@@ -643,6 +643,51 @@ export function describeManoeuvrePath(path: FlightPath): ManoeuvreDescription | 
     rotationDeg: turns[last],
     spanFt: turf.distance(flown[0], flown[last], { units: 'feet' }),
     spanBearingDeg: normalizeBearing(turf.bearing(flown[last], flown[0]))
+  };
+}
+
+/**
+ * Resolve a dragged initiation point into the numbers that describe it.
+ *
+ * The inverse of what `solveManoeuvre` consumes: the point is projected
+ * onto the final-approach axis to give the depth (how far back) and the
+ * offset (how far to the side, on the side the turn happens). The result is
+ * clamped to what can actually be drawn, so a drag can never leave the
+ * fields holding a setup the map has to disagree with — the same rule the
+ * number fields enforce, applied to the other way of entering it.
+ *
+ * `point` must be the wind-free position: the caller drags a handle sitting
+ * on the drifted path and has to take the drift out first.
+ */
+export function placeInitiation(
+  point: LatLng,
+  target: Target,
+  params: ManoeuvreParams
+): { depthFt: number; offsetFt: number } {
+  const sign = params.turnDirection === 'right' ? 1 : -1;
+  const from = turf.point([target.target.lng, target.target.lat]);
+  const to = turf.point([point.lng, point.lat]);
+  const distanceFt = turf.distance(from, to, { units: 'feet' });
+  const relative = rad(turf.bearing(from, to) - target.finalHeading);
+  // Along the final heading, positive ahead of the target; the initiation
+  // is behind it, so depth is the negative of that.
+  const depthFt = -distanceFt * Math.cos(relative);
+  // Across it, positive to the right of the final heading; the offset is
+  // measured on the side the turn happens.
+  const offsetFt = sign * distanceFt * Math.sin(relative);
+
+  // One axis at a time, each starting from a setup already known to work:
+  // the offset against the turn as it stands, then the depth against the
+  // offset just settled. Clamping both against the dragged point instead
+  // leaves a drag that is out of bounds in BOTH still out of bounds, since
+  // neither axis alone has a feasible range to be clamped into.
+  const offsetBounds = manoeuvreBounds({ ...params, offsetFt });
+  const settledOffset = clampNumber(offsetFt, offsetBounds.offsetFt.min, offsetBounds.offsetFt.max);
+  const depthBounds = manoeuvreBounds({ ...params, offsetFt: settledOffset, depthFt });
+
+  return {
+    depthFt: clampNumber(depthFt, depthBounds.depthFt.min, depthBounds.depthFt.max),
+    offsetFt: settledOffset
   };
 }
 

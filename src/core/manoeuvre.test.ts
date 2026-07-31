@@ -6,10 +6,12 @@ import {
   describeManoeuvreForDisplay,
   describeManoeuvrePath,
   manoeuvreBounds,
+  placeInitiation,
   solveManoeuvre
 } from './manoeuvre';
-import { FlightPath, FlightPoint, ManoeuvreParams, Target } from '../types';
-import { addWind, reposition } from './geometry';
+import { FlightPath, FlightPoint, LatLng, ManoeuvreParams, Target } from '../types';
+import { addWind, destinationPoint, reposition } from './geometry';
+import { metersToFeet } from './units';
 import { createWindProfile, createWindRow } from './wind';
 
 // Helper to create a turf point with properties
@@ -514,6 +516,76 @@ describe('describeManoeuvrePath', () => {
   it('returns null for a path too short to have a direction', () => {
     expect(describeManoeuvrePath([])).toBeNull();
     expect(describeManoeuvrePath([createPoint(0, 0)])).toBeNull();
+  });
+});
+
+describe('placeInitiation', () => {
+  const AT: Target = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
+
+  /** Where the numbers say the initiation is, as a coordinate. */
+  const initiationOf = (params: ManoeuvreParams): LatLng =>
+    describeManoeuvrePath(reposition(createManoeuvrePath(params), [], AT, false))!.initiation;
+
+  it('round-trips: dropping the handle where it already is changes nothing', () => {
+    for (const rotationDeg of [90, 135, 270, 450]) {
+      for (const turnDirection of ['left', 'right'] as const) {
+        const params = { ...TURN, rotationDeg, turnDirection, depthFt: 420, offsetFt: 260 };
+        const placed = placeInitiation(initiationOf(params), AT, params);
+
+        expect(placed.depthFt, `${rotationDeg} ${turnDirection} depth`).toBeCloseTo(420, 0);
+        expect(placed.offsetFt, `${rotationDeg} ${turnDirection} offset`).toBeCloseTo(260, 0);
+      }
+    }
+  });
+
+  it('reads a drag straight back from the map', () => {
+    const params = { ...TURN, rotationDeg: 270 };
+    // 800 ft behind the target and 300 to the left, which is the side a
+    // left turn happens on.
+    const dragged = destinationPoint(
+      destinationPoint(AT.target, AT.finalHeading + 180, 800 / metersToFeet),
+      AT.finalHeading - 90,
+      300 / metersToFeet
+    );
+    const placed = placeInitiation(dragged, AT, params);
+
+    expect(placed.depthFt).toBeCloseTo(800, 0);
+    expect(placed.offsetFt).toBeCloseTo(300, 0);
+  });
+
+  it('mirrors with the turn direction', () => {
+    const dragged = destinationPoint(
+      destinationPoint(AT.target, AT.finalHeading + 180, 800 / metersToFeet),
+      AT.finalHeading - 90,
+      300 / metersToFeet
+    );
+
+    expect(placeInitiation(dragged, AT, { ...TURN, turnDirection: 'left' }).offsetFt)
+      .toBeCloseTo(-placeInitiation(dragged, AT, { ...TURN, turnDirection: 'right' }).offsetFt, 0);
+  });
+
+  it('never places a turn that cannot be drawn', () => {
+    // Dragging is the primary way to set the turn up, so it has to obey the
+    // same limits the fields do — otherwise the drag reintroduces exactly
+    // the mismatch the bounds were added to remove.
+    for (const rotationDeg of [90, 135, 270]) {
+      for (const backFt of [-1500, -200, 0, 600, 2500]) {
+        for (const sideFt of [-900, -100, 0, 400, 1800]) {
+          const params = { ...TURN, rotationDeg };
+          const dragged = destinationPoint(
+            destinationPoint(AT.target, AT.finalHeading + 180, backFt / metersToFeet),
+            AT.finalHeading - 90,
+            sideFt / metersToFeet
+          );
+          const placed = placeInitiation(dragged, AT, params);
+
+          expect(
+            solveManoeuvre({ ...params, ...placed }).reaches,
+            `${rotationDeg} deg, dragged ${backFt} back / ${sideFt} across`
+          ).toBe(true);
+        }
+      }
+    }
   });
 });
 

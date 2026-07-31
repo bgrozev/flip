@@ -207,7 +207,8 @@ export const MAP_LAYER_IDS = [
   'targetEdit',
   'courseEdit',
   'flocking',
-  'manoeuvreHint'
+  'manoeuvreHint',
+  'manoeuvreEdit'
 ] as const;
 export type MapLayerId = typeof MAP_LAYER_IDS[number];
 
