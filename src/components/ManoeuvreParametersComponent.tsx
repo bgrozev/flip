@@ -1,14 +1,17 @@
 import {
+  Alert,
   InputAdornment,
   Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip
+  Tooltip,
+  Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 
 import { DEFAULT_MANOEUVRE_PARAMS } from '../core/model';
+import { solveManoeuvre } from '../core/manoeuvre';
 import { useUnits } from '../hooks';
 import { ManoeuvreParams } from '../types';
 import { LIMITS, NumericLimits, clampNumber } from '../core/validation';
@@ -114,6 +117,7 @@ export default function ManoeuvreParametersComponent({
     max: Math.round(formatAltitude(limits.max).value)
   });
 
+  const { reaches } = solveManoeuvre(params);
   const isPreset = ROTATION_PRESETS.includes(params.rotationDeg);
   const [rotationCustom, setRotationCustom] = useState(!isPreset);
   const showCustomRotation = rotationCustom || !isPreset;
@@ -188,7 +192,7 @@ export default function ManoeuvreParametersComponent({
 
       <NumberField
         label="Offset"
-        title="How far to the side you start, across your final heading, on the side you turn from. For a 90, 270 or 450 this is the radius of the turn."
+        title="How far to the side you start, across your final heading, measured on the side you turn from. Negative starts you across the final approach line, which needs more than a quarter turn to fly."
         value={Math.round(formatAltitude(params.offsetFt).value)}
         unit={altitudeLabel}
         step={altitudeLabel === 'ft' ? 50 : 15}
@@ -205,6 +209,24 @@ export default function ManoeuvreParametersComponent({
         limits={LIMITS.manoeuvreDurationS}
         onChange={value => change('duration', value)}
       />
+
+      {!reaches && (
+        <Alert severity="warning" variant="outlined">
+          No turn of {params.rotationDeg}° can start there. A quarter turn
+          only ever takes you sideways and forwards, so it cannot begin past
+          the target or across your final approach line — turn further, or
+          move the start.
+        </Alert>
+      )}
+
+      {/* The numbers fix where the turn starts and how far it goes; they do
+          not describe its shape, and a real canopy turn is not a circle.
+          Saying so here is the difference between a drawing and a claim. */}
+      <Typography variant="caption" color="text.secondary">
+        The turn drawn on the map is an illustration. Depth and offset place
+        the point where you start it; the curve between there and the target
+        is drawn at a nominal radius, not the path your canopy will fly.
+      </Typography>
     </Stack>
   );
 }

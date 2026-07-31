@@ -4,23 +4,57 @@ import { cumulativeTurnDeg } from './pathStats';
 import { normalizeBearing } from './geometry';
 
 /**
- * Shortest rollout (ft) kept between the end of the turn and the landing
- * point. The final approach direction is derived downstream from the bearing
- * between the last two points (`setFinalHeading`), so that segment must
- * exist and must point along the final heading — a zero or negative rollout
- * would leave the heading undefined or reversed, which is exactly how the
- * old model managed to spin an entire manoeuvre by 180 degrees.
+ * The drawn turn is an ILLUSTRATION, not a flight model.
+ *
+ * The numbers a pilot enters fix two things exactly: where the turn starts
+ * (depth and offset, against the final approach axis) and how far round it
+ * goes. They do not describe the shape in between — a real canopy turn is
+ * not a circle, and its radius is a property of the canopy and the pilot,
+ * not of where they chose to set up. So the curve here is drawn at a
+ * NOMINAL radius and the slack is taken up by straight legs: a long depth
+ * stretches the final approach, a negative offset stretches the entry, and
+ * a turn that has to reach round further grows a straight leg partway.
+ *
+ * That is the whole reason the radius is no longer tied to the offset. It
+ * used to be (offset WAS the radius for a 90/270/450), which meant a wider
+ * setup silently redrew the turn as a wider one.
  */
-const MIN_ROLLOUT_FT = 1;
+const NOMINAL_RADIUS_FT = 200;
+
+/**
+ * Beyond three quarters, a constant radius makes the curve cross itself.
+ * Shrinking it as the turn progresses closes it into a spiral instead, so
+ * a 450 reads as a 450 rather than as a knot. Ramped in from 270 so there
+ * is no visible step as the rotation is dialled up.
+ */
+const SPIRAL_FROM_DEG = 270;
+const SPIRAL_RAMP_DEG = 180;
+const SPIRAL_MAX_SHRINK = 0.5;
+
+/**
+ * Shortest rollout (ft) kept between the end of the turn and the landing
+ * point. The final approach direction is derived downstream from the
+ * bearing between the last two points (`setFinalHeading`), so that segment
+ * must exist and must point along the final heading — a zero or negative
+ * rollout would leave the heading undefined or reversed, which is exactly
+ * how the old model managed to spin an entire manoeuvre by 180 degrees.
+ *
+ * Long enough to exceed one sample of the finished track (see
+ * TRACK_SAMPLES), so the last segment lies wholly inside it and carries the
+ * final heading exactly. A pilot rolls out with something in hand anyway.
+ */
+const MIN_ROLLOUT_FT = 40;
+
+/**
+ * Straight flown on the entry heading before the turn begins (ft). Same
+ * reason as the rollout at the other end: `reposition` reads the first
+ * segment as the heading to build the pattern's final leg on, and it has to
+ * be longer than one sample of the finished track for that read to be exact.
+ */
+const ENTRY_STUB_FT = 40;
 
 /** Arc sampling step (degrees of turn per point). */
 const ARC_STEP_DEG = 5;
-
-/** Straight stub flown on the entry heading before the arc begins (ft). */
-const ENTRY_STUB_FT = 1;
-
-/** Below this the turn is treated as straight rather than an arc. */
-const MIN_RADIUS_FT = 0.5;
 
 interface Vec {
   /** Feet east of the local origin. */
@@ -36,123 +70,284 @@ function dir(bearingDeg: number): Vec {
   return { x: Math.sin(rad(bearingDeg)), y: Math.cos(rad(bearingDeg)) };
 }
 
+const add = (a: Vec, b: Vec): Vec => ({ x: a.x + b.x, y: a.y + b.y });
+const sub = (a: Vec, b: Vec): Vec => ({ x: a.x - b.x, y: a.y - b.y });
+const scale = (v: Vec, k: number): Vec => ({ x: v.x * k, y: v.y * k });
+
+/** Radius at a given point in the sweep, shrinking for big rotations. */
+function radiusAt(sweptDeg: number, rotationDeg: number, baseFt: number): number {
+  const ramp = Math.min(
+    Math.max((rotationDeg - SPIRAL_FROM_DEG) / SPIRAL_RAMP_DEG, 0),
+    1
+  );
+  const shrink = ramp * SPIRAL_MAX_SHRINK;
+
+  return baseFt * (1 - (shrink * sweptDeg) / rotationDeg);
+}
+
 /**
- * The turn's solved geometry, in a local frame whose final heading points
- * north. Exported because both the panel and the map hint want to say what
- * the numbers actually produce.
+ * Where the curve may grow a straight leg: at the start (on the entry
+ * heading), wherever the heading passes a right angle to the final one, and
+ * at the end (on the final heading).
+ *
+ * The right-angle joints are what let any setup be drawn. Their directions
+ * are the four axes of the final-approach frame, so between them they can
+ * absorb a displacement in any direction — the owner's "a 270 with negative
+ * depth is a 90, then a long straight, then a 180".
  */
+interface Joint {
+  /** Index into the arc's own point list. */
+  index: number;
+  /** Heading flown there, relative to the final heading. */
+  headingDeg: number;
+}
+
+interface ArcShape {
+  /** Points relative to the start of the arc, in flight order. */
+  points: Vec[];
+  joints: Joint[];
+  /** Net displacement from the first arc point to the last. */
+  displacement: Vec;
+}
+
+/**
+ * The curved part, as local offsets from wherever it starts. Sampled rather
+ * than solved: the radius varies along a spiral, so there is no closed form
+ * worth having, and each step is an exact constant-radius arc anyway.
+ */
+function buildArc(
+  rotationDeg: number,
+  sign: number,
+  entryHeadingDeg: number,
+  baseRadiusFt: number
+): ArcShape {
+  // Sweeps to stop at: the regular sampling, plus every right-angle joint,
+  // so joints are exact points rather than something near one.
+  const sweeps = new Set<number>([0, rotationDeg]);
+
+  for (let s = ARC_STEP_DEG; s < rotationDeg; s += ARC_STEP_DEG) {
+    sweeps.add(s);
+  }
+  // Heading is a right angle to final at sweeps rotation - 90k.
+  for (let s = rotationDeg - 90; s > 0; s -= 90) {
+    sweeps.add(s);
+  }
+
+  const ordered = [...sweeps].sort((a, b) => a - b);
+  const points: Vec[] = [{ x: 0, y: 0 }];
+  const joints: Joint[] = [];
+  let position: Vec = { x: 0, y: 0 };
+
+  for (let i = 1; i < ordered.length; i++) {
+    const from = ordered[i - 1];
+    const to = ordered[i];
+    const radius = radiusAt((from + to) / 2, rotationDeg, baseRadiusFt);
+    const headingFrom = entryHeadingDeg + sign * from;
+    const headingTo = entryHeadingDeg + sign * to;
+    // Exact circular step: the chord between two points one radius from the
+    // same centre, which is where the turn's centre sits at this radius.
+    const step = scale(
+      sub(dir(headingFrom + 90 * sign), dir(headingTo + 90 * sign)),
+      radius
+    );
+
+    position = add(position, step);
+    points.push(position);
+
+    const sweptToRightAngle = (rotationDeg - to) % 90 === 0 && to < rotationDeg;
+
+    if (sweptToRightAngle) {
+      joints.push({ index: points.length - 1, headingDeg: headingTo });
+    }
+  }
+
+  return { points, joints, displacement: position };
+}
+
+/**
+ * Choose which straights take up the slack.
+ *
+ * Two of them are enough to reach anywhere (any two non-parallel directions
+ * span the plane), so this solves each candidate pair and keeps the valid
+ * one with the least total straight — the shortest way to join the ends,
+ * which is also the one that looks least contrived.
+ */
+function solveStraights(residual: Vec, directions: Vec[]): { lengths: number[]; reaches: boolean } {
+  const lengths = directions.map(() => 0);
+  let best: { lengths: number[]; total: number } | null = null;
+
+  for (let i = 0; i < directions.length; i++) {
+    for (let j = i + 1; j < directions.length; j++) {
+      const u = directions[i];
+      const v = directions[j];
+      const det = u.x * v.y - u.y * v.x;
+
+      if (Math.abs(det) < 1e-9) {
+        continue;
+      }
+
+      const lu = (residual.x * v.y - residual.y * v.x) / det;
+      const lv = (u.x * residual.y - u.y * residual.x) / det;
+
+      if (lu < 0 || lv < 0) {
+        continue;
+      }
+
+      const total = lu + lv;
+
+      if (!best || total < best.total) {
+        const candidate = directions.map(() => 0);
+
+        candidate[i] = lu;
+        candidate[j] = lv;
+        best = { lengths: candidate, total };
+      }
+    }
+  }
+
+  return best ? { lengths: best.lengths, reaches: true } : { lengths, reaches: false };
+}
+
+/** The illustrated turn's geometry, in the final heading's frame. */
 export interface ManoeuvreGeometry {
   /**
-   * Turn radius (ft). For a 90/270/450 this equals the offset exactly; for
-   * other rotations it is the radius that both starts at the offset and
-   * arrives on the final line.
-   */
-  radiusFt: number;
-  /** Straight rollout from the end of the turn to the landing point (ft). */
-  rolloutFt: number;
-  /**
    * Heading at initiation, relative to the final heading (deg, signed,
-   * positive = to the right of final). A right 270 entered at final-270.
+   * positive = to the right of final). A right 270 enters at final - 270.
    */
   entryHeadingRelDeg: number;
+  /** Nominal radius the curve is drawn at (ft). */
+  radiusFt: number;
+  /** Straight flown before the turn begins (ft). */
+  entryStraightFt: number;
+  /** Straight flown from the end of the turn to the landing point (ft). */
+  rolloutFt: number;
+  /** Straight legs inserted partway round the turn (ft), if any. */
+  midStraightsFt: number[];
   /**
-   * The depth actually flown (ft). Equals the requested depth unless it was
-   * too short to leave a rollout, in which case the turn is backed up.
+   * Whether the drawn turn reaches the initiation point the numbers ask
+   * for. A 90 cannot start past the target, however the legs are stretched.
    */
-  depthFt: number;
+  reaches: boolean;
   /** +1 for a right (clockwise) turn, -1 for a left one. */
   sign: number;
 }
 
-/**
- * Solve the turn: entry heading, radius and rollout from the parameters.
- *
- * Working frame: the landing point is the origin, the final heading points
- * north, +x is to the right of it. The initiation point sits `depth` behind
- * and `offset` to the side the turn happens on; the turn is a circular arc
- * of `rotation` degrees that ends pointing north, followed by a straight
- * rollout to the origin. Two unknowns (radius, rollout), two equations (the
- * arc has to end on the final line, and the rollout has to reach the
- * landing point) — so it solves in closed form.
- */
-export function solveManoeuvre(params: ManoeuvreParams): ManoeuvreGeometry {
+/** Solve the straights for one candidate radius. */
+function solveAtRadius(params: ManoeuvreParams, radiusFt: number): ManoeuvreGeometry {
   const sign = params.turnDirection === 'right' ? 1 : -1;
-  const rotation = params.rotationDeg;
-  // Right turns increase heading, so entry = final - rotation; left is the
-  // mirror. Final is north (0) in this frame.
-  const entryHeadingRelDeg = -sign * rotation;
-  // Bearing from the initiation point to the centre of the turn: 90 degrees
-  // to the side you turn towards.
-  const phi = entryHeadingRelDeg + 90 * sign;
-  const denom = sign - Math.sin(rad(phi));
-  const radiusFt =
-    Math.abs(denom) < 1e-9 ? 0 : (sign * params.offsetFt) / denom;
+  // Right turns increase heading on the way round, so they start to the
+  // left of final by the rotation; left turns are the mirror. Final is
+  // north (0) in this frame.
+  const entryHeadingRelDeg = -sign * params.rotationDeg;
+  const arc = buildArc(params.rotationDeg, sign, entryHeadingRelDeg, radiusFt);
+  const entryDir = dir(entryHeadingRelDeg);
+  const finalDir = dir(0);
 
-  // The arc alone carries you this far back from the landing point; anything
-  // beyond it is rollout. Backing the turn up keeps a usable final segment
-  // when the requested depth is too short (or negative) to leave one.
-  const arcDepthFt = radiusFt * Math.cos(rad(phi));
-  const depthFt = Math.max(params.depthFt, arcDepthFt + MIN_ROLLOUT_FT);
+  // The initiation point sits `depth` back and `offset` to the side the
+  // turn happens on, so the curve has to cover exactly this.
+  const required: Vec = { x: -sign * params.offsetFt, y: params.depthFt };
+  // What is left once the curve itself and the two fixed stubs are spent.
+  const residual = sub(
+    sub(
+      sub(required, arc.displacement),
+      scale(entryDir, ENTRY_STUB_FT)
+    ),
+    scale(finalDir, MIN_ROLLOUT_FT)
+  );
+
+  const directions = [entryDir, ...arc.joints.map(j => dir(j.headingDeg)), finalDir];
+  const { lengths, reaches } = solveStraights(residual, directions);
 
   return {
-    radiusFt,
-    rolloutFt: depthFt - arcDepthFt,
     entryHeadingRelDeg,
-    depthFt,
+    radiusFt,
+    entryStraightFt: ENTRY_STUB_FT + lengths[0],
+    rolloutFt: MIN_ROLLOUT_FT + lengths[lengths.length - 1],
+    midStraightsFt: lengths.slice(1, -1),
+    reaches,
     sign
   };
 }
 
+/** Bisection steps used to find the largest radius that still fits. */
+const RADIUS_FIT_STEPS = 20;
+
+/**
+ * Solve the illustrated turn: which way it goes, how wide it is drawn, and
+ * how long each straight leg has to be for it to start where the numbers
+ * say it starts.
+ *
+ * The radius is the nominal one unless the setup is tighter than that — a
+ * quarter turn entered 150 ft to the side cannot be drawn 200 ft wide — in
+ * which case it is the widest turn that still fits. Tightening is the only
+ * thing that couples the drawn shape to the numbers, and only when the
+ * alternative is drawing nothing.
+ */
+export function solveManoeuvre(params: ManoeuvreParams): ManoeuvreGeometry {
+  const nominal = solveAtRadius(params, NOMINAL_RADIUS_FT);
+
+  if (nominal.reaches) {
+    return nominal;
+  }
+
+  // Bisect for the widest radius that fits. Below the floor there is no
+  // turn to draw at all, so the nominal is returned with `reaches` false
+  // and the caller can say so.
+  let low = 0;
+  let high = NOMINAL_RADIUS_FT;
+  let best: ManoeuvreGeometry | null = null;
+
+  for (let i = 0; i < RADIUS_FIT_STEPS; i++) {
+    const mid = (low + high) / 2;
+    const candidate = solveAtRadius(params, mid);
+
+    if (candidate.reaches) {
+      best = candidate;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  return best ?? nominal;
+}
+
 /**
  * The turn's ground track, in flight order (initiation first), as local
- * feet-east/feet-north offsets from the landing point at the origin.
+ * feet-east/feet-north offsets. The landing point ends up at the origin
+ * whenever the turn reaches (see `solveManoeuvre`).
  */
 function manoeuvreTrack(params: ManoeuvreParams): Vec[] {
-  const { radiusFt, rolloutFt, entryHeadingRelDeg, depthFt, sign } =
-    solveManoeuvre(params);
-  const entry: Vec = { x: sign * params.offsetFt, y: -depthFt };
+  const geometry = solveManoeuvre(params);
+  const sign = geometry.sign;
+  const entryHeadingRelDeg = geometry.entryHeadingRelDeg;
+  // Rebuilt at the radius the solve settled on, so the track and the
+  // straight lengths describe the same turn.
+  const arc = buildArc(params.rotationDeg, sign, entryHeadingRelDeg, geometry.radiusFt);
+  const jointAt = new Map(arc.joints.map((joint, i) => [joint.index, i]));
 
-  if (!Number.isFinite(radiusFt) || Math.abs(radiusFt) < MIN_RADIUS_FT) {
-    // Degenerate (a full 360, or an offset of nothing): fly the entry
-    // heading straight in. The final segment below still fixes the heading.
-    return [entry, { x: 0, y: -rolloutFt }, { x: 0, y: 0 }];
+  let cursor: Vec = { x: sign * params.offsetFt, y: -params.depthFt };
+  const track: Vec[] = [cursor];
+
+  cursor = add(cursor, scale(dir(entryHeadingRelDeg), geometry.entryStraightFt));
+  track.push(cursor);
+
+  for (let i = 1; i < arc.points.length; i++) {
+    cursor = add(cursor, sub(arc.points[i], arc.points[i - 1]));
+    track.push(cursor);
+
+    const joint = jointAt.get(i);
+
+    if (joint !== undefined && geometry.midStraightsFt[joint] > 0) {
+      cursor = add(cursor, scale(dir(arc.joints[joint].headingDeg), geometry.midStraightsFt[joint]));
+      track.push(cursor);
+    }
   }
 
-  const phi = entryHeadingRelDeg + 90 * sign;
-  const centre: Vec = {
-    x: entry.x + radiusFt * dir(phi).x,
-    y: entry.y + radiusFt * dir(phi).y
-  };
-  const steps = Math.max(2, Math.ceil(params.rotationDeg / ARC_STEP_DEG));
-  const arc: Vec[] = [];
+  cursor = add(cursor, scale(dir(0), geometry.rolloutFt));
+  track.push(cursor);
 
-  for (let i = 0; i <= steps; i++) {
-    // Heading sweeps from the entry heading round to the final heading; the
-    // point is always one radius from the centre, abeam the current heading.
-    // The last sample lands on the final line at (0, -rollout), which is
-    // where the rollout starts — so it is not added again below.
-    const swept = (params.rotationDeg * i) / steps;
-    const abeam = dir(entryHeadingRelDeg + sign * swept + 90 * sign);
-
-    arc.push({
-      x: centre.x - radiusFt * abeam.x,
-      y: centre.y - radiusFt * abeam.y
-    });
-  }
-
-  // A stub along the entry tangent, so the initiation heading read back from
-  // the first two points is exact rather than a chord's worth off. Chords
-  // sit half a sampling step from the tangent, and `reposition` builds the
-  // pattern's final leg on that heading, so the error would be visible.
-  const entryDir = dir(entryHeadingRelDeg);
-  const stubFt = Math.min(ENTRY_STUB_FT, dist(arc[0], arc[1]) / 4);
-  const entryTangent: Vec = {
-    x: entry.x + stubFt * entryDir.x,
-    y: entry.y + stubFt * entryDir.y
-  };
-
-  // Straight rollout from the end of the arc to the landing point.
-  return [arc[0], entryTangent, ...arc.slice(1), { x: 0, y: 0 }];
+  return track;
 }
 
 /** Planar distance between two local points, in feet. */
@@ -161,15 +356,21 @@ function dist(a: Vec, b: Vec): number {
 }
 
 /**
- * Build a manoeuvre path from its parameters.
+ * How many points the finished turn is sampled at.
  *
- * Returned in the app's path order: index 0 is the landing point (altitude
- * 0) and the last point is the initiation (the highest, earliest point), so
- * time decreases and altitude increases with index. Altitude and time are
- * distributed along the ground track, i.e. at constant ground speed.
+ * They are spaced evenly in TIME rather than following the corners of the
+ * construction, which is what makes the wind drift over the turn identical
+ * whatever its shape (see `createManoeuvrePath`). High enough that the
+ * straight/curve joins are not visibly cut: the longest turn a pilot can
+ * describe is a few thousand feet, so the spacing stays inside a few feet.
  */
-export function createManoeuvrePath(params: ManoeuvreParams): FlightPath {
-  const track = manoeuvreTrack(params);
+const TRACK_SAMPLES = 240;
+
+/**
+ * Resample a track at evenly spaced distances, keeping both ends exactly.
+ * Ground speed is constant, so even in distance is even in time.
+ */
+function resample(track: Vec[], samples: number): Vec[] {
   const cumulative: number[] = [0];
 
   for (let i = 1; i < track.length; i++) {
@@ -177,13 +378,59 @@ export function createManoeuvrePath(params: ManoeuvreParams): FlightPath {
   }
 
   const total = cumulative[cumulative.length - 1];
+
+  if (total <= 0) {
+    return track;
+  }
+
+  const out: Vec[] = [];
+  let segment = 1;
+
+  for (let i = 0; i <= samples; i++) {
+    const wanted = (total * i) / samples;
+
+    while (segment < track.length - 1 && cumulative[segment] < wanted) {
+      segment++;
+    }
+
+    const spanFt = cumulative[segment] - cumulative[segment - 1];
+    const t = spanFt > 0 ? (wanted - cumulative[segment - 1]) / spanFt : 0;
+
+    out.push({
+      x: track[segment - 1].x + (track[segment].x - track[segment - 1].x) * t,
+      y: track[segment - 1].y + (track[segment].y - track[segment - 1].y) * t
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Build a manoeuvre path from its parameters.
+ *
+ * Returned in the app's path order: index 0 is the landing point (altitude
+ * 0) and the last point is the initiation (the highest, earliest point), so
+ * time decreases and altitude increases with index.
+ *
+ * Altitude and time are both spread along the GROUND TRACK, which makes
+ * altitude a linear function of time whatever shape the turn is. That is
+ * what keeps the wind drift over the turn independent of depth and offset:
+ * drift is the wind integrated over time, and the altitude-versus-time
+ * profile does not depend on how far the illustration wanders.
+ */
+export function createManoeuvrePath(params: ManoeuvreParams): FlightPath {
+  // Evenly spaced in time, so every shape of turn is sampled at the same
+  // altitudes at the same moments. `addWind` sums the wind over the
+  // segments it is given, so this is what makes the drift over the turn a
+  // property of the altitude and the duration alone.
+  const track = resample(manoeuvreTrack(params), TRACK_SAMPLES);
   // The local origin is arbitrary — `reposition` re-anchors the whole path
   // on the target — but it must not be a pole or the antimeridian.
   const origin = turf.point([0.1, -0.1]) as FlightPoint;
   const lastIndex = track.length - 1;
 
   const points = track.map((vec, i) => {
-    const fraction = total > 0 ? cumulative[i] / total : i / lastIndex;
+    const fraction = i / lastIndex;
     const distanceFt = Math.hypot(vec.x, vec.y);
     const bearing = (Math.atan2(vec.x, vec.y) * 180) / Math.PI;
     const point = (
@@ -195,8 +442,8 @@ export function createManoeuvrePath(params: ManoeuvreParams): FlightPath {
     point.properties = {
       time: params.duration * 1000 * fraction,
       alt: params.altitudeFt * (1 - fraction),
-      // Only the two ends are points of manoeuvre; the arc between them is
-      // sampling, not somewhere the pilot does anything.
+      // Only the two ends are points of manoeuvre; everything between them
+      // is sampling, not somewhere the pilot does anything.
       pom: i === 0 || i === lastIndex ? 1 : 0
     };
 

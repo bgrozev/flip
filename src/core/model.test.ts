@@ -582,9 +582,10 @@ describe('migrateManoeuvreParams', () => {
     expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, depthFt: -500 }).depthFt).toBe(-500);
   });
 
-  it('keeps the offset positive: a turn cannot start across its own final line', () => {
+  it('allows a zero or negative offset', () => {
+    expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetFt: 0 }).offsetFt).toBe(0);
     expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetFt: -500 }).offsetFt)
-      .toBe(LIMITS.manoeuvreOffsetFt.min);
+      .toBe(-500);
   });
 });
 

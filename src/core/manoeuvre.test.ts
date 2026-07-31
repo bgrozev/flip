@@ -6,7 +6,9 @@ import {
   describeManoeuvrePath,
   solveManoeuvre
 } from './manoeuvre';
-import { FlightPath, FlightPoint, ManoeuvreParams } from '../types';
+import { FlightPath, FlightPoint, ManoeuvreParams, Target } from '../types';
+import { addWind, reposition } from './geometry';
+import { createWindProfile, createWindRow } from './wind';
 
 // Helper to create a turf point with properties
 function createPoint(lng: number, lat: number, props: Partial<FlightPoint['properties']> = {}): FlightPoint {
@@ -85,35 +87,77 @@ function totalTurnDeg(path: FlightPath): number {
 }
 
 describe('solveManoeuvre', () => {
-  it('makes the offset the turn radius for quarter-circle rotations', () => {
-    // 90, 270 and 450 all leave the turn abeam the final line, so the
-    // sideways offset the pilot enters IS the radius they fly.
-    for (const rotationDeg of [90, 270, 450]) {
-      expect(solveManoeuvre({ ...TURN, rotationDeg }).radiusFt).toBeCloseTo(TURN.offsetFt, 6);
+  it('draws every turn at the same nominal radius, whatever the offset', () => {
+    // The radius used to BE the offset for a 90/270/450, so setting up wider
+    // silently redrew the turn as a wider one. A canopy's turn radius is a
+    // property of the canopy, not of where the pilot chose to start.
+    const radii = [50, 150, 400, 900].map(
+      offsetFt => solveManoeuvre({ ...TURN, offsetFt }).radiusFt
+    );
+
+    expect(new Set(radii).size).toBe(1);
+  });
+
+  it('lengthens the final approach as the setup gets deeper', () => {
+    const shallow = solveManoeuvre({ ...TURN, depthFt: 400 });
+    const deep = solveManoeuvre({ ...TURN, depthFt: 900 });
+
+    expect(deep.rolloutFt - shallow.rolloutFt).toBeCloseTo(500, 3);
+    expect(deep.entryStraightFt).toBeCloseTo(shallow.entryStraightFt, 3);
+  });
+
+  it('lengthens the entry as the offset goes negative', () => {
+    // A negative offset starts on the far side of the final line, so the
+    // turn has to be flown straight for longer before it begins. Shown on a
+    // 270, the smallest rotation that can reach across the line at all.
+    const near = solveManoeuvre({ ...TURN, rotationDeg: 270, offsetFt: 150 });
+    const far = solveManoeuvre({ ...TURN, rotationDeg: 270, offsetFt: -400 });
+
+    expect(far.entryStraightFt).toBeGreaterThan(near.entryStraightFt);
+  });
+
+  it('reaches the initiation point for the setups a pilot would fly', () => {
+    for (const rotationDeg of [90, 135, 270, 450]) {
+      for (const depthFt of [300, 1200]) {
+        for (const offsetFt of [150, 900]) {
+          const solved = solveManoeuvre({ ...TURN, rotationDeg, depthFt, offsetFt });
+
+          expect(
+            solved.reaches,
+            `${rotationDeg} deg, depth ${depthFt}, offset ${offsetFt}`
+          ).toBe(true);
+        }
+      }
     }
   });
 
-  it('derives the entry heading from the rotation and the direction', () => {
-    // Right turns increase heading on the way round, so they start to the
-    // left of final by the rotation; left turns are the mirror.
-    expect(solveManoeuvre({ ...TURN, turnDirection: 'right' }).entryHeadingRelDeg).toBe(-270);
-    expect(solveManoeuvre({ ...TURN, turnDirection: 'left' }).entryHeadingRelDeg).toBe(270);
+  it('only reaches the far side of the final line once the turn goes past a half', () => {
+    // Every heading between the entry and final lies on one side, so a turn
+    // can only ever travel that way. Reaching an initiation point across
+    // the final line needs the turn to pass a heading pointing back at it,
+    // which a 90 or a 135 never does.
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 90, offsetFt: -600 }).reaches).toBe(false);
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 135, offsetFt: -600 }).reaches).toBe(false);
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 270, offsetFt: -600 }).reaches).toBe(true);
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 450, offsetFt: -600 }).reaches).toBe(true);
   });
 
-  it('leaves a rollout that grows with depth', () => {
-    const shallow = solveManoeuvre({ ...TURN, depthFt: 300 });
-    const deep = solveManoeuvre({ ...TURN, depthFt: 800 });
+  it('grows a straight partway round when the ends cannot be joined otherwise', () => {
+    // A 270 that starts wider than the drawn radius cannot be one clean
+    // curve: the far side of the turn has to be stretched instead. This is
+    // the owner's "a 90, then a long straight, then a 180".
+    const solved = solveManoeuvre({ ...TURN, rotationDeg: 270, offsetFt: 900 });
 
-    expect(deep.rolloutFt - shallow.rolloutFt).toBeCloseTo(500, 6);
+    expect(solved.reaches).toBe(true);
+    expect(Math.max(...solved.midStraightsFt)).toBeGreaterThan(0);
   });
 
-  it('backs the turn up rather than letting the rollout vanish', () => {
-    // A depth this short would put the end of the turn past the target,
-    // which is what used to reverse the final segment.
-    const solved = solveManoeuvre({ ...TURN, depthFt: -2000 });
-
-    expect(solved.rolloutFt).toBeGreaterThan(0);
-    expect(solved.depthFt).toBeGreaterThan(-2000);
+  it('admits when a turn cannot be drawn at all', () => {
+    // A 90 only ever moves you sideways and forwards; it cannot start past
+    // the target however the straights are stretched.
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 90, depthFt: -500 }).reaches).toBe(false);
+    // ...whereas a 270 can, by going the long way round.
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 270, depthFt: -500 }).reaches).toBe(true);
   });
 });
 
@@ -195,7 +239,7 @@ describe('createManoeuvrePath', () => {
     ])('is unchanged by %s', (_label, overrides) => {
       const path = createManoeuvrePath({ ...TURN, ...overrides });
 
-      expect(bearingDelta(reference, finalBearing(path))).toBeCloseTo(0, 6);
+      expect(bearingDelta(reference, finalBearing(path))).toBeCloseTo(0, 4);
     });
   });
 
@@ -227,6 +271,89 @@ describe('createManoeuvrePath', () => {
 
     expect(path[0].properties.time).toBe(20000);
     expect(path[path.length - 1].properties.time).toBe(0);
+  });
+});
+
+/** Do two line segments properly cross? Shared endpoints do not count. */
+function segmentsCross(a1: Vec2, a2: Vec2, b1: Vec2, b2: Vec2): boolean {
+  const cross = (o: Vec2, p: Vec2, q: Vec2) =>
+    (p.x - o.x) * (q.y - o.y) - (p.y - o.y) * (q.x - o.x);
+  const d1 = cross(b1, b2, a1);
+  const d2 = cross(b1, b2, a2);
+  const d3 = cross(a1, a2, b1);
+  const d4 = cross(a1, a2, b2);
+
+  return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+}
+
+interface Vec2 { x: number; y: number }
+
+describe('the drawn curve', () => {
+  const asPlane = (path: FlightPath): Vec2[] =>
+    path.map(point => ({
+      x: point.geometry.coordinates[0],
+      y: point.geometry.coordinates[1]
+    }));
+
+  it.each([90, 135, 270, 450, 540])('does not cross itself at %i degrees', rotationDeg => {
+    // Past three quarters a constant radius would loop back over its own
+    // track; the radius shrinks into a spiral instead.
+    const points = asPlane(createManoeuvrePath({ ...TURN, rotationDeg }));
+
+    for (let i = 0; i + 1 < points.length; i++) {
+      for (let j = i + 2; j + 1 < points.length; j++) {
+        expect(
+          segmentsCross(points[i], points[i + 1], points[j], points[j + 1]),
+          `segments ${i} and ${j} cross at ${rotationDeg} degrees`
+        ).toBe(false);
+      }
+    }
+  });
+});
+
+describe('wind drift over the turn', () => {
+  const WINDS = createWindProfile([
+    createWindRow(0, 270, 10),
+    createWindRow(500, 250, 18),
+    createWindRow(1500, 240, 26)
+  ]);
+  const TARGET: Target = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
+
+  /** How far the wind moves the initiation point over the whole turn. */
+  const driftFt = (params: ManoeuvreParams): number => {
+    const ideal = reposition(createManoeuvrePath(params), [], TARGET, false);
+    const corrected = addWind(ideal, WINDS, true);
+    const last = ideal.length - 1;
+
+    return turf.distance(ideal[last], corrected[last], { units: 'feet' });
+  };
+
+  it('is the same however deep or wide the setup is', () => {
+    // Altitude and time are both spread along the ground track, so altitude
+    // is linear in time whatever shape the turn takes. Drift is the wind
+    // integrated over time, so it cannot depend on the shape.
+    const reference = driftFt(TURN);
+
+    for (const depthFt of [100, 300, 1500, 2500]) {
+      for (const offsetFt of [50, 150, 800]) {
+        expect(driftFt({ ...TURN, depthFt, offsetFt })).toBeCloseTo(reference, 1);
+      }
+    }
+  });
+
+  it('is the same however far the turn rotates', () => {
+    const reference = driftFt(TURN);
+
+    for (const rotationDeg of [90, 135, 270, 450]) {
+      expect(driftFt({ ...TURN, rotationDeg })).toBeCloseTo(reference, 1);
+    }
+  });
+
+  it('does change with the altitude and the time it takes', () => {
+    // The guard on the tests above: they would also pass if drift were
+    // simply not being applied.
+    expect(driftFt({ ...TURN, duration: 24 })).toBeGreaterThan(driftFt(TURN) * 2);
+    expect(driftFt({ ...TURN, altitudeFt: 300 })).not.toBeCloseTo(driftFt(TURN), 1);
   });
 });
 

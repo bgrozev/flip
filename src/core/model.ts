@@ -85,11 +85,12 @@ export const DEFAULT_PATTERN_PARAMS: PatternParams = {
   ]
 };
 
-// A left 270 — the everyday swoop turn — rolling out 300 ft short of the
-// target from a 150 ft radius.
+// A left 90. The initiation altitude is deliberately high for a 90 — it
+// makes the manoeuvre obvious on the map on a first run, rather than a
+// detail the user has to go looking for.
 export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
   turnDirection: 'left',
-  rotationDeg: 270,
+  rotationDeg: 90,
   altitudeFt: 900,
   depthFt: 300,
   offsetFt: 150,

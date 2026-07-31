@@ -22,11 +22,12 @@ export const LIMITS = {
    */
   manoeuvreDepthFt: { min: -3000, max: 3000 },
   /**
-   * How far to the side the initiation point sits (ft), on the side the turn
-   * happens. Must stay positive: a turn cannot start on the far side of the
-   * final line and still arrive on it (see core/manoeuvre).
+   * How far to the side the initiation point sits (ft), measured on the side
+   * the turn happens. Signed: a negative offset starts on the far side of
+   * the final line, which the illustration absorbs by flying straight for
+   * longer before it turns (see core/manoeuvre).
    */
-  manoeuvreOffsetFt: { min: 5, max: 3000 },
+  manoeuvreOffsetFt: { min: -3000, max: 3000 },
   /**
    * Degrees rotated onto final. Excludes 0 and 360, where the entry heading
    * equals the final heading and the turn has no radius to solve for.

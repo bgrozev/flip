@@ -415,7 +415,12 @@ function DashboardContent() {
     pattern: !isFlocking ? pattern ?? [] : [],
     target: target ?? DEFAULT_TARGET,
     winds: effectiveWinds,
-    correctPatternHeading: modeSettings.correctPatternHeading,
+    // Only recorded turns need it. It snaps the pattern's final leg to +/-90
+    // of the target heading, which exists to tolerate a track or a sample
+    // being a few degrees off; a parametric turn knows its entry heading
+    // exactly, and snapping a 135 would leave a 45-degree kink.
+    correctPatternHeading:
+      modeSettings.correctPatternHeading && manoeuvreConfig.type !== 'parameters',
     interpolateWind: modeSettings.interpolateWind,
     straightenLegsEnabled: modeSettings.straightenLegs
   });

@@ -104,10 +104,11 @@ describe('LIMITS', () => {
     expect(clampNumber(0, LIMITS.manoeuvreDepthFt.min, LIMITS.manoeuvreDepthFt.max)).toBe(0);
   });
 
-  it('keeps the manoeuvre offset positive', () => {
-    // The turn happens on the side the offset names, so a zero or negative
-    // one has no radius to fly (see core/manoeuvre).
-    expect(LIMITS.manoeuvreOffsetFt.min).toBeGreaterThan(0);
+  it('allows a negative manoeuvre offset', () => {
+    // A negative offset starts on the far side of the final line; the
+    // illustration absorbs it by flying straight for longer before the turn
+    // (see core/manoeuvre).
+    expect(LIMITS.manoeuvreOffsetFt.min).toBeLessThan(0);
   });
 });
 
