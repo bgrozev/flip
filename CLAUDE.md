@@ -101,6 +101,32 @@ control that writes it is behind the same gate. Toggle at the top of Settings; a
 chip in the toolbar while it is on. Adding an item is one line in
 `NERD_FEATURES` or `NERD_SETTING_KEYS`.
 
+**The manoeuvre is a turn onto final, described in the final heading's
+frame** — not relative to the target. The final heading is fixed by the
+target, so the parameters are what a turn is actually free to choose:
+`turnDirection` (which way you rotate), `rotationDeg` (90 / 135 / 270 /
+450 / custom), `depthFt` (how far back you start, along the final heading,
+positive away from the target) and `offsetFt` (how far to the side, on the
+side you turn FROM). The entry heading is derived, so odd rotations work
+and changing a sign moves a point instead of rotating the whole manoeuvre
+— which the previous offsetX/offsetY/`left` model did, because it folded
+the offset's sign into the final bearing. Measuring the offset on the turn
+side is what makes flipping left/right mirror the turn; the absolute
+convention is not merely unintuitive but unflyable, since a turn cannot
+start across its own final line and still arrive on it.
+
+`solveManoeuvre()` closes the geometry in closed form: two unknowns
+(radius, rollout), two constraints (the arc ends on the final line, the
+rollout reaches the landing point). For a 90/270/450 the radius IS the
+offset. The path is that arc plus a straight rollout, with a short straight
+stub at each end so the entry and final headings read back exactly —
+`reposition` builds the pattern's final leg on the entry heading, so a
+half-sample chord error there is visible. A short or negative depth backs
+the turn up rather than letting the rollout vanish. `describeManoeuvrePath`
+measures all of this back OFF a path, so recorded tracks and samples are
+described the same way, and `ManoeuvreHintLayer` draws it (final axis,
+entry arrow, rotation label; `showManoeuvreHint`).
+
 **Modes** (`src/modes/`) decide which of this is exposed — panels, map
 layers, coarse `features`, setting defaults. The three are *Standard
 Pattern*, *High Performance Landing* (adds manoeuvre + CP courses) and
@@ -222,7 +248,7 @@ user can force a mode-overridden setting back to the global default.
 |------|---------|
 | `core/geometry.ts` | `translate()`, `reposition()`, `addWind()`, `averageWind()`, `straightenLegs()`, `mirror()` |
 | `core/pattern.ts` | `makePatternByType()` — landing pattern from parameters |
-| `core/manoeuvre.ts` | `createManoeuvrePath()`, initiation-altitude scaling |
+| `core/manoeuvre.ts` | `solveManoeuvre()` + `createManoeuvrePath()` (the turn), `describeManoeuvrePath()` (measure one back), initiation-altitude scaling |
 | `core/wind.ts` | `WindProfile` data + pure helpers (`getWindAt`, vector interpolation, Beaufort, row provenance, `sampleWindBands` for the shared by-altitude summary, `forecastHourOffset`) |
 | `core/flocking.ts` | Flocking math: path, into-wind, drift vectors, FWC spot description, jumprun line helpers |
 | `core/flockingSolve.ts` | Analytic corridor solver: tiers + into-wind preference |

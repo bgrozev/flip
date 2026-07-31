@@ -1193,3 +1193,116 @@ used`, from the destructure in `duplicateCourseParams`) and a `no-shadow`
 warning in `courses.test.ts` were committed in the previous pass, because
 the check read only eslint's last line — which reports the *fixable*
 count, not the total. Read the "✖ N problems" line.
+
+## Session 2026-07-30 — the manoeuvre's parameters (`0328ddb`, `c5bd838`)
+
+Owner report, and it was right: "my description of left/right relative to
+the target is wrong. It should be relative to the final direction of
+flight." Worked example — a left-hand 270 approaching from the north always
+ends up facing west; a positive "back" should offset you west of your
+start, a negative one east, but you face west either way.
+
+Three separate defects were behind that, all in one small model:
+
+1. **`left` did not name the turn.** It named the side the target was on
+   (per its own tooltip). The local geometry it built for `left: true` was:
+   fly north, turn CLOCKWISE 90, fly east — a right-hand turn under a flag
+   the UI rendered as "Left".
+2. **The offsets ran along local axes**, not the final heading, so neither
+   number meant anything until you knew which way the manoeuvre had been
+   rotated afterwards.
+3. **The sign of `offsetXFt` was folded into the final bearing**
+   (`finalBearing = (finalBearing + 180) % 360`). `setFinalHeading` rotates
+   the path so the LAST SEGMENT matches the target heading, so flipping
+   that segment rotated the entire manoeuvre by 180 degrees. That is the
+   owner's bug exactly: a negative depth re-aimed the turn instead of
+   moving the rollout.
+
+Rotation was also hardcoded to 90 (the angle between the two legs), so a
+270 could only be approximated by choosing offsets, and the entry heading
+was always final ±90. Worth noting: that is what `correctPatternHeading`
+compensates for — it snaps the pattern's final leg to ±90 of the target
+heading, which was harmless when the manoeuvre could only ever be ±90.
+
+### The model now
+
+`turnDirection` + `rotationDeg` + `depthFt` + `offsetFt`, all in the frame
+of the final heading, with the entry heading derived (`final -/+ rotation`).
+Offered alternatives were: radius instead of offsets (fewer numbers, more
+physical, but "roll out 40 ft left of centre" stops being dialable);
+map-first dragging with the numbers as readouts; and preset chips. The
+owner picked the explicit one. They are not a fork — the stored model can
+carry either pair and derive the other.
+
+**Why the offset is signed against the turn rather than absolutely.** The
+first instinct is "+ = right of final", which reads well until you flip the
+direction: the shape does not mirror, it becomes *unflyable*. Given an
+entry heading that is not parallel to final, the initiation point has to be
+on the side from which flying forward reaches the final line. Measuring on
+the turn side makes that automatic, makes flipping a mirror, and makes
+every positive value valid — hence `LIMITS.manoeuvreOffsetFt.min > 0`.
+
+**Why an arc rather than the old two legs.** With rotation explicit the
+shape is solvable: two unknowns (radius, rollout), two constraints (the arc
+ends on the final line, the rollout reaches the landing point). Closed
+form, and for a 90/270/450 the radius falls out equal to the offset, which
+is a nice thing to be able to tell a canopy pilot.
+
+**Both ends carry a straight stub.** Chord bearings sit half a sampling
+step from the tangent, and `reposition` reads the manoeuvre's first segment
+as the heading to build the pattern's final leg on — so without an entry
+stub every parametric turn handed the pattern a heading 2.5 degrees out.
+The rollout is the same idea at the other end, and it must never reach
+zero: a zero-length final segment is how the old model managed to reverse a
+heading.
+
+### Two bugs the work surfaced
+
+- **Writing the tests first caught a duplicate point.** The arc's last
+  sample already IS the start of the rollout; pushing it again left a
+  zero-length final segment, i.e. no final heading at all. The monotonic
+  altitude assertion failed on it.
+- **A fresh setup flew no manoeuvre.** Retiring the `none` type made
+  `parameters` the default, but `DEFAULT_MANOEUVRE_CONFIG` carried no
+  `params`, and `computeManoeuvre` returns `[]` for that. The panel showed
+  the default numbers the whole time (it falls back for display), so only
+  the map showed it. Found in the browser, not by a test.
+
+### Tests
+
+The manoeuvre suite is now property-based rather than coordinate-based:
+rotation actually flown, entry heading, mirroring under a direction flip,
+and a table asserting the final approach direction is unchanged by depth
+sign, turn direction, rotation and offset — the regression pin for the 180
+flip.
+
+`pipeline.test.ts` was the interesting call. Its goldens took a manoeuvre
+from `createManoeuvrePath`, so the model change would have required
+regenerating 73 pinned coordinates — destroying the safety net at the exact
+moment it was there to help. Instead its 3-point manoeuvre is now literal
+data (the values the old parameters produced), so the pins carry over
+untouched. **A golden test should not take its input from the module the
+change is in.**
+
+Stored `offsetXFt`/`offsetYFt`/`left` are deliberately NOT migrated (owner:
+"I don't care about existing config — just replace it"), and there is no
+sound reading of a `left` that named the target's side anyway.
+
+### The map hint
+
+`ManoeuvreHintLayer` + pure `describeManoeuvrePath`: the final axis, an
+entry arrow and the rotation. It measures the PATH, not the parameters, so
+tracks and samples get described identically — the owner asked for the
+rotation on those too. Rotation comes from the pre-wind path while the
+geometry is anchored to the drawn one, because wind bends the ground track
+and a turn entered as 270 otherwise reads back "271". `showManoeuvreHint`
+(Map section, on by default) turns it off.
+
+### Open — raised, not fixed
+
+`correctPatternHeading` (nerd-only, defaults true) still snaps the
+pattern's final leg to ±90 of the target heading. Now that rotation is
+exact, a 135 leaves a visible 45-degree kink between the pattern and the
+turn. The snap exists to tolerate noisy RECORDED tracks; a parametric turn
+knows its entry heading exactly and should bypass it. `reposition` takes
+paths, not the config, so it cannot tell them apart today.

@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **794 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **829 tests, 0 lint errors, 50 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -118,7 +118,42 @@ Shortcuts / About. The `about` panel is gone; About is a topic and
 `?` deep-linking to its own topic. **The prose is placeholder** — see
 "What's next".
 
-### Session 2026-07-29 (most recent)
+### Session 2026-07-30 (most recent)
+
+**The manoeuvre's parameters were reworked** (`0328ddb`, `c5bd838`), on an
+owner report that left/right was described relative to the target when it
+should be relative to the final direction of flight. Three defects sat
+behind that in one small model — `left` named the target's side rather
+than the turn (its `left: true` geometry was a right-hand 90), the offsets
+ran along local axes rather than the final heading, and the sign of
+`offsetXFt` was folded into the final bearing, so a negative depth rotated
+the whole manoeuvre 180 degrees instead of moving the rollout. Rotation was
+hardcoded to 90, so a 270 could only be approximated.
+
+Now `turnDirection` + `rotationDeg` + `depthFt` + `offsetFt`, in the frame
+of the final heading, entry heading derived. The path is a solved arc plus
+a rollout (closed form; for a 90/270/450 the radius equals the offset).
+The offset is signed against the TURN, not absolutely — the absolute
+convention does not merely read badly, it is unflyable when you flip the
+direction. Stored values are not migrated (owner's call). The `none`
+manoeuvre type is gone: that is Standard Pattern.
+
+Also: the Manoeuvre panel was reordered and moved to compact Courses-style
+fields, with rotation as preset buttons; a new `ManoeuvreHintLayer` draws
+the final axis, the entry heading and the rotation on the map (measured
+from the path, so tracks and samples get it too), behind
+`showManoeuvreHint`. See NOTES for the reasoning, the two bugs it
+surfaced, and why `pipeline.test.ts` now holds its manoeuvre as literal
+data.
+
+⚠️ **Raised but not fixed**: `correctPatternHeading` still snaps the
+pattern's final leg to ±90 of the target heading, which was harmless when
+a manoeuvre could only be ±90. With rotation now exact, a 135 shows a
+45-degree kink between pattern and turn. Parametric turns should bypass the
+snap (recorded tracks still want it); `reposition` takes paths, not the
+config, so it cannot currently tell them apart.
+
+### Session 2026-07-29
 
 **Courses are per-dropzone.** `CourseParams.placeId` (a `Place.id`) scopes
 the shipped courses and the user's own with *one* field — the alternative,
