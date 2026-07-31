@@ -140,6 +140,12 @@ altitude is linear in time, so the drift integral is shape-independent, but
 `addWind` sums over the segments it is handed and geometric sampling put
 those at shape-dependent times.
 
+Not every setup can be drawn, and the fields say so rather than letting the
+map disagree with them: `manoeuvreBounds` bisects on `reaches` to find the
+feasible depth and offset range (each with the rest of the turn held where
+it is), those bounds reach the input element so the spinner stops at the
+edge, and the binding edge is spelled out under the field.
+
 `correctPatternHeading` applies only to tracks and samples, which are often
 a few degrees off; a parametric turn knows its entry heading exactly.
 
