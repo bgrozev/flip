@@ -5,6 +5,7 @@ import {
   createManoeuvrePath,
   describeManoeuvreForDisplay,
   describeManoeuvrePath,
+  manoeuvreBounds,
   solveManoeuvre
 } from './manoeuvre';
 import { FlightPath, FlightPoint, ManoeuvreParams, Target } from '../types';
@@ -296,19 +297,31 @@ describe('the drawn curve', () => {
       y: point.geometry.coordinates[1]
     }));
 
-  it.each([90, 135, 270, 450, 540])('does not cross itself at %i degrees', rotationDeg => {
-    // Past three quarters a constant radius would loop back over its own
-    // track; the radius shrinks into a spiral instead.
-    const points = asPlane(createManoeuvrePath({ ...TURN, rotationDeg }));
+  const selfCrossings = (rotationDeg: number, overrides: Partial<ManoeuvreParams> = {}) => {
+    const points = asPlane(createManoeuvrePath({ ...TURN, rotationDeg, ...overrides }));
+    let crossings = 0;
 
     for (let i = 0; i + 1 < points.length; i++) {
       for (let j = i + 2; j + 1 < points.length; j++) {
-        expect(
-          segmentsCross(points[i], points[i + 1], points[j], points[j + 1]),
-          `segments ${i} and ${j} cross at ${rotationDeg} degrees`
-        ).toBe(false);
+        if (segmentsCross(points[i], points[i + 1], points[j], points[j + 1])) {
+          crossings++;
+        }
       }
     }
+
+    return crossings;
+  };
+
+  it.each([90, 135, 180, 270])('never crosses itself at %i degrees', rotationDeg => {
+    expect(selfCrossings(rotationDeg)).toBe(0);
+  });
+
+  it.each([450, 540])('crosses at most once leaving the loop at %i degrees', rotationDeg => {
+    // A turn of more than a full circle ends up inside its own track, so the
+    // run out to the target has to cross it — a real 450 looks like that
+    // too. What the shrinking radius buys is that the CURVE does not wrap
+    // back over itself, which would read as a knot rather than a turn.
+    expect(selfCrossings(rotationDeg)).toBeLessThanOrEqual(1);
   });
 });
 
@@ -367,6 +380,46 @@ const DRIFT_TARGET: Target = {
   target: { lat: 28.21887, lng: -82.15122 },
   finalHeading: 270
 };
+
+describe('manoeuvreBounds', () => {
+  it('stops the depth where a quarter turn stops being drawable', () => {
+    // The reported symptom: stepping depth down to 0 on a 90 left the field
+    // reading 0 while the map drew something else entirely.
+    const bounds = manoeuvreBounds({ ...TURN, rotationDeg: 90 });
+
+    expect(bounds.depthFt.min).toBeGreaterThan(0);
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 90, depthFt: bounds.depthFt.min }).reaches)
+      .toBe(true);
+    expect(solveManoeuvre({ ...TURN, rotationDeg: 90, depthFt: bounds.depthFt.min - 5 }).reaches)
+      .toBe(false);
+  });
+
+  it('opens the depth right up once the turn can come back round', () => {
+    const quarter = manoeuvreBounds({ ...TURN, rotationDeg: 90 });
+    const threeQuarter = manoeuvreBounds({ ...TURN, rotationDeg: 270 });
+
+    expect(threeQuarter.depthFt.min).toBeLessThan(quarter.depthFt.min);
+    expect(threeQuarter.depthFt.min).toBeLessThan(0);
+  });
+
+  it('keeps the offset on the turn side for a quarter turn, either side for a 270', () => {
+    expect(manoeuvreBounds({ ...TURN, rotationDeg: 90 }).offsetFt.min).toBeGreaterThan(0);
+    expect(manoeuvreBounds({ ...TURN, rotationDeg: 270 }).offsetFt.min).toBeLessThan(0);
+  });
+
+  it('reports every bound as a value that actually works', () => {
+    for (const rotationDeg of [90, 135, 270, 450]) {
+      const bounds = manoeuvreBounds({ ...TURN, rotationDeg });
+
+      for (const depthFt of [bounds.depthFt.min, bounds.depthFt.max]) {
+        expect(solveManoeuvre({ ...TURN, rotationDeg, depthFt }).reaches).toBe(true);
+      }
+      for (const offsetFt of [bounds.offsetFt.min, bounds.offsetFt.max]) {
+        expect(solveManoeuvre({ ...TURN, rotationDeg, offsetFt }).reaches).toBe(true);
+      }
+    }
+  });
+});
 
 describe('describeManoeuvrePath', () => {
   it('reads back the rotation and the headings a turn was built from', () => {

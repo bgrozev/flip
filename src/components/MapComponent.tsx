@@ -139,7 +139,14 @@ function MapComponent({
         />
       )}
 
-      {has('manoeuvreHint') && settings.showManoeuvreHint && <ManoeuvreHintLayer path={pathB} idealPath={pathA} />}
+      {has('manoeuvreHint') && (settings.showManoeuvreHint || settings.showFinalApproachLine) && (
+        <ManoeuvreHintLayer
+          path={pathB}
+          idealPath={pathA}
+          showTurnHint={settings.showManoeuvreHint}
+          showFinalApproachLine={settings.showFinalApproachLine}
+        />
+      )}
 
       {has('courses') && <CourseLayer courses={courses} />}
 

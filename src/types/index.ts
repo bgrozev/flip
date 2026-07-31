@@ -153,11 +153,16 @@ export interface Settings {
   /** Show place/road labels over the satellite imagery (Google only). */
   showMapLabels: boolean;
   /**
-   * Draw the turn hint on the map: the final approach axis, the heading you
-   * start on, and how far round you go. The manoeuvre's numbers are all
-   * measured against an axis that is otherwise invisible.
+   * Draw the turn hint on the map: the heading you start the turn on and
+   * how far round it goes.
    */
   showManoeuvreHint: boolean;
+  /**
+   * Draw the final approach line through the target. Separate from the turn
+   * hint: it is the reference frame the manoeuvre's depth and offset are
+   * measured against, and it is worth seeing on its own.
+   */
+  showFinalApproachLine: boolean;
   interpolateWind: boolean;
   correctPatternHeading: boolean;
   straightenLegs: boolean;

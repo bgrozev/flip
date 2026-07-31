@@ -2,6 +2,7 @@ import * as turf from '@turf/turf';
 import { FlightPath, FlightPoint, LatLng, ManoeuvreParams } from '../types';
 import { cumulativeTurnDeg } from './pathStats';
 import { normalizeBearing } from './geometry';
+import { LIMITS, NumericLimits } from './validation';
 
 /**
  * The drawn turn is an ILLUSTRATION, not a flight model.
@@ -19,7 +20,7 @@ import { normalizeBearing } from './geometry';
  * used to be (offset WAS the radius for a 90/270/450), which meant a wider
  * setup silently redrew the turn as a wider one.
  */
-const NOMINAL_RADIUS_FT = 200;
+const NOMINAL_RADIUS_FT = 150;
 
 /**
  * Beyond three quarters, a constant radius makes the curve cross itself.
@@ -310,6 +311,94 @@ export function solveManoeuvre(params: ManoeuvreParams): ManoeuvreGeometry {
   }
 
   return best ?? nominal;
+}
+
+/** Samples taken when hunting for a feasible value to start bisecting from. */
+const BOUND_SCAN_STEPS = 48;
+/** Bisection steps used to pin each bound. */
+const BOUND_BISECT_STEPS = 14;
+
+/**
+ * The sub-range of `limits` around `seed` for which `works` holds.
+ *
+ * Used to bound the depth and offset fields to what can actually be drawn.
+ * Feasibility is a geometric fact — a quarter turn cannot start past the
+ * target — and a field that accepts a number the map then ignores is worse
+ * than one that stops at the edge.
+ */
+function feasibleRange(
+  works: (value: number) => boolean,
+  limits: NumericLimits,
+  seed: number
+): NumericLimits {
+  let anchor: number | null = works(seed) ? seed : null;
+
+  if (anchor === null) {
+    for (let i = 0; i <= BOUND_SCAN_STEPS; i++) {
+      const value = limits.min + ((limits.max - limits.min) * i) / BOUND_SCAN_STEPS;
+
+      if (works(value)) {
+        anchor = value;
+        break;
+      }
+    }
+  }
+
+  if (anchor === null) {
+    // Nothing in range works: leave the field unbounded rather than lock
+    // the user out of the value that would let them fix it.
+    return limits;
+  }
+
+  const edge = (towards: number): number => {
+    let good = anchor as number;
+    let bad = towards;
+
+    if (works(bad)) {
+      return bad;
+    }
+    for (let i = 0; i < BOUND_BISECT_STEPS; i++) {
+      const mid = (good + bad) / 2;
+
+      if (works(mid)) {
+        good = mid;
+      } else {
+        bad = mid;
+      }
+    }
+
+    return good;
+  };
+
+  return { min: Math.ceil(edge(limits.min)), max: Math.floor(edge(limits.max)) };
+}
+
+/** What the depth and offset can actually be, given the rest of the turn. */
+export interface ManoeuvreBounds {
+  depthFt: NumericLimits;
+  offsetFt: NumericLimits;
+}
+
+/**
+ * The depth and offset a turn of this rotation can actually be drawn with.
+ *
+ * Each is measured with the other held where it is, so the pair moves as
+ * the user works — which is the honest answer to "how deep can I be": it
+ * depends on how far to the side you are, and on how far round you turn.
+ */
+export function manoeuvreBounds(params: ManoeuvreParams): ManoeuvreBounds {
+  return {
+    depthFt: feasibleRange(
+      depthFt => solveManoeuvre({ ...params, depthFt }).reaches,
+      LIMITS.manoeuvreDepthFt,
+      params.depthFt
+    ),
+    offsetFt: feasibleRange(
+      offsetFt => solveManoeuvre({ ...params, offsetFt }).reaches,
+      LIMITS.manoeuvreOffsetFt,
+      params.offsetFt
+    )
+  };
 }
 
 /**

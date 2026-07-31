@@ -8,10 +8,10 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { DEFAULT_MANOEUVRE_PARAMS } from '../core/model';
-import { solveManoeuvre } from '../core/manoeuvre';
+import { manoeuvreBounds, solveManoeuvre } from '../core/manoeuvre';
 import { useUnits } from '../hooks';
 import { ManoeuvreParams } from '../types';
 import { LIMITS, NumericLimits, clampNumber } from '../core/validation';
@@ -33,6 +33,8 @@ interface NumberFieldProps {
   step?: number;
   /** Bounds in display units. */
   limits: NumericLimits;
+  /** Shown under the field; use it to explain a bound the user just hit. */
+  helperText?: string;
   onChange: (value: number) => void;
 }
 
@@ -42,7 +44,9 @@ interface NumberFieldProps {
  * Out-of-range values are never propagated while typing (a half-typed "5" on
  * the way to "500" must not reshape the turn), and are clamped on blur.
  */
-function NumberField({ label, title, value, unit, step = 1, limits, onChange }: NumberFieldProps) {
+function NumberField({
+  label, title, value, unit, step = 1, limits, helperText, onChange
+}: NumberFieldProps) {
   const [text, setText] = useState(String(value));
 
   // Re-sync when the value changes from outside (a preset load, a unit
@@ -87,9 +91,18 @@ function NumberField({ label, title, value, unit, step = 1, limits, onChange }: 
         value={text}
         onChange={handleChange}
         onBlur={handleBlur}
+        helperText={helperText}
         slotProps={{
           input: { endAdornment: <InputAdornment position="end">{unit}</InputAdornment> },
-          htmlInput: { type: 'number', step, 'aria-label': label }
+          // min/max are on the input itself, so the spinner stops at the
+          // edge instead of stepping to a value the map cannot draw.
+          htmlInput: {
+            type: 'number',
+            step,
+            min: limits.min,
+            max: limits.max,
+            'aria-label': label
+          }
         }}
       />
     </Tooltip>
@@ -118,6 +131,23 @@ export default function ManoeuvreParametersComponent({
   });
 
   const { reaches } = solveManoeuvre(params);
+  // What the geometry actually allows, given everything else. Recomputed
+  // only when the turn changes: each bound is found by bisection.
+  const bounds = useMemo(() => manoeuvreBounds(params), [params]);
+  const toDisplay = (feet: number) => Math.round(formatAltitude(feet).value);
+  // Only worth saying when it is tighter than the field's own range.
+  const boundNote = (limits: NumericLimits, stored: NumericLimits) => {
+    const parts: string[] = [];
+
+    if (limits.min > stored.min) {
+      parts.push(`min ${toDisplay(limits.min)}`);
+    }
+    if (limits.max < stored.max) {
+      parts.push(`max ${toDisplay(limits.max)}`);
+    }
+
+    return parts.length > 0 ? `${parts.join(', ')} ${altitudeLabel} for a ${params.rotationDeg}° turn` : undefined;
+  };
   const isPreset = ROTATION_PRESETS.includes(params.rotationDeg);
   const [rotationCustom, setRotationCustom] = useState(!isPreset);
   const showCustomRotation = rotationCustom || !isPreset;
@@ -173,7 +203,7 @@ export default function ManoeuvreParametersComponent({
       <NumberField
         label="Altitude"
         title="The altitude the turn starts at."
-        value={Math.round(formatAltitude(params.altitudeFt).value)}
+        value={toDisplay(params.altitudeFt)}
         unit={altitudeLabel}
         step={altitudeLabel === 'ft' ? 50 : 15}
         limits={lengthLimits(LIMITS.manoeuvreAltitudeFt)}
@@ -183,20 +213,22 @@ export default function ManoeuvreParametersComponent({
       <NumberField
         label="Depth"
         title="How far back you start from the landing point, along your final heading. Positive is away from the target."
-        value={Math.round(formatAltitude(params.depthFt).value)}
+        value={toDisplay(params.depthFt)}
         unit={altitudeLabel}
         step={altitudeLabel === 'ft' ? 50 : 15}
-        limits={lengthLimits(LIMITS.manoeuvreDepthFt)}
+        limits={lengthLimits(bounds.depthFt)}
+        helperText={boundNote(bounds.depthFt, LIMITS.manoeuvreDepthFt)}
         onChange={value => change('depthFt', parseAltitude(value))}
       />
 
       <NumberField
         label="Offset"
         title="How far to the side you start, across your final heading, measured on the side you turn from. Negative starts you across the final approach line, which needs more than a quarter turn to fly."
-        value={Math.round(formatAltitude(params.offsetFt).value)}
+        value={toDisplay(params.offsetFt)}
         unit={altitudeLabel}
         step={altitudeLabel === 'ft' ? 50 : 15}
-        limits={lengthLimits(LIMITS.manoeuvreOffsetFt)}
+        limits={lengthLimits(bounds.offsetFt)}
+        helperText={boundNote(bounds.offsetFt, LIMITS.manoeuvreOffsetFt)}
         onChange={value => change('offsetFt', parseAltitude(value))}
       />
 

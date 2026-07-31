@@ -23,6 +23,13 @@ import { PATH_COLORS } from './FlightPathsLayer';
 /** How far past the initiation point the final axis is drawn (ft). */
 const AXIS_MARGIN_FT = 250;
 
+/**
+ * How far the final axis runs PAST the landing point, in the direction of
+ * flight. Long enough to read as the line you are flying down rather than
+ * as something that stops at your feet.
+ */
+const AXIS_FORWARD_FT = 325;
+
 /** Length of the entry-direction arrow, in screen pixels. */
 const ARROW_PX = 34;
 
@@ -46,6 +53,10 @@ const LABEL_STYLE: React.CSSProperties = {
 const feetToMeters = (feet: number) => feet / metersToFeet;
 
 interface ManoeuvreHintLayerProps {
+  /** Draw the final approach line through the landing point. */
+  showFinalApproachLine: boolean;
+  /** Draw the entry arrow and the rotation. */
+  showTurnHint: boolean;
   /** The path as drawn (wind-corrected); the hint is anchored to it. */
   path: FlightPath;
   /**
@@ -88,7 +99,12 @@ function EntryArrow({ position, bearingDeg }: { position: LatLng; bearingDeg: nu
 const manoeuvreOf = (path: FlightPath) =>
   path.filter(point => point.properties.phase === 'manoeuvre');
 
-export default function ManoeuvreHintLayer({ path, idealPath }: ManoeuvreHintLayerProps) {
+export default function ManoeuvreHintLayer({
+  path,
+  idealPath,
+  showFinalApproachLine,
+  showTurnHint
+}: ManoeuvreHintLayerProps) {
   const described = describeManoeuvreForDisplay(manoeuvreOf(path), manoeuvreOf(idealPath));
 
   if (!described) {
@@ -103,7 +119,7 @@ export default function ManoeuvreHintLayer({ path, idealPath }: ManoeuvreHintLay
   // far enough back to pass the initiation point.
   const axis: LatLng[] = [
     destinationPoint(landing, finalHeadingDeg + 180, feetToMeters(spanFt + AXIS_MARGIN_FT)),
-    destinationPoint(landing, finalHeadingDeg, feetToMeters(AXIS_MARGIN_FT / 2))
+    destinationPoint(landing, finalHeadingDeg, feetToMeters(AXIS_FORWARD_FT))
   ];
 
   // Whole degrees: the measured rotation of a recorded track is never round,
@@ -122,11 +138,17 @@ export default function ManoeuvreHintLayer({ path, idealPath }: ManoeuvreHintLay
 
   return (
     <>
-      <MapPolyline path={axis} color={AXIS_COLOR} opacity={0.5} weight={1} zIndex={1} dotted />
-      <EntryArrow position={initiation} bearingDeg={entryHeadingDeg} />
-      <MapOverlay position={labelAt}>
-        <div style={LABEL_STYLE}>{rounded}°{side}</div>
-      </MapOverlay>
+      {showFinalApproachLine && (
+        <MapPolyline path={axis} color={AXIS_COLOR} opacity={0.5} weight={1} zIndex={1} dotted />
+      )}
+      {showTurnHint && (
+        <>
+          <EntryArrow position={initiation} bearingDeg={entryHeadingDeg} />
+          <MapOverlay position={labelAt}>
+            <div style={LABEL_STYLE}>{rounded}°{side}</div>
+          </MapOverlay>
+        </>
+      )}
     </>
   );
 }

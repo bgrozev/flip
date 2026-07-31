@@ -96,7 +96,12 @@ const settingsGroups: SettingsGroup[] = [
       {
         key: 'showManoeuvreHint',
         label: 'Show turn direction hint',
-        tooltip: 'Draw the final approach line, the heading you start the turn on, and how far round it goes.'
+        tooltip: 'Draw the heading you start the turn on, and how far round it goes.'
+      },
+      {
+        key: 'showFinalApproachLine',
+        label: 'Show final approach line',
+        tooltip: 'Draw the line you land along, through the target. Depth and offset are measured against it.'
       }
     ]
   },
