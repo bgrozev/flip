@@ -101,12 +101,39 @@ export interface PatternParams {
 }
 
 // Manoeuvre types
+export type TurnDirection = 'left' | 'right';
+
+/**
+ * A parametric turn to final, described in the frame of the FINAL HEADING
+ * rather than relative to the target. The final heading is fixed by the
+ * target, so what a turn is free to choose is: which way it rotates, how
+ * far, and where it puts the initiation point relative to where it rolls
+ * out. Everything here is measured against that axis, which is why a sign
+ * change moves a point instead of spinning the whole manoeuvre (the bug in
+ * the old offsetX/offsetY model).
+ */
 export interface ManoeuvreParams {
-  offsetXFt: number;
-  offsetYFt: number;
+  /** Which way you rotate. The entry heading follows from this + rotation. */
+  turnDirection: TurnDirection;
+  /** Total degrees rotated onto final: 90, 135, 270, 450, ... */
+  rotationDeg: number;
+  /** Initiation altitude (ft). */
   altitudeFt: number;
+  /**
+   * How far back the initiation point sits from the landing point, along the
+   * final heading. Positive is away from the target (behind it).
+   */
+  depthFt: number;
+  /**
+   * How far the initiation point sits to the side, across the final heading,
+   * on the side you turn FROM — the side the whole turn happens on. For a
+   * quarter/three-quarter/450 turn this is exactly the turn radius. Signed
+   * relative to the turn direction, so flipping left/right mirrors the turn
+   * instead of making it geometrically impossible.
+   */
+  offsetFt: number;
+  /** Time from initiation to touchdown (s). */
   duration: number;
-  left: boolean;
 }
 
 // Map providers (see src/map). The active provider renders the map and
@@ -372,7 +399,9 @@ export interface ObservedWindStation {
 }
 
 // Preset types
-export type ManoeuvreType = 'none' | 'parameters' | 'track' | 'samples';
+// "None" is gone: a jump with no turn to final IS Standard Pattern mode, so
+// the type only lists the ways of describing a turn.
+export type ManoeuvreType = 'parameters' | 'track' | 'samples';
 
 export interface ManoeuvreConfig {
   type: ManoeuvreType;

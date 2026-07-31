@@ -99,9 +99,15 @@ describe('LIMITS', () => {
     }
   });
 
-  it('allows zero and negative manoeuvre depth offsets', () => {
-    expect(LIMITS.manoeuvreOffsetXFt.min).toBeLessThan(0);
-    expect(clampNumber(0, LIMITS.manoeuvreOffsetXFt.min, LIMITS.manoeuvreOffsetXFt.max)).toBe(0);
+  it('allows zero and negative manoeuvre depths', () => {
+    expect(LIMITS.manoeuvreDepthFt.min).toBeLessThan(0);
+    expect(clampNumber(0, LIMITS.manoeuvreDepthFt.min, LIMITS.manoeuvreDepthFt.max)).toBe(0);
+  });
+
+  it('keeps the manoeuvre offset positive', () => {
+    // The turn happens on the side the offset names, so a zero or negative
+    // one has no radius to fly (see core/manoeuvre).
+    expect(LIMITS.manoeuvreOffsetFt.min).toBeGreaterThan(0);
   });
 });
 

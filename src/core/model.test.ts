@@ -5,8 +5,11 @@
  */
 import { createVersionedCodec } from '../util/storage';
 
+import { LIMITS } from './validation';
+
 import {
   DEFAULT_FLOCKING_PARAMS,
+  DEFAULT_MANOEUVRE_CONFIG,
   DEFAULT_MANOEUVRE_PARAMS,
   DEFAULT_PATTERN_PARAMS,
   DEFAULT_SETTINGS,
@@ -309,28 +312,46 @@ describe('migrateFlockingParams', () => {
 });
 
 describe('migrateManoeuvreConfig', () => {
-  it.each(GARBAGE.map(g => [g]))('returns a "none" config for %j', raw => {
-    expect(migrateManoeuvreConfig(raw)).toEqual({ type: 'none' });
+  it.each(GARBAGE.map(g => [g]))('falls back to the default config for %j', raw => {
+    expect(migrateManoeuvreConfig(raw)).toEqual(DEFAULT_MANOEUVRE_CONFIG);
   });
 
   it('keeps a valid parameters config', () => {
     const config = {
       type: 'parameters',
-      params: { offsetXFt: 200, offsetYFt: 100, altitudeFt: 800, duration: 6, left: false }
+      params: {
+        turnDirection: 'right',
+        rotationDeg: 450,
+        altitudeFt: 800,
+        depthFt: 200,
+        offsetFt: 100,
+        duration: 6
+      }
     };
 
     expect(migrateManoeuvreConfig(config)).toEqual(config);
   });
 
+  it('drops the retired offsetX/offsetY/left model rather than reading it', () => {
+    // Its `left` named the side the target was on, not the way you turned,
+    // so there is no sound reading of a stored value.
+    const result = migrateManoeuvreConfig({
+      type: 'parameters',
+      params: { offsetXFt: 200, offsetYFt: 100, left: false }
+    });
+
+    expect(result.params).toEqual(DEFAULT_MANOEUVRE_PARAMS);
+  });
+
   it('defaults invalid params fields', () => {
     const result = migrateManoeuvreConfig({
       type: 'parameters',
-      params: { offsetXFt: 'x', offsetYFt: 1e9 }
+      params: { rotationDeg: 'x', offsetFt: 1e9 }
     });
 
     expect(result.params).toEqual({
       ...DEFAULT_MANOEUVRE_PARAMS,
-      offsetYFt: 3000
+      offsetFt: 3000
     });
   });
 
@@ -465,7 +486,7 @@ describe('migratePresets', () => {
         name: 'Main',
         target: { target: { lat: 1, lng: 2 }, finalHeading: 90 },
         patternParams: DEFAULT_PATTERN_PARAMS,
-        manoeuvre: { type: 'none' },
+        manoeuvre: DEFAULT_MANOEUVRE_CONFIG,
         selectedCourseId: null,
         createdAt: 123
       },
@@ -481,7 +502,7 @@ describe('migratePresets', () => {
     expect(result[1].name).toBe('no id or content');
     expect(result[1].target).toEqual(DEFAULT_TARGET);
     expect(result[1].patternParams).toEqual(DEFAULT_PATTERN_PARAMS);
-    expect(result[1].manoeuvre).toEqual({ type: 'none' });
+    expect(result[1].manoeuvre).toEqual(DEFAULT_MANOEUVRE_CONFIG);
   });
 
   it('keeps the place a preset was saved at, and nulls a missing one', () => {
@@ -556,9 +577,14 @@ describe('migrateManoeuvreParams', () => {
     expect(migrateManoeuvreParams('x')).toEqual(DEFAULT_MANOEUVRE_PARAMS);
   });
 
-  it('allows zero and negative depth offsets', () => {
-    expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetXFt: 0 }).offsetXFt).toBe(0);
-    expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetXFt: -500 }).offsetXFt).toBe(-500);
+  it('allows a zero or negative depth', () => {
+    expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, depthFt: 0 }).depthFt).toBe(0);
+    expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, depthFt: -500 }).depthFt).toBe(-500);
+  });
+
+  it('keeps the offset positive: a turn cannot start across its own final line', () => {
+    expect(migrateManoeuvreParams({ ...DEFAULT_MANOEUVRE_PARAMS, offsetFt: -500 }).offsetFt)
+      .toBe(LIMITS.manoeuvreOffsetFt.min);
   });
 });
 

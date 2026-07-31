@@ -16,10 +16,22 @@ export const LIMITS = {
   descentRateMph: { min: 1, max: 60 },
   /** Pattern glide ratio */
   glideRatio: { min: 0.1, max: 10 },
-  /** Manoeuvre depth offset (ft); negative offsets to the opposite side */
-  manoeuvreOffsetXFt: { min: -3000, max: 3000 },
-  /** Manoeuvre lateral offset (ft) */
-  manoeuvreOffsetYFt: { min: 10, max: 3000 },
+  /**
+   * How far back the initiation point sits from the landing point (ft),
+   * along the final heading. Signed: negative rolls out past the target.
+   */
+  manoeuvreDepthFt: { min: -3000, max: 3000 },
+  /**
+   * How far to the side the initiation point sits (ft), on the side the turn
+   * happens. Must stay positive: a turn cannot start on the far side of the
+   * final line and still arrive on it (see core/manoeuvre).
+   */
+  manoeuvreOffsetFt: { min: 5, max: 3000 },
+  /**
+   * Degrees rotated onto final. Excludes 0 and 360, where the entry heading
+   * equals the final heading and the turn has no radius to solve for.
+   */
+  manoeuvreRotationDeg: { min: 15, max: 540 },
   /** Manoeuvre initiation altitude (ft) */
   manoeuvreAltitudeFt: { min: 100, max: 5000 },
   /** Manoeuvre duration (s) */

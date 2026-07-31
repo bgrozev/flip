@@ -13,10 +13,7 @@
  * - Wind direction interpolation wrap (350°→10° goes through 180°).
  *   See step 2a; interpolation is only pinned for rows with a uniform
  *   direction, where linear and vector interpolation agree.
- * - Manoeuvre offsetXFt clamp to 3 ft (0/negative offsets broken).
- *   See step 2b; the manoeuvre here uses offsetXFt=300, far from the clamp.
  */
-import { createManoeuvrePath } from './manoeuvre';
 import { makePattern } from './pattern';
 import { addWind, averageWind, reposition, straightenLegs } from './geometry';
 import { WindProfile, createWindProfile, createWindRow, getWindAt } from './wind';
@@ -24,14 +21,35 @@ import { FlightPath, Target } from '../types';
 
 const TARGET: Target = { target: { lat: 28.21887, lng: -82.15122 }, finalHeading: 270 };
 
+/**
+ * A fixed 3-point manoeuvre, as literal data rather than something
+ * `createManoeuvrePath` produces.
+ *
+ * These goldens pin the PIPELINE (reposition → addWind → straightenLegs →
+ * averageWind), not the shape of a turn. Generating the input from the
+ * manoeuvre model would couple them: the turn parameters were reworked (see
+ * core/manoeuvre) and every number below would have had to be regenerated,
+ * destroying the safety net at exactly the moment it was needed. The values
+ * are the ones the old offsetX=300 / offsetY=150 / left turn produced, so
+ * the pins carry over untouched. Turn geometry is tested in manoeuvre.test.
+ */
 function makeManoeuvre(): FlightPath {
-  return createManoeuvrePath({
-    offsetXFt: 300,
-    offsetYFt: 150,
-    altitudeFt: 900,
-    duration: 8,
-    left: true
-  });
+  const coords: [number, number][] = [
+    [0.10082233975651889, -0.09958883074286257],
+    [0.10000000000002274, -0.09958883074286257],
+    [0.1, -0.1]
+  ];
+  const props = [
+    { time: 8000, alt: 0, pom: 1 },
+    { time: 4000, alt: 450, pom: 0 },
+    { time: 0, alt: 900, pom: 1 }
+  ];
+
+  return coords.map((coordinates, i) => ({
+    type: 'Feature' as const,
+    geometry: { type: 'Point' as const, coordinates: [...coordinates] },
+    properties: { ...props[i] }
+  })) as FlightPath;
 }
 
 function makeThreeLegPattern(): FlightPath {

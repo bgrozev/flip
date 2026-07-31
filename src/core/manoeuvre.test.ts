@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf';
 
-import { applyInitiationAltitudeOffset, createManoeuvrePath } from './manoeuvre';
-import { FlightPath, FlightPoint } from '../types';
+import { applyInitiationAltitudeOffset, createManoeuvrePath, solveManoeuvre } from './manoeuvre';
+import { FlightPath, FlightPoint, ManoeuvreParams } from '../types';
 
 // Helper to create a turf point with properties
 function createPoint(lng: number, lat: number, props: Partial<FlightPoint['properties']> = {}): FlightPoint {
@@ -13,226 +13,215 @@ function createPoint(lng: number, lat: number, props: Partial<FlightPoint['prope
   }) as FlightPoint;
 }
 
+const TURN: ManoeuvreParams = {
+  turnDirection: 'left',
+  rotationDeg: 270,
+  altitudeFt: 900,
+  depthFt: 300,
+  offsetFt: 150,
+  duration: 8
+};
+
+/** Signed difference between two bearings, folded to (-180, 180]. */
+function bearingDelta(from: number, to: number): number {
+  return ((to - from + 540) % 360) - 180;
+}
+
+/**
+ * The path as flown: initiation first. `createManoeuvrePath` returns the
+ * app's order (landing first), which reads backwards for turn geometry.
+ */
+function asFlown(path: FlightPath): FlightPoint[] {
+  return [...path].reverse();
+}
+
+/** Bearing of the final approach — the last segment of the flown path. */
+function finalBearing(path: FlightPath): number {
+  return turf.bearing(path[1], path[0]);
+}
+
+/** Bearing at initiation — the first segment of the flown path. */
+function entryBearing(path: FlightPath): number {
+  const flown = asFlown(path);
+
+  return turf.bearing(flown[0], flown[1]);
+}
+
+/**
+ * Where the initiation point sits relative to the landing point, resolved
+ * onto the final-approach axis: how far back, and how far across (positive
+ * to the right of the final heading).
+ */
+function initiationOffsets(path: FlightPath): { backFt: number; acrossFt: number } {
+  const landing = path[0];
+  const initiation = path[path.length - 1];
+  const distanceFt = turf.distance(landing, initiation, { units: 'feet' });
+  const relative = (turf.bearing(landing, initiation) - finalBearing(path)) * (Math.PI / 180);
+
+  return {
+    backFt: -distanceFt * Math.cos(relative),
+    acrossFt: distanceFt * Math.sin(relative)
+  };
+}
+
+/** Total signed rotation flown, positive to the right. */
+function totalTurnDeg(path: FlightPath): number {
+  const flown = asFlown(path);
+  let total = 0;
+
+  for (let i = 2; i < flown.length; i++) {
+    total += bearingDelta(
+      turf.bearing(flown[i - 2], flown[i - 1]),
+      turf.bearing(flown[i - 1], flown[i])
+    );
+  }
+
+  return total;
+}
+
+describe('solveManoeuvre', () => {
+  it('makes the offset the turn radius for quarter-circle rotations', () => {
+    // 90, 270 and 450 all leave the turn abeam the final line, so the
+    // sideways offset the pilot enters IS the radius they fly.
+    for (const rotationDeg of [90, 270, 450]) {
+      expect(solveManoeuvre({ ...TURN, rotationDeg }).radiusFt).toBeCloseTo(TURN.offsetFt, 6);
+    }
+  });
+
+  it('derives the entry heading from the rotation and the direction', () => {
+    // Right turns increase heading on the way round, so they start to the
+    // left of final by the rotation; left turns are the mirror.
+    expect(solveManoeuvre({ ...TURN, turnDirection: 'right' }).entryHeadingRelDeg).toBe(-270);
+    expect(solveManoeuvre({ ...TURN, turnDirection: 'left' }).entryHeadingRelDeg).toBe(270);
+  });
+
+  it('leaves a rollout that grows with depth', () => {
+    const shallow = solveManoeuvre({ ...TURN, depthFt: 300 });
+    const deep = solveManoeuvre({ ...TURN, depthFt: 800 });
+
+    expect(deep.rolloutFt - shallow.rolloutFt).toBeCloseTo(500, 6);
+  });
+
+  it('backs the turn up rather than letting the rollout vanish', () => {
+    // A depth this short would put the end of the turn past the target,
+    // which is what used to reverse the final segment.
+    const solved = solveManoeuvre({ ...TURN, depthFt: -2000 });
+
+    expect(solved.rolloutFt).toBeGreaterThan(0);
+    expect(solved.depthFt).toBeGreaterThan(-2000);
+  });
+});
+
 describe('createManoeuvrePath', () => {
-  it('creates a path with 3 points', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
+  it('runs from the landing point to the initiation point', () => {
+    const path = createManoeuvrePath(TURN);
 
-    expect(result).toHaveLength(3);
+    expect(path[0].properties.alt).toBe(0);
+    expect(path[0].properties.time).toBe(8000);
+    expect(path[path.length - 1].properties.alt).toBe(900);
+    expect(path[path.length - 1].properties.time).toBe(0);
   });
 
-  it('sets correct altitude progression', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
+  it('descends and gains time monotonically along the path', () => {
+    const path = createManoeuvrePath(TURN);
 
-    // Path is returned in reverse order: [p2, p1, p0]
-    // p2 (end of manoeuvre) has alt 0
-    // p1 (middle) has alt/2
-    // p0 (start) has full altitude
-    expect(result[0].properties.alt).toBe(0);
-    expect(result[1].properties.alt).toBe(400);
-    expect(result[2].properties.alt).toBe(800);
+    for (let i = 1; i < path.length; i++) {
+      expect(path[i].properties.alt).toBeGreaterThan(path[i - 1].properties.alt);
+      expect(path[i].properties.time).toBeLessThan(path[i - 1].properties.time);
+    }
   });
 
-  it('sets correct time progression', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
+  it('marks only the initiation and the landing point as POMs', () => {
+    const path = createManoeuvrePath(TURN);
 
-    // Path is in reverse, so times go from 0 to positive
-    // p2 at time 60000 (60 sec * 1000), p1 at 30000, p0 at 0
-    expect(result[0].properties.time).toBe(60000);
-    expect(result[1].properties.time).toBe(30000);
-    expect(result[2].properties.time).toBe(0);
+    expect(path[0].properties.pom).toBe(1);
+    expect(path[path.length - 1].properties.pom).toBe(1);
+    expect(path.slice(1, -1).every(p => p.properties.pom === 0)).toBe(true);
   });
 
-  it('marks POMs correctly', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
-
-    // First point (p2) and last point (p0) should be POMs
-    expect(result[0].properties.pom).toBe(1);
-    expect(result[1].properties.pom).toBe(0);
-    expect(result[2].properties.pom).toBe(1);
+  it('rotates by the requested amount, in the requested direction', () => {
+    for (const rotationDeg of [90, 135, 270, 450]) {
+      expect(totalTurnDeg(createManoeuvrePath({ ...TURN, rotationDeg, turnDirection: 'right' })))
+        .toBeCloseTo(rotationDeg, 1);
+      expect(totalTurnDeg(createManoeuvrePath({ ...TURN, rotationDeg, turnDirection: 'left' })))
+        .toBeCloseTo(-rotationDeg, 1);
+    }
   });
 
-  it('creates left turn when left=true', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
+  it('starts on the heading the rotation implies', () => {
+    const path = createManoeuvrePath({ ...TURN, rotationDeg: 270, turnDirection: 'left' });
 
-    // With left turn, p2 should be offset 90 degrees (east) from p1
-    const p1 = result[1];
-    const p2 = result[0];
-
-    const bearing = turf.bearing(p1, p2);
-
-    // Bearing should be approximately 90 (east) for left turn
-    expect(Math.abs(bearing - 90) < 5 || Math.abs(bearing + 270) < 5).toBe(true);
+    expect(bearingDelta(finalBearing(path), entryBearing(path))).toBeCloseTo(-90, 1);
   });
 
-  it('creates right turn when left=false', () => {
-    const result = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: false
-    });
+  it('places the initiation point at the requested depth and offset', () => {
+    const path = createManoeuvrePath({ ...TURN, depthFt: 500, offsetFt: 200 });
+    const { backFt, acrossFt } = initiationOffsets(path);
 
-    // With right turn, p2 should be offset 270 degrees (west) from p1
-    const p1 = result[1];
-    const p2 = result[0];
-
-    const bearing = turf.bearing(p1, p2);
-
-    // Bearing should be approximately 270 (west) or -90 for right turn
-    expect(Math.abs(bearing - 270) < 5 || Math.abs(bearing + 90) < 5).toBe(true);
+    expect(backFt).toBeCloseTo(500, 0);
+    // A left turn happens on the left, so the offset is to the left of final.
+    expect(acrossFt).toBeCloseTo(-200, 0);
   });
 
-  it('respects offsetYFt for forward/back offset', () => {
-    const smallOffset = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 500,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
+  it('mirrors when the turn direction flips', () => {
+    const left = initiationOffsets(createManoeuvrePath({ ...TURN, turnDirection: 'left' }));
+    const right = initiationOffsets(createManoeuvrePath({ ...TURN, turnDirection: 'right' }));
 
-    const largeOffset = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 2000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
-
-    // Distance from start to middle point should be larger with larger offsetY
-    const smallDist = turf.distance(smallOffset[2], smallOffset[1], { units: 'feet' });
-    const largeDist = turf.distance(largeOffset[2], largeOffset[1], { units: 'feet' });
-
-    expect(largeDist).toBeGreaterThan(smallDist);
+    expect(right.backFt).toBeCloseTo(left.backFt, 3);
+    expect(right.acrossFt).toBeCloseTo(-left.acrossFt, 3);
   });
 
-  it('respects offsetXFt for lateral offset', () => {
-    const smallOffset = createManoeuvrePath({
-      offsetXFt: 200,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
+  describe('the final approach direction', () => {
+    // The old model derived the final segment from the sign of an offset, so
+    // a negative one silently rotated the whole manoeuvre by 180 degrees.
+    // The final segment must now depend on nothing but the geometry frame.
+    const reference = finalBearing(createManoeuvrePath(TURN));
+
+    it.each([
+      ['a negative depth', { depthFt: -500 }],
+      ['a zero depth', { depthFt: 0 }],
+      ['a deep setup', { depthFt: 2000 }],
+      ['a right turn', { turnDirection: 'right' as const }],
+      ['a 90', { rotationDeg: 90 }],
+      ['a 135', { rotationDeg: 135 }],
+      ['a 450', { rotationDeg: 450 }],
+      ['a tight offset', { offsetFt: 5 }],
+      ['a wide offset', { offsetFt: 1200 }]
+    ])('is unchanged by %s', (_label, overrides) => {
+      const path = createManoeuvrePath({ ...TURN, ...overrides });
+
+      expect(bearingDelta(reference, finalBearing(path))).toBeCloseTo(0, 6);
     });
-
-    const largeOffset = createManoeuvrePath({
-      offsetXFt: 1000,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    });
-
-    // Distance from middle to end point should be larger with larger offsetX
-    const smallDist = turf.distance(smallOffset[1], smallOffset[0], { units: 'feet' });
-    const largeDist = turf.distance(largeOffset[1], largeOffset[0], { units: 'feet' });
-
-    expect(largeDist).toBeGreaterThan(smallDist);
   });
 
-  describe('offsetXFt sign handling', () => {
-    const base = {
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 60,
-      left: true
-    };
+  it('keeps the landing point clear of the end of the turn', () => {
+    // Whatever the inputs, the last segment has to have length, or the final
+    // heading it defines is meaningless.
+    for (const depthFt of [-3000, -100, 0, 50, 3000]) {
+      const path = createManoeuvrePath({ ...TURN, depthFt });
 
-    it('uses the exact distance for positive offsets', () => {
-      const result = createManoeuvrePath({ ...base, offsetXFt: 300 });
-      const dist = turf.distance(result[1], result[0], { units: 'feet' });
-      const bearing = turf.bearing(result[1], result[0]);
+      expect(turf.distance(path[0], path[1], { units: 'feet' })).toBeGreaterThan(0);
+    }
+  });
 
-      expect(dist).toBeCloseTo(300, 3);
-      expect(bearing).toBeCloseTo(90, 3);
-    });
+  it('spreads altitude and time evenly along the ground track', () => {
+    const path = createManoeuvrePath(TURN);
+    const flown = asFlown(path);
+    const mid = flown[Math.floor(flown.length / 2)];
 
-    it('produces (visually) no offset for offsetX=0 while keeping the heading defined', () => {
-      const result = createManoeuvrePath({ ...base, offsetXFt: 0 });
-
-      // Last two points must be distinct (setFinalHeading derives the final
-      // approach direction from them), but within a hair of coinciding.
-      const dist = turf.distance(result[1], result[0], { units: 'feet' });
-
-      expect(dist).toBeGreaterThan(0);
-      expect(dist).toBeLessThan(0.02);
-      expect(turf.bearing(result[1], result[0])).toBeCloseTo(90, 1);
-      expect(result.every(p => p.geometry.coordinates.every(Number.isFinite))).toBe(true);
-    });
-
-    it('offsets to the opposite side for negative offsets', () => {
-      const positive = createManoeuvrePath({ ...base, offsetXFt: 300 });
-      const negative = createManoeuvrePath({ ...base, offsetXFt: -300 });
-
-      const dist = turf.distance(negative[1], negative[0], { units: 'feet' });
-      const bearing = (turf.bearing(negative[1], negative[0]) + 360) % 360;
-
-      expect(dist).toBeCloseTo(300, 3);
-      expect(bearing).toBeCloseTo(270, 3);
-
-      // Same distance as the positive offset, opposite direction
-      const positiveBearing = (turf.bearing(positive[1], positive[0]) + 360) % 360;
-      expect(Math.abs(bearing - positiveBearing)).toBeCloseTo(180, 3);
-    });
-
-    it('respects left=false for negative offsets', () => {
-      const result = createManoeuvrePath({ ...base, offsetXFt: -300, left: false });
-      const bearing = (turf.bearing(result[1], result[0]) + 360) % 360;
-
-      expect(bearing).toBeCloseTo(90, 3);
-    });
+    // Constant ground speed: the halfway point of the track is roughly the
+    // halfway point of the descent and of the clock.
+    expect(mid.properties.alt).toBeGreaterThan(250);
+    expect(mid.properties.alt).toBeLessThan(700);
+    expect(mid.properties.time).toBeGreaterThan(2000);
+    expect(mid.properties.time).toBeLessThan(6000);
   });
 
   it('handles different durations', () => {
-    const short = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 30,
-      left: true
-    });
+    const path = createManoeuvrePath({ ...TURN, duration: 20 });
 
-    const long = createManoeuvrePath({
-      offsetXFt: 500,
-      offsetYFt: 1000,
-      altitudeFt: 800,
-      duration: 120,
-      left: true
-    });
-
-    expect(short[0].properties.time).toBe(30000);
-    expect(long[0].properties.time).toBe(120000);
+    expect(path[0].properties.time).toBe(20000);
+    expect(path[path.length - 1].properties.time).toBe(0);
   });
 });
 

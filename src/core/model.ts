@@ -15,6 +15,7 @@ import {
   LatLng,
   ManoeuvreConfig,
   ManoeuvreParams,
+  TurnDirection,
   ManoeuvreType,
   MAP_PROVIDERS,
   PatternLeg,
@@ -84,14 +85,17 @@ export const DEFAULT_PATTERN_PARAMS: PatternParams = {
   ]
 };
 
-export const DEFAULT_MANOEUVRE_CONFIG: ManoeuvreConfig = { type: 'none' };
+export const DEFAULT_MANOEUVRE_CONFIG: ManoeuvreConfig = { type: 'parameters' };
 
+// A left 270 — the everyday swoop turn — rolling out 300 ft short of the
+// target from a 150 ft radius.
 export const DEFAULT_MANOEUVRE_PARAMS: ManoeuvreParams = {
-  offsetXFt: 300,
-  offsetYFt: 150,
+  turnDirection: 'left',
+  rotationDeg: 270,
   altitudeFt: 900,
-  duration: 8,
-  left: true
+  depthFt: 300,
+  offsetFt: 150,
+  duration: 8
 };
 
 // FWC's defaults: classic mode, 12k -> 4k ft, the "Flow" preset, into wind
@@ -305,19 +309,31 @@ export function migratePatternParams(raw: unknown): PatternParams {
   };
 }
 
+const TURN_DIRECTIONS: readonly TurnDirection[] = ['left', 'right'];
+
+/**
+ * Validating loader for the turn parameters.
+ *
+ * The old offsetX/offsetY/left model is NOT migrated: its `left` flag named
+ * the side the target was on rather than the way you turned, and its offsets
+ * were measured against local axes rather than the final heading, so there
+ * is no sound reading of a stored value. Anything unrecognized falls back to
+ * the default turn, which is what an unset field does here anyway.
+ */
 export function migrateManoeuvreParams(raw: unknown): ManoeuvreParams {
   const r = isRecord(raw) ? raw : {};
 
   return {
-    offsetXFt: limitedNumber(r.offsetXFt, DEFAULT_MANOEUVRE_PARAMS.offsetXFt, LIMITS.manoeuvreOffsetXFt),
-    offsetYFt: limitedNumber(r.offsetYFt, DEFAULT_MANOEUVRE_PARAMS.offsetYFt, LIMITS.manoeuvreOffsetYFt),
+    turnDirection: oneOf(r.turnDirection, TURN_DIRECTIONS, DEFAULT_MANOEUVRE_PARAMS.turnDirection),
+    rotationDeg: limitedNumber(r.rotationDeg, DEFAULT_MANOEUVRE_PARAMS.rotationDeg, LIMITS.manoeuvreRotationDeg),
     altitudeFt: limitedNumber(r.altitudeFt, DEFAULT_MANOEUVRE_PARAMS.altitudeFt, LIMITS.manoeuvreAltitudeFt),
-    duration: limitedNumber(r.duration, DEFAULT_MANOEUVRE_PARAMS.duration, LIMITS.manoeuvreDurationS),
-    left: booleanOr(r.left, DEFAULT_MANOEUVRE_PARAMS.left)
+    depthFt: limitedNumber(r.depthFt, DEFAULT_MANOEUVRE_PARAMS.depthFt, LIMITS.manoeuvreDepthFt),
+    offsetFt: limitedNumber(r.offsetFt, DEFAULT_MANOEUVRE_PARAMS.offsetFt, LIMITS.manoeuvreOffsetFt),
+    duration: limitedNumber(r.duration, DEFAULT_MANOEUVRE_PARAMS.duration, LIMITS.manoeuvreDurationS)
   };
 }
 
-const MANOEUVRE_TYPES: readonly ManoeuvreType[] = ['none', 'parameters', 'track', 'samples'];
+const MANOEUVRE_TYPES: readonly ManoeuvreType[] = ['parameters', 'track', 'samples'];
 
 export function migrateManoeuvreConfig(raw: unknown): ManoeuvreConfig {
   const r = isRecord(raw) ? raw : {};

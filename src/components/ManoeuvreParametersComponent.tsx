@@ -1,16 +1,97 @@
-import { Stack } from '@mui/material';
-import React from 'react';
+import {
+  InputAdornment,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip
+} from '@mui/material';
+import React, { useEffect, useState } from 'react';
 
 import { DEFAULT_MANOEUVRE_PARAMS } from '../core/model';
 import { useUnits } from '../hooks';
 import { ManoeuvreParams } from '../types';
-import { LIMITS } from '../core/validation';
+import { LIMITS, NumericLimits, clampNumber } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
-import NumberInput from './NumberInput';
 
 // Canonical definition lives in core/model; re-exported for existing users
 export { DEFAULT_MANOEUVRE_PARAMS };
+
+/** The turns people actually fly; anything else goes in Custom. */
+const ROTATION_PRESETS = [90, 135, 270, 450];
+
+interface NumberFieldProps {
+  label: string;
+  title: string;
+  /** Current value, already in display units. */
+  value: number;
+  unit: string;
+  step?: number;
+  /** Bounds in display units. */
+  limits: NumericLimits;
+  onChange: (value: number) => void;
+}
+
+/**
+ * Compact numeric field, styled to match the Courses panel.
+ *
+ * Out-of-range values are never propagated while typing (a half-typed "5" on
+ * the way to "500" must not reshape the turn), and are clamped on blur.
+ */
+function NumberField({ label, title, value, unit, step = 1, limits, onChange }: NumberFieldProps) {
+  const [text, setText] = useState(String(value));
+
+  // Re-sync when the value changes from outside (a preset load, a unit
+  // switch). Runs only on `value`, so a partially typed entry is safe.
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.value;
+
+    setText(next);
+
+    const parsed = parseFloat(next);
+
+    if (Number.isFinite(parsed) && parsed >= limits.min && parsed <= limits.max) {
+      onChange(parsed);
+    }
+  };
+
+  const handleBlur = () => {
+    const parsed = parseFloat(text);
+
+    if (!Number.isFinite(parsed)) {
+      setText(String(value));
+
+      return;
+    }
+
+    const clamped = clampNumber(parsed, limits.min, limits.max);
+
+    setText(String(clamped));
+    onChange(clamped);
+  };
+
+  return (
+    <Tooltip title={title}>
+      <TextField
+        label={label}
+        size="small"
+        fullWidth
+        value={text}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        slotProps={{
+          input: { endAdornment: <InputAdornment position="end">{unit}</InputAdornment> },
+          htmlInput: { type: 'number', step, 'aria-label': label }
+        }}
+      />
+    </Tooltip>
+  );
+}
 
 interface ManoeuvreParametersComponentProps {
   params: ManoeuvreParams;
@@ -23,63 +104,106 @@ export default function ManoeuvreParametersComponent({
 }: ManoeuvreParametersComponentProps) {
   const { formatAltitude, parseAltitude, altitudeLabel } = useUnits();
 
-  const handleChange = (key: keyof ManoeuvreParams) => (value: number | boolean) => {
-    onParamsChange({ ...params, [key]: value } as ManoeuvreParams);
+  const change = <K extends keyof ManoeuvreParams>(key: K, value: ManoeuvreParams[K]) => {
+    onParamsChange({ ...params, [key]: value });
   };
 
-  const handleSwitch = () => {
-    onParamsChange({ ...params, left: !params.left });
-  };
+  // Length limits are stored in feet but entered in the display unit.
+  const lengthLimits = (limits: NumericLimits): NumericLimits => ({
+    min: Math.round(formatAltitude(limits.min).value),
+    max: Math.round(formatAltitude(limits.max).value)
+  });
+
+  const isPreset = ROTATION_PRESETS.includes(params.rotationDeg);
+  const [rotationCustom, setRotationCustom] = useState(!isPreset);
+  const showCustomRotation = rotationCustom || !isPreset;
 
   return (
     <Stack direction="column" spacing={2}>
-      <NumberInput
-        title="Distance in the depth direction. Negative values offset to the opposite side."
-        label="Back"
-        initialValue={formatAltitude(params.offsetXFt).value}
-        step={altitudeLabel === 'ft' ? 50 : 15}
-        min={Math.round(formatAltitude(LIMITS.manoeuvreOffsetXFt.min).value)}
-        max={Math.round(formatAltitude(LIMITS.manoeuvreOffsetXFt.max).value)}
-        unit={altitudeLabel}
-        onChange={v => handleChange('offsetXFt')(parseAltitude(v))}
-      />
-      <NumberInput
-        title="Distance in the offset direction."
-        label="Offset"
-        initialValue={formatAltitude(params.offsetYFt).value}
-        step={altitudeLabel === 'ft' ? 50 : 15}
-        min={Math.round(formatAltitude(LIMITS.manoeuvreOffsetYFt.min).value)}
-        max={Math.round(formatAltitude(LIMITS.manoeuvreOffsetYFt.max).value)}
-        unit={altitudeLabel}
-        onChange={v => handleChange('offsetYFt')(parseAltitude(v))}
-      />
-      <NumberInput
-        title="The altitude the manoeuvre starts at."
-        label="Altitude"
-        initialValue={formatAltitude(params.altitudeFt).value}
-        step={altitudeLabel === 'ft' ? 50 : 15}
-        min={Math.round(formatAltitude(LIMITS.manoeuvreAltitudeFt.min).value)}
-        max={Math.round(formatAltitude(LIMITS.manoeuvreAltitudeFt.max).value)}
-        unit={altitudeLabel}
-        onChange={v => handleChange('altitudeFt')(parseAltitude(v))}
-      />
-      <NumberInput
-        title="The duration from the start of manoeuvre to flying level."
-        label="Duration"
-        initialValue={params.duration}
-        step={0.5}
-        min={LIMITS.manoeuvreDurationS.min}
-        max={LIMITS.manoeuvreDurationS.max}
-        unit="s"
-        onChange={handleChange('duration')}
-      />
+      {/* Which way you rotate. The offset is measured on the side you turn
+          from, so flipping this mirrors the whole turn. */}
       <DirectionSwitch
-        title={
-          'The position of the target relative to the start of the turn. For example, for a right hand ' +
-          '270 the target is on the LEFT side.'
-        }
-        value={!params.left}
-        onChange={handleSwitch}
+        title="Which way you turn onto final. A left-hand 270 rotates left through 270°."
+        value={params.turnDirection === 'right'}
+        onChange={right => change('turnDirection', right ? 'right' : 'left')}
+      />
+
+      <Tooltip title="How far you rotate onto final. The heading you start on follows from this: a 270 to the left starts 270° to the right of your final heading.">
+        <ToggleButtonGroup
+          value={showCustomRotation ? 'custom' : String(params.rotationDeg)}
+          exclusive
+          fullWidth
+          size="small"
+          onChange={(_event, value: string | null) => {
+            if (!value) {
+              return;
+            }
+            if (value === 'custom') {
+              setRotationCustom(true);
+
+              return;
+            }
+            setRotationCustom(false);
+            change('rotationDeg', Number(value));
+          }}
+        >
+          {ROTATION_PRESETS.map(deg => (
+            <ToggleButton key={deg} value={String(deg)}>{deg}°</ToggleButton>
+          ))}
+          <ToggleButton value="custom">Custom</ToggleButton>
+        </ToggleButtonGroup>
+      </Tooltip>
+
+      {showCustomRotation && (
+        <NumberField
+          label="Rotation"
+          title="Total degrees rotated onto final."
+          value={params.rotationDeg}
+          unit="°"
+          step={5}
+          limits={LIMITS.manoeuvreRotationDeg}
+          onChange={value => change('rotationDeg', value)}
+        />
+      )}
+
+      <NumberField
+        label="Altitude"
+        title="The altitude the turn starts at."
+        value={Math.round(formatAltitude(params.altitudeFt).value)}
+        unit={altitudeLabel}
+        step={altitudeLabel === 'ft' ? 50 : 15}
+        limits={lengthLimits(LIMITS.manoeuvreAltitudeFt)}
+        onChange={value => change('altitudeFt', parseAltitude(value))}
+      />
+
+      <NumberField
+        label="Depth"
+        title="How far back you start from the landing point, along your final heading. Positive is away from the target."
+        value={Math.round(formatAltitude(params.depthFt).value)}
+        unit={altitudeLabel}
+        step={altitudeLabel === 'ft' ? 50 : 15}
+        limits={lengthLimits(LIMITS.manoeuvreDepthFt)}
+        onChange={value => change('depthFt', parseAltitude(value))}
+      />
+
+      <NumberField
+        label="Offset"
+        title="How far to the side you start, across your final heading, on the side you turn from. For a 90, 270 or 450 this is the radius of the turn."
+        value={Math.round(formatAltitude(params.offsetFt).value)}
+        unit={altitudeLabel}
+        step={altitudeLabel === 'ft' ? 50 : 15}
+        limits={lengthLimits(LIMITS.manoeuvreOffsetFt)}
+        onChange={value => change('offsetFt', parseAltitude(value))}
+      />
+
+      <NumberField
+        label="Duration"
+        title="The time from the start of the turn to touchdown."
+        value={params.duration}
+        unit="s"
+        step={0.5}
+        limits={LIMITS.manoeuvreDurationS}
+        onChange={value => change('duration', value)}
       />
     </Stack>
   );
