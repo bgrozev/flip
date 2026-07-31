@@ -115,17 +115,37 @@ side is what makes flipping left/right mirror the turn; the absolute
 convention is not merely unintuitive but unflyable, since a turn cannot
 start across its own final line and still arrive on it.
 
-`solveManoeuvre()` closes the geometry in closed form: two unknowns
-(radius, rollout), two constraints (the arc ends on the final line, the
-rollout reaches the landing point). For a 90/270/450 the radius IS the
-offset. The path is that arc plus a straight rollout, with a short straight
-stub at each end so the entry and final headings read back exactly —
-`reposition` builds the pattern's final leg on the entry heading, so a
-half-sample chord error there is visible. A short or negative depth backs
-the turn up rather than letting the rollout vanish. `describeManoeuvrePath`
-measures all of this back OFF a path, so recorded tracks and samples are
-described the same way, and `ManoeuvreHintLayer` draws it (final axis,
-entry arrow, rotation label; `showManoeuvreHint`).
+**The drawn curve is an ILLUSTRATION**, and the panel says so. The numbers
+fix where the turn starts and how far it goes; they say nothing about its
+shape, and a real canopy turn is not a circle. `solveManoeuvre()` draws it
+at a nominal 200 ft radius and takes up the slack with straight legs: the
+turn is cut at every heading at a right angle to final, and a straight may
+be inserted at each joint as well as at both ends. Those directions are the
+four axes of the final-approach frame, so between them they absorb any
+displacement — a deep setup stretches the final approach, a negative offset
+stretches the entry, a 270 starting past the target becomes turn-straight-
+turn. Two straights always suffice, so the solver takes the valid pair with
+the least total length. The radius is tightened (by bisection) only when
+the setup is smaller than the nominal. Some setups cannot be drawn at all —
+a 90 can neither start past the target nor across the final line — and
+`reaches` reports that for the panel to warn about. Past 270 the radius
+shrinks along the sweep so big turns spiral instead of crossing themselves.
+
+Two invariants worth keeping: the entry and final headings read back
+exactly (each end carries a straight longer than one track sample —
+`reposition` builds the pattern's final leg on the entry heading), and the
+**wind drift over the turn depends only on altitude and duration**, not on
+the shape. The second is why the track is resampled at uniform TIME steps:
+altitude is linear in time, so the drift integral is shape-independent, but
+`addWind` sums over the segments it is handed and geometric sampling put
+those at shape-dependent times.
+
+`correctPatternHeading` applies only to tracks and samples, which are often
+a few degrees off; a parametric turn knows its entry heading exactly.
+
+`describeManoeuvrePath` measures all of this back OFF a path, so recorded
+tracks and samples are described the same way, and `ManoeuvreHintLayer`
+draws it (final axis, entry arrow, rotation label; `showManoeuvreHint`).
 
 **Modes** (`src/modes/`) decide which of this is exposed — panels, map
 layers, coarse `features`, setting defaults. The three are *Standard
