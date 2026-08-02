@@ -42,7 +42,14 @@ export interface ManoeuvreEditTarget {
    * the air — so the drag is resolved against this instead.
    */
   idealInitiation: LatLng;
-  /** Called with the wind-free position the handle was dragged to. */
+  /**
+   * Called once, on release, with the wind-free position the handle was
+   * dropped at. Deliberately not fired mid-drag: settling the turn means
+   * re-solving its geometry and then bisecting for its feasible bounds,
+   * which is far too much to repeat per pointer move. The handle follows
+   * the pointer on its own until then — the same bargain the target handle
+   * makes.
+   */
   onMove: (point: LatLng) => void;
 }
 
@@ -81,10 +88,7 @@ export default function ManoeuvreEditLayer({ edit }: ManoeuvreEditLayerProps) {
       zIndex={26}
       color={PATH_COLORS.manoeuvre}
       scale={dragging ? 8 : 6}
-      onDrag={position => {
-        setDragging(true);
-        edit.onMove(withoutDrift(position));
-      }}
+      onDrag={() => setDragging(true)}
       onDragEnd={position => {
         setDragging(false);
         edit.onMove(withoutDrift(position));
