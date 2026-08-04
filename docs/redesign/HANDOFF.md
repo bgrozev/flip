@@ -37,7 +37,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **829 tests, 0 lint errors, 50 known lint
+Baseline on the branch: **858 tests, 0 lint errors, 51 known lint
 warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the

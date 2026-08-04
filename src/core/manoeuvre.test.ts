@@ -311,6 +311,8 @@ describe('createManoeuvrePath', () => {
   });
 });
 
+interface Vec2 { x: number; y: number }
+
 /** Do two line segments properly cross? Shared endpoints do not count. */
 function segmentsCross(a1: Vec2, a2: Vec2, b1: Vec2, b2: Vec2): boolean {
   const cross = (o: Vec2, p: Vec2, q: Vec2) =>
@@ -322,8 +324,6 @@ function segmentsCross(a1: Vec2, a2: Vec2, b1: Vec2, b2: Vec2): boolean {
 
   return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
 }
-
-interface Vec2 { x: number; y: number }
 
 describe('the drawn curve', () => {
   const asPlane = (path: FlightPath): Vec2[] =>

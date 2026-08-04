@@ -5,8 +5,6 @@
  */
 import { createVersionedCodec } from '../util/storage';
 
-import { LIMITS } from './validation';
-
 import {
   DEFAULT_FLOCKING_PARAMS,
   DEFAULT_MANOEUVRE_CONFIG,
