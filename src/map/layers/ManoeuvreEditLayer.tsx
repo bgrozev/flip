@@ -34,21 +34,24 @@ const MIN_TARGET_GAP_PX = 26;
 export interface ManoeuvreEditTarget {
   /** The landing target, so the handle can keep clear of its handle. */
   target: LatLng;
-  /** Where the handle sits: the initiation point of the path as drawn. */
+  /**
+   * Where the handle sits: the initiation point of the STILL-AIR path — the
+   * dashed pre-wind line, not the solid one.
+   *
+   * The turn is described through the air (that is what depth and offset
+   * are), and the wind-corrected path is the app's OUTPUT. Putting the
+   * handle on the output meant dragging one line to set another, and the
+   * drag then had to have the drift subtracted back out of it before the
+   * numbers could be read off — an input dressed as a result.
+   */
   initiation: LatLng;
   /**
-   * The same point with no wind. The handle has to sit on the line the user
-   * can see, which has drifted, but the numbers describe the turn through
-   * the air — so the drag is resolved against this instead.
-   */
-  idealInitiation: LatLng;
-  /**
-   * Called once, on release, with the wind-free position the handle was
-   * dropped at. Deliberately not fired mid-drag: settling the turn means
-   * re-solving its geometry and then bisecting for its feasible bounds,
-   * which is far too much to repeat per pointer move. The handle follows
-   * the pointer on its own until then — the same bargain the target handle
-   * makes.
+   * Called once, on release, with the position the handle was dropped at —
+   * still air, since that is the line it lives on. Deliberately not fired
+   * mid-drag: settling the turn means re-solving its geometry and then
+   * bisecting for its feasible bounds, which is far too much to repeat per
+   * pointer move. The handle follows the pointer on its own until then —
+   * the same bargain the target handle makes.
    */
   onMove: (point: LatLng) => void;
 }
@@ -71,16 +74,6 @@ export default function ManoeuvreEditLayer({ edit }: ManoeuvreEditLayerProps) {
     return null;
   }
 
-  /**
-   * Take the wind drift back out of a dragged position. Over the few
-   * hundred feet a turn spans, the drift is the same vector at both points,
-   * so subtracting it in degrees is exact enough to be invisible.
-   */
-  const withoutDrift = (position: LatLng): LatLng => ({
-    lat: position.lat + (edit.idealInitiation.lat - edit.initiation.lat),
-    lng: position.lng + (edit.idealInitiation.lng - edit.initiation.lng)
-  });
-
   return (
     <MapDragHandle
       position={edit.initiation}
@@ -91,7 +84,7 @@ export default function ManoeuvreEditLayer({ edit }: ManoeuvreEditLayerProps) {
       onDrag={() => setDragging(true)}
       onDragEnd={position => {
         setDragging(false);
-        edit.onMove(withoutDrift(position));
+        edit.onMove(position);
       }}
     />
   );

@@ -1306,3 +1306,54 @@ exact, a 135 leaves a visible 45-degree kink between the pattern and the
 turn. The snap exists to tolerate noisy RECORDED tracks; a parametric turn
 knows its entry heading exactly and should bypass it. `reposition` takes
 paths, not the config, so it cannot tell them apart today.
+
+## Session 2026-08-03 — the initiation handle's frame
+
+Closed the item above first, by reading the code rather than trusting the
+note: `4eda10b` already fixed it. App passes `correctPatternHeading &&
+manoeuvreConfig.type !== 'parameters'` to `useFlightPaths`, so the snap
+still tolerates a noisy track and never touches a turn that knows its own
+entry heading. `reposition` still cannot tell them apart, which is why the
+decision is made at the call site, where the config is in scope. No test
+covers that line.
+
+### The handle was on the wrong line
+
+Owner's report: the parametric turn is configured for STILL AIR — the
+dashed pre-wind line — and the wind-corrected path is FliP's answer. The
+initiation handle sat on the answer.
+
+Whether that was cosmetic was the question worth asking, and the answer is
+mostly yes. The write-back was already resolved in still air: the layer
+subtracted the drift (`idealInitiation - initiation`) from the drop before
+handing it to `placeInitiation`, which works in the target's frame. What
+was not obvious is that the subtraction was *exact*, not an approximation.
+The drift at initiation is the wind integrated over the time from
+initiation to touchdown, and both the altitude and the duration are
+parameters — the turn's shape and position do not enter it (the same
+invariant that makes the path resample at uniform time steps). So the
+drift vector does not change as the handle is dragged. Measured before
+touching anything: dragging 300 ft deeper, the handle re-rendered 0.005 ft
+from where it was dropped.
+
+So the fix is a deletion. The handle takes `paths.ideal`'s initiation
+instead of `paths.display`'s, `onMove` forwards the drop untouched, and
+`ManoeuvreEditTarget.idealInitiation` and the `withoutDrift` helper are
+gone. Dragging now moves the line the numbers describe, and the solid path
+answers.
+
+A pre-fix run of the new `ManoeuvreEditLayer.test.tsx` expectations
+(against the old two-field shape) failed on both counts — the handle
+rendered at the drifted point, and the drop arrived at `onMove` shifted by
+the drift — which is what makes the test worth keeping.
+
+Browser-verified on MapLibre at ZHills, ~15 kt average: the handle sits on
+the dashed line and the entry arrow ~140 ft away on the solid one, the
+displacement pointing upwind, which is the right sign — with wind you must
+start upwind of the still-air initiation to land on the same spot.
+
+That gap is the loose end: `ManoeuvreHintLayer` still anchors the arrow
+and the rotation label to the drawn path, so the two ends of one turn are
+now drawn on different lines. Moving the hint to the still-air path is
+consistent for a parametric turn; for a recorded track the drawn line is
+the one that was actually flown. Owner's call, recorded in HANDOFF.

@@ -146,12 +146,35 @@ from the path, so tracks and samples get it too), behind
 surfaced, and why `pipeline.test.ts` now holds its manoeuvre as literal
 data.
 
-⚠️ **Raised but not fixed**: `correctPatternHeading` still snaps the
-pattern's final leg to ±90 of the target heading, which was harmless when
-a manoeuvre could only be ±90. With rotation now exact, a 135 shows a
-45-degree kink between pattern and turn. Parametric turns should bypass the
-snap (recorded tracks still want it); `reposition` takes paths, not the
-config, so it cannot currently tell them apart.
+☑ **The `correctPatternHeading` kink was fixed** the same week, in
+`4eda10b`: App passes `correctPatternHeading && manoeuvreConfig.type !==
+'parameters'`, so the ±90 snap survives for tracks and samples (which are
+a few degrees off and want it) and never touches a parametric turn (which
+knows its entry heading exactly). `reposition` still takes paths rather
+than the config, so the decision is made where the config is known — at
+the one call site, and it is not covered by a test.
+
+### Session 2026-08-03
+
+**The initiation handle moved to the still-air path** (the dashed pre-wind
+line). It sat on the wind-corrected path, which inverted the direction the
+app runs in: a turn is set up in still air and the correction is the
+OUTPUT, so the handle was an input dressed as a result. Only the frame was
+wrong — the drag was already resolved in still air, by subtracting the
+drift from the drop, and that arithmetic was exact rather than an
+approximation (the drift over the turn depends only on altitude and
+duration, so it is the same vector wherever the handle lands: measured at
+0.005 ft over a 300 ft drag). The correction is simply gone now, along
+with `ManoeuvreEditTarget.idealInitiation`. Browser-verified on MapLibre:
+the handle sits on the dashed line, ~140 ft upwind of the entry arrow,
+which stays anchored to the drawn path.
+
+⚠️ **Left open by that**: `ManoeuvreHintLayer`'s entry arrow and rotation
+label still anchor to the drawn path, so they no longer sit at the handle
+— the two ends of the same turn are drawn on different lines. Anchoring
+the hint to the still-air path as well is the consistent move for a
+parametric turn; for a recorded track it is less obvious, since the drawn
+line is the one the jumper flew. Owner's call.
 
 ### Session 2026-07-29
 
@@ -651,8 +674,9 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
   middle-handle rotations, the classic exit translates everything, and the
   camera never scrolls while dragging any handle.
 - **The manoeuvre's initiation handle** (swoop, parametric turns): drag to
-  set depth and offset. Confirm it tracks the pointer rather than springing
-  back (the wind-drift correction), that it clamps at the edge of what can
+  set depth and offset — on the dashed still-air line as of 2026-08-03.
+  Confirm it tracks the pointer rather than springing
+  back, that it clamps at the edge of what can
   be drawn instead of jumping, and that it withdraws rather than stealing
   the target's drags when the two are close or the map is zoomed out.
 - **Target handle** (all modes): drag to move, hover to reveal the

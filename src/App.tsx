@@ -441,6 +441,11 @@ function DashboardContent() {
    * set a turn up, so it is live whenever a parametric turn is being flown
    * — no edit mode, the way the target handle works. A recorded track has
    * no depth and offset to write back to, so it gets no handle.
+   *
+   * It rides the IDEAL path. The turn is set up in still air and the wind
+   * correction is what FliP hands back, so the handle belongs on the input
+   * line; on the corrected one it read as if the drift were something you
+   * could drag.
    */
   const manoeuvreEditTarget: ManoeuvreEditTarget | undefined = useMemo(() => {
     if (isFlocking || !hasFeature(mode, 'manoeuvre') || manoeuvreConfig.type !== 'parameters') {
@@ -449,17 +454,15 @@ function DashboardContent() {
 
     const ofManoeuvre = (path: FlightPath) =>
       path.filter(point => point.properties.phase === 'manoeuvre');
-    const drawn = describeManoeuvrePath(ofManoeuvre(paths.display));
     const ideal = describeManoeuvrePath(ofManoeuvre(paths.ideal));
 
-    if (!drawn || !ideal) {
+    if (!ideal) {
       return undefined;
     }
 
     return {
       target: (target ?? DEFAULT_TARGET).target,
-      initiation: drawn.initiation,
-      idealInitiation: ideal.initiation,
+      initiation: ideal.initiation,
       onMove: (point: LatLng) => {
         const params = manoeuvreConfig.params ?? DEFAULT_MANOEUVRE_PARAMS;
 
@@ -469,7 +472,7 @@ function DashboardContent() {
         });
       }
     };
-  }, [isFlocking, mode, manoeuvreConfig, paths.display, paths.ideal, target, setManoeuvreConfig]);
+  }, [isFlocking, mode, manoeuvreConfig, paths.ideal, target, setManoeuvreConfig]);
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 

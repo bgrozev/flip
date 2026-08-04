@@ -154,12 +154,18 @@ a few degrees off; a parametric turn knows its entry heading exactly.
 
 **The initiation point is a drag handle** (`ManoeuvreEditLayer`), and is
 the primary way to set a turn up — depth and offset are a position, and a
-position is a thing you point at. Always live, parametric turns only. The
-handle sits on the drifted path but the numbers describe the turn through
-the air, so `placeInitiation` is fed the position with the wind drift taken
-back out; it projects onto the final-approach axis and clamps to the same
-feasible bounds the fields use, one axis at a time. The handle withdraws
-within 26 px of the target's so it never eats its drags.
+position is a thing you point at. Always live, parametric turns only. It
+rides the **still-air path** — the dashed pre-wind line — because that is
+the frame the turn is described in: you set the turn up in still air and
+the wind correction is what FliP hands back. On the corrected path it was
+an input dressed as a result, and the drop had to have the drift taken
+back out of it before `placeInitiation` could read the numbers off.
+(Harmless arithmetic, as it happens: the drift over the turn depends only
+on altitude and duration, so it is the same vector wherever the handle is
+dropped.) `placeInitiation` projects the drop onto the final-approach axis
+and clamps to the same feasible bounds the fields use, one axis at a time.
+The handle withdraws within 26 px of the target's so it never eats its
+drags.
 
 `describeManoeuvrePath` measures all of this back OFF a path, so recorded
 tracks and samples are described the same way. `ManoeuvreHintLayer` draws
