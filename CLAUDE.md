@@ -362,6 +362,17 @@ cancels the flown line — see NOTES).
   corridors that both reach green are separated by which run is most
   into the wind, which keeps the answer stable as a forecast drifts.
 
+**The no-wind ghost is drawn from the exit** (`anchorAtExit` in
+`useFlockingPath`). The model builds both paths sharing an END, because
+`addWind` holds the landing point and accumulates the drift backwards —
+right for measuring, wrong for drawing: the ghost then started at the exit
+you would have needed in still air, which is nobody's exit, and ended on
+the target, which is where the wind puts you. Translated onto the real
+exit it reads as the jump being planned — leave here, no wind, end up
+there — and the gap at the far end IS the drift. Only the drawn path
+moves; `flockingVectors` and `averageWind` keep the end-aligned pair,
+since both measure the gap between the two.
+
 **The spot is the output**, so it is treated as one: "Jumprun 248˚ · 3.41
 mi prior · 0.42 mi left" is written by `core/spotText.formatSpot()` and
 nothing else, and every surface that says it reads that one function —

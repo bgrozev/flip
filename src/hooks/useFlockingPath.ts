@@ -137,6 +137,32 @@ function shiftPath(path: FlightPath, dLng: number, dLat: number): FlightPath {
   })) as FlightPath;
 }
 
+/**
+ * Put the no-wind path where it can actually be read: leaving the aircraft
+ * at the real exit.
+ *
+ * The model builds both paths sharing an END — `addWind` holds the landing
+ * point and walks the drift backwards — which is right for measuring the
+ * drift and wrong for drawing it. Anchored that way the ghost started at
+ * the exit you would have needed in still air, a point nobody flies from,
+ * and ended on the target, which is where the wind takes you and not where
+ * still air would. Translated onto the exit it reads as the jump being
+ * planned: leave HERE, and with no wind you would end up THERE — short of
+ * the target by exactly the drift.
+ *
+ * Only what is drawn moves. `flockingVectors` and `averageWind` keep the
+ * end-aligned pair, because both measure the gap between the two paths.
+ */
+function anchorAtExit(ideal: FlightPath, exit: LatLng): FlightPath {
+  if (ideal.length === 0) {
+    return ideal;
+  }
+
+  const [lng, lat] = ideal[ideal.length - 1].geometry.coordinates;
+
+  return shiftPath(ideal, exit.lng - lng, exit.lat - lat);
+}
+
 function pointToLatLng(p: FlightPoint): LatLng {
   return { lat: p.geometry.coordinates[1], lng: p.geometry.coordinates[0] };
 }
@@ -221,7 +247,9 @@ export function useFlockingPath({
       const exit = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
 
       return {
-        ideal: idealAtTarget,
+        // Drawn from the exit; the drift block below keeps the end-aligned
+        // pair, which is what measures the wind.
+        ideal: anchorAtExit(idealAtTarget, exit),
         corrected: correctedAtTarget,
         exit,
         end: target.target,
@@ -256,8 +284,9 @@ export function useFlockingPath({
     const exitAtTarget = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
     const dLng = exit.lng - exitAtTarget.lng;
     const dLat = exit.lat - exitAtTarget.lat;
-    const ideal = shiftPath(idealAtTarget, dLng, dLat);
+    const idealAligned = shiftPath(idealAtTarget, dLng, dLat);
     const corrected = shiftPath(correctedAtTarget, dLng, dLat);
+    const ideal = anchorAtExit(idealAligned, exit);
 
     const end = pointToLatLng(corrected[0]);
     const missEN = localMilesEN(end, target.target);
@@ -279,11 +308,11 @@ export function useFlockingPath({
       intoWindDeg,
       canopyDeviationDeg: driftAngle(canopyDeg, jumprunDeg),
       canopyDeviationWarning: driftAngle(canopyDeg, jumprunDeg) > CANOPY_DEVIATION_WARN_DEG,
-      vectors: flockingVectors(ideal, corrected),
+      vectors: flockingVectors(idealAligned, corrected),
       spot: spotDescription(exit, reference, jumprunDeg),
       reference,
       hasWind,
-      averageWind: averageWind(ideal, corrected),
+      averageWind: averageWind(idealAligned, corrected),
       jumprunLine,
       solve: null,
       corridorSolutions: [],
@@ -427,8 +456,9 @@ function deriveSolve({
   const exitAtTarget = pointToLatLng(correctedAtTarget[correctedAtTarget.length - 1]);
   const dLng = exit.lng - exitAtTarget.lng;
   const dLat = exit.lat - exitAtTarget.lat;
-  const ideal = shiftPath(idealAtTarget, dLng, dLat);
+  const idealAligned = shiftPath(idealAtTarget, dLng, dLat);
   const corrected = shiftPath(correctedAtTarget, dLng, dLat);
+  const ideal = anchorAtExit(idealAligned, exit);
 
   const end = pointToLatLng(corrected[0]);
   const missEN = localMilesEN(end, target);
@@ -451,11 +481,11 @@ function deriveSolve({
     canopyDeviationDeg: driftAngle(best.canopyDeg, best.jumprunDeg),
     canopyDeviationWarning:
       driftAngle(best.canopyDeg, best.jumprunDeg) > CANOPY_DEVIATION_WARN_DEG,
-    vectors: flockingVectors(ideal, corrected),
+    vectors: flockingVectors(idealAligned, corrected),
     spot: spotDescription(exit, reference, best.jumprunDeg),
     reference,
     hasWind,
-    averageWind: averageWind(ideal, corrected),
+    averageWind: averageWind(idealAligned, corrected),
     jumprunLine,
     solve,
     corridorSolutions,

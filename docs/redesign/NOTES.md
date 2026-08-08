@@ -1466,3 +1466,30 @@ before "fixing" a clipboard failure that only automation sees.
 Mobile answers the remaining question from the options list: the footer bar
 (option 7) is unnecessary, because the top bar survives a panel replacing
 the map, which is where the spot used to disappear on a phone.
+
+### The no-wind ghost was anchored at the wrong end (same day)
+
+Owner: what is the white dashed line in flocking? If it is the no-wind
+canopy flight, it should start at the exit and end wherever it ends,
+rather than ending at the target and starting somewhere arbitrary.
+
+Correct, and the cause is structural rather than a slip. `addWind` holds
+the LANDING point and accumulates drift backwards, so `ideal` and
+`corrected` come out of the model sharing an end. That alignment is what
+`flockingVectors` and `averageWind` measure against — drift is the gap
+between the two exits — so the pair has to stay that way for the numbers.
+Drawing it that way is a different question, and the answer was wrong: the
+ghost began at the exit you would have needed in still air (a point nobody
+flies from) and finished on the target, where the wind puts you and still
+air would not.
+
+`anchorAtExit` translates the drawn ghost onto the real exit, in all three
+sub-modes; the vectors keep the end-aligned pair (`idealAligned`). The
+picture now reads as the jump being planned: leave the aircraft HERE, with
+no wind you would end up THERE, and the gap at the far end is exactly the
+drift — which is also the new regression test, since the gap and
+`vectors.windDrift.lengthMi` must agree.
+
+Three tests failed before the change (one per sub-mode: the ghost's exit
+did not coincide with the flight's), and one pins what must NOT move —
+canopy flight, drift and average wind read the same as before.

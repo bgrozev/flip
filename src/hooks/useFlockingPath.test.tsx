@@ -192,3 +192,47 @@ describe('useFlockingPath — solve mode', () => {
     expect(d.corridorOutlines).toEqual([]);
   });
 });
+
+// The ghost is the jump you are actually making, flown without wind: it
+// leaves the aircraft where you leave it and ends short of the target by the
+// drift. Anchored at the target instead (as it was), it started at the exit
+// you would have needed in still air — a point nobody flies from.
+describe('useFlockingPath — the no-wind ghost', () => {
+  const exitOf = (path: { geometry: { coordinates: number[] } }[]) =>
+    path[path.length - 1].geometry.coordinates as [number, number];
+  const endOf = (path: { geometry: { coordinates: number[] } }[]) =>
+    path[0].geometry.coordinates as [number, number];
+
+  for (const [name, params] of [
+    ['classic', DEFAULT_FLOCKING_PARAMS],
+    ['free', { ...DEFAULT_FLOCKING_PARAMS, mode: 'free', exitAlongMi: 1 }],
+    ['solve', { ...DEFAULT_FLOCKING_PARAMS, mode: 'solve' }]
+  ] as [string, FlockingParams][]) {
+    it(`starts at the exit in ${name} mode`, () => {
+      const d = run(params);
+
+      expect(distMi(exitOf(d.ideal), exitOf(d.corrected))).toBeLessThan(0.001);
+      expect(distMi(exitOf(d.ideal), [d.exit!.lng, d.exit!.lat])).toBeLessThan(0.001);
+    });
+  }
+
+  it('ends short of the target by exactly the wind drift', () => {
+    const d = run(DEFAULT_FLOCKING_PARAMS);
+    const gapMi = distMi(endOf(d.ideal), [target.target.lng, target.target.lat]);
+
+    expect(gapMi).toBeCloseTo(d.vectors!.windDrift.lengthMi, 3);
+    expect(gapMi).toBeGreaterThan(0.1);
+  });
+
+  it('leaves the drift block and the average wind measured as before', () => {
+    const d = run(DEFAULT_FLOCKING_PARAMS);
+
+    // Canopy flight is the ghost's own length, wherever it is drawn
+    expect(d.vectors!.canopyFlight.lengthMi)
+      .toBeCloseTo(distMi(exitOf(d.ideal), endOf(d.ideal)), 6);
+    // Drift and average wind still describe the wind, not the anchoring
+    expect(d.vectors!.windDrift.lengthMi).toBeGreaterThan(0.1);
+    expect(d.averageWind.speedKts).toBeCloseTo(20, 0);
+    expect(d.averageWind.direction).toBeCloseTo(270, 0);
+  });
+});
