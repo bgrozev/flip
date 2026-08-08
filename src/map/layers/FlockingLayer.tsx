@@ -18,6 +18,7 @@ import {
   vectorCardinalDirection
 } from '../../core/flocking';
 import { destinationPoint } from '../../core/geometry';
+import { formatSpot } from '../../core/spotText';
 import { WindProfile, getWindAt, prepWind } from '../../core/wind';
 import { useUnits } from '../../hooks';
 import { FlightPath, LatLng } from '../../types';
@@ -124,17 +125,36 @@ const CORRIDOR_LABEL_STYLE: React.CSSProperties = {
   transform: 'translate(-50%, -50%)'
 };
 
-/** The spot one-liner near the exit. */
+/**
+ * The spot one-liner near the exit — the map's copy of flocking's output,
+ * so it is set larger than the other labels and reads as the answer rather
+ * than as an annotation.
+ *
+ * Deliberately NOT clickable, unlike the panel and the top bar. Map
+ * overlays live in Google's `overlayLayer` pane, which receives no mouse
+ * events; the only interactive panes sit ABOVE every marker, so a
+ * clickable label would shadow whatever drag handle happened to be under
+ * it — and in free mode the exit handle is a few pixels away by
+ * construction. Reading beats copying here: copy is one glance up, in the
+ * top bar.
+ */
 const SPOT_LABEL_STYLE: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.85)',
   border: `1px solid ${FLOCKING_COLOR}`,
-  padding: '4px 8px',
-  borderRadius: '4px',
-  fontSize: '13px',
+  padding: '6px 10px',
+  borderRadius: '14px',
+  fontSize: '15px',
+  fontWeight: 'bold',
   color: 'white',
   display: 'inline-block',
   whiteSpace: 'nowrap',
   transform: 'translate(-50%, 16px)'
+};
+
+/** The verdict and the canopy deviation, under the spot itself. */
+const SPOT_LABEL_NOTE_STYLE: React.CSSProperties = {
+  fontSize: '13px',
+  fontWeight: 'normal'
 };
 
 export interface FlockingLayerProps {
@@ -349,24 +369,9 @@ export default function FlockingLayer({
   const unitLabel = DISTANCE_UNIT_LABELS[distanceUnit];
   const missed = !onTarget;
   const missColor = TIER_COLOR[tier ?? 'red'];
-  let spotText = spot
-    ? `Jumprun ${roundDeg(spot.jumprunDeg)}˚ · ${
-      milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} ${unitLabel} ${
-      spot.prior ? 'prior' : 'PAST'}`
-    : null;
-
-  // Perpendicular offset from the jumprun line (crosswind spot), when non-zero.
-  if (spotText && spot) {
-    const offsetDisp = milesToDisplay(spot.offsetMi, distanceUnit);
-    if (offsetDisp >= 0.005) {
-      spotText += ` · ${offsetDisp.toFixed(2)} ${unitLabel} ${spot.offsetLeft ? 'left' : 'right'}`;
-    }
-  }
-
-  if (spotText && missed && missMi !== null) {
-    spotText += `${tier === 'yellow' ? ' · CLOSE by ' : ' · MISSES by '}${
-      milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`;
-  }
+  // One formatter for every surface: what the label says here is exactly
+  // what the panel says, what the top bar says and what gets copied.
+  const spotText = spot ? formatSpot(spot, distanceUnit, { missMi, tier }) : null;
 
   const lineProps = { color: JUMPRUN_COLOR, opacity: 0.9, weight: 3, zIndex: 0 };
 
@@ -760,9 +765,19 @@ export default function FlockingLayer({
               ...missed ? { border: `1px solid ${missColor}`, color: missColor } : {}
             }}
           >
-            <div>{spotText}</div>
+            <div>{spotText.line}</div>
+            {missed && spotText.verdict && (
+              <div style={{ ...SPOT_LABEL_NOTE_STYLE, color: missColor }}>
+                {spotText.verdict}
+              </div>
+            )}
             {canopyDeviationDeg >= 0.5 && (
-              <div style={{ color: canopyDeviationWarning ? MISS_COLOR : JUMPRUN_COLOR }}>
+              <div
+                style={{
+                  ...SPOT_LABEL_NOTE_STYLE,
+                  color: canopyDeviationWarning ? MISS_COLOR : JUMPRUN_COLOR
+                }}
+              >
                 Canopy {Math.round(canopyDeviationDeg)}˚ off jumprun
               </div>
             )}

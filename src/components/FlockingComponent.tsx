@@ -6,9 +6,11 @@
  * flight and the jumprun are fully independent.
  */
 import {
+  ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon
+  ExpandMore as ExpandMoreIcon,
+  IosShare as ShareIcon
 } from '@mui/icons-material';
 import {
   Accordion,
@@ -47,8 +49,9 @@ import {
   milesToDisplay
 } from '../core/flocking';
 import { LIMITS, normalizeDirection } from '../core/validation';
+import { SpotText, formatSpot } from '../core/spotText';
 import { LatLng } from '../types';
-import { useAppState, useUnits } from '../hooks';
+import { useAppState, useCopySpot, useUnits } from '../hooks';
 
 import NumberInput from './NumberInput';
 
@@ -116,6 +119,117 @@ function BearingArrow({ deg }: { deg: number }) {
     >
       ↑
     </span>
+  );
+}
+
+/**
+ * The spot, as the panel's headline.
+ *
+ * Flocking exists to produce this one answer, and it used to be a body-text
+ * paragraph a third of the way down a panel full of inputs — so it scrolled
+ * away exactly when it was being read out. It is now the first thing in the
+ * panel, set in display type, and it sticks to the top while the inputs
+ * scroll under it. Tapping it (or the copy button) hands it on; the numbers
+ * themselves come from `formatSpot`, so this reads identically to the map
+ * label, the top bar and the clipboard.
+ */
+function SpotHero({
+  spot,
+  text,
+  tier,
+  canopyDeviationDeg,
+  canopyDeviationWarning
+}: {
+  spot: SpotDescription;
+  text: SpotText;
+  tier: SolveTier | null;
+  canopyDeviationDeg: number;
+  canopyDeviationWarning: boolean;
+}) {
+  const { copy, share, canShare } = useCopySpot();
+
+  return (
+    <Box
+      data-testid="flocking-spot"
+      onClick={() => copy(text.line)}
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 2,
+        cursor: 'pointer',
+        textAlign: 'left',
+        px: 1.5,
+        py: 1,
+        borderRadius: 1,
+        border: 1,
+        borderColor: 'divider',
+        backgroundColor: 'background.paper'
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+          Spot
+        </Typography>
+        <Stack direction="row">
+          <Tooltip title="Copy the spot">
+            <IconButton
+              size="small"
+              aria-label="Copy the spot"
+              onClick={event => {
+                event.stopPropagation();
+                copy(text.line);
+              }}
+            >
+              <CopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {canShare && (
+            <Tooltip title="Send the spot">
+              <IconButton
+                size="small"
+                aria-label="Send the spot"
+                onClick={event => {
+                  event.stopPropagation();
+                  share(text.line);
+                }}
+              >
+                <ShareIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      </Stack>
+
+      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+        {text.jumprun} <BearingArrow deg={spot.jumprunDeg} />
+      </Typography>
+      <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+        {text.along}
+      </Typography>
+      {text.offset && (
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          {text.offset}
+        </Typography>
+      )}
+      {text.verdict && (
+        <Typography
+          variant="body2"
+          sx={{ color: TIER_COLOR[tier ?? 'green'], mt: 0.5 }}
+          data-testid="flocking-miss"
+        >
+          {text.verdict}
+        </Typography>
+      )}
+      {canopyDeviationDeg >= 0.5 && (
+        <Typography
+          variant="body2"
+          sx={{ color: canopyDeviationWarning ? 'error.main' : 'success.main' }}
+          data-testid="flocking-deviation"
+        >
+          Canopy {Math.round(canopyDeviationDeg)}˚ off jumprun
+        </Typography>
+      )}
+    </Box>
   );
 }
 
@@ -359,11 +473,21 @@ export default function FlockingComponent({
       p.horizontalSpeedMph === params.horizontalSpeedMph
   );
 
-  const offsetDisplay = spot ? milesToDisplay(spot.offsetMi, distanceUnit) : 0;
+  const spotText = spot ? formatSpot(spot, distanceUnit, { missMi, tier }) : null;
   const unitLabel = DISTANCE_UNIT_LABELS[distanceUnit];
 
   return (
     <Box display="flex" flexDirection="column" gap={1.5}>
+      {spot && spotText && (
+        <SpotHero
+          spot={spot}
+          text={spotText}
+          tier={tier}
+          canopyDeviationDeg={canopyDeviationDeg}
+          canopyDeviationWarning={canopyDeviationWarning}
+        />
+      )}
+
       <ToggleButtonGroup
         value={params.mode}
         exclusive
@@ -398,49 +522,6 @@ export default function FlockingComponent({
           <VectorRow label="Wind drift" v={vectors.windDrift} unit={distanceUnit} />
           <VectorRow label="Canopy flight" v={vectors.canopyFlight} unit={distanceUnit} />
           <VectorRow label="Combined" v={vectors.combined} unit={distanceUnit} />
-        </Box>
-      )}
-
-      {spot && (
-        <Box sx={{ textAlign: 'left' }} data-testid="flocking-spot">
-          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-            Spot
-          </Typography>
-          <Typography variant="body1">
-            Jumprun {roundDeg(spot.jumprunDeg)}˚ <BearingArrow deg={spot.jumprunDeg} />
-          </Typography>
-          {canopyDeviationDeg >= 0.5 && (
-            <Typography
-              variant="body1"
-              sx={{ color: canopyDeviationWarning ? 'error.main' : 'success.main' }}
-              data-testid="flocking-deviation"
-            >
-              Canopy {Math.round(canopyDeviationDeg)}˚ off jumprun
-            </Typography>
-          )}
-          <Typography variant="body1">
-            {milesToDisplay(spot.alongMi, distanceUnit).toFixed(2)} {unitLabel}{' '}
-            {spot.prior ? 'prior' : <b>PAST</b>}
-          </Typography>
-          {offsetDisplay > 0.05 && (
-            <Typography variant="body1">
-              Offset {offsetDisplay.toFixed(2)} {unitLabel} {spot.offsetLeft ? 'left' : 'right'}
-            </Typography>
-          )}
-          {missMi !== null && (
-            <Typography
-              variant="body1"
-              sx={{ color: TIER_COLOR[tier ?? 'green'], mt: 0.5 }}
-              data-testid="flocking-miss"
-            >
-              {tier === 'green' &&
-                `On target (${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel} off)`}
-              {tier === 'yellow' &&
-                `Close: ${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel} off`}
-              {tier === 'red' &&
-                `MISSES TARGET by ${milesToDisplay(missMi, distanceUnit).toFixed(2)} ${unitLabel}`}
-            </Typography>
-          )}
         </Box>
       )}
 

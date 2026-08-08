@@ -50,10 +50,12 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 - ☐ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — opening any
   panel on mobile replaces the map, breaking see-while-editing. (The
   top-bar + WINDS-indicator refresh already work from the map view.)
-- ☐ **P8 / task 40 · Jumprun handoff copy/share** — the flocking
-  deliverable ("Jumprun 0° · 3.61 mi prior") is read-only text; no way to
-  copy/share to the pilot. The one output flockers exist for isn't
-  exportable.
+- ☑ **P8 / task 40 · Jumprun handoff copy/share** — DONE 2026-08-03. The
+  spot is now built by one formatter (`core/spotText`) and shown as the
+  panel's sticky hero, in the top bar (replacing the wind summary in
+  flocking) and as a pill on the map; the first two copy it, or open the
+  share sheet where there is one. Text is the spot alone, per the owner:
+  no dropzone, corridor name or forecast time.
 - ☐ **F6 · Mobile Wind panel density** — desktop-shaped layout, large empty
   space below COMPARE SOURCES on a phone.
 - ☐ **task 14 · "Why did the pattern shift" teaching affordance** — the key

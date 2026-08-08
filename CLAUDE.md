@@ -362,6 +362,27 @@ cancels the flown line — see NOTES).
   corridors that both reach green are separated by which run is most
   into the wind, which keeps the answer stable as a forecast drifts.
 
+**The spot is the output**, so it is treated as one: "Jumprun 248˚ · 3.41
+mi prior · 0.42 mi left" is written by `core/spotText.formatSpot()` and
+nothing else, and every surface that says it reads that one function —
+the panel's sticky **SpotHero** (display type, first thing in the panel,
+stays put while the inputs scroll), the **top bar**, which in flocking
+shows the spot INSTEAD of the wind summary (the map's winds indicator
+already carries GND and the bands; the pilot handoff outranks them), and
+the map's pill label at the exit. Two readouts rounding the same distance
+differently would be a bug, so they cannot be built separately.
+`useCopySpot` hands it on — clipboard, or the share sheet where the
+platform has one — from the top bar and the hero, and reports failure
+rather than pretending. The copy text is the spot alone: the reference
+point is agreed offline, and the corridor name and the forecast time are
+FliP's business, not the aircraft's. The map label is deliberately NOT
+clickable: map overlays live in Google's `overlayLayer` pane, which takes
+no mouse events, and the interactive panes sit above every marker — a
+clickable label would shadow the drag handles beside it. `verdict`
+("MISSES by 0.80 mi") sits beside the spot on every surface but never
+inside the copied line; it describes the jumper's own setup, not where
+the plane should fly.
+
 ## Coordinate Formats
 
 - **Flip Format** (internal): GeoJSON `Feature<Point>` with properties

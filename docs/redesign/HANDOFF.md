@@ -169,6 +169,19 @@ with `ManoeuvreEditTarget.idealInitiation`. Browser-verified on MapLibre:
 the handle sits on the dashed line, ~140 ft upwind of the entry arrow,
 which stays anchored to the drawn path.
 
+**The spot became flocking's headline** (P8 closed). One formatter,
+`core/spotText.formatSpot`, now writes "Jumprun 248˚ · 3.41 mi prior ·
+0.42 mi left" for every surface: the panel's sticky hero (display type,
+top of the panel), the top bar — which in flocking shows the spot INSTEAD
+of avg/gnd wind, since the map's winds indicator already carries that —
+and the map's pill at the exit. The first two copy on click (or open the
+share sheet); the map label deliberately does not, because Google's
+`overlayLayer` pane takes no mouse events and the panes that do would
+shadow the drag handles beside it. The copied text is the spot alone, by
+the owner's call: no dropzone, corridor name or forecast validity. A
+`verdict` ("MISSES by 0.80 mi") shows beside the spot everywhere and is
+never copied — it is about the jumper's setup, not the aircraft's.
+
 **"No place" could not be stored** (owner report: pick a Google result with
 no dropzone matches, get a stale Spot Reference and a "1000 mi PAST"
 spot). Toolpad's `useLocalStorageState` deletes the key when handed null,

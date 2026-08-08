@@ -1411,3 +1411,58 @@ active place is ZHills again straight after choosing a geocoder hit, and
 an off-list edit is handed back by the default dropzone) and the guard's
 own (a remembered target nowhere near its place is ignored). A fourth pins
 what the guard must NOT eat — a reference three miles up the jumprun.
+
+## Session 2026-08-03 (3) — the spot as the output
+
+Owner: the spot is what flocking is FOR. It is decided, read out and sent
+to a pilot, so it has to be big, readable and copyable — and the top bar's
+avg/gnd wind is the wrong thing to be showing in that mode.
+
+Shipped four of the seven options that were on the table (1, 3, 4 minus the
+shortcut and the radio phrasing, 6); the map HUD card and the big-type
+aircraft view were dropped as redundant with the top bar.
+
+**One formatter.** `core/spotText.formatSpot()` builds every string, and
+the panel, the top bar and the map label all call it. Before this each
+surface built its own — the map label had its own "Jumprun … prior/PAST …"
+concatenation, the panel had another with different wording ("Offset 0.42
+mi left" vs "0.42 mi left"), and the two rounded independently. Same
+lesson as `sampleWindBands`: "they show the same thing" has to be
+structural or it is a rumour.
+
+`verdict` is deliberately outside `line`. A miss is a fact about the
+jumper's configuration; the pilot is being handed a place to fly to. So
+every surface may show it, and no clipboard ever carries it.
+
+**Top bar.** In flocking, `CustomAppTitle` renders `SpotSummary` instead of
+`WindSummary`. That is not a loss of wind information: the map's winds
+indicator already shows GND and the plan's bands, which is what the bar was
+duplicating. The wordmark hides under `sm` when a spot is present — on a
+375 px phone the bar cannot hold both, and "FliP" is the part nobody needs
+to read. `variant="subtitle1"`, not `button`: the latter upper-cases, and
+prior vs PAST is carried by the case.
+
+**Panel.** The spot was body text a third of the way down a panel of
+inputs, so it scrolled away exactly when it was being read out. It is now
+first, in display type, and sticky.
+
+**The map label is not clickable, on purpose.** It was, briefly. Google's
+`OVERLAY_LAYER` pane receives no mouse events (which is why the click did
+nothing in the browser), and the panes that do — `overlayMouseTarget`,
+`floatPane` — sit above every marker pane, which is exactly why the layer
+was moved off them in the first place: a label there shadows the drag
+handles under it, and in free mode the exit handle is a few pixels from
+this label by construction. Copy is one glance up in the top bar. If the
+owner wants it clickable anyway, the fix is an `interactive` flag on
+`MapOverlay` plus more separation from the exit.
+
+**Verification note.** A synthetic `element.click()` on the copy control
+reported "Could not copy the spot", which looked like a bug and was not:
+`navigator.clipboard.writeText` needs transient user activation, which a
+scripted click does not carry. Driving the same button through the
+browser's real input path copied and toasted correctly. Worth remembering
+before "fixing" a clipboard failure that only automation sees.
+
+Mobile answers the remaining question from the options list: the footer bar
+(option 7) is unnecessary, because the top bar survives a panel replacing
+the map, which is where the spot used to disappear on a phone.

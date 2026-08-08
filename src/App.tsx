@@ -57,6 +57,7 @@ import {
   SettingsComponent,
   TargetComponent,
   ToolbarActions,
+  SpotSummary,
   WindSummary,
   WindsComponent
 } from './components';
@@ -88,6 +89,7 @@ import { dropzoneForPlaceId, placeNameFromId } from './core/places';
 import { DROPZONES } from './util/dropzones';
 import { flipPatternSides, makePatternByType, withFullPattern } from './core/pattern';
 import { describeManoeuvrePath, placeInitiation } from './core/manoeuvre';
+import { SpotText, formatSpot } from './core/spotText';
 import { DEFAULT_MANOEUVRE_PARAMS } from './core/model';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
 import { windTrust } from './core/windTrust';
@@ -473,6 +475,18 @@ function DashboardContent() {
       }
     };
   }, [isFlocking, mode, manoeuvreConfig, paths.ideal, target, setManoeuvreConfig]);
+
+  // Flocking's output, formatted once for the top bar. The panel and the map
+  // label build their own from the same `formatSpot`, so all three agree.
+  const spotText = useMemo(
+    () => (isFlocking && flocking.spot
+      ? formatSpot(flocking.spot, modeSettings.units.distance, {
+        missMi: flocking.missMi,
+        tier: flocking.tier
+      })
+      : null),
+    [isFlocking, flocking.spot, flocking.missMi, flocking.tier, modeSettings.units.distance]
+  );
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
@@ -1085,14 +1099,14 @@ function DashboardContent() {
     onPresetsOpenChange: setPresetsOpen
   };
 
-  const appTitlePropsRef = useRef<WindSummaryData | undefined>(undefined);
+  const appTitlePropsRef = useRef<{ wind?: WindSummaryData; spot?: SpotText }>({});
 
-  appTitlePropsRef.current = windSummary;
+  appTitlePropsRef.current = { wind: windSummary, spot: spotText ?? undefined };
 
   const slots = useMemo(() => ({
     toolbarActions: () => <ToolbarActions {...toolbarPropsRef.current} />,
     sidebarFooter: SidebarFooter,
-    appTitle: () => <CustomAppTitle wind={appTitlePropsRef.current} />
+    appTitle: () => <CustomAppTitle {...appTitlePropsRef.current} />
   }), []);
 
   const dashboard = (
@@ -1170,22 +1184,32 @@ function SidebarFooter({ mini }: { mini?: boolean }) {
   );
 }
 
-function CustomAppTitle({ wind }: { wind?: WindSummaryData }) {
+/**
+ * The top bar. In flocking the wind summary gives way to the SPOT, which is
+ * that mode's whole output and the thing a flocker reads out to the pilot —
+ * and the wind it displaces is already on the map's winds indicator. Every
+ * other mode is unchanged.
+ */
+function CustomAppTitle({ wind, spot }: { wind?: WindSummaryData; spot?: SpotText }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={2}>
+    <Stack direction="row" alignItems="center" spacing={2} sx={{ minWidth: 0 }}>
       <FlipIcon />
       <Typography
         variant="h6"
         sx={{
           fontWeight: 'bold',
           color: '#4ade80',
-          textTransform: 'uppercase'
+          textTransform: 'uppercase',
+          // The spot is long, and on a phone the bar cannot hold both. The
+          // wordmark is the part nobody needs to read.
+          display: spot ? { xs: 'none', sm: 'block' } : 'block'
         }}
       >
         FliP
       </Typography>
       <Divider />
-      {wind && wind.average && wind.ground && (
+      {spot && <SpotSummary spot={spot} />}
+      {!spot && wind && wind.average && wind.ground && (
         <WindSummary
           average={{
             direction: wind.average.direction ?? 0,
