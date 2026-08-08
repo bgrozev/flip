@@ -307,7 +307,7 @@ user can force a mode-overridden setting back to the global default.
 | `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
 | `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |
 | `modes/nerd.ts` | Nerd-mode flag: `withNerd()` mode transform, `applyNerdGate()` settings mask |
-| `util/dropzones.ts` | Dropzone database (272 entries; `direction`, `website`, `town`/`region`/`country` and per-mode config only where known) |
+| `util/dropzones.ts` | Dropzone database (274 entries; `direction`, `website`, `town`/`region`/`country` and per-mode config only where known) |
 | `util/exportKmz.ts`, `util/exportFlySight.ts` | Exports (DOM/download side effects, so not in core) |
 
 ## Wind System (`src/data/wind/`)

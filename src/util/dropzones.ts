@@ -330,6 +330,15 @@ export const DROPZONES: Dropzone[] = [
     country: 'Germany'
   },
   {
+    name: 'Fallskärmsklubben Aros',
+    lat: 59.57964,
+    lng: 16.49721,
+    direction: 45,
+    town: 'Västerås',
+    country: 'Sweden',
+    website: 'https://www.fkaros.se/'
+  },
+  {
     name: 'Fano Sky Team S.S.D.',
     lat: 43.82382,
     lng: 13.02883,
@@ -1982,6 +1991,23 @@ export const DROPZONES: Dropzone[] = [
     lng: -3.21998,
     direction: 60,
     country: 'United Kingdom'
+  },
+  {
+    name: 'Skydive Stockholm',
+    lat: 60.28415,
+    lng: 17.42161,
+    direction: 0,
+    town: 'Gryttjom',
+    region: 'Uppsala',
+    country: 'Sweden',
+    website: 'https://skydive.se/',
+    modes: {
+      swoop: {
+        lat: 60.28548,
+        lng: 17.42649,
+        direction: 180
+      },
+    },
   },
   {
     name: 'Skydive Strathallan',
