@@ -218,6 +218,86 @@ describe('useAppState targets', () => {
     expect(second.result.current.targetForMode('pattern')).toEqual(POND);
   });
 
+  // A geocoder hit belongs to no place, and "no place" is a real answer that
+  // has to survive a reload. Stored as an absent key it did not: the key's
+  // default (ZHills) reappeared on the next mount, so every later edit was
+  // recorded against a dropzone the user was nowhere near.
+  const PARIS = { target: { lat: 48.8584, lng: 2.2945 }, finalHeading: 90 };
+  // What `flip.place.active` defaults to when it holds nothing.
+  const DEFAULT_PLACE_ID = 'dz:Skydive City (ZHills)';
+
+  it('stays at no place across a remount after a target off the list', () => {
+    const first = renderAppState();
+
+    act(() => first.result.current.selectPlaceTarget(ZHILLS, { id: 'dz:ZHills' }));
+    act(() => first.result.current.selectPlaceTarget(PARIS));
+    expect(first.result.current.activePlaceId).toBeNull();
+    first.unmount();
+
+    const second = renderAppState();
+
+    expect(second.result.current.activePlaceId).toBeNull();
+  });
+
+  // The same hole, seen from the damage it does: the default place id is
+  // what the key falls back to, so edits made off-list were written into
+  // that dropzone's record and handed back the next time it was chosen.
+  it('does not record an off-list edit against the default dropzone', () => {
+    const { result } = renderAppState();
+    const adjusted = { target: { lat: 48.86, lng: 2.3 }, finalHeading: 90 };
+
+    act(() => result.current.selectPlaceTarget(PARIS));
+    act(() => result.current.setTargetForMode('flocking', adjusted));
+    act(() => result.current.setFlockingParams({
+      ...result.current.flockingParams,
+      referencePoint: adjusted.target
+    }));
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: DEFAULT_PLACE_ID }));
+
+    // Going back to the dropzone must not restore a target — or a Spot
+    // Reference — from the other side of the world
+    expect(result.current.targetForMode('flocking')).toEqual(ZHILLS);
+    expect(result.current.flockingParams.referencePoint).toBeNull();
+  });
+
+  // Storage written by a build with the bug above still holds another
+  // continent under a dropzone's id, so the record itself has to be doubted.
+  it('ignores a remembered target that is nowhere near its place', () => {
+    store('flip.targets.byPlace', {
+      [DEFAULT_PLACE_ID]: {
+        shared: PARIS,
+        byMode: { flocking: PARIS },
+        flockingReference: PARIS.target
+      }
+    });
+
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: DEFAULT_PLACE_ID }));
+
+    expect(result.current.targetForMode('flocking')).toEqual(ZHILLS);
+    expect(result.current.flockingParams.referencePoint).toBeNull();
+  });
+
+  it('still restores a Spot Reference a few miles up the jumprun', () => {
+    // Three miles out is a normal canonical reference, not damage
+    const upTheJumprun = { lat: ZHILLS.target.lat + 0.043, lng: ZHILLS.target.lng };
+
+    store('flip.targets.byPlace', {
+      [DEFAULT_PLACE_ID]: {
+        shared: ZHILLS,
+        byMode: {},
+        flockingReference: upTheJumprun
+      }
+    });
+
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: DEFAULT_PLACE_ID }));
+
+    expect(result.current.flockingParams.referencePoint).toEqual(upTheJumprun);
+  });
+
   it('keeps per-mode adjustments separate within one place', () => {
     const { result } = renderAppState();
 
@@ -259,6 +339,18 @@ describe('useAppState targets', () => {
     act(() => result.current.selectPlaceTarget(ZHILLS, { id: 'dz:ZHills' }));
     pinReference(result, ZHILLS.target);
     act(() => result.current.selectPlaceTarget(DELAND, { id: 'dz:DeLand' }));
+
+    expect(result.current.flockingParams.referencePoint).toBeNull();
+  });
+
+  // The same move, but to somewhere the place list has never heard of: a
+  // geocoder hit carries no place id, and the reference has to go anyway.
+  it('unpins the Spot Reference when moving to a place off the list', () => {
+    const { result } = renderAppState();
+
+    act(() => result.current.selectPlaceTarget(ZHILLS, { id: 'dz:ZHills' }));
+    pinReference(result, ZHILLS.target);
+    act(() => result.current.selectPlaceTarget(DELAND));
 
     expect(result.current.flockingParams.referencePoint).toBeNull();
   });

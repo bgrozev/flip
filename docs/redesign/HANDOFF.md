@@ -169,6 +169,21 @@ with `ManoeuvreEditTarget.idealInitiation`. Browser-verified on MapLibre:
 the handle sits on the dashed line, ~140 ft upwind of the entry arrow,
 which stays anchored to the drawn path.
 
+**"No place" could not be stored** (owner report: pick a Google result with
+no dropzone matches, get a stale Spot Reference and a "1000 mi PAST"
+spot). Toolpad's `useLocalStorageState` deletes the key when handed null,
+and a deleted key reads back as the key's default — ZHills, for
+`flip.place.active`. So a geocoder hit left the app believing it was at
+ZHills from the next render on, and every later edit (target drag, pinned
+reference, course) was filed under that dropzone; returning to it restored
+another continent's coordinates. **Not flocking-specific** — flocking is
+just where the number is printed; the same write corrupts every mode's
+per-place target and points the Courses panel at the wrong dropzone.
+Fixed by storing "nowhere" as `NO_PLACE` (`''`), plus `nearbyMemory`,
+which ignores a remembered target or reference more than 25 mi from its
+place and so heals storage the bug already wrote. Only that one key had
+the hole; the others' defaults are null anyway.
+
 ⚠️ **Left open by that**: `ManoeuvreHintLayer`'s entry arrow and rotation
 label still anchor to the drawn path, so they no longer sit at the handle
 — the two ends of the same turn are drawn on different lines. Anchoring

@@ -193,6 +193,20 @@ the old DZ produced spots thousands of miles out) and comes back with its
 place. Targets belonging to no place — a preset, a geocoder hit — pass no
 place id and are not remembered.
 
+**"No place" is stored explicitly** (`NO_PLACE`, the empty string). It
+cannot be stored as null: `useLocalStorageState` encodes null as *delete
+the key*, and a missing key reads back as that key's DEFAULT — which for
+`flip.place.active` is ZHills. So picking a geocoder hit used to leave the
+app believing it was at ZHills, and every later edit (a target drag, a
+pinned Spot Reference, a new course) was recorded against that dropzone;
+choosing it later handed the foreign coordinates back, which is what a
+"1652 mi prior" spot was. `flip.place.active` is the only key with a
+non-null default that is ever set to null, so it is the only one with this
+hole. Reading a place's memory is also **bounded** (`nearbyMemory`): a
+remembered target or Spot Reference further than 25 mi from the place it
+belongs to is treated as damage and dropped, which heals storage already
+written by the bug.
+
 A dropzone can also declare where each mode *starts*
 (`Dropzone.modes`, keyed by mode id): a swoop pond away from the student
 LZ, a flocking end point out in the big field, and for flocking the DZ's

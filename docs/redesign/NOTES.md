@@ -1357,3 +1357,57 @@ and the rotation label to the drawn path, so the two ends of one turn are
 now drawn on different lines. Moving the hint to the still-air path is
 consistent for a parametric turn; for a recorded track the drawn line is
 the one that was actually flown. Owner's call, recorded in HANDOFF.
+
+## Session 2026-08-03 (2) — "no place" could not be stored
+
+Owner report, flocking: search for somewhere with no dropzone matches, pick
+a Google result, and the Spot Reference is stale — "1000 mi PAST".
+
+The state layer looked innocent. `selectPlaceTarget` already clears the
+reference when the new place has none (`remembered?.flockingReference ??
+declared ?? null`), a unit test already pinned that for dropzone-to-
+dropzone moves, and adding the geocoder case — `selectPlaceTarget(value)`
+with no place — passed first time. In the browser, picking "Eiffel Tower"
+did unpin the reference and the spot read 3.41 mi.
+
+The hole is one layer down, in **Toolpad's `useLocalStorageState`**:
+`encode()` maps a null value to null, and `setValue()` treats null as
+`removeItem(key)`. A key that is *absent* falls back to its initializer
+(`getSnapshot(area, key) ?? encodedInitialValue`). So `flip.place.active`,
+whose initializer is ZHills (a deliberate choice, see the 2026-07-29 entry
+— it makes a fresh install's DZ-scoped data show something), could not
+hold "no place" at all: writing null deleted the key, and the next read —
+which in jsdom is the very next render, no reload needed — said ZHills.
+
+Everything downstream then wrote to the wrong record. `setTargetForMode`
+and `setFlockingParams` both key on `activePlaceId`, so an adjustment made
+in Paris was filed under ZHills, and the next visit to ZHills restored a
+target and a Spot Reference on another continent. That is the reported
+spot: ZHills' plan measured against Paris. It is not a flocking bug —
+flocking is where it is loudest, because the spot readout prints the
+distance. The same write hits every mode's per-place target, and the
+Courses panel lists the wrong dropzone's courses meanwhile.
+
+Fix: store the absence. `NO_PLACE = ''` is never a `Place.id`, so the key
+carries "explicitly nowhere" without a second key or a codec, and
+`setActivePlaceId` maps null to it on the way in, `activePlaceId` maps it
+back to null on the way out. Audited the other keys: every one whose
+initializer is non-null is an object or array that is never set to null,
+and the ones that are set to null (`flip.mode`, `flip.winds`,
+`flip.courses.selected`, `flip.settings.touched`) default to null anyway,
+so this was the only key with the hole.
+
+Second half, because the first does nothing for storage already written:
+`nearbyMemory` bounds what a place is allowed to remember at 25 miles from
+the place's own position — well past a flocking end point out in the field
+or a Spot Reference up the jumprun, nowhere near an ocean. A record that
+fails is ignored (the place falls back to its declared coordinates, as on
+a first visit); a reference that fails is dropped on its own. Verified in
+the browser against a storage record poisoned by the pre-fix repro:
+selecting ZHills healed it.
+
+Three tests fail against the pre-fix code: the two `NO_PLACE` ones (the
+active place is ZHills again straight after choosing a geocoder hit, and
+an off-list edit is handed back by the default dropzone) and the guard's
+own (a remembered target nowhere near its place is ignored). A fourth pins
+what the guard must NOT eat — a reference three miles up the jumprun.

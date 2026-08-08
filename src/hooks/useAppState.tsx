@@ -24,6 +24,7 @@ import { FlockingParams } from '../core/flocking';
 import {
   DropzoneModeConfig,
   FlightPath,
+  LatLng,
   ManoeuvreConfig,
   PatternParams,
   PlaceTargets,
@@ -32,7 +33,7 @@ import {
 } from '../types';
 import { createVersionedCodec } from '../util/storage';
 import { applyInitiationAltitudeOffset, createManoeuvrePath } from '../core/manoeuvre';
-import { mirror } from '../core/geometry';
+import { distanceFeet, mirror } from '../core/geometry';
 import { dropzoneForPlaceId, dropzonePlaceId, placeModeTargets } from '../core/places';
 import { BUILT_IN_PARAMS, courseIsAtPlace } from '../core/courses';
 import { DROPZONES } from '../util/dropzones';
@@ -72,6 +73,63 @@ const TOUCHED_SETTINGS_CODEC = createVersionedCodec<TouchedSettings | null>(
 
 /** The place `DEFAULT_TARGET`'s coordinates belong to (see its use below). */
 const DEFAULT_ACTIVE_PLACE_ID = dropzonePlaceId('Skydive City (ZHills)');
+
+/**
+ * How "I am at no place" is stored.
+ *
+ * It cannot be stored as null: `useLocalStorageState` encodes null as
+ * "delete the key", and a missing key reads back as the key's DEFAULT — so
+ * choosing a geocoder hit (which belongs to no place) left the app claiming
+ * to be at ZHills the moment the write landed. Every later edit was then
+ * recorded against a dropzone the user was nowhere near, and choosing that
+ * dropzone handed the foreign target and Spot Reference back: a spot
+ * measured across an ocean, reported as "1652 mi prior".
+ *
+ * The empty string is never a `Place.id`, so it can carry the meaning
+ * without a second key.
+ */
+const NO_PLACE = '';
+
+/**
+ * How far a remembered target or Spot Reference may sit from the place it is
+ * remembered against before it is treated as damage rather than data (feet).
+ *
+ * A flocking end point can be a couple of miles out into the field and a
+ * canonical Spot Reference a few miles up the jumprun, so the bar is set
+ * well past anything a dropzone spans. What it catches is a record poisoned
+ * by the bug above, which is off by whole continents.
+ */
+const MAX_REMEMBERED_DISTANCE_FT = 25 * 5280;
+
+/**
+ * What a place remembers, minus anything too far away to have been meant.
+ *
+ * Storage written before the `NO_PLACE` fix can hold another continent's
+ * target under a dropzone's id, and restoring it silently teleports the
+ * plan. Rather than trusting a record because it exists, each absolute
+ * coordinate in it is checked against the place's own position, and a
+ * wild one is dropped: the place falls back to its declared coordinates,
+ * which is what a first visit does.
+ */
+function nearbyMemory(
+  remembered: PlaceTargets | undefined,
+  placePosition: LatLng
+): PlaceTargets | undefined {
+  if (!remembered) {
+    return undefined;
+  }
+
+  const near = (point: LatLng | null | undefined) =>
+    !point || distanceFeet(point, placePosition) <= MAX_REMEMBERED_DISTANCE_FT;
+
+  if (!near(remembered.shared.target)) {
+    return undefined;
+  }
+
+  return near(remembered.flockingReference)
+    ? remembered
+    : { ...remembered, flockingReference: null };
+}
 
 function computeManoeuvre(config: ManoeuvreConfig): FlightPath {
   let path: FlightPath;
@@ -203,8 +261,13 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   // corridors — silently has nothing to show until they reselect it from the
   // picker. This only applies before any explicit choice is ever stored.
   const [storedActivePlaceId, setStoredActivePlaceId] =
-    useLocalStorageState<string | null>('flip.place.active', DEFAULT_ACTIVE_PLACE_ID);
-  const activePlaceId = storedActivePlaceId ?? null;
+    useLocalStorageState<string>('flip.place.active', DEFAULT_ACTIVE_PLACE_ID);
+  // Empty (NO_PLACE) and null (the hydration snapshot) both mean no place.
+  const activePlaceId = storedActivePlaceId ? storedActivePlaceId : null;
+  const setActivePlaceId = useCallback(
+    (id: string | null) => setStoredActivePlaceId(id ?? NO_PLACE),
+    [setStoredActivePlaceId]
+  );
 
   const [storedTargetsByPlace, setStoredTargetsByPlace] =
     useLocalStorageState<Record<string, PlaceTargets>>(
@@ -387,7 +450,9 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   // opened: with no override left, every mode reads the shared target.
   const selectPlaceTarget = useCallback(
     (value: Target, place?: PlaceSelection) => {
-      const remembered = place ? targetsByPlace[place.id] : undefined;
+      const remembered = place
+        ? nearbyMemory(targetsByPlace[place.id], value.target)
+        : undefined;
       const declared = place?.modes;
       const nextPlaceId = place?.id ?? null;
       // A preset carries its own target and overrides every mode with it, so
@@ -410,7 +475,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         }
       }
 
-      setStoredActivePlaceId(nextPlaceId);
+      setActivePlaceId(nextPlaceId);
       setStoredTarget(useRememberedTarget ? remembered.shared : value);
       // What the user did here wins; failing that, what the dropzone says
       // this mode starts from; failing that, the shared target. A preset
@@ -447,7 +512,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     },
     [
       targetsByPlace,
-      setStoredActivePlaceId,
+      setActivePlaceId,
       setStoredTarget,
       setStoredTargetsByMode,
       flockingParams,
