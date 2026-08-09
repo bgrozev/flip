@@ -14,7 +14,6 @@ import {
   Stack,
   TextField,
   Tooltip,
-  Typography
 } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';

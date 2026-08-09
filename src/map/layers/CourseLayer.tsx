@@ -7,6 +7,8 @@ import React from 'react';
 import { Course, CourseElement, CourseMarker } from '../../types';
 import { MapCircle, MapOverlay, MapPolyline, useMapZoom } from '..';
 
+import { mapLabel } from './labelStyles';
+
 /** Course distance markers only render at or above this zoom level. */
 const MARKER_MIN_ZOOM = 20;
 
@@ -75,17 +77,14 @@ export default function CourseLayer({ courses }: CourseLayerProps) {
             return (
               <MapOverlay key={key} position={pos}>
                 <div style={{
-                  display: 'inline-block',
-                  color: marker.color,
-                  fontSize: '10px',
-                  whiteSpace: 'nowrap',
-                  transform: 'translate(-50%, -50%)',
-                  pointerEvents: 'none',
-                  fontWeight: 'bold',
-                  background: 'rgba(0,0,0,0.65)',
-                  border: '1px solid rgba(255,255,255,0.35)',
-                  borderRadius: '2px',
-                  padding: '1px 3px',
+                  ...mapLabel({
+                    size: 'sm',
+                    color: marker.color,
+                    bold: true,
+                    border: 'rgba(255, 255, 255, 0.35)',
+                    transform: 'translate(-50%, -50%)'
+                  }),
+                  pointerEvents: 'none'
                 }}>
                   {marker.label}
                 </div>

@@ -271,6 +271,27 @@ reached from each panel header's `?` (`/help?topic=<id>`) or the Help
 nav item, which replaced About. The old measure tool and average-wind arrow
 were removed (measure to be reimplemented — see BACKLOG).
 
+## UI conventions (one way to do each thing)
+
+The panels had drifted into three numeric fields, five section headings,
+two disclosure styles, three reset idioms and thirteen map-label styles.
+The shared pieces below are the whole vocabulary; reach for one before
+writing a new look.
+
+| Thing | Use | Notes |
+|---|---|---|
+| A number | `components/NumberField` | Floating label, unit inside, helper text free for a bound. Bounds required (`limits`) unless the value is cyclic (`wrap`), and the type enforces the choice. 220px alone; `fullWidth` when sharing a row. |
+| A section | `components/PanelSection` / `SectionHeading` | Uppercase caption, optional action on the heading row. The Accordion (Flocking) is only for sections long enough to be worth collapsing. |
+| A folded section | `components/DisclosureRow` | Chevron carries the state, so the label never renames itself. |
+| A panel title | the App panel header | Panels never render their own — Courses used to, and said "Courses" twice. Panel-scoped actions (Wind's refresh, Courses' New) go in the header or on a section heading. |
+| A button | `contained` in dialogs only | `outlined` for a panel's own action, `text` inline, `size="small"` throughout. |
+| A reset | text button, gated | Shown only when there is something to restore, with a `describeChild` tooltip naming what — without that flag MUI makes the tooltip the button's accessible NAME. |
+| A map label | `map/layers/labelStyles.mapLabel()` | One background, one radius, three sizes (`sm` annotates, `md` is default, `lg` is an answer). Colour is meaning; nothing else varies. |
+
+Panels are left-aligned by their container (`App.tsx`), not by each
+component: the container used to centre text and every panel undid it by
+hand.
+
 ## Key Components
 
 | Component | File | Purpose |

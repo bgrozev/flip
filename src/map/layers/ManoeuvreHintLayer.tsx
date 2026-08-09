@@ -19,6 +19,7 @@ import { destinationPoint } from '../../core/geometry';
 import { metersToFeet } from '../../core/units';
 
 import { PATH_COLORS } from './FlightPathsLayer';
+import { mapLabel } from './labelStyles';
 
 /** How far past the initiation point the final axis is drawn (ft). */
 const AXIS_MARGIN_FT = 250;
@@ -36,18 +37,14 @@ const ARROW_PX = 34;
 const AXIS_COLOR = '#ffffff';
 
 const LABEL_STYLE: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.72)',
-  padding: '1px 6px',
-  borderRadius: '3px',
-  fontSize: '14px',
-  fontWeight: 'bold',
-  color: PATH_COLORS.manoeuvre,
-  display: 'inline-block',
-  whiteSpace: 'nowrap',
-  pointerEvents: 'none',
-  // Lifted clear of its anchor: the initiation point's own altitude label
-  // hangs just below the same spot.
-  transform: 'translate(-50%, -160%)'
+  ...mapLabel({
+    color: PATH_COLORS.manoeuvre,
+    bold: true,
+    // Lifted clear of its anchor: the initiation point's own altitude label
+    // hangs just below the same spot.
+    transform: 'translate(-50%, -160%)'
+  }),
+  pointerEvents: 'none'
 };
 
 const feetToMeters = (feet: number) => feet / metersToFeet;

@@ -1493,3 +1493,59 @@ drift — which is also the new regression test, since the gap and
 Three tests failed before the change (one per sub-mode: the ghost's exit
 did not coincide with the flight's), and one pins what must NOT move —
 canopy flight, drift and average wind read the same as before.
+
+## Session 2026-08-08 — the consistency pass
+
+Owner: the UI should feel like one app. Example given: the input fields
+differ between panels, and the new Manoeuvre ones are right (though too
+wide). I audited every panel and the map layers first and proposed nine
+findings; the owner took all of them.
+
+What was actually wrong, in order of how much it showed:
+
+**Three numeric fields.** `NumberInput` (label underneath as helper text,
+uncontrolled, 15ch), the Manoeuvre panel's `NumberField` (floating label,
+unit inside, controlled) and a hand-rolled `TextField` in Courses with
+focus refs. Unified on the second. Two things fell out of that: the
+Flocking panel's `externalEdit` counter — which existed only to remount an
+uncontrolled input when a preset changed its value — is gone, and the
+field grew a `wrap` for headings with a union type that makes `limits` and
+`wrap` mutually exclusive, so a cyclic field cannot claim bounds it does
+not have. Width: 220px alone, `fullWidth` in a pair, and the pairs are the
+ones people set together (altitude+duration, depth+offset).
+
+**Five section headings** (h6, secondary body2, uppercase caption,
+overline, accordion) became one, plus the accordion where collapsing earns
+the click. Two of those h6s were competing with the panel header directly
+above them — Courses rendered its own title, so the panel said "Courses"
+twice in two sizes.
+
+**The container was fighting its contents.** `alignItems: 'left'` is not a
+value `align-items` takes, so it did nothing; `textAlign: 'center'` meant
+every panel re-lefted its own text, and the manoeuvre panel's caption —
+added later, without the override — was centred. One line fixed a whole
+class of drift.
+
+**Buttons**: contained in a panel (the track panel's Save), outlined for
+inline row actions (Wind's Unlock/Invert/Reset), text for the same job
+elsewhere (Flocking). Now: contained in dialogs, outlined for a panel
+action, text inline, small everywhere.
+
+**A tooltip renames a button.** Gating Wind's Reset broke a test that
+queried it by name — not because of the gate, but because wrapping a text
+button in a MUI `Tooltip` makes the tooltip its accessible NAME unless
+`describeChild` is set. "Reset" was called "Discard this profile and start
+from nothing." to anything reading the page. Fixed here and in the two
+other text buttons with tooltips; icon buttons are unaffected (the tooltip
+IS their name, correctly).
+
+**Thirteen map-label styles** over nine backgrounds, three radii and five
+font sizes, for one thing: a dark plate holding text over imagery.
+`mapLabel()` now issues them, with size (sm/md/lg) and colour as the only
+axes that carry meaning. The tooltip proper keeps its own style — it is a
+denser surface with a shadow and an anchor offset — and the station arrows
+keep text-shadow instead of a plate, deliberately.
+
+Left alone on purpose: the ToggleButtonGroup picker idiom (already
+consistent everywhere), the wind table, the SpotHero's display type, the
+mode/NERD chips. Those are hierarchy, not drift.

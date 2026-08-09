@@ -169,6 +169,21 @@ with `ManoeuvreEditTarget.idealInitiation`. Browser-verified on MapLibre:
 the handle sits on the dashed line, ~140 ft upwind of the entry arrow,
 which stays anchored to the drawn path.
 
+### Session 2026-08-08 — UI consistency
+
+The panels were audited end to end and the drift removed: one numeric
+field (`components/NumberField`, replacing three implementations), one
+section heading (`PanelSection`), one disclosure (`DisclosureRow`), one
+button vocabulary, one reset idiom, and one map-label style
+(`map/layers/labelStyles.mapLabel`) in place of thirteen. `NumberInput` is
+deleted; the Flocking panel's remount-key counter went with it. The table
+in CLAUDE.md ("UI conventions") is the vocabulary — reach for a shared
+piece before writing a new look.
+
+Worth knowing: wrapping a text button in a MUI `Tooltip` makes the tooltip
+the button's accessible NAME unless `describeChild` is set. Three buttons
+were affected; a test caught the first.
+
 **The spot became flocking's headline** (P8 closed). One formatter,
 `core/spotText.formatSpot`, now writes "Jumprun 248˚ · 3.41 mi prior ·
 0.42 mi left" for every surface: the panel's sticky hero (display type,

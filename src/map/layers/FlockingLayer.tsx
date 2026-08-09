@@ -26,6 +26,7 @@ import { MapCircle, MapDragHandle, MapOverlay, MapPolyline, useMapZoom } from '.
 
 import { SolveTier } from '../../core/flockingSolve';
 
+import { LABEL_FONT_SIZE, mapLabel } from './labelStyles';
 import { DirectionArrow, TOOLTIP_STYLE } from './tooltip';
 
 // Flocking path color — distinct from pattern green and manoeuvre red
@@ -73,57 +74,32 @@ function altitudeLabelStepThousands(zoom: number): number | null {
   return null;
 }
 
-const ALTITUDE_LABEL_STYLE: React.CSSProperties = {
-  background: 'black',
-  border: '1px solid black',
-  padding: '4px 8px',
-  borderRadius: '4px',
-  fontSize: '14px',
-  color: 'white',
-  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-  display: 'inline-block',
-  whiteSpace: 'nowrap'
-};
+const ALTITUDE_LABEL_STYLE = mapLabel();
 
 /** Small distance-marker label on the jumprun line. */
-const MARKER_LABEL_STYLE: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.75)',
-  padding: '1px 5px',
-  borderRadius: '3px',
-  fontSize: '11px',
+const MARKER_LABEL_STYLE = mapLabel({
+  size: 'sm',
   color: '#e0e0e0',
-  display: 'inline-block',
-  whiteSpace: 'nowrap',
   transform: 'translate(-50%, 8px)'
-};
+});
 
 // Pinned reference point C
 const REFERENCE_COLOR = '#ffc107';
 
-const REFERENCE_LABEL_STYLE: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.75)',
-  padding: '1px 5px',
-  borderRadius: '3px',
-  fontSize: '11px',
+const REFERENCE_LABEL_STYLE = mapLabel({
+  size: 'sm',
   color: REFERENCE_COLOR,
-  fontWeight: 'bold',
-  display: 'inline-block',
-  whiteSpace: 'nowrap',
+  bold: true,
   transform: 'translate(-50%, 12px)'
-};
+});
 
 /** Corridor name, centered on its exit rectangle. */
-const CORRIDOR_LABEL_STYLE: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.65)',
-  padding: '1px 6px',
-  borderRadius: '3px',
-  fontSize: '12px',
+const CORRIDOR_LABEL_STYLE = mapLabel({
+  size: 'sm',
   color: JUMPRUN_COLOR,
-  fontWeight: 'bold',
-  display: 'inline-block',
-  whiteSpace: 'nowrap',
+  bold: true,
   transform: 'translate(-50%, -50%)'
-};
+});
 
 /**
  * The spot one-liner near the exit — the map's copy of flocking's output,
@@ -138,22 +114,17 @@ const CORRIDOR_LABEL_STYLE: React.CSSProperties = {
  * construction. Reading beats copying here: copy is one glance up, in the
  * top bar.
  */
-const SPOT_LABEL_STYLE: React.CSSProperties = {
-  background: 'rgba(10, 10, 10, 0.85)',
-  border: `1px solid ${FLOCKING_COLOR}`,
-  padding: '6px 10px',
-  borderRadius: '14px',
-  fontSize: '15px',
-  fontWeight: 'bold',
-  color: 'white',
-  display: 'inline-block',
-  whiteSpace: 'nowrap',
+const SPOT_LABEL_STYLE = mapLabel({
+  size: 'lg',
+  bold: true,
+  border: FLOCKING_COLOR,
+  pill: true,
   transform: 'translate(-50%, 16px)'
-};
+});
 
 /** The verdict and the canopy deviation, under the spot itself. */
 const SPOT_LABEL_NOTE_STYLE: React.CSSProperties = {
-  fontSize: '13px',
+  fontSize: LABEL_FONT_SIZE.md,
   fontWeight: 'normal'
 };
 

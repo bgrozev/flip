@@ -23,6 +23,7 @@ import {
 } from '../../core/pathStats';
 import { MapCircle, MapCircleStyle, MapOverlay, MapPolyline } from '..';
 
+import { mapLabel } from './labelStyles';
 import { DirectionArrow, formatDistance, SECTION_STYLE, TOOLTIP_SECONDARY_STYLE, TOOLTIP_STYLE } from './tooltip';
 
 // Colors for flight path visualization
@@ -38,18 +39,7 @@ export const PATH_COLORS = {
 } as const;
 
 // Text overlay style for altitude labels
-const ALTITUDE_LABEL_STYLE: React.CSSProperties = {
-  background: 'black',
-  border: '1px solid black',
-  padding: '4px 8px',
-  borderRadius: '4px',
-  fontSize: '14px',
-  color: 'white',
-  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-  display: 'inline-block',
-  whiteSpace: 'nowrap',
-  wordBreak: 'break-word'
-};
+const ALTITUDE_LABEL_STYLE = mapLabel();
 
 interface CustomTextOverlayProps {
   position: LatLng;
