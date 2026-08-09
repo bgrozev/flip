@@ -6,8 +6,6 @@ import {
 import {
   Box,
   Divider,
-  FormControl,
-  FormHelperText,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -32,7 +30,7 @@ import { LIMITS } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
 import { SectionHeading } from './PanelSection';
-import NumberInput from './NumberInput';
+import NumberField from './NumberField';
 
 interface PatternComponentProps {
   params: PatternParams;
@@ -206,24 +204,26 @@ export default function PatternComponent({
         <>
           <Divider />
           <Stack direction="row" spacing={2}>
-            <NumberInput
+            <NumberField
               title="Vertical speed in the pattern."
               label="Descent Rate"
-              initialValue={formatDescentRate(params.descentRateMph).value}
+              value={formatDescentRate(params.descentRateMph).value}
               step={1}
-              min={formatDescentRate(LIMITS.descentRateMph.min).value}
-              max={formatDescentRate(LIMITS.descentRateMph.max).value}
+              limits={{
+                min: formatDescentRate(LIMITS.descentRateMph.min).value,
+                max: formatDescentRate(LIMITS.descentRateMph.max).value
+              }}
               unit={descentRateLabel}
+              fullWidth
               onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
             />
-            <NumberInput
+            <NumberField
               title="Glide ratio in the pattern with no wind."
               label="Glide Ratio"
-              initialValue={params.glideRatio}
+              value={params.glideRatio}
               step={0.1}
-              min={LIMITS.glideRatio.min}
-              max={LIMITS.glideRatio.max}
-              unit=""
+              limits={LIMITS.glideRatio}
+              fullWidth
               onChange={value => handleChange('glideRatio', value)}
             />
           </Stack>
@@ -294,7 +294,7 @@ function LegAltitudeSelector({
   };
 
   return (
-    <FormControl sx={{ m: 1, width: '20ch' }} variant="outlined">
+    <Box sx={{ flex: 1, minWidth: 0 }}>
       <Tooltip title={title}>
         <ToggleButtonGroup
           value={mode}
@@ -313,19 +313,22 @@ function LegAltitudeSelector({
       </Tooltip>
 
       {isCustom && (
-        <NumberInput
-          title={title}
-          label={label}
-          initialValue={Math.round(formatAltitude(value).value)}
-          step={altitudeLabel === 'ft' ? 100 : 10}
-          min={Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.min).value)}
-          max={Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.max).value)}
-          unit={altitudeLabel}
-          onChange={handleCustomChange}
-        />
+        <Box sx={{ mt: 1 }}>
+          <NumberField
+            title={title}
+            label={label}
+            value={Math.round(formatAltitude(value).value)}
+            step={altitudeLabel === 'ft' ? 100 : 10}
+            limits={{
+              min: Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.min).value),
+              max: Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.max).value)
+            }}
+            unit={altitudeLabel}
+            fullWidth
+            onChange={handleCustomChange}
+          />
+        </Box>
       )}
-
-      <FormHelperText>Altitude ({altitudeLabel})</FormHelperText>
-    </FormControl>
+    </Box>
   );
 }

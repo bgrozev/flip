@@ -37,6 +37,13 @@ export const LIMITS = {
   manoeuvreAltitudeFt: { min: 100, max: 5000 },
   /** Manoeuvre duration (s) */
   manoeuvreDurationS: { min: 1, max: 60 },
+  /**
+   * Where the turn sits relative to a canopy-piloting course (ft, in the
+   * course's frame): how far back along the course axis, and how far
+   * across it. Wide enough to hold any pond and its run-in, tight enough
+   * that a mistyped value cannot fling the target across the county.
+   */
+  courseRelativeFt: { min: -3000, max: 3000 },
   /** Flocking altitude window bounds (ft) */
   flockingAltitudeFt: { min: 0, max: 30000 },
   /** Flocking descent rate (mph); XRW reaches 40 */

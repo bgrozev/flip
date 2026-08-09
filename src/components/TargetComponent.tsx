@@ -1,10 +1,6 @@
 import {
   Button,
   Divider,
-  FormControl,
-  FormHelperText,
-  InputAdornment,
-  OutlinedInput,
   Stack,
   Tooltip,
   Typography
@@ -16,6 +12,7 @@ import { Target } from '../types';
 import { normalizeDirection } from '../core/validation';
 
 import { PlacePicker } from './';
+import NumberField from './NumberField';
 import { SectionHeading } from './PanelSection';
 
 interface TargetComponentProps {
@@ -44,13 +41,10 @@ export default function TargetComponent({
   upwindHeading,
   headingRelevant = true
 }: TargetComponentProps) {
-  const handleHeadingChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    // Normalize into [0, 360); the old `(x + 360) % 360` stayed negative for
-    // values below -360, and NaN (empty input) becomes 0.
-    const value = normalizeDirection(Number(ev.target.value));
-    const updated = { ...target, finalHeading: value };
-
-    setTarget(updated);
+  const handleHeadingChange = (value: number) => {
+    // `NumberField` wraps at 360 already; normalizing again costs nothing and
+    // keeps the guarantee local to the thing that stores the heading.
+    setTarget({ ...target, finalHeading: normalizeDirection(value) });
   };
 
   return (
@@ -63,11 +57,12 @@ export default function TargetComponent({
 
       {headingRelevant && (
         <Stack direction="row">
-          <ControlledNumberInput
+          <NumberField
             title="The direction of the final approach."
-            label="Final Heading"
-            value={target.finalHeading}
+            label="Final heading"
+            value={Math.round(target.finalHeading)}
             step={1}
+            wrap={360}
             unit="°"
             onChange={handleHeadingChange}
           />
@@ -97,40 +92,5 @@ export default function TargetComponent({
         <PlacePicker upwindHeading={upwindHeading} />
       </TargetProvider>
     </Stack>
-  );
-}
-
-interface ControlledNumberInputProps {
-  title: string;
-  label: string;
-  value: number;
-  step: number;
-  unit: string;
-  onChange: (ev: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
-// This has to be a controlled input, because it can be updated via clicks on the map.
-function ControlledNumberInput({
-  title,
-  label,
-  value,
-  step,
-  unit,
-  onChange
-}: ControlledNumberInputProps) {
-  return (
-    <Tooltip title={title}>
-      <FormControl sx={{ m: 1, width: '15ch' }} variant="outlined">
-        <OutlinedInput
-          endAdornment={<InputAdornment position="end">{unit}</InputAdornment>}
-          aria-describedby={`${label}-helper-text`}
-          value={value}
-          onChange={onChange}
-          type="number"
-          inputProps={{ 'aria-label': label, step }}
-        />
-        <FormHelperText id={`${label}-helper-text`}>{label}</FormHelperText>
-      </FormControl>
-    </Tooltip>
   );
 }

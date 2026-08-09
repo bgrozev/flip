@@ -1,14 +1,12 @@
 import {
   Alert,
-  InputAdornment,
   Stack,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { DEFAULT_MANOEUVRE_PARAMS } from '../core/model';
 import { manoeuvreBounds, solveManoeuvre } from '../core/manoeuvre';
@@ -17,97 +15,13 @@ import { ManoeuvreParams } from '../types';
 import { LIMITS, NumericLimits, clampNumber } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
+import NumberField from './NumberField';
 
 // Canonical definition lives in core/model; re-exported for existing users
 export { DEFAULT_MANOEUVRE_PARAMS };
 
 /** The turns people actually fly; anything else goes in Custom. */
 const ROTATION_PRESETS = [90, 135, 270, 450];
-
-interface NumberFieldProps {
-  label: string;
-  title: string;
-  /** Current value, already in display units. */
-  value: number;
-  unit: string;
-  step?: number;
-  /** Bounds in display units. */
-  limits: NumericLimits;
-  /** Shown under the field; use it to explain a bound the user just hit. */
-  helperText?: string;
-  onChange: (value: number) => void;
-}
-
-/**
- * Compact numeric field, styled to match the Courses panel.
- *
- * Out-of-range values are never propagated while typing (a half-typed "5" on
- * the way to "500" must not reshape the turn), and are clamped on blur.
- */
-function NumberField({
-  label, title, value, unit, step = 1, limits, helperText, onChange
-}: NumberFieldProps) {
-  const [text, setText] = useState(String(value));
-
-  // Re-sync when the value changes from outside (a preset load, a unit
-  // switch). Runs only on `value`, so a partially typed entry is safe.
-  useEffect(() => {
-    setText(String(value));
-  }, [value]);
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = event.target.value;
-
-    setText(next);
-
-    const parsed = parseFloat(next);
-
-    if (Number.isFinite(parsed) && parsed >= limits.min && parsed <= limits.max) {
-      onChange(parsed);
-    }
-  };
-
-  const handleBlur = () => {
-    const parsed = parseFloat(text);
-
-    if (!Number.isFinite(parsed)) {
-      setText(String(value));
-
-      return;
-    }
-
-    const clamped = clampNumber(parsed, limits.min, limits.max);
-
-    setText(String(clamped));
-    onChange(clamped);
-  };
-
-  return (
-    <Tooltip title={title}>
-      <TextField
-        label={label}
-        size="small"
-        fullWidth
-        value={text}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        helperText={helperText}
-        slotProps={{
-          input: { endAdornment: <InputAdornment position="end">{unit}</InputAdornment> },
-          // min/max are on the input itself, so the spinner stops at the
-          // edge instead of stepping to a value the map cannot draw.
-          htmlInput: {
-            type: 'number',
-            step,
-            min: limits.min,
-            max: limits.max,
-            'aria-label': label
-          }
-        }}
-      />
-    </Tooltip>
-  );
-}
 
 interface ManoeuvreParametersComponentProps {
   params: ManoeuvreParams;
@@ -216,47 +130,57 @@ export default function ManoeuvreParametersComponent({
         />
       )}
 
-      <NumberField
-        label="Altitude"
-        title="The altitude the turn starts at."
-        value={toDisplay(params.altitudeFt)}
-        unit={altitudeLabel}
-        step={altitudeLabel === 'ft' ? 50 : 15}
-        limits={lengthLimits(LIMITS.manoeuvreAltitudeFt)}
-        onChange={value => change('altitudeFt', parseAltitude(value))}
-      />
+      {/* Paired: two three-digit numbers do not each need 400px, and the
+          pairs are the ones people set together. */}
+      <Stack direction="row" spacing={2}>
+        <NumberField
+          label="Altitude"
+          title="The altitude the turn starts at."
+          value={toDisplay(params.altitudeFt)}
+          unit={altitudeLabel}
+          step={altitudeLabel === 'ft' ? 50 : 15}
+          limits={lengthLimits(LIMITS.manoeuvreAltitudeFt)}
+          fullWidth
+          onChange={value => change('altitudeFt', parseAltitude(value))}
+        />
+        <NumberField
+          label="Duration"
+          title="The time from the start of the turn to touchdown."
+          value={params.duration}
+          unit="s"
+          step={0.5}
+          limits={LIMITS.manoeuvreDurationS}
+          fullWidth
+          onChange={value => change('duration', value)}
+        />
+      </Stack>
 
-      <NumberField
-        label="Depth"
-        title="How far back you start from the landing point, along your final heading. Positive is away from the target."
-        value={toDisplay(params.depthFt)}
-        unit={altitudeLabel}
-        step={altitudeLabel === 'ft' ? 50 : 15}
-        limits={lengthLimits(bounds.depthFt)}
-        helperText={boundNote(bounds.depthFt, LIMITS.manoeuvreDepthFt)}
-        onChange={value => change('depthFt', parseAltitude(value))}
-      />
-
-      <NumberField
-        label="Offset"
-        title="How far to the side you start, across your final heading, measured on the side you turn from. Negative starts you across the final approach line, which needs more than a quarter turn to fly."
-        value={toDisplay(params.offsetFt)}
-        unit={altitudeLabel}
-        step={altitudeLabel === 'ft' ? 50 : 15}
-        limits={lengthLimits(bounds.offsetFt)}
-        helperText={boundNote(bounds.offsetFt, LIMITS.manoeuvreOffsetFt)}
-        onChange={value => change('offsetFt', parseAltitude(value))}
-      />
-
-      <NumberField
-        label="Duration"
-        title="The time from the start of the turn to touchdown."
-        value={params.duration}
-        unit="s"
-        step={0.5}
-        limits={LIMITS.manoeuvreDurationS}
-        onChange={value => change('duration', value)}
-      />
+      {/* Depth and offset are one position expressed as two numbers, so they
+          share a row; each keeps its own note about the bound it is against. */}
+      <Stack direction="row" spacing={2} alignItems="flex-start">
+        <NumberField
+          label="Depth"
+          title="How far back you start from the landing point, along your final heading. Positive is away from the target."
+          value={toDisplay(params.depthFt)}
+          unit={altitudeLabel}
+          step={altitudeLabel === 'ft' ? 50 : 15}
+          limits={lengthLimits(bounds.depthFt)}
+          helperText={boundNote(bounds.depthFt, LIMITS.manoeuvreDepthFt)}
+          fullWidth
+          onChange={value => change('depthFt', parseAltitude(value))}
+        />
+        <NumberField
+          label="Offset"
+          title="How far to the side you start, across your final heading, measured on the side you turn from. Negative starts you across the final approach line, which needs more than a quarter turn to fly."
+          value={toDisplay(params.offsetFt)}
+          unit={altitudeLabel}
+          step={altitudeLabel === 'ft' ? 50 : 15}
+          limits={lengthLimits(bounds.offsetFt)}
+          helperText={boundNote(bounds.offsetFt, LIMITS.manoeuvreOffsetFt)}
+          fullWidth
+          onChange={value => change('offsetFt', parseAltitude(value))}
+        />
+      </Stack>
 
       {!reaches && (
         <Alert severity="warning" variant="outlined">

@@ -53,7 +53,7 @@ import { SpotText, formatSpot } from '../core/spotText';
 import { LatLng } from '../types';
 import { useAppState, useCopySpot, useUnits } from '../hooks';
 
-import NumberInput from './NumberInput';
+import NumberField from './NumberField';
 
 // FWC's presets (Input.kt): descent / horizontal, mph
 const PRESETS = [
@@ -253,15 +253,13 @@ interface DirectionSelectorProps {
   resolvedDeg: number;
   label: string;
   title: string;
-  /** Remount key for external (quick-set) edits. */
-  editKey: string;
   onChange: (value: number | 'into-wind') => void;
   onExternalChange: (value: number | 'into-wind') => void;
 }
 
 /** A direction selector: N/E/S/W + Into wind quick-set, and a degrees field. */
 function DirectionSelector({
-  value, resolvedDeg, label, title, editKey, onChange, onExternalChange
+  value, resolvedDeg, label, title, onChange, onExternalChange
 }: DirectionSelectorProps) {
   const intoWind = value === 'into-wind';
   const toggleValue = intoWind
@@ -296,14 +294,14 @@ function DirectionSelector({
         </ToggleButtonGroup>
       </Tooltip>
       <Stack direction="row" spacing={2} alignItems="center">
-        <NumberInput
-          key={`${editKey}-${intoWind ? roundDeg(resolvedDeg) : 'set'}`}
+        <NumberField
           title={`${title} Editing this overrides the into-wind setting.`}
           label={label}
-          initialValue={intoWind ? roundDeg(resolvedDeg) : value as number}
+          value={intoWind ? roundDeg(resolvedDeg) : value as number}
           step={5}
           wrap={360}
           unit="˚"
+          fullWidth
           onChange={v => onChange(normalizeDirection(v))}
         />
         {intoWind && (
@@ -401,21 +399,15 @@ export default function FlockingComponent({
     descentRateLabel
   } = useUnits();
 
-  // NumberInput keeps its own state from initialValue; quick-set actions
-  // (presets, N/E/S/W, into-wind) change values from outside, so bump a
-  // key to remount the inputs with the new values. Typing never bumps it,
-  // so focus is preserved while editing.
-  const [externalEdit, setExternalEdit] = useState(0);
-
-  const set = (patch: Partial<FlockingParams>, external = false) => {
+  // `NumberField` is controlled and re-syncs on its own, so a quick-set
+  // (a preset, N/E/S/W, into-wind) reaches the fields without the remount
+  // keys this panel used to carry. The `external` flag is gone with them.
+  const set = (patch: Partial<FlockingParams>) => {
     onParamsChange({ ...params, ...patch });
-    if (external) {
-      setExternalEdit(n => n + 1);
-    }
   };
 
-  const setJumprun = (patch: Partial<JumprunConfig>, external = false) => {
-    set({ jumprun: { ...params.jumprun, ...patch } }, external);
+  const setJumprun = (patch: Partial<JumprunConfig>) => {
+    set({ jumprun: { ...params.jumprun, ...patch } });
   };
 
   const setCorridor = (i: number, patch: Partial<SolveCorridorParams>) => {
@@ -441,7 +433,7 @@ export default function FlockingComponent({
           canopyToleranceDeg: 15
         }
       ]
-    }, true);
+    });
   };
 
   // Per-corridor collapse (details hidden; the checkbox/name/verdict stay
@@ -456,7 +448,7 @@ export default function FlockingComponent({
     });
 
   const removeCorridor = (i: number) => {
-    set({ solveCorridors: params.solveCorridors.filter((_c, j) => j !== i) }, true);
+    set({ solveCorridors: params.solveCorridors.filter((_c, j) => j !== i) });
     // Keep collapse flags aligned to the shifted indices.
     setCollapsed(prev => {
       const next = new Set<number>();
@@ -491,7 +483,7 @@ export default function FlockingComponent({
       <ToggleButtonGroup
         value={params.mode}
         exclusive
-        onChange={(_e, m) => m !== null && set({ mode: m }, true)}
+        onChange={(_e, m) => m !== null && set({ mode: m })}
         fullWidth
         size="small"
         color="primary"
@@ -537,7 +529,7 @@ export default function FlockingComponent({
                 set({
                   descentRateMph: preset.descentRateMph,
                   horizontalSpeedMph: preset.horizontalSpeedMph
-                }, true);
+                });
               }
             }}
             fullWidth
@@ -550,50 +542,46 @@ export default function FlockingComponent({
           </ToggleButtonGroup>
         </Tooltip>
         <Stack direction="row" spacing={2}>
-          <NumberInput
-            key={`top-${externalEdit}`}
+          <NumberField
             title="Exit altitude — the top of the flown altitude window."
             label="Altitude from"
-            initialValue={Math.round(formatAltitude(params.windowTopFt).value)}
+            value={Math.round(formatAltitude(params.windowTopFt).value)}
             step={altitudeLabel === 'ft' ? 500 : 100}
-            min={Math.round(formatAltitude(LIMITS.flockingAltitudeFt.min).value)}
-            max={Math.round(formatAltitude(LIMITS.flockingAltitudeFt.max).value)}
+            limits={{ min: Math.round(formatAltitude(LIMITS.flockingAltitudeFt.min).value), max: Math.round(formatAltitude(LIMITS.flockingAltitudeFt.max).value) }}
             unit={altitudeLabel}
+            fullWidth
             onChange={value => set({ windowTopFt: parseAltitude(value) })}
           />
-          <NumberInput
-            key={`bottom-${externalEdit}`}
+          <NumberField
             title="End of the jump — the bottom of the flown altitude window."
             label="Down to"
-            initialValue={Math.round(formatAltitude(params.windowBottomFt).value)}
+            value={Math.round(formatAltitude(params.windowBottomFt).value)}
             step={altitudeLabel === 'ft' ? 500 : 100}
-            min={Math.round(formatAltitude(LIMITS.flockingAltitudeFt.min).value)}
-            max={Math.round(formatAltitude(LIMITS.flockingAltitudeFt.max).value)}
+            limits={{ min: Math.round(formatAltitude(LIMITS.flockingAltitudeFt.min).value), max: Math.round(formatAltitude(LIMITS.flockingAltitudeFt.max).value) }}
             unit={altitudeLabel}
+            fullWidth
             onChange={value => set({ windowBottomFt: parseAltitude(value) })}
           />
         </Stack>
         <Stack direction="row" spacing={2}>
-          <NumberInput
-            key={`descent-${externalEdit}`}
+          <NumberField
             title="Vertical speed during the jump."
             label="Descent rate"
-            initialValue={formatDescentRate(params.descentRateMph).value}
+            value={formatDescentRate(params.descentRateMph).value}
             step={1}
-            min={formatDescentRate(LIMITS.flockingDescentRateMph.min).value}
-            max={formatDescentRate(LIMITS.flockingDescentRateMph.max).value}
+            limits={{ min: formatDescentRate(LIMITS.flockingDescentRateMph.min).value, max: formatDescentRate(LIMITS.flockingDescentRateMph.max).value }}
             unit={descentRateLabel}
+            fullWidth
             onChange={value => set({ descentRateMph: parseDescentRate(value) })}
           />
-          <NumberInput
-            key={`horizontal-${externalEdit}`}
+          <NumberField
             title="Horizontal speed over ground during the jump."
             label="Horizontal speed"
-            initialValue={formatDescentRate(params.horizontalSpeedMph).value}
+            value={formatDescentRate(params.horizontalSpeedMph).value}
             step={1}
-            min={formatDescentRate(LIMITS.flockingHorizontalSpeedMph.min).value}
-            max={formatDescentRate(LIMITS.flockingHorizontalSpeedMph.max).value}
+            limits={{ min: formatDescentRate(LIMITS.flockingHorizontalSpeedMph.min).value, max: formatDescentRate(LIMITS.flockingHorizontalSpeedMph.max).value }}
             unit={descentRateLabel}
+            fullWidth
             onChange={value => set({ horizontalSpeedMph: parseDescentRate(value) })}
           />
         </Stack>
@@ -607,9 +595,8 @@ export default function FlockingComponent({
               resolvedDeg={canopyDeg}
               label="Direction"
               title="Direction flown over ground during the jump (the jumprun follows it)."
-              editKey={`canopy-${externalEdit}`}
               onChange={v => set({ direction: v })}
-              onExternalChange={v => set({ direction: v }, true)}
+              onExternalChange={v => set({ direction: v })}
             />
           ) : (
             <>
@@ -620,9 +607,9 @@ export default function FlockingComponent({
                     exclusive
                     onChange={(_e, v) => {
                       if (v === 'follow') {
-                        set({ canopyDirection: 'follow-jumprun' }, true);
+                        set({ canopyDirection: 'follow-jumprun' });
                       } else if (v === 'custom') {
-                        set({ canopyDirection: roundDeg(jumprunDeg) }, true);
+                        set({ canopyDirection: roundDeg(jumprunDeg) });
                       }
                     }}
                     fullWidth
@@ -636,14 +623,14 @@ export default function FlockingComponent({
               </Stack>
               {params.canopyDirection !== 'follow-jumprun' && (
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <NumberInput
-                    key={`canopy-free-${externalEdit}`}
+                  <NumberField
                     title="Canopy flight direction over ground (with profiles: the initial direction)."
                     label="Direction"
-                    initialValue={params.canopyDirection}
+                    value={params.canopyDirection}
                     step={5}
                     wrap={360}
                     unit="˚"
+                    fullWidth
                     onChange={v => set({ canopyDirection: normalizeDirection(v) })}
                   />
                 </Stack>
@@ -671,21 +658,19 @@ export default function FlockingComponent({
             resolvedDeg={jumprunDeg}
             label="Jumprun"
             title="The jumprun the pilots fly — independent of the canopy flight."
-            editKey={`jr-${externalEdit}`}
             onChange={v => setJumprun({ directionDeg: v })}
-            onExternalChange={v => setJumprun({ directionDeg: v }, true)}
+            onExternalChange={v => setJumprun({ directionDeg: v })}
           />
           <Stack direction="row" spacing={2}>
-            <NumberInput
-              key={`jr-offset-${externalEdit}`}
+            <NumberField
               title={'Lateral offset of the jumprun line from the Spot Reference '
                 + '(positive = right of the run direction).'}
               label="Offset"
-              initialValue={roundDist(params.jumprun.offsetMi, distanceUnit)}
+              value={roundDist(params.jumprun.offsetMi, distanceUnit)}
               step={0.1}
-              min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
-              max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
+              limits={{ min: milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit) }}
               unit={unitLabel}
+              fullWidth
               onChange={value => setJumprun({ offsetMi: displayToMiles(value, distanceUnit) })}
             />
 
@@ -793,73 +778,68 @@ export default function FlockingComponent({
                 </Typography>
                 <Collapse in={!isCollapsed}>
                   <Stack direction="row" spacing={1}>
-                    <NumberInput
-                      key={`c${i}-dir-${externalEdit}`}
+                    <NumberField
                       title="Jumprun direction for this corridor."
                       label="Direction"
-                      initialValue={roundDeg(c.directionDeg)}
+                      value={roundDeg(c.directionDeg)}
                       step={5}
                       wrap={360}
                       unit="˚"
+                      fullWidth
                       onChange={v => setCorridor(i, { directionDeg: normalizeDirection(v) })}
                     />
-                    <NumberInput
-                      key={`c${i}-tol-${externalEdit}`}
+                    <NumberField
                       title="How far the canopy flight may deviate from the run."
                       label="Canopy ±"
-                      initialValue={c.canopyToleranceDeg}
+                      value={c.canopyToleranceDeg}
                       step={5}
-                      min={LIMITS.flockingCanopyToleranceDeg.min}
-                      max={LIMITS.flockingCanopyToleranceDeg.max}
+                      limits={{ min: LIMITS.flockingCanopyToleranceDeg.min, max: LIMITS.flockingCanopyToleranceDeg.max }}
                       unit="˚"
+                      fullWidth
                       onChange={v => setCorridor(i, { canopyToleranceDeg: v })}
                     />
                   </Stack>
                   <Stack direction="row" spacing={1}>
-                    <NumberInput
-                      key={`c${i}-offmin-${externalEdit}`}
+                    <NumberField
                       title="Left-most allowed lateral offset of the run (negative = left)."
                       label="Offset min"
-                      initialValue={roundDist(c.offsetMinMi, distanceUnit)}
+                      value={roundDist(c.offsetMinMi, distanceUnit)}
                       step={0.25}
-                      min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
-                      max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
+                      limits={{ min: milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit) }}
                       unit={unitLabel}
+                      fullWidth
                       onChange={v => setCorridor(i, { offsetMinMi: displayToMiles(v, distanceUnit) })}
                     />
-                    <NumberInput
-                      key={`c${i}-offmax-${externalEdit}`}
+                    <NumberField
                       title="Right-most allowed lateral offset of the run."
                       label="Offset max"
-                      initialValue={roundDist(c.offsetMaxMi, distanceUnit)}
+                      value={roundDist(c.offsetMaxMi, distanceUnit)}
                       step={0.25}
-                      min={milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit)}
-                      max={milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit)}
+                      limits={{ min: milesToDisplay(LIMITS.flockingJumprunOffsetMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingJumprunOffsetMi.max, distanceUnit) }}
                       unit={unitLabel}
+                      fullWidth
                       onChange={v => setCorridor(i, { offsetMaxMi: displayToMiles(v, distanceUnit) })}
                     />
                   </Stack>
                   <Stack direction="row" spacing={1}>
-                    <NumberInput
-                      key={`c${i}-alongmin-${externalEdit}`}
+                    <NumberField
                       title="Earliest allowed exit along the run (signed; negative = before the reference)."
                       label="Along min"
-                      initialValue={roundDist(c.alongMinMi, distanceUnit)}
+                      value={roundDist(c.alongMinMi, distanceUnit)}
                       step={0.5}
-                      min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
-                      max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
+                      limits={{ min: milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit) }}
                       unit={unitLabel}
+                      fullWidth
                       onChange={v => setCorridor(i, { alongMinMi: displayToMiles(v, distanceUnit) })}
                     />
-                    <NumberInput
-                      key={`c${i}-alongmax-${externalEdit}`}
+                    <NumberField
                       title="Latest allowed exit along the run."
                       label="Along max"
-                      initialValue={roundDist(c.alongMaxMi, distanceUnit)}
+                      value={roundDist(c.alongMaxMi, distanceUnit)}
                       step={0.5}
-                      min={milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit)}
-                      max={milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit)}
+                      limits={{ min: milesToDisplay(LIMITS.flockingExitAlongMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingExitAlongMi.max, distanceUnit) }}
                       unit={unitLabel}
+                      fullWidth
                       onChange={v => setCorridor(i, { alongMaxMi: displayToMiles(v, distanceUnit) })}
                     />
                   </Stack>
@@ -887,28 +867,26 @@ export default function FlockingComponent({
 
       <Section title="Display">
         <Stack direction="row" spacing={2}>
-          <NumberInput
-            key={`green-radius-${externalEdit}`}
+          <NumberField
             title={'Green ring: the jump works if it ends anywhere inside. In solve '
               + 'mode, corridors that all reach it are chosen by which run is most '
               + 'into the wind rather than by a hair of miss distance.'}
             label="Green radius"
-            initialValue={roundDist(params.targetRadiusMi, distanceUnit, 2)}
+            value={roundDist(params.targetRadiusMi, distanceUnit, 2)}
             step={0.05}
-            min={milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit)}
-            max={milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit)}
+            limits={{ min: milesToDisplay(LIMITS.flockingTargetRadiusMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingTargetRadiusMi.max, distanceUnit) }}
             unit={unitLabel}
+            fullWidth
             onChange={value => set({ targetRadiusMi: displayToMiles(value, distanceUnit) })}
           />
-          <NumberInput
-            key={`yellow-radius-${externalEdit}`}
+          <NumberField
             title="Yellow ring: beyond the green one, but still workable."
             label="Yellow radius"
-            initialValue={roundDist(params.yellowRadiusMi, distanceUnit, 2)}
+            value={roundDist(params.yellowRadiusMi, distanceUnit, 2)}
             step={0.05}
-            min={milesToDisplay(LIMITS.flockingYellowRadiusMi.min, distanceUnit)}
-            max={milesToDisplay(LIMITS.flockingYellowRadiusMi.max, distanceUnit)}
+            limits={{ min: milesToDisplay(LIMITS.flockingYellowRadiusMi.min, distanceUnit), max: milesToDisplay(LIMITS.flockingYellowRadiusMi.max, distanceUnit) }}
             unit={unitLabel}
+            fullWidth
             onChange={value => set({ yellowRadiusMi: displayToMiles(value, distanceUnit) })}
           />
         </Stack>

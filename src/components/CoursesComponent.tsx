@@ -11,7 +11,6 @@ import {
   Divider,
   FormControl,
   IconButton,
-  InputAdornment,
   InputLabel,
   List,
   ListItem,
@@ -41,16 +40,20 @@ import {
   fromCourseRelative,
   getTargetRelativeToCourse
 } from '../core/courses';
-import { normalizeRelativeAngle } from '../core/validation';
+import { LIMITS, normalizeRelativeAngle } from '../core/validation';
 import { downloadCourseKmz } from '../util/exportKmz';
 import { AltitudeUnit } from '../core/units';
 
+import NumberField from './NumberField';
 import { SectionHeading } from './PanelSection';
 
 const M_PER_FT = 0.3048;
 
 /** The three course types, in the order the New menu offers them. */
 const COURSE_TYPES: readonly CourseType[] = ['distance', 'zone-accuracy', 'speed'];
+
+/** Feet to metres, for turning the stored limits into display units. */
+const FT_TO_M = 0.3048;
 
 function metersToDisplay(m: number, unit: AltitudeUnit): number {
   return unit === 'ft' ? m / M_PER_FT : m;
@@ -111,6 +114,11 @@ function CoursesComponent({
   const hasAny = atPlace.length + unassigned.length + elsewhere.length > 0;
 
   // ── Target-relative section ──────────────────────────────────────────────────
+  // The stored bound is in feet; the fields are in the display unit.
+  const relativeLimits = {
+    min: Math.round(metersToDisplay(LIMITS.courseRelativeFt.min * FT_TO_M, altitudeUnit)),
+    max: Math.round(metersToDisplay(LIMITS.courseRelativeFt.max * FT_TO_M, altitudeUnit))
+  };
   const [depthStr, setDepthStr] = useState('0');
   const [offsetStr, setOffsetStr] = useState('0');
   const [dirStr, setDirStr] = useState('0');
@@ -133,11 +141,9 @@ function CoursesComponent({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourseId, selectedCourseParams?.lat, selectedCourseParams?.lng, selectedCourseParams?.direction, altitudeUnit]);
 
-  const handleDepth = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const s = e.target.value;
-    setDepthStr(s);
-    const v = parseFloat(s);
-    if (isNaN(v) || !selectedCourseParams) return;
+  const handleDepth = (v: number) => {
+    setDepthStr(String(v));
+    if (!selectedCourseParams) return;
     const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
     const off = parseFloat(offsetStr);
     const depM = displayToMeters(v, altitudeUnit);
@@ -145,11 +151,9 @@ function CoursesComponent({
     onTargetChange({ ...target, target: fromCourseRelative(depM, offM, center, selectedCourseParams.direction) });
   };
 
-  const handleOffset = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const s = e.target.value;
-    setOffsetStr(s);
-    const v = parseFloat(s);
-    if (isNaN(v) || !selectedCourseParams) return;
+  const handleOffset = (v: number) => {
+    setOffsetStr(String(v));
+    if (!selectedCourseParams) return;
     const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
     const dep = parseFloat(depthStr);
     const depM = displayToMeters(isNaN(dep) ? 0 : dep, altitudeUnit);
@@ -157,11 +161,9 @@ function CoursesComponent({
     onTargetChange({ ...target, target: fromCourseRelative(depM, offM, center, selectedCourseParams.direction) });
   };
 
-  const handleApproachAngle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const s = e.target.value;
-    setDirStr(s);
-    const v = parseFloat(s);
-    if (isNaN(v) || !selectedCourseParams) return;
+  const handleApproachAngle = (v: number) => {
+    setDirStr(String(v));
+    if (!selectedCourseParams) return;
     const finalHeading = ((selectedCourseParams.direction - v) % 360 + 360) % 360;
     onTargetChange({ ...target, finalHeading });
   };
@@ -171,7 +173,6 @@ function CoursesComponent({
   const [editLat, setEditLat] = useState('');
   const [editLng, setEditLng] = useState('');
   const [editCourseDir, setEditCourseDir] = useState('');
-  const dirFocusedRef = React.useRef(false);
   const latFocusedRef = React.useRef(false);
   const lngFocusedRef = React.useRef(false);
 
@@ -194,8 +195,10 @@ function CoursesComponent({
     if (selectedCustom && !lngFocusedRef.current) setEditLng(String(selectedCustom.lng));
   }, [selectedCustom?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The field is controlled by `NumberField`, which keeps its own text while
+  // typing, so this only has to follow the stored value (a map drag).
   useEffect(() => {
-    if (selectedCustom && !dirFocusedRef.current) {
+    if (selectedCustom) {
       setEditCourseDir(String(Math.round(selectedCustom.direction * 1000) / 1000));
     }
   }, [selectedCustom?.direction]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -211,14 +214,6 @@ function CoursesComponent({
   const commitLng = () => {
     const v = parseFloat(editLng);
     if (selectedCustom && !isNaN(v)) updateCourse(selectedCustom.id, { lng: v });
-  };
-  const commitCourseDir = () => {
-    const v = parseFloat(editCourseDir);
-    if (selectedCustom && !isNaN(v)) {
-      const n = ((v % 360) + 360) % 360;
-      updateCourse(selectedCustom.id, { direction: n });
-      setEditCourseDir(String(Math.round(n * 1000) / 1000));
-    }
   };
 
   // ── Shared actions ───────────────────────────────────────────────────────────
@@ -369,23 +364,17 @@ function CoursesComponent({
             />
           </Stack>
 
-          <TextField
+          <NumberField
             label="Direction"
-            size="small"
+            title="The direction the course runs, as a compass bearing."
+            value={Number(editCourseDir)}
+            unit="°"
+            step={1}
+            wrap={360}
             fullWidth
-            value={editCourseDir}
-            onChange={e => {
-              const s = e.target.value;
-              setEditCourseDir(s);
-              const v = parseFloat(s);
-              if (!isNaN(v)) updateCourse(params.id, { direction: v });
-            }}
-            onFocus={() => { dirFocusedRef.current = true; }}
-            onBlur={() => { dirFocusedRef.current = false; commitCourseDir(); }}
-            onKeyDown={e => { if (e.key === 'Enter') commitCourseDir(); }}
-            slotProps={{
-              input: { endAdornment: <InputAdornment position="end">°</InputAdornment> },
-              htmlInput: { type: 'number', step: 0.1 }
+            onChange={v => {
+              setEditCourseDir(String(v));
+              updateCourse(params.id, { direction: v });
             }}
           />
         </>
@@ -564,47 +553,38 @@ function CoursesComponent({
           {/* One field per line: three side by side wrapped unpredictably in a
               narrow panel, and the labels are too long to read at a glance. */}
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Tooltip title="Distance back from the course centre along the course axis. Positive is away from the course, in the direction you fly it from.">
-              <TextField
-                label="Depth"
-                size="small"
-                fullWidth
-                value={depthStr}
-                onChange={handleDepth}
-                slotProps={{
-                  input: { endAdornment: <InputAdornment position="end">{altitudeUnit}</InputAdornment> },
-                  htmlInput: { type: 'number', step: altitudeUnit === 'ft' ? 1 : 0.5 }
-                }}
-              />
-            </Tooltip>
+            <NumberField
+              label="Depth"
+              title="Distance back from the course centre along the course axis. Positive is away from the course, in the direction you fly it from."
+              value={Number(depthStr)}
+              unit={altitudeUnit}
+              step={altitudeUnit === 'ft' ? 1 : 0.5}
+              limits={relativeLimits}
+              fullWidth
+              onChange={handleDepth}
+            />
 
-            <Tooltip title="Distance across the course from its centreline. Positive is to the right of the course direction.">
-              <TextField
-                label="Offset"
-                size="small"
-                fullWidth
-                value={offsetStr}
-                onChange={handleOffset}
-                slotProps={{
-                  input: { endAdornment: <InputAdornment position="end">{altitudeUnit}</InputAdornment> },
-                  htmlInput: { type: 'number', step: altitudeUnit === 'ft' ? 1 : 0.5 }
-                }}
-              />
-            </Tooltip>
+            <NumberField
+              label="Offset"
+              title="Distance across the course from its centreline. Positive is to the right of the course direction."
+              value={Number(offsetStr)}
+              unit={altitudeUnit}
+              step={altitudeUnit === 'ft' ? 1 : 0.5}
+              limits={relativeLimits}
+              fullWidth
+              onChange={handleOffset}
+            />
 
-            <Tooltip title="How far your final heading is turned from the course direction. 0 flies straight down the course; positive means the course runs to the right of your approach.">
-              <TextField
-                label="Approach Angle"
-                size="small"
-                fullWidth
-                value={dirStr}
-                onChange={handleApproachAngle}
-                slotProps={{
-                  input: { endAdornment: <InputAdornment position="end">°</InputAdornment> },
-                  htmlInput: { type: 'number', step: 0.5 }
-                }}
-              />
-            </Tooltip>
+            <NumberField
+              label="Approach angle"
+              title="How far your final heading is turned from the course direction. 0 flies straight down the course; positive means the course runs to the right of your approach."
+              value={Number(dirStr)}
+              unit="°"
+              step={0.5}
+              limits={{ min: -180, max: 180 }}
+              fullWidth
+              onChange={handleApproachAngle}
+            />
           </Stack>
         </>
       )}
