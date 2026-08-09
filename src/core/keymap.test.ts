@@ -200,13 +200,13 @@ describe('shifted letters', () => {
     expect(eventToCombo({ key: '<', shiftKey: true })).toBe('<');
   });
 
-  it('binds the mirror to both Z and Shift+X, and X to the pattern flip', () => {
+  it('binds the mirror to Shift+X, leaving X to the pattern flip', () => {
     const mirror = SHORTCUTS.find(s => s.id === 'manoeuvre.mirror');
 
-    expect(mirror?.keys).toEqual(['z', 'shift+x']);
+    expect(mirror?.keys).toEqual(['shift+x']);
     expect(matchShortcut('shift+x', SHORTCUTS)?.shortcut.id).toBe('manoeuvre.mirror');
-    expect(matchShortcut('z', SHORTCUTS)?.shortcut.id).toBe('manoeuvre.mirror');
     expect(matchShortcut('x', SHORTCUTS)?.shortcut.id).toBe('pattern.flipSides');
+    expect(matchShortcut('z', SHORTCUTS)).toBeNull();
   });
 
   it('offers the mirror only where there is a manoeuvre', () => {

@@ -77,7 +77,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
 
   // Manoeuvre
   {
-    id: 'manoeuvre.mirror', keys: ['z', 'shift+x'],
+    id: 'manoeuvre.mirror', keys: ['shift+x'],
     label: 'Mirror the turn left/right', category: 'manoeuvre', feature: 'manoeuvre'
   },
 
@@ -187,7 +187,8 @@ export interface KeyLike {
  * case — which is what made "X flips the pattern, Shift+X mirrors the turn"
  * impossible to express. The test is `shiftKey`, not the case of the
  * character, so caps lock still types plain letters and still triggers the
- * plain bindings.
+ * plain bindings. The cost is that a shifted letter no longer falls through
+ * to its unshifted binding: Shift+P does not open the Pattern panel.
  */
 export function eventToCombo(event: KeyLike): string | null {
   if (event.ctrlKey || event.metaKey || event.altKey) {

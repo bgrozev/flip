@@ -1569,9 +1569,11 @@ was a reason. There was: `eventToCombo` folded letters to lower case by
 design, so Shift+X and X were the same combo and the binding could not be
 expressed. Rather than pick one, the fold now applies only to unshifted
 letters — a shifted letter is its own combo, tested on `shiftKey` so caps
-lock still types plain letters — and the action is bound to BOTH `z` and
-`shift+x`. One deliberate loss, pinned in a test that used to assert the
-opposite: `Shift+P` no longer opens the Pattern panel.
+lock still types plain letters. It shipped bound to both `z` and `shift+x`
+for an hour; the owner asked for one, so `shift+x` is the binding. One
+deliberate loss, pinned in a test that used to assert the opposite:
+`Shift+P` no longer opens the Pattern panel, and no shifted letter falls
+through to its plain binding.
 
 What mirroring *means* depends on the manoeuvre's type, so it lives in
 `core/manoeuvre.mirrorManoeuvre` rather than in a key handler: a

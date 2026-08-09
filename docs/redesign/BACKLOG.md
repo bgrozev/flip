@@ -114,12 +114,31 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Polish (trivial)
 
+- ☐ **Settings has no `?` in its panel header** while every other panel
+  does (spotted in the 2026-08-08 UI pass). Either give it a help topic in
+  `core/help.ts` or decide the icon does not belong there — as it stands it
+  reads as missing.
+- ☐ **The manoeuvre hint and the initiation handle sit on different
+  lines.** Since the handle moved to the still-air path (2026-08-03),
+  `ManoeuvreHintLayer`'s entry arrow and rotation label are the only part
+  of the turn still anchored to the drawn one. Anchoring the hint to
+  still-air is consistent for a parametric turn; for a recorded track the
+  drawn line is the one that was flown. ✎ owner's call.
+- ☐ **The map's spot label is not clickable** — copy lives in the top bar
+  and the panel hero instead. Google's `overlayLayer` pane takes no mouse
+  events, and the panes that do sit above every marker, so a clickable
+  label would shadow the drag handles beside it. Fixable with an
+  `interactive` flag on `MapOverlay` plus separation from the exit, if the
+  owner wants it.
+
 - ☐ **Round altitude/number display in both feet and metres** — labels and
   readouts should land on round numbers in the active unit (e.g. 1000 ft
   ↔ ~300 m shown as a clean 300 m, not 305 m), rather than converting an
   exact value and showing an odd figure. Affects POM altitude labels, the
   winds indicator, tables, hovers. Pick round-number targets per unit.
-- ☐ Input fields UX — highlight/select content on click (focus behavior).
+- ☑ Input fields UX — highlight/select content on click. DONE 2026-08-08:
+  every numeric field is `components/NumberField`, which selects on focus
+  (they are retyped far more often than edited in place).
 - ☐ Default pattern params → student-friendly: 3:1 glide, 8 kts descent
   (current default: 9 mph descent, 3.0 GR — confirm intended units kts vs mph).
 - ☑ Beaufort colors elsewhere — DONE. Wind table rows (`185c2d8`, a colour

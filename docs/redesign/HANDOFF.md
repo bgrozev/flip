@@ -1,13 +1,9 @@
 # Redesign hand-off — start here
 
-Entry point for a new session picking up the FliP redesign. Rewritten
-2026-07-25 (winds indicator, trust banner, target + flocking map
-interactions); updated 2026-07-28 at the end of the density-altitude,
-per-place-memory and dropzone-data session, again same-day after the
-dropzone import (59 -> 339 entries), and 2026-07-29 for the owner's
-dropzone curation pass and nerd mode. The 2026-07-27 revision covered DZ
-discovery, shortcuts and in-app help; 2026-07-19 covered the architecture
-review, the wind-UX batch, and Phase 6 flocking.
+Entry point for a new session picking up the FliP redesign. Last revised
+**2026-08-08**, at the end of the UI-consistency pass. Sessions are logged
+newest-first below; each one says what changed and what it left open, and
+`NOTES.md` has the reasoning behind every entry.
 
 **The owner's first dropzone curation pass landed** (`aa3c041`, `00e4ad4`):
 212 entries promoted to hand-checked positions/headings, 69 removed, 4
@@ -29,7 +25,9 @@ dropzone import" below still govern any further curation.
 6. `UIUX.md` — UX improvements + feature ideas, ⭐ = owner-prioritized.
 
 `CLAUDE.md` (repo root) describes the codebase and is current as of this
-hand-off (structure, core modules, wind layer, flocking, indicator/banner).
+hand-off: structure, core modules, the wind layer, flocking and the spot,
+the manoeuvre model, per-place memory, nerd mode, and the **UI conventions
+table** — the one place that says which shared component to reach for.
 
 ## Where things stand
 
@@ -37,8 +35,8 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **858 tests, 0 lint errors, 51 known lint
-warnings, build green, tree clean.** (`.claude/launch.json` is untracked
+Baseline on the branch: **896 tests in 44 files, 0 lint errors, 51 known
+lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
 unfiltered place-list render (still no grouping/limit — BACKLOG) scales
@@ -47,9 +45,11 @@ with dropzone count and jsdom is slow at 272 of them.
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
 MapLibre provider and all of Phase 6 (flocking) landed earlier — see the
-2026-07-19 history in NOTES.md.
+2026-07-19 history in NOTES.md. Everything since has been UX iteration on
+owner reports; the sessions below are that work, newest first.
 
-This UX-iteration session (2026-07-19 → 25) added, roughly in order:
+The oldest of them, the UX-iteration session of 2026-07-19 → 25, added
+roughly in order:
 
 - **Compact winds indicator** (`WindMiniIndicator`): a map-corner overlay,
   every mode, showing GND + plan-relevant altitude bands (5k ceiling for
@@ -74,51 +74,100 @@ This UX-iteration session (2026-07-19 → 25) added, roughly in order:
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
 
-### Session 2026-07-26 → 27
+### Session 2026-08-08 — UI consistency, and three small ones
 
-Four things landed: DZ discovery (P6/F5), the leg-count fix (P9),
-keyboard shortcuts, and the in-app help panel. NOTES has the reasoning
-for each; the short version:
+**The panels were audited end to end and the drift removed.** One numeric
+field (`components/NumberField`, replacing three implementations), one
+section heading (`PanelSection`), one disclosure (`DisclosureRow`), one
+button vocabulary, one reset idiom, and one map-label style
+(`map/layers/labelStyles.mapLabel`) in place of thirteen. `NumberInput` is
+deleted, and the Flocking panel's remount-key counter went with it: a
+controlled field re-syncs on its own. Two structural fixes came out of it —
+Courses was rendering its own title under the panel header's (the panel
+said "Courses" twice), and the panel container was centring text with an
+`alignItems: 'left'` that is not a value `align-items` takes, so every
+panel undid it by hand and anything that forgot came out centred.
 
-**DZ discovery (P6/F5)** — see the detail below.
+**The table in CLAUDE.md ("UI conventions") is the vocabulary.** Reach for
+a shared piece before writing a new look; that table is the whole list.
 
-**P9 — leg-count selector** hidden in Standard Pattern via a new
-`patternLegCount` mode feature. The promotion to three legs is applied on
-READ (`core/pattern.withFullPattern`), never written back, so a swooper's
-stored two-leg choice survives a trip through the simple mode. The
-pattern path moved from `useAppState` to App, which is the only place
-that knows the mode.
+Three small items the same day:
 
-**Target scope: place vs position** (owner report — "the DZ changes when
-I switch modes"). Per-mode targets stay, but choosing a *place* (picker,
-nearest-dropzone, loading a preset) now moves every mode via
-`setTargetEverywhere`, which clears the per-mode overrides so even
-never-opened modes follow. Dragging, shift-click and the heading input
-stay per-mode.
+- **A sounding says how far away it is, from the target now.** The distance
+  it used to print was measured at fetch time, from wherever the profile
+  was fetched for — and a profile outlives a move to another dropzone.
+  `meta.stationLocation` is stored, the panel re-measures, and older
+  profiles fall back to the fetched number with "away" instead of "from the
+  target".
+- **`Shift+X` mirrors the manoeuvre** (`core/manoeuvre.mirrorManoeuvre`:
+  flip `turnDirection` for a parametric turn, `sampleLeft` for a sample,
+  the points themselves for a recorded track). This needed `eventToCombo`
+  to stop folding shifted letters onto their unshifted binding — a change
+  with one cost, pinned by a test that used to assert the opposite:
+  **`Shift+P` no longer opens the Pattern panel**, and no shifted letter
+  falls through any more.
+- **Beaufort colour reaches the top bar**, closing that backlog item.
 
-**Winds re-fetch on a new place.** Moving beyond the 5 mi invalidation
-threshold used to clear the winds and stop; the auto-fetch effect is now
-keyed on where the winds were last fetched *for*, so it refetches. The
-ref records the location last **attempted**, so a failing fetch cannot
-spin.
+⚠️ Noticed and left alone: **Settings has no `?` in its header** while every
+other panel does — it needs either a help topic or a decision to drop the
+icon there.
 
-**Keyboard shortcuts + `?` overlay.** `core/keymap.ts` is one table read
-by both the handler (`hooks/useKeyboardShortcuts`) and the overlay
-(`components/ShortcutsOverlay`), gated per mode, and it carries mouse
-gestures with no keys so "how do I move the target" has an answer. `F`
-hides everything but the map; `S` opens presets and 1-9 load one; `Esc`
-steps back. The guard — ignore keys from inputs and from anything with
-`role=menu|dialog|listbox` — is the feature, and it is what lets the
-preset menu own the digits.
+### Session 2026-08-03 — the spot, the ghost, and a storage hole
 
-**Help panel** (`core/help.ts` + `components/HelpComponent`): topics as
-DATA, one per panel plus How-it-works / Reading-the-map / Glossary /
-Shortcuts / About. The `about` panel is gone; About is a topic and
-`/about` redirects to `/help?topic=about`. Every panel header now has a
-`?` deep-linking to its own topic. **The prose is placeholder** — see
-"What's next".
+**The spot became flocking's headline** (P8 closed). One formatter,
+`core/spotText.formatSpot`, writes "Jumprun 248˚ · 3.41 mi prior · 0.42 mi
+left" for every surface: the panel's sticky hero (display type, top of the
+panel), the top bar — which in flocking shows the spot INSTEAD of avg/gnd
+wind, since the map's winds indicator already carries that — and the map's
+pill at the exit. The first two copy on click (or open the share sheet);
+the map label deliberately does not, because Google's `overlayLayer` pane
+takes no mouse events and the panes that do would shadow the drag handles
+beside it. The copied text is the spot alone, by the owner's call: no
+dropzone, corridor name or forecast validity. A `verdict` ("MISSES by 0.80
+mi") shows beside the spot everywhere and is never copied — it describes
+the jumper's setup, not where the plane should fly.
 
-### Session 2026-07-30 (most recent)
+**"No place" could not be stored** (owner report: pick a Google result with
+no dropzone matches, get a stale Spot Reference and a "1000 mi PAST"
+spot). Toolpad's `useLocalStorageState` deletes the key when handed null,
+and a deleted key reads back as the key's default — ZHills, for
+`flip.place.active`. So a geocoder hit left the app believing it was at
+ZHills from the next render on, and every later edit (target drag, pinned
+reference, course) was filed under that dropzone; returning to it restored
+another continent's coordinates. **Not flocking-specific** — flocking is
+just where the number is printed; the same write corrupts every mode's
+per-place target and points the Courses panel at the wrong dropzone.
+Fixed by storing "nowhere" as `NO_PLACE` (`''`), plus `nearbyMemory`,
+which ignores a remembered target or reference more than 25 mi from its
+place and so heals storage the bug already wrote. Only that one key had
+the hole; the others' defaults are null anyway.
+
+**The initiation handle moved to the still-air path** (the dashed pre-wind
+line). It sat on the wind-corrected path, which inverted the direction the
+app runs in: a turn is set up in still air and the correction is the
+OUTPUT, so the handle was an input dressed as a result. Only the frame was
+wrong — the drag was already resolved in still air, and that arithmetic
+was exact rather than approximate (the drift over the turn depends only on
+altitude and duration, so it is the same vector wherever the handle lands:
+measured at 0.005 ft over a 300 ft drag).
+
+**Flocking's no-wind ghost is drawn from the exit** (`anchorAtExit`). The
+model builds both paths sharing an END, because `addWind` holds the
+landing point and walks the drift backwards — right for measuring, wrong
+for drawing: the ghost began at the exit you would have needed in still
+air and finished on the target. It now leaves the aircraft where you do,
+and the gap at the far end is the drift. `flockingVectors` and
+`averageWind` keep the end-aligned pair, since both measure the gap
+between the two paths.
+
+⚠️ **Left open**: `ManoeuvreHintLayer`'s entry arrow and rotation label
+still anchor to the drawn path, so they no longer sit at the initiation
+handle — the two ends of one turn are drawn on different lines. Anchoring
+the hint to the still-air path is the consistent move for a parametric
+turn; for a recorded track the drawn line is the one that was flown.
+Owner's call.
+
+### Session 2026-07-30 — the manoeuvre's parameters
 
 **The manoeuvre's parameters were reworked** (`0328ddb`, `c5bd838`), on an
 owner report that left/right was described relative to the target when it
@@ -153,71 +202,6 @@ a few degrees off and want it) and never touches a parametric turn (which
 knows its entry heading exactly). `reposition` still takes paths rather
 than the config, so the decision is made where the config is known — at
 the one call site, and it is not covered by a test.
-
-### Session 2026-08-03
-
-**The initiation handle moved to the still-air path** (the dashed pre-wind
-line). It sat on the wind-corrected path, which inverted the direction the
-app runs in: a turn is set up in still air and the correction is the
-OUTPUT, so the handle was an input dressed as a result. Only the frame was
-wrong — the drag was already resolved in still air, by subtracting the
-drift from the drop, and that arithmetic was exact rather than an
-approximation (the drift over the turn depends only on altitude and
-duration, so it is the same vector wherever the handle lands: measured at
-0.005 ft over a 300 ft drag). The correction is simply gone now, along
-with `ManoeuvreEditTarget.idealInitiation`. Browser-verified on MapLibre:
-the handle sits on the dashed line, ~140 ft upwind of the entry arrow,
-which stays anchored to the drawn path.
-
-### Session 2026-08-08 — UI consistency
-
-The panels were audited end to end and the drift removed: one numeric
-field (`components/NumberField`, replacing three implementations), one
-section heading (`PanelSection`), one disclosure (`DisclosureRow`), one
-button vocabulary, one reset idiom, and one map-label style
-(`map/layers/labelStyles.mapLabel`) in place of thirteen. `NumberInput` is
-deleted; the Flocking panel's remount-key counter went with it. The table
-in CLAUDE.md ("UI conventions") is the vocabulary — reach for a shared
-piece before writing a new look.
-
-Worth knowing: wrapping a text button in a MUI `Tooltip` makes the tooltip
-the button's accessible NAME unless `describeChild` is set. Three buttons
-were affected; a test caught the first.
-
-**The spot became flocking's headline** (P8 closed). One formatter,
-`core/spotText.formatSpot`, now writes "Jumprun 248˚ · 3.41 mi prior ·
-0.42 mi left" for every surface: the panel's sticky hero (display type,
-top of the panel), the top bar — which in flocking shows the spot INSTEAD
-of avg/gnd wind, since the map's winds indicator already carries that —
-and the map's pill at the exit. The first two copy on click (or open the
-share sheet); the map label deliberately does not, because Google's
-`overlayLayer` pane takes no mouse events and the panes that do would
-shadow the drag handles beside it. The copied text is the spot alone, by
-the owner's call: no dropzone, corridor name or forecast validity. A
-`verdict` ("MISSES by 0.80 mi") shows beside the spot everywhere and is
-never copied — it is about the jumper's setup, not the aircraft's.
-
-**"No place" could not be stored** (owner report: pick a Google result with
-no dropzone matches, get a stale Spot Reference and a "1000 mi PAST"
-spot). Toolpad's `useLocalStorageState` deletes the key when handed null,
-and a deleted key reads back as the key's default — ZHills, for
-`flip.place.active`. So a geocoder hit left the app believing it was at
-ZHills from the next render on, and every later edit (target drag, pinned
-reference, course) was filed under that dropzone; returning to it restored
-another continent's coordinates. **Not flocking-specific** — flocking is
-just where the number is printed; the same write corrupts every mode's
-per-place target and points the Courses panel at the wrong dropzone.
-Fixed by storing "nowhere" as `NO_PLACE` (`''`), plus `nearbyMemory`,
-which ignores a remembered target or reference more than 25 mi from its
-place and so heals storage the bug already wrote. Only that one key had
-the hole; the others' defaults are null anyway.
-
-⚠️ **Left open by that**: `ManoeuvreHintLayer`'s entry arrow and rotation
-label still anchor to the drawn path, so they no longer sit at the handle
-— the two ends of the same turn are drawn on different lines. Anchoring
-the hint to the still-air path as well is the consistent move for a
-parametric turn; for a recorded track it is less obvious, since the drawn
-line is the one the jumper flew. Owner's call.
 
 ### Session 2026-07-29
 
@@ -435,6 +419,50 @@ correct localStorage at the time:
   switch. Its number fields are uncontrolled (`initialValue`), so the panel
   is now keyed on `mode.id`.
 
+### Session 2026-07-26 → 27
+
+Four things landed: DZ discovery (P6/F5), the leg-count fix (P9),
+keyboard shortcuts, and the in-app help panel. NOTES has the reasoning
+for each; the short version:
+
+**DZ discovery (P6/F5)** — see the detail below.
+
+**P9 — leg-count selector** hidden in Standard Pattern via a new
+`patternLegCount` mode feature. The promotion to three legs is applied on
+READ (`core/pattern.withFullPattern`), never written back, so a swooper's
+stored two-leg choice survives a trip through the simple mode. The
+pattern path moved from `useAppState` to App, which is the only place
+that knows the mode.
+
+**Target scope: place vs position** (owner report — "the DZ changes when
+I switch modes"). Per-mode targets stay, but choosing a *place* (picker,
+nearest-dropzone, loading a preset) now moves every mode via
+`setTargetEverywhere`, which clears the per-mode overrides so even
+never-opened modes follow. Dragging, shift-click and the heading input
+stay per-mode.
+
+**Winds re-fetch on a new place.** Moving beyond the 5 mi invalidation
+threshold used to clear the winds and stop; the auto-fetch effect is now
+keyed on where the winds were last fetched *for*, so it refetches. The
+ref records the location last **attempted**, so a failing fetch cannot
+spin.
+
+**Keyboard shortcuts + `?` overlay.** `core/keymap.ts` is one table read
+by both the handler (`hooks/useKeyboardShortcuts`) and the overlay
+(`components/ShortcutsOverlay`), gated per mode, and it carries mouse
+gestures with no keys so "how do I move the target" has an answer. `F`
+hides everything but the map; `S` opens presets and 1-9 load one; `Esc`
+steps back. The guard — ignore keys from inputs and from anything with
+`role=menu|dialog|listbox` — is the feature, and it is what lets the
+preset menu own the digits.
+
+**Help panel** (`core/help.ts` + `components/HelpComponent`): topics as
+DATA, one per panel plus How-it-works / Reading-the-map / Glossary /
+Shortcuts / About. The `about` panel is gone; About is a topic and
+`/about` redirects to `/help?topic=about`. Every panel header now has a
+`?` deep-linking to its own topic. **The prose is placeholder** — see
+"What's next".
+
 ### DZ discovery, in detail (P6/F5)
 
 - **Dropzone data**: FWC's list ported in, 14 → 58 dropzones. The
@@ -604,6 +632,11 @@ the presence of `direction`.
 
 ## What's next
 
+Nothing is half-finished in the tree: every session above ended green, and
+the items here are new work, not loose ends. Two exceptions, both flagged
+in their sessions and repeated here: the **`ManoeuvreHintLayer` anchor**
+question and **Settings' missing `?`**.
+
 **The immediate one: the help text.** `core/help.ts` has a topic per panel
 with placeholder prose written by an agent from reading the code. The
 structure is done and tested; the words are the owner's to write. Two
@@ -615,19 +648,23 @@ entries need his eye before anyone trusts them:
 - **How FliP works** — this is the P1 teaching text. It should sound like
   the owner explaining it to a student, not like an agent's paraphrase.
 
-Then, owner priorities most-ready first (the dropzone import above comes
-before all of these — it is already agreed):
+**The second: a real pointer on the drag handles.** The list under "Never
+exercised by a real pointer" has only grown; a lot of recent work is
+drag-shaped and none of it has been touched by a human hand.
+
+Then, owner priorities most-ready first:
 
 | Item | Notes |
 |---|---|
-| **Owner feedback on what shipped** | Place picker, shortcuts, focus map, help panel — all browser-verified, none used in anger |
+| **Owner feedback on what shipped** | The spot readout, the UI pass, the place picker, shortcuts, help panel — all browser-verified, none used in anger |
+| **Per-mode dropzone data** | The CSV import dropped the per-mode targets the owner had defined for some DZs; BACKLOG has it, and it needs his localStorage dump to redo |
 | **P1's other half** | The Help topic gives dashed-vs-solid a home, but only for someone who goes looking. A legend or first-run pointer ON the map is still the higher-reach half |
 | **Trust banner → help link** | The banner says "don't trust this"; "why?" has an answer now (`/help?topic=winds`) but nothing links to it. Small and obvious |
 | **Flocking shortcuts** | Rotate jumprun, step the exit along it, cycle sub-mode, toggle a corridor by number. The keymap is ready for them |
 | **Corridor direction ranges** | "anything 250–290°" — solver structure supports it, schema stores fixed headings. Small |
-| **Landing headings for the imported DZs** | 44 of 59 have ~100 m coordinates and no heading; promote them as they are checked against imagery. Folds into the import/curation session |
-| **Dropzone `timezone`** | Deferred by the owner this session. Forecast times render in *browser* local time, so a coach planning a DZ two zones away reads the wrong clock |
-| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), course Type up front (P5), mobile panels page-swap the map (P7), jumprun handoff copy/share (P8) |
+| **Landing headings for the remaining DZs** | 60 of 272 still have no `direction`; promote them as they are checked against imagery |
+| **Dropzone `timezone`** | Deferred by the owner. Forecast times render in *browser* local time, so a coach planning a DZ two zones away reads the wrong clock |
+| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), mobile panels page-swap the map (P7). P5, P6, P8, P9 are done |
 | **Trust state — finish it** | `◐`: out-of-bounds "silly value" call-out, stale-age tuning |
 | ⭐ **Shareable setup links** | Needs a *design session with the owner*; fragment-encoding proposal parked in BACKLOG |
 | **Better wind visualization** | windy.com-like particle/flow rendering. ✎ design |
@@ -707,8 +744,9 @@ before all of these — it is already agreed):
 
 Everything below works by unit test and by DOM inspection, but automated
 drags cannot drive them (Google-marker drags/hover don't reach the
-handlers here). This is the **top verification priority** — a lot of this
-session's work is drag-shaped. Ask the owner to try, or verify another way:
+handlers here). This is the **top verification priority** and the list has
+only grown — a lot of recent work is drag-shaped. Ask the owner to try, or
+verify another way:
 
 - **All flocking map handles** (the reworked set above): exit-translate,
   jumprun-rotate (at the run start), end-of-CF and middle-of-CF canopy
@@ -736,15 +774,32 @@ session's work is drag-shaped. Ask the owner to try, or verify another way:
   unit test, because synthetic events dispatched on `window` never have a
   menu as their target. Worth one real pass: type in a numeric field and
   confirm nothing fires, open the preset menu and confirm 1-9 load
-  presets without also switching mode.
+  presets without also switching mode. Since 2026-08-08 also confirm the
+  shifted letters: `Shift+X` mirrors the turn, plain `X` still flips the
+  pattern, and no shifted letter falls through to its plain binding.
 - **Focus map (`F`) and the help `?` icons on a phone.** Verified at
   375px in the preview, not on a real handset.
 - The **winds indicator hover** works via real DOM (not a marker), so it
   *was* verified — ground-station detail shows on GND-row hover.
+- **Copying the spot** was verified through the browser's real input path
+  (panel and top bar). Note for the next attempt: a scripted
+  `element.click()` reports "Could not copy the spot" and is not a bug —
+  `clipboard.writeText` needs transient user activation, which a synthetic
+  click does not carry.
 
 ## Owner decisions recorded (most recent first)
 
 Recorded here because they were judgement calls, not deductions.
+
+**2026-08-08:**
+
+- The manoeuvre mirror is bound to **`Shift+X` only** — one shortcut, not
+  two; `Z` was tried and dropped.
+- The copied spot is the spot alone: no dropzone, no corridor name, no
+  forecast validity. The Spot Reference is agreed offline and set on the
+  map, so it is not named in the text either.
+- Of the UI-consistency options put to him, the map HUD card and the
+  big-type "in the aircraft" view were dropped; the rest were taken.
 
 **2026-07-29 (courses):**
 
@@ -789,6 +844,8 @@ Recorded here because they were judgement calls, not deductions.
 
 ## Open questions for the owner
 
+- **The manoeuvre hint's anchor** and **Settings' missing `?`** — both in
+  BACKLOG's polish list, both one-line decisions.
 - Higher-res PWA icons (current ones are the pixel-art logo upscaled).
 - "Initiation altitude not saved?" — could not reproduce; needs a repro
   or closure.
