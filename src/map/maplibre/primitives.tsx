@@ -284,6 +284,11 @@ export function MapDragHandle({
 
   const [el] = useState(() => document.createElement('div'));
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  // A DOM `click` fires after a drag (mousedown and mouseup land on the same
+  // element), but `onClick` is contracted to mean a click with NO drag — and
+  // a caller that acts on it would fire at the end of every drag. Google's
+  // marker suppresses this for us; here it has to be done by hand.
+  const dragged = useRef(false);
 
   // Style the handle element (circular, white-ringed, screen-fixed size).
   useEffect(() => {
@@ -310,10 +315,14 @@ export function MapDragHandle({
       .setLngLat([position.lng, position.lat])
       .addTo(map);
 
-    marker.on('dragstart', () => handlers.current.handleDrag.start());
+    marker.on('dragstart', () => {
+      dragged.current = false;
+      handlers.current.handleDrag.start();
+    });
     marker.on('drag', () => {
       const l = marker.getLngLat();
 
+      dragged.current = true;
       handlers.current.onDrag?.({ lat: l.lat, lng: l.lng });
       // Pinned handles never chase the pointer: snap back to the line.
       if (handlers.current.pinned) {
@@ -330,6 +339,11 @@ export function MapDragHandle({
 
     const onEl = (e: MouseEvent) => {
       e.stopPropagation();
+      if (dragged.current) {
+        dragged.current = false;
+
+        return;
+      }
       handlers.current.onClick?.();
     };
     const onEnter = () => handlers.current.onMouseOver?.();

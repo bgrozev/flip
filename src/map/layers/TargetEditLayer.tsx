@@ -3,8 +3,10 @@
  * Dragging it moves the target; there is no separate "edit" mode. The
  * final-heading rotate handle is revealed on hover/tap of the target and
  * hidden again shortly after, so it stays out of the way until wanted.
- * Shift-clicking the map jumps the target there (fast relocation); a plain
- * background click just dismisses a tapped reveal.
+ * Dragging that handle turns the final heading; CLICKING it snaps the heading
+ * into wind — the panel's "Upwind" button went with the heading field, and a
+ * phone has no `u` key. Shift-clicking the map jumps the target there (fast
+ * relocation); a plain background click just dismisses a tapped reveal.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -29,6 +31,14 @@ export interface TargetEditTarget {
   heading: number;
   onMove: (pos: LatLng) => void;
   onHeadingChange: (heading: number) => void;
+  /**
+   * Turn the final heading into wind. Bound to a CLICK on the rotate handle,
+   * which had no meaning before: the handle is already the control for the
+   * landing direction, and "into wind" is the direction you want most of the
+   * time. Absent when there is no usable wind to face — then the click only
+   * keeps the handle revealed.
+   */
+  onUpwind?: () => void;
   /**
    * Whether the final-heading rotate handle is offered. Modes that ignore
    * the target heading (flocking) pass false: only the move handle renders.
@@ -134,6 +144,10 @@ export default function TargetEditLayer({ edit }: TargetEditLayerProps) {
           scale={7}
           onMouseOver={show}
           onMouseOut={hideSoon}
+          onClick={() => {
+            show();
+            edit.onUpwind?.();
+          }}
           onDrag={pos => {
             draggingHeading.current = true;
             show();

@@ -1083,6 +1083,12 @@ function DashboardContent() {
       heading: target.finalHeading,
       onMove: (pos: LatLng) => setTarget({ ...target, target: pos }),
       onHeadingChange: (h: number) => setTarget({ ...target, finalHeading: Math.round(h) }),
+      // The panel's "Upwind" button went with the final-heading field, and a
+      // phone has no `u` key — so the gesture lives on the handle that already
+      // means "landing direction". Omitted when there is no wind to face.
+      onUpwind: upwindHeading === null
+        ? undefined
+        : () => setTarget({ ...target, finalHeading: upwindHeading }),
       headingEditable: !isFlocking
     };
 

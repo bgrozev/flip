@@ -137,6 +137,10 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     id: 'gesture.rotateTarget', keys: [], gestureText: 'Hover the target',
     label: 'Reveals the heading handle', category: 'gestures', headingOnly: true
+  },
+  {
+    id: 'gesture.upwindHandle', keys: [], gestureText: 'Click that handle',
+    label: 'Turns the final heading into wind', category: 'gestures', headingOnly: true
   }
 ];
 
