@@ -11,12 +11,14 @@
  */
 import { PanelId } from '../types';
 
-export type ShortcutCategory = 'app' | 'panels' | 'pattern' | 'winds' | 'target' | 'gestures';
+export type ShortcutCategory =
+  'app' | 'panels' | 'pattern' | 'manoeuvre' | 'winds' | 'target' | 'gestures';
 
 export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutCategory, string> = {
   app: 'App',
   panels: 'Panels',
   pattern: 'Pattern',
+  manoeuvre: 'Manoeuvre',
   winds: 'Winds',
   target: 'Target',
   gestures: 'On the map'
@@ -71,6 +73,12 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     id: 'pattern.flipSides', keys: ['x'],
     label: 'Flip pattern left/right', category: 'pattern', panel: 'pattern'
+  },
+
+  // Manoeuvre
+  {
+    id: 'manoeuvre.mirror', keys: ['z', 'shift+x'],
+    label: 'Mirror the turn left/right', category: 'manoeuvre', feature: 'manoeuvre'
   },
 
   // Winds
@@ -145,7 +153,8 @@ export function visibleShortcuts(
 
 /** Group them for display, in the order the categories are declared. */
 export function groupShortcuts(shortcuts: readonly Shortcut[]): [ShortcutCategory, Shortcut[]][] {
-  const order: ShortcutCategory[] = ['panels', 'pattern', 'winds', 'target', 'gestures', 'app'];
+  const order: ShortcutCategory[] =
+    ['panels', 'pattern', 'manoeuvre', 'winds', 'target', 'gestures', 'app'];
 
   return order
     .map((category): [ShortcutCategory, Shortcut[]] =>
@@ -170,8 +179,15 @@ export interface KeyLike {
  *
  * Printable keys match on the CHARACTER, not the physical key, so `?` works
  * wherever the layout happens to put it, and shift is already baked in
- * (`<` is not `shift+,`). Letters fold to lower case; named keys keep their
- * modifiers (`shift+arrowleft`).
+ * (`<` is not `shift+,`). Named keys keep their modifiers
+ * (`shift+arrowleft`).
+ *
+ * A SHIFTED letter is its own combo (`shift+x`), because the shifted and
+ * unshifted forms of a letter are the same character to a keymap that folds
+ * case — which is what made "X flips the pattern, Shift+X mirrors the turn"
+ * impossible to express. The test is `shiftKey`, not the case of the
+ * character, so caps lock still types plain letters and still triggers the
+ * plain bindings.
  */
 export function eventToCombo(event: KeyLike): string | null {
   if (event.ctrlKey || event.metaKey || event.altKey) {
@@ -181,7 +197,10 @@ export function eventToCombo(event: KeyLike): string | null {
   const { key } = event;
 
   if (key.length === 1) {
-    return key.toLowerCase();
+    const lower = key.toLowerCase();
+    const isLetter = lower !== key.toUpperCase();
+
+    return event.shiftKey && isLetter ? `shift+${lower}` : lower;
   }
 
   return `${event.shiftKey ? 'shift+' : ''}${key.toLowerCase()}`;

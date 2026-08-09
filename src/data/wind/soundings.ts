@@ -213,7 +213,8 @@ export function soundingToProfile(
       elevationFt: surfaceHght * metersToFeet,
       station: station.id,
       stationName: station.name,
-      stationDistanceFt: distanceFt
+      stationDistanceFt: distanceFt,
+      stationLocation: { lat: station.lat, lng: station.lng }
     }
   };
 }

@@ -70,6 +70,13 @@ export interface WindProfileMeta {
   stationName?: string;
   /** Distance from the fetch location to the station. */
   stationDistanceFt?: number;
+  /**
+   * Where the station is. `stationDistanceFt` is measured from wherever the
+   * profile was fetched for, which goes stale as soon as the target moves —
+   * with the position stored, the distance can be re-measured against
+   * wherever the target is now.
+   */
+  stationLocation?: LatLng;
   /** Ground-level temperature (°C), when the source provides it (2m forecast or observed station). */
   groundTempC?: number;
   /** Ground-level relative humidity (%), when the source provides it. */

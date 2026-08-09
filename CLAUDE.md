@@ -266,6 +266,14 @@ auto-fetch on load and again whenever the target moves to a new place.
 **Keyboard + help.** `core/keymap.ts` is one table driving both the key
 handler (`hooks/useKeyboardShortcuts`) and the `?` overlay, gated per
 mode; it also documents mouse gestures. `F` hides all chrome but the map.
+`X` flips the pattern's turns; `Z` (or `Shift+X`) mirrors the MANOEUVRE —
+`core/manoeuvre.mirrorManoeuvre` decides what that means per type: flip
+`turnDirection` for a parametric turn (the offset is measured on the turn
+side, so nothing else moves), flip `sampleLeft` for a sample, and mirror
+the points of a recorded track, which carries no handedness. A shifted
+letter is its own combo (`shift+x`), keyed off `shiftKey` so caps lock
+still types plain letters — the cost is that `Shift+P` no longer opens the
+Pattern panel.
 `core/help.ts` holds the in-app reference as data — a topic per panel,
 reached from each panel header's `?` (`/help?topic=<id>`) or the Help
 nav item, which replaced About. The old measure tool and average-wind arrow

@@ -843,6 +843,14 @@ export function migrateStoredWinds(raw: unknown): WindProfile | null {
     if (typeof m.stationDistanceFt === 'number' && Number.isFinite(m.stationDistanceFt)) {
       meta.stationDistanceFt = m.stationDistanceFt;
     }
+    if (isRecord(m.stationLocation) &&
+        typeof m.stationLocation.lat === 'number' && Number.isFinite(m.stationLocation.lat) &&
+        typeof m.stationLocation.lng === 'number' && Number.isFinite(m.stationLocation.lng)) {
+      meta.stationLocation = {
+        lat: clampNumber(m.stationLocation.lat, -90, 90),
+        lng: clampNumber(m.stationLocation.lng, -180, 180)
+      };
+    }
     if (typeof m.groundTempC === 'number' && Number.isFinite(m.groundTempC)) {
       meta.groundTempC = m.groundTempC;
     }

@@ -1549,3 +1549,37 @@ keep text-shadow instead of a plate, deliberately.
 Left alone on purpose: the ToggleButtonGroup picker idiom (already
 consistent everywhere), the wind table, the SpotHero's display type, the
 mode/NERD chips. Those are hierarchy, not drift.
+
+### Three small ones (2026-08-08)
+
+**The sounding says how far away it is.** It always had the distance, but
+measured at fetch time from wherever the profile was fetched for — and a
+profile outlives a move to another dropzone, so the number quietly became
+about somewhere else. The station's own position is now stored
+(`meta.stationLocation`, and remember: every meta field has to be listed
+in `migrateStoredWinds` or the round trip drops it — the temperature bug),
+and the panel re-measures against the target on every render: "39 mi from
+the target". Profiles stored before this fall back to the fetched distance
+and say "39 mi away" instead, because that is all they can honestly claim.
+It uses the shared target rather than the mode's: per-mode targets differ
+by yards within a place, and this is a tens-of-miles number.
+
+**Mirror the turn.** The owner asked for Shift+X, and offered Z if there
+was a reason. There was: `eventToCombo` folded letters to lower case by
+design, so Shift+X and X were the same combo and the binding could not be
+expressed. Rather than pick one, the fold now applies only to unshifted
+letters — a shifted letter is its own combo, tested on `shiftKey` so caps
+lock still types plain letters — and the action is bound to BOTH `z` and
+`shift+x`. One deliberate loss, pinned in a test that used to assert the
+opposite: `Shift+P` no longer opens the Pattern panel.
+
+What mirroring *means* depends on the manoeuvre's type, so it lives in
+`core/manoeuvre.mirrorManoeuvre` rather than in a key handler: a
+parametric turn flips `turnDirection` and nothing else (the offset is
+measured on the turn side precisely so that works), a sample flips
+`sampleLeft`, and a recorded track has its points mirrored, since a track
+carries no hand to flip.
+
+**Beaufort in the top bar** — the last of that backlog item. The AVG and
+GND arrows take `beaufortColor`, the same function behind the map arrows
+and the wind table's dots.

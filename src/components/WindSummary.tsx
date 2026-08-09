@@ -7,6 +7,7 @@ import { Stack, Tooltip, Typography } from '@mui/material';
 import React from 'react';
 
 import { DaSeverity } from '../core/atmosphere';
+import { beaufortColor } from '../core/wind';
 import { useUnits } from '../hooks';
 
 interface WindData {
@@ -49,7 +50,14 @@ export default function WindSummary({
         <Typography variant="button">
           avg
           <NavigationIcon
-            sx={{ fontSize: 16, transform: `rotate(${rotAverage}deg)`, mx: 0.5 }}
+            sx={{
+              fontSize: 16,
+              transform: `rotate(${rotAverage}deg)`,
+              mx: 0.5,
+              // Beaufort, like the map arrows and the wind table's dots: the
+              // strength of the wind should read the same wherever it is shown.
+              color: beaufortColor(average.speedKts)
+            }}
           />
           {Math.round(average.direction)}˚@{avgSpeed.value.toFixed(1)}
         </Typography>
@@ -58,7 +66,12 @@ export default function WindSummary({
         <Typography variant="button">
           gnd
           <NavigationIcon
-            sx={{ fontSize: 16, transform: `rotate(${rotGround}deg)`, mx: 0.5 }}
+            sx={{
+              fontSize: 16,
+              transform: `rotate(${rotGround}deg)`,
+              mx: 0.5,
+              color: beaufortColor(ground.speedKts)
+            }}
           />
           {Math.round(ground.direction)}˚@{gndSpeed.value.toFixed(1)}
         </Typography>

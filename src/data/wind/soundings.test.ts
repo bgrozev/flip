@@ -141,6 +141,11 @@ describe('soundingToProfile', () => {
     expect(profile!.meta?.station).toBe('KTBW');
     expect(profile!.meta?.stationName).toBe('Tampa Bay Area FL/US');
     expect(profile!.meta?.stationDistanceFt).toBeCloseTo(0, 0);
+    // The station's own position, so the panel can re-measure the distance
+    // against wherever the target is now — the fetched distance is from
+    // wherever the profile happened to be fetched for, and a profile
+    // outlives a move to another dropzone.
+    expect(profile!.meta?.stationLocation).toEqual({ lat: station.lat, lng: station.lng });
   });
 
   it('returns null for an empty or wind-less sounding', () => {

@@ -6,6 +6,7 @@ import {
   describeManoeuvreForDisplay,
   describeManoeuvrePath,
   manoeuvreBounds,
+  mirrorManoeuvre,
   placeInitiation,
   solveManoeuvre
 } from './manoeuvre';
@@ -670,5 +671,48 @@ describe('applyInitiationAltitudeOffset', () => {
     const out = applyInitiationAltitudeOffset(flat, 100);
 
     expect(out[1].properties.alt).toBe(0);
+  });
+});
+
+describe('mirrorManoeuvre', () => {
+  it('flips the turn direction of a parametric turn, and nothing else', () => {
+    const mirrored = mirrorManoeuvre({ type: 'parameters', params: TURN });
+
+    expect(mirrored.params).toEqual({ ...TURN, turnDirection: 'right' });
+  });
+
+  it('mirrors a parametric turn into its reflection, not into an impossible one', () => {
+    // The offset is measured on the side the turn happens, so flipping the
+    // direction alone reflects the whole shape: same distances, opposite side.
+    const left = createManoeuvrePath(TURN);
+    const right = createManoeuvrePath(
+      mirrorManoeuvre({ type: 'parameters', params: TURN }).params!
+    );
+
+    expect(initiationOffsets(right).backFt).toBeCloseTo(initiationOffsets(left).backFt, 0);
+    expect(initiationOffsets(right).acrossFt)
+      .toBeCloseTo(-initiationOffsets(left).acrossFt, 0);
+  });
+
+  it('flips a sample, defaulting an unset hand to left', () => {
+    expect(mirrorManoeuvre({ type: 'samples', sampleIndex: 0 }).sampleLeft).toBe(false);
+    expect(mirrorManoeuvre({ type: 'samples', sampleIndex: 0, sampleLeft: false }).sampleLeft)
+      .toBe(true);
+  });
+
+  it('mirrors a recorded track in place, since it carries no hand', () => {
+    const track = createManoeuvrePath(TURN);
+    const mirrored = mirrorManoeuvre({ type: 'track', trackData: track });
+
+    expect(mirrored.trackData).toBeDefined();
+    expect(initiationOffsets(mirrored.trackData!).acrossFt)
+      .toBeCloseTo(-initiationOffsets(track).acrossFt, 0);
+  });
+
+  it('leaves a config with nothing to mirror alone', () => {
+    const empty = { type: 'track' as const };
+
+    expect(mirrorManoeuvre(empty)).toBe(empty);
+    expect(mirrorManoeuvre({ type: 'parameters' })).toEqual({ type: 'parameters' });
   });
 });

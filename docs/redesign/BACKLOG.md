@@ -122,9 +122,10 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 - ☐ Input fields UX — highlight/select content on click (focus behavior).
 - ☐ Default pattern params → student-friendly: 3:1 glide, 8 kts descent
   (current default: 9 mph descent, 3.0 GR — confirm intended units kts vs mph).
-- ◐ Beaufort colors elsewhere — wind table rows DONE (`185c2d8`, color dot
-  per speed in the read-only table, shares `core/beaufortColor` with the
-  map arrows). Wind summary (top bar AVG/GND) still uncolored.
+- ☑ Beaufort colors elsewhere — DONE. Wind table rows (`185c2d8`, a colour
+  dot per speed) and, as of 2026-08-08, the top bar's AVG/GND arrows. All
+  of it shares `core/beaufortColor` with the map arrows, so a wind's
+  strength reads the same wherever it appears.
 
 ## Small features (days)
 

@@ -30,7 +30,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppState, useUnits } from '../hooks';
 import WindComparison from './WindComparison';
@@ -45,6 +45,8 @@ import {
   tryDensityAltitudeFt
 } from '../core/atmosphere';
 import { LIMITS, clampNumber, normalizeDirection } from '../core/validation';
+import { DISTANCE_UNIT_LABELS, milesToDisplay } from '../core/units';
+import { distanceFeet } from '../core/geometry';
 import {
   SOURCE_MANUAL,
   SOURCE_OPEN_METEO,
@@ -94,6 +96,9 @@ interface WindsComponentProps {
  * input padding left too little room for e.g. a five-digit altitude. Trim both
  * so typed values are not clipped.
  */
+/** Feet in a statute mile — the unit `distanceFeet` returns. */
+const FEET_PER_MILE = 5280;
+
 const EDIT_CELL_SX = { px: 0.5 };
 const NUMBER_FIELD_SX = { width: '100%', minWidth: 56, '& input': { px: 0.75 } };
 
@@ -235,6 +240,37 @@ export default function WindsComponent({
   // Keyed off the *selected* source, not the fetched profile's, so the picker
   // disappears as soon as soundings are chosen — before any fetch.
   const soundingSelected = settings.windAloftSource === 'sounding';
+
+  /**
+   * How far the radiosonde is from where you are planning to land.
+   *
+   * A sounding comes from whichever station is nearest, which can be fifty
+   * miles away, and that distance is the main thing to know about it. It is
+   * measured against the target NOW rather than reported from the fetch:
+   * `stationDistanceFt` was measured wherever the profile happened to be
+   * fetched for, and a profile survives a move to another dropzone. (The
+   * shared target, not the mode's: per-mode targets differ by yards within
+   * one place, and this is a tens-of-miles number.) Profiles stored before
+   * the station's position was recorded fall back to the fetched distance,
+   * which is not necessarily from here — so they do not claim it is.
+   */
+  const soundingDistance = useMemo(() => {
+    const unit = settings.units.distance;
+    const label = DISTANCE_UNIT_LABELS[unit];
+    const station = winds.meta?.stationLocation;
+
+    if (station) {
+      const miles = distanceFeet(station, target.target) / FEET_PER_MILE;
+
+      return `${milesToDisplay(miles, unit).toFixed(0)} ${label} from the target`;
+    }
+
+    const fetched = winds.meta?.stationDistanceFt;
+
+    return fetched === undefined
+      ? null
+      : `${milesToDisplay(fetched / FEET_PER_MILE, unit).toFixed(0)} ${label} away`;
+  }, [winds.meta, target.target, settings.units.distance]);
 
   const { tempC, humidityPct, elevationFt } = groundConditions(winds);
   const densityAltFt = tryDensityAltitudeFt(elevationFt, tempC, humidityPct);
@@ -531,9 +567,7 @@ export default function WindsComponent({
                       : winds.meta.stationName}
                   </>
                   : ''}
-                {winds.meta?.stationDistanceFt !== undefined
-                  ? ` (${(winds.meta.stationDistanceFt / 5280).toFixed(0)} mi)`
-                  : ''}
+                {soundingDistance ? ` · ${soundingDistance}` : ''}
                 {winds.validTime
                   ? ` · launched ${winds.validTime.toLocaleString([], {
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'

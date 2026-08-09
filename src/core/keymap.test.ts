@@ -120,9 +120,12 @@ describe('eventToCombo', () => {
     expect(eventToCombo({ key: 'w', altKey: true })).toBeNull();
   });
 
-  it('folds letters to lower case, so Shift+P is still P', () => {
+  // This used to fold Shift+P onto P. It no longer does: a shifted letter is
+  // its own combo, which is what "X flips the pattern, Shift+X mirrors the
+  // turn" needs. The cost is that Shift+P no longer opens the Pattern panel.
+  it('keeps a shifted letter distinct from the plain one', () => {
     expect(eventToCombo({ key: 'p' })).toBe('p');
-    expect(eventToCombo({ key: 'P', shiftKey: true })).toBe('p');
+    expect(eventToCombo({ key: 'P', shiftKey: true })).toBe('shift+p');
   });
 
   it('matches printable keys by character, not physical key', () => {
@@ -174,5 +177,47 @@ describe('groupShortcuts', () => {
 
     expect(categories).toEqual(['panels', 'winds', 'target', 'gestures', 'app']);
     expect(grouped.every(([, entries]) => entries.length > 0)).toBe(true);
+  });
+});
+
+describe('shifted letters', () => {
+  // "X flips the pattern, Shift+X mirrors the turn" is only expressible if a
+  // shifted letter is its own combo; the map used to fold case, so both
+  // produced "x".
+  it('reads a shifted letter as its own combo', () => {
+    expect(eventToCombo({ key: 'X', shiftKey: true })).toBe('shift+x');
+    expect(eventToCombo({ key: 'x' })).toBe('x');
+  });
+
+  it('still folds caps lock to the plain binding', () => {
+    // Caps lock types an upper-case character with no shift held: that is
+    // the same key, not a different one.
+    expect(eventToCombo({ key: 'X', shiftKey: false })).toBe('x');
+  });
+
+  it('leaves shifted punctuation matching on its character', () => {
+    expect(eventToCombo({ key: '?', shiftKey: true })).toBe('?');
+    expect(eventToCombo({ key: '<', shiftKey: true })).toBe('<');
+  });
+
+  it('binds the mirror to both Z and Shift+X, and X to the pattern flip', () => {
+    const mirror = SHORTCUTS.find(s => s.id === 'manoeuvre.mirror');
+
+    expect(mirror?.keys).toEqual(['z', 'shift+x']);
+    expect(matchShortcut('shift+x', SHORTCUTS)?.shortcut.id).toBe('manoeuvre.mirror');
+    expect(matchShortcut('z', SHORTCUTS)?.shortcut.id).toBe('manoeuvre.mirror');
+    expect(matchShortcut('x', SHORTCUTS)?.shortcut.id).toBe('pattern.flipSides');
+  });
+
+  it('offers the mirror only where there is a manoeuvre', () => {
+    const withTurn = visibleShortcuts({
+      navPanels: ['manoeuvre'], features: ['manoeuvre'], headingRelevant: true
+    });
+    const without = visibleShortcuts({
+      navPanels: ['pattern'], features: [], headingRelevant: true
+    });
+
+    expect(withTurn.some(s => s.id === 'manoeuvre.mirror')).toBe(true);
+    expect(without.some(s => s.id === 'manoeuvre.mirror')).toBe(false);
   });
 });

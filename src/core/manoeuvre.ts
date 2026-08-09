@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf';
-import { FlightPath, FlightPoint, LatLng, ManoeuvreParams, Target } from '../types';
+import { FlightPath, FlightPoint, LatLng, ManoeuvreConfig, ManoeuvreParams, Target } from '../types';
 import { cumulativeTurnDeg } from './pathStats';
-import { normalizeBearing } from './geometry';
+import { mirror, normalizeBearing } from './geometry';
 import { LIMITS, NumericLimits, clampNumber } from './validation';
 
 /**
@@ -689,6 +689,51 @@ export function placeInitiation(
     depthFt: clampNumber(depthFt, depthBounds.depthFt.min, depthBounds.depthFt.max),
     offsetFt: settledOffset
   };
+}
+
+/**
+ * Mirror a manoeuvre: the same turn, the other way round.
+ *
+ * What that means depends on how the turn is described, which is the point
+ * of doing it here rather than at the keyboard handler:
+ *
+ * - **parameters** — flip `turnDirection`. Nothing else moves, because the
+ *   offset is measured on the side the turn happens (see the module's doc):
+ *   that convention exists precisely so a left/right flip mirrors the turn
+ *   instead of producing an unflyable one.
+ * - **samples** — flip `sampleLeft`; the sample library stores one hand and
+ *   mirrors the path on read.
+ * - **track** — mirror the recorded points about the line the track starts
+ *   on. A track carries no handedness flag, so this rewrites the data.
+ *
+ * Anything with no turn to mirror is returned untouched.
+ */
+export function mirrorManoeuvre(config: ManoeuvreConfig): ManoeuvreConfig {
+  switch (config.type) {
+    case 'parameters': {
+      const params = config.params;
+
+      return params
+        ? {
+          ...config,
+          params: {
+            ...params,
+            turnDirection: params.turnDirection === 'left' ? 'right' : 'left'
+          }
+        }
+        : config;
+    }
+    case 'samples':
+      // Defaults to left, so an unset flag mirrors to right rather than
+      // reading as "already right" and doing nothing.
+      return { ...config, sampleLeft: !(config.sampleLeft ?? true) };
+    case 'track':
+      return config.trackData && config.trackData.length > 1
+        ? { ...config, trackData: mirror(config.trackData) }
+        : config;
+    default:
+      return config;
+  }
 }
 
 /**

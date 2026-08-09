@@ -88,7 +88,7 @@ import { COURSES } from './core/courses';
 import { dropzoneForPlaceId, placeNameFromId } from './core/places';
 import { DROPZONES } from './util/dropzones';
 import { flipPatternSides, makePatternByType, withFullPattern } from './core/pattern';
-import { describeManoeuvrePath, placeInitiation } from './core/manoeuvre';
+import { describeManoeuvrePath, mirrorManoeuvre, placeInitiation } from './core/manoeuvre';
 import { SpotText, formatSpot } from './core/spotText';
 import { DEFAULT_MANOEUVRE_PARAMS } from './core/model';
 import { SOURCE_DZ, SOURCE_MANUAL, windBandAltitudesFt } from './core/wind';
@@ -751,6 +751,9 @@ function DashboardContent() {
     'panel.flocking': () => router.navigate(panelPath('flocking')),
     'panel.settings': () => router.navigate(panelPath('settings')),
     'pattern.flipSides': () => setModePatternParams(flipPatternSides(modePatternParams)),
+    // Mirrors whichever way the turn is described — parameters, sample or
+    // recorded track; `mirrorManoeuvre` owns that distinction.
+    'manoeuvre.mirror': () => setManoeuvreConfig(mirrorManoeuvre(manoeuvreConfig)),
     'winds.refresh': () => handleFetchWinds(undefined, { force: true }),
     'winds.hourBack': () => stepForecastHour(-1),
     'winds.hourForward': () => stepForecastHour(1),

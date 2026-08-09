@@ -761,7 +761,11 @@ describe('migrateStoredWinds', () => {
         location: { lat: 28.2, lng: -82.1 },
         elevationFt: 90,
         groundTempC: 27,
-        groundHumidityPct: 86
+        groundHumidityPct: 86,
+        station: 'KTBW',
+        stationName: 'Tampa Bay Area FL/US',
+        stationDistanceFt: 231000,
+        stationLocation: { lat: 27.7, lng: -82.4 }
       }
     }));
 
@@ -783,6 +787,12 @@ describe('migrateStoredWinds', () => {
     expect(profile!.meta?.elevationFt).toBe(90);
     expect(profile!.meta?.groundTempC).toBe(27);
     expect(profile!.meta?.groundHumidityPct).toBe(86);
+    // Every meta field has to be listed in the migration or the round trip
+    // silently drops it — which is how temperature once vanished on every
+    // forecast change.
+    expect(profile!.meta?.station).toBe('KTBW');
+    expect(profile!.meta?.stationDistanceFt).toBe(231000);
+    expect(profile!.meta?.stationLocation).toEqual({ lat: 27.7, lng: -82.4 });
     expect(profile!.center).toEqual({ lat: 28.2, lng: -82.1 });
   });
 
