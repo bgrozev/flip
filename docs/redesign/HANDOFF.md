@@ -35,7 +35,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **929 tests in 46 files, 0 lint errors, 52 known
+Baseline on the branch: **930 tests in 46 files, 0 lint errors, 52 known
 lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases used to need a 15 s timeout for the unfiltered place-list render; the
@@ -107,10 +107,14 @@ Four bugs, each pinned by a test that fails without its fix:
   its own contract — which would have snapped the heading into wind after
   every rotate drag on that provider.
 
-Two side effects worth knowing: the suite went from **31s to 9s** (both
+The **exact heading came back behind nerd mode** (`headingField` in
+`NERD_FEATURES`), between the hero card and the search — it edits the same
+value the handle does, so gating it changes no path math. Flocking suppresses
+it regardless.
+
+Side effect worth knowing: the suite went from **31s to 9s**, since both
 `PlacePicker` 15-second timeouts are gone — the unfiltered 274-row render was
-the cost), and **there is no way to type an exact heading any more**. If "set
-final to 247" matters, the hero card is where it would go.
+the cost.
 
 ⚠️ Not verified by a real pointer: the click-the-handle-for-upwind gesture.
 

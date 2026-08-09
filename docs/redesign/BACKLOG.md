@@ -118,11 +118,6 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Polish (trivial)
 
-- ☐ **No way to type an exact final heading.** The field left with the Target
-  panel, so the heading is the map's rotate handle plus `<` `>` (5°), `,` `.`
-  (1°) and `u`/handle-click for into wind. Fine for flying; a coach wanting
-  "set final to 247" has no way in. The Location hero card is where a small
-  editable heading line would go, if the owner wants one. ✎
 - ☐ **The phone toolbar still takes two rows** (375px). Nothing is clipped
   any more and the density altitude was dropped there to make room (it is in
   the map's winds indicator and the Wind panel), but AVG + GND + the mode

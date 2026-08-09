@@ -92,7 +92,8 @@ everyday values at App's `modeSettings` choke point. That value is
 switch never silently changes the path math; unlike mode defaults the
 gate ignores `flip.settings.touched`. Behind it: manual wind entry
 (Unlock / Invert / Reset), both exports, pattern-point hover tooltips
-(`pointTooltips` — POM hover used to ignore its setting), and nine
+(`pointTooltips` — POM hover used to ignore its setting), the Location
+panel's numeric final-heading field (`headingField`), and nine
 settings including interpolation, leg straightening and the map
 provider. The wind source/model dropdowns are nerd-only too, but their
 *values* are deliberately not masked — the comparison table lets any user
@@ -279,7 +280,10 @@ writes them, since a preset load also selects a place and that is not
 somewhere you went. The dropzones appear when searched, or under an **All
 dropzones** disclosure grouping all 274 by country — 41 countries is a list,
 274 dropzones is not, and rendering them all is what used to make this
-panel's tests need a 15-second timeout.
+panel's tests need a 15-second timeout. The numeric **final-heading field**
+comes back between the card and the search under nerd mode only
+(`headingField`) — it edits the same value the handle does, so gating it
+changes no path math, and flocking suppresses it regardless.
 
 **Keyboard + help.** `core/keymap.ts` is one table driving both the key
 handler (`hooks/useKeyboardShortcuts`) and the `?` overlay, gated per

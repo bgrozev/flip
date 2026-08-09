@@ -1854,3 +1854,20 @@ Each has a test confirmed to fail without its fix:
   hand-checked one (it carries a `direction`), so it wins. Worth noting for
   the general case: the two were only ever *asserted* to be the same place,
   and nothing compared them until something displayed the difference.
+
+### The exact heading, restored behind nerd (2026-08-08)
+
+Raised as the cost of removing the field, and the owner took it back — in the
+Location panel, between the hero card and the search, nerd only.
+
+It is a `NERD_FEATURES` entry (`headingField`) rather than a `settings.nerd &&`
+in the component, which is the rule that table exists for. It also passes the
+test for what belongs behind the gate cleanly: the field edits the same value
+the map's rotate handle does, so hiding it cannot change the path math — the
+worry that `NERD_OFF_OVERRIDES` exists for does not arise. Flocking suppresses
+it regardless of nerd, having no final heading at all.
+
+Confirmed on the way, since it decides where the value lands: a heading typed
+here writes to the PER-MODE target (`byMode.pattern`), not the shared one.
+That is the existing rule — choosing a place is shared, positioning within it
+is per-mode — and the field is positioning.
