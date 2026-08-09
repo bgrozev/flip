@@ -64,7 +64,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { id: 'app.mode.pattern', keys: ['1'], label: 'Standard pattern mode', category: 'app' },
   { id: 'app.mode.swoop', keys: ['2'], label: 'High performance landing mode', category: 'app' },
   { id: 'app.mode.flocking', keys: ['3'], label: 'Flocking mode', category: 'app' },
-  { id: 'app.presets', keys: ['s'], label: 'Presets — then 1-9 to load one', category: 'app', feature: 'presets' },
+  { id: 'app.presets', keys: ['s'], label: 'Setups — then 1-9 to load one', category: 'app', feature: 'presets' },
   { id: 'app.export', keys: ['e'], label: 'Export', category: 'app', feature: 'export' },
 
   // Panels — pressing the key again closes the panel

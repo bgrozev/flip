@@ -53,8 +53,8 @@ const settingsGroups: SettingsGroup[] = [
     options: [
       {
         key: 'showPresets',
-        label: 'Show presets',
-        tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
+        label: 'Show setups',
+        tooltip: 'Show the setup selector in the toolbar, to save and load named arrangements.'
       }
     ]
   },

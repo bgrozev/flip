@@ -1871,3 +1871,136 @@ Confirmed on the way, since it decides where the value lands: a heading typed
 here writes to the PER-MODE target (`byMode.pattern`), not the shared one.
 That is the existing rule — choosing a place is shared, positioning within it
 is per-mode — and the field is positioning.
+
+## Session 2026-08-08 (5) — presets become setups
+
+Owner's framing: three CP setups at ZHills (Speed / Distance / ZoneAcc),
+each a different target, turn and pattern, plus its own course — and the
+same canopy and turn wanted at Eloy for the next comp. He asked whether the
+target belongs in a preset at all, and whether there should be two types.
+
+### The split, and why not two types
+
+Everything a preset stored divides on one question: does it travel between
+dropzones? The pattern and the turn do (they describe a canopy); the place,
+target and course do not. The coaching case degenerates into the same
+shape — a student is a canopy and a turn, at a target that mostly does not
+move.
+
+Two composed types (Profile × Site, picked independently) were put to the
+owner and dropped. The duplication they save is a rare edit — a new canopy
+means editing a few setups — while the cost is paid on every single
+interaction: two menus, two dirty states, two things to explain. One type
+with an optional site half gives the same two behaviours with one document,
+and it is the idiom courses already use (`placeId` scopes them; `undefined`
+means "belongs nowhere, offered everywhere").
+
+`site` is optional **as a group**, not field by field. A target without the
+place it belongs to is not a weaker setup, it is a wrong one: the same
+coordinates at another dropzone are a field two states away.
+
+It is stored as an explicit `null` when a setup travels, rather than by
+omitting the key. A preset written before any of this carries neither
+`site` nor a portable flag, and the migration has to tell "this travels"
+from "this is old" — the only thing that distinguishes them is that old
+presets always had a top-level `target`.
+
+### Carrying the mode
+
+`Setup.modeId`, and loading switches mode first. Pattern params are
+per-mode (`flip.pattern.byMode`), so a swoop setup loaded from Standard
+Pattern would otherwise file a swooper's numbers under the student pattern.
+Two consequences worth recording:
+
+- Applying the pattern goes through `setPatternParamsForMode(setup.modeId,
+  …)` rather than the bound setter. React has not re-rendered by the time
+  the pattern is applied, so a setter closed over the mode that WAS active
+  writes to the wrong one. The mode-explicit setter already existed.
+- It settles the parked question about `flockingParams`: a setup snapshots
+  the active mode's documents, so a flocking setup carries them and nothing
+  else does.
+
+### Dormant, not dirty
+
+A setup is live only where it applies — its mode, and its dropzone.
+Elsewhere it is DORMANT: it still shows in the toolbar (saying which), it
+comes back when you return, and it cannot be dirty or saved.
+
+The mode half was designed in. The PLACE half was a bug the browser found:
+standing at Eloy with a ZHills setup loaded read as "unsaved place, target
+and course", and Save would have quietly rebound the ZHills setup to Eloy.
+Being somewhere else is not an edit. Pinned by a test confirmed to fail
+without the fix.
+
+### Dirty as data
+
+`setupDiff(snapshot, stored)` returns which parts differ rather than a
+boolean, which is what lets the tooltip say "unsaved pattern and target"
+and the menu label Save changes with the same words. Target comparison has
+an epsilon (1e-7 deg): a storage round-trip must not strand a setup as
+permanently modified, while a drag (metres) and a one-degree heading step
+both still count.
+
+Discard changes is also the fix for a backlog entry — re-selecting the
+active preset did nothing, so once you had wandered off one there was no
+way back to it. Loading discards unsaved changes silently, with an Undo in
+the snackbar: a confirm on every switch would tax the one thing setups
+exist for.
+
+### The course-relative copy
+
+The owner's case: a Distance setup sitting 25° L and 100 ft deep relative
+to the ZHills distance course, wanted at Eloy. He proposed the cascade for
+choosing the course there, and it is implemented as proposed.
+
+What makes it cheap: the relative position is not stored anywhere. The
+Courses panel derives depth/offset/approach angle from the absolute target
+every time it renders (`getTargetRelativeToCourse`), so a copy measures the
+triple off the original and lays it out again against the destination's
+course. The copy is therefore turned the way the NEW course is turned,
+which is the point — verified end to end in the browser: −2.54° to the
+ZHills distance course became −2.54° to Eloy's, on courses oriented 197.46°
+and 214.756°.
+
+Two decisions inside it:
+
+- The source course is read from the STORED setup, not the live selection.
+  By the time you are at Eloy, `selectPlaceTarget` has already dropped a
+  course selection belonging to the place you left; `coursesForPlace`'s
+  `elsewhere` bucket is what keeps the foreign course resolvable.
+- A visible course PICKER was offered and declined — the owner wanted the
+  cascade silent ("they can easily see and fix if necessary"), with at most
+  a yes/no on being course-relative at all. So the dialog is a name and one
+  switch. The weak rung is rule 3 (any course at the destination, whatever
+  its type), which is now a silent guess by choice; the offset is visible on
+  the map the moment the copy loads.
+
+### The canopy label
+
+Two placements were offered: a field on `PatternParams` (derived, since
+glide ratio and descent rate ARE the canopy) or metadata on the setup. The
+owner took metadata. Recorded as a knowing trade — it is the one part of a
+setup's description that is typed rather than derived, so it can go stale
+against the numbers beside it. The mitigation in place is that the save
+dialog prefills it from the setup you are on; the real fix is the canopy +
+wing-loading entry in BACKLOG, which gives it something to reference.
+
+Everything else on the second line is derived: the turn (`turnLabel`,
+measured off the path by `describeManoeuvrePath` for tracks and samples,
+with a sample's handedness taken from `sampleLeft` because the library
+stores one hand), the course, and the mode when it differs from the one you
+are in.
+
+### Two defects, each pinned by a failing test first
+
+- **Ids were `setup_${Date.now()}`.** Copying a setup in the millisecond it
+  was created produced two documents sharing an id, and every lookup by id
+  then confused them. Found by the copy test, which does exactly that.
+- **The place-dormancy bug above.**
+
+### Left alone
+
+- Storage keys stay `flip.presets` / `flip.presets.active`. Renaming them
+  buys a migration and nothing else; nobody but the hook reads them.
+- Setups do not carry winds. That is the same snapshot-vs-refetch question
+  share-links have to answer, and it should be answered once.

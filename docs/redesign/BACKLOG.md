@@ -46,11 +46,6 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   and the 274 dropzones only rendered when searched or under a
   country-grouped browse. Distances/nearest-first ordering stay out (owner:
   not useful).
-- ☐ **Re-selecting the active preset does nothing** (spotted while
-  verifying the above) — `PresetSelector.handleSelect` skips `onSelect`
-  when the id is already active, so once you have wandered off a preset
-  there is no way to reload it. Pre-existing; wants a "revert to preset"
-  affordance rather than just dropping the guard.
 - ☑ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — DONE
   2026-08-08. The map and the panel now split the screen: the map keeps the
   top 40%, the panel scrolls below, and a chevron on the divider collapses
@@ -187,8 +182,21 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   `temperature_{hPa}hPa` per pressure level, and soundings already carry
   it per row) and anything forecast-shaped beyond the selected hour.
 - ☐ **Distance course: more markers** (120 m etc.) — render only when zoomed in.
-- ☐ **Preset UX** — explicit "none"/default preset, clearer active-preset
-  indication, dirty state. ✎ discuss desired behavior.
+- ☑ **Preset UX** — DONE 2026-08-08, as the **Setups** rework. Presets
+  became setups and split on what travels: the pattern and the turn are
+  always in one, the site half (place, target, course) is optional, and a
+  setup carries the mode it was saved in. The three things this entry asked
+  for are all in: an explicit "Work without a setup", a toolbar button that
+  names the setup and dots it amber when it differs, and Save/Discard driven
+  by `core/setups.setupDiff`, which reports which parts differ rather than a
+  boolean. "Copy to <dropzone>" carries a setup to a new place keeping its
+  position relative to a course. Still open:
+  - ☐ Setups do not carry their **winds**, and probably should not — but the
+    question is the same one share-links have to answer (snapshot vs refetch),
+    so decide both together.
+  - ☐ The **canopy is a typed label**, not a modelled canopy, so it can go
+    stale against the glide ratio and descent rate beside it. Folds into the
+    canopy + wing-loading entry below.
 - ☐ **Course stats display** — distance to gates, angle vs course direction. Speed.
 - ☐ **Replay animation** — animate a dot along the plan (later: a recorded
   track) over time. Teaching/demo value; cheap over the memoized paths.
@@ -219,7 +227,9 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 - ☐ **Generic "free"/explore mode** — Google-Earth-like: measure, annotate,
   drop markers; make measure tool actually useful.
 - ☐ **Canopy + wing loading input** — pick canopy model + WL instead of raw
-  GR/descent rate; canopy presets database. 
+  GR/descent rate; canopy presets database. A setup's `canopy` is a free-text
+  label today ("SAW 75") precisely because there is nothing to reference; it
+  is what should become a reference when this lands. 
 - ☐ **Long spot calculator** (coaching use-case) — how far out can students exit
   and still make it back: glide from exit alt vs winds. Related to wind cones.
 - ☐ **Wind cones** — area reachable from current altitude flying in any
@@ -248,6 +258,8 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
     with a permanence promise) vs hybrid (embed small stuff, host blobs).
   - Custom courses are small parameter sets → embeddable; built-in courses
     referenced by id. What else must be referencable "forever"?
+  - A **Setup is now the natural payload** — it already is the serialisable
+    arrangement, with the site half optional and the mode recorded.
   - What does the receiver get: read-only view, or "load into my app"
     (or both: preview → apply)?
   - Winds: share the snapshot, or refetch live at open time? (Probably
@@ -356,9 +368,12 @@ accessible names.
   into `Mode` would have all three modes repeat the same pair. Worth doing
   only if a mode ever needs a different secondary group. Owner's call
   whether to keep the item open.
-- ☐ Presets don't carry their mode yet (ARCHITECTURE: Plan carries mode)
-  — still true (`Preset` has target/pattern/manoeuvre/course/place, no mode);
-  part of the Phase-7 Plan document work.
+- ☑ Presets don't carry their mode yet (ARCHITECTURE: Plan carries mode) —
+  DONE 2026-08-08 with the Setups rework: `Setup.modeId` is recorded and
+  loading switches mode before applying the pattern, since pattern params are
+  per-mode. That also answered the parked question of whether presets should
+  snapshot `flockingParams` — a flocking setup does, and nothing else needs
+  to.
 
 ## Phase-4 follow-ups (found during implementation + spot check, 2026-07-15)
 

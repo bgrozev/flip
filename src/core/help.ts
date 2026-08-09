@@ -215,7 +215,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
       },
       {
         kind: 'paragraph',
-        text: 'Courses belong to a dropzone, so the list only shows the ones at the place you are at, and "New" adds a course there. Switching dropzone clears a course that belongs to the one you left. A preset remembers both, so loading it brings back the dropzone and its course together.'
+        text: 'Courses belong to a dropzone, so the list only shows the ones at the place you are at, and "New" adds a course there. Switching dropzone clears a course that belongs to the one you left. A setup remembers both, so loading it brings back the dropzone and its course together.'
       },
       {
         kind: 'terms',
@@ -248,7 +248,8 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
           { term: 'Drift', text: 'How far the wind carries you while you descend.' },
           { term: 'Crab', text: 'Flying angled into the wind so your track over the ground is the one you want.' },
           { term: 'Glide ratio', text: 'Distance forward per unit of height lost.' },
-          { term: 'POM', text: 'Point of measurement — the marked points along the path, normally one per 1000 ft.' }
+          { term: 'POM', text: 'Point of measurement — the marked points along the path, normally one per 1000 ft.' },
+          { term: 'Setup', text: 'A named arrangement you can switch between: the pattern and the turn, and optionally the dropzone, target and course. One that remembers a target belongs to its dropzone; one that does not works anywhere.' }
         ]
       }
     ]

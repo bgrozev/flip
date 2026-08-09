@@ -1,7 +1,7 @@
 # Redesign hand-off — start here
 
 Entry point for a new session picking up the FliP redesign. Last revised
-**2026-08-08**, after a backlog re-check pass. Sessions are logged
+**2026-08-08**, after the Setups rework. Sessions are logged
 newest-first below; each one says what changed and what it left open, and
 `NOTES.md` has the reasoning behind every entry.
 
@@ -38,7 +38,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **930 tests in 46 files, 0 lint errors, 52 known
+Baseline on the branch: **967 tests in 47 files, 0 lint errors, 46 known
 lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases used to need a 15 s timeout for the unfiltered place-list render; the
@@ -76,6 +76,48 @@ roughly in order:
 - **Flocking map interactions** — see below.
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
+
+### Session 2026-08-08 (5) — presets become setups
+
+**A setup splits on what travels.** The pattern and the turn are always in
+one; the site half — place, target, course — is optional **as a group**,
+because a target without the place it belongs to is not a weaker setup but a
+wrong one. Bound, it groups under its dropzone and loading moves you there;
+portable (`site: null`), it is a canopy and a turn and works anywhere. One
+checkbox at save time is the whole difference. Two composed types (Profile ×
+Site) were offered and dropped: the duplication they save is a rare edit,
+while the cost is two menus and two dirty states on every interaction.
+
+**A setup carries its `modeId`** and switches to it on load — pattern params
+are per-mode, so a swoop setup loaded from Standard Pattern would otherwise
+file its numbers in the wrong slot. That closes a Phase-3 backlog item and
+answers the parked `flockingParams` question (a flocking setup carries them;
+nothing else does).
+
+**Working on one is visible.** `core/setups.setupDiff` reports WHICH parts
+differ, so the toolbar's amber dot has a tooltip ("unsaved pattern and
+target") and Save / Discard appear only when there is something to save.
+Discard is also the fix for "re-selecting the active preset does nothing".
+Loading discards silently with an **Undo** in the snackbar.
+
+**Copy to \<dropzone\>** carries a setup to a new place keeping its position
+relative to a course — depth, offset and approach angle measured off the
+original and laid out again against the course there, so it is turned the way
+the new course is turned. The destination course is picked silently (selected
+→ same type → first there → none), the owner's call over a picker.
+
+Two defects, each pinned by a test that fails without its fix: ids were
+`Date.now()` alone (a copy made in the same millisecond shared an id), and
+**standing at another dropzone read as dirty**, so Save would have quietly
+rebound the ZHills setup to Eloy — a setup is now *dormant* away from its
+place or mode.
+
+The canopy is a **typed label**, by the owner's choice over deriving it from
+`PatternParams`; it is the one part of the description that can go stale.
+
+⚠️ Not verified by a real pointer: nothing new — this is all keyboard and
+menu work, and it was browser-verified end to end (grouped menu, load, dirty
+dot, discard, the away state, the copy dialog and its geometry, manage).
 
 ### Session 2026-08-08 (4) — Target becomes Location
 
@@ -783,7 +825,7 @@ Then, owner priorities most-ready first:
 
 | Item | Notes |
 |---|---|
-| **Owner feedback on what shipped** | The Location panel, the mobile split, the spot readout, the UI pass, shortcuts, help panel — all browser-verified, only the phone layout used in anger so far |
+| **Owner feedback on what shipped** | The Setups rework, the Location panel, the mobile split, the spot readout, the UI pass, shortcuts, help panel — all browser-verified, only the phone layout used in anger so far |
 | **Per-mode dropzone data** | The CSV import dropped the per-mode targets the owner had defined for some DZs; BACKLOG has it, and it needs his localStorage dump to redo |
 | **P1's other half** | The Help topic gives dashed-vs-solid a home, but only for someone who goes looking. A legend or first-run pointer ON the map is still the higher-reach half |
 | **Trust banner → help link** | The banner says "don't trust this"; "why?" has an answer now (`/help?topic=winds`) but nothing links to it. Small and obvious |
@@ -1011,8 +1053,10 @@ Recorded here because they were judgement calls, not deductions.
   altitude is no longer in it. One row means taking AVG/GND out of the bar
   entirely; AVG is nowhere else in the UI. See BACKLOG, Polish.
 - Should FWC itself get the PAST left/right fix?
-- Should presets (and later share-links) snapshot `flockingParams` too?
-  They currently do not.
+- Should setups (and later share-links) snapshot the **winds**? They do not,
+  and probably should not — but it is the same snapshot-vs-refetch question
+  share-links have to answer, so decide both at once. (`flockingParams` is
+  settled: a flocking setup carries them.)
 - Improved KMZ export, preset UX, course stats, distance-course marker
   spacing, "wind code" — all need the owner's intent.
 - Observability tool choice (replacing Google Analytics).

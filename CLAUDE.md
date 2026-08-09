@@ -30,7 +30,7 @@ All source is TypeScript.
 ├── components/               # UI panels, toolbar, map composition
 ├── hooks/                    # useAppState (context + localStorage), useWinds,
 │                             #   useFlightPaths, useFlockingPath, useMode,
-│                             #   usePresets, useUnits, useNotifications, ...
+│                             #   useSetups, useUnits, useNotifications, ...
 ├── app/                      # routing helpers (URL scheme)
 ├── types/                    # Shared type definitions (types/index.ts)
 ├── samples/                  # Sample GPS track files for manoeuvres
@@ -181,7 +181,7 @@ e.g. only `swoop` has `patternLegCount`, so Standard Pattern hides the
 leg-count selector and always flies the full three-leg pattern. A first-run picker
 chooses one; it is remembered per device and switchable from the toolbar.
 Each mode keeps its own target *position within a place*, but the place
-itself is shared: choosing one in the picker (or loading a preset) moves
+itself is shared: choosing one in the picker (or loading a setup) moves
 the target in every mode, while dragging it, shift-clicking and the
 heading input affect only the current mode. Places also *remember*: a
 dropzone's stored coordinates are only a starting point, so the spot you
@@ -191,7 +191,7 @@ restored next time you pick it. Flocking's pinned Spot Reference and its
 jumprun corridors ride along in the same record: the reference is the only
 other absolute coordinate in the app, so it unpins on a move (one left at
 the old DZ produced spots thousands of miles out) and comes back with its
-place. Targets belonging to no place — a preset, a geocoder hit — pass no
+place. Targets belonging to no place — a setup, a geocoder hit — pass no
 place id and are not remembered.
 
 **"No place" is stored explicitly** (`NO_PLACE`, the empty string). It
@@ -247,12 +247,12 @@ Choosing another dropzone drops a selection that belongs to the one being
 left (`selectPlaceTarget`), since it is meaningless there and the map
 camera would chase it. Two escapes keep that lossless: a course with no
 `placeId` — every custom course saved before this existed — belongs
-nowhere and is offered everywhere, and a preset records the place it was
-saved at (`Preset.placeId`), restoring dropzone and course together with
-`PlaceSelection.useGivenTarget` so the preset's own target still wins over
+nowhere and is offered everywhere, and a setup records the place it was
+saved at (`Setup.site.placeId`), restoring dropzone and course together with
+`PlaceSelection.useGivenTarget` so the setup's own target still wins over
 what that place remembers.
 
-Additional features: presets, canopy-piloting courses (distance / zone
+Additional features: setups, canopy-piloting courses (distance / zone
 accuracy / speed, plus custom courses), observed ground-wind stations,
 forecast time selection + hour scrubber, model/sounding comparison (which
 follows the selected hour),
@@ -276,7 +276,7 @@ favorite you just used is both), so separate headed lists would show it
 twice, and the star on each row is both the marker and the way to move a
 place between them. Recents live in `flip.places.recent` (six, and snapshots
 rather than references — a geocoder hit is in no database); only the picker
-writes them, since a preset load also selects a place and that is not
+writes them, since a setup load also selects a place and that is not
 somewhere you went. The dropzones appear when searched, or under an **All
 dropzones** disclosure grouping all 274 by country — 41 countries is a list,
 274 dropzones is not, and rendering them all is what used to make this
@@ -284,6 +284,63 @@ panel's tests need a 15-second timeout. The numeric **final-heading field**
 comes back between the card and the search under nerd mode only
 (`headingField`) — it edits the same value the handle does, so gating it
 changes no path math, and flocking suppresses it regardless.
+
+**A setup is a document, and it splits on what travels.** (`core/setups.ts`
++ `hooks/useSetups.ts` + `components/SetupSelector.tsx`; storage keys are
+still `flip.presets` — nobody but the hook reads them.) The pattern and the
+turn are always in a `Setup`; the **site half is optional as a GROUP**
+(`site`: place, target, course), because a target without the place it
+belongs to means nothing — the same coordinates at another dropzone are a
+field two states away. Bound, it groups under its dropzone in the menu and
+loading moves you there; portable (`site: null`), it is a canopy and a turn
+and applies wherever you are. Null rather than absent, because a preset
+saved before any of this carries NEITHER key and was always site-bound, and
+the migration has to tell the two apart.
+
+A setup also carries its **`modeId`** and switches to it on load — pattern
+params are per-mode, so without that a swoop setup loaded from Standard
+Pattern files its numbers in the wrong slot. Loading therefore applies the
+pattern through `setPatternParamsForMode(setup.modeId, …)`: React has not
+re-rendered by then, so a setter bound to the mode that WAS active would
+write to the wrong one. Carrying the mode also settles what a flocking
+setup stores, which is `flockingParams`.
+
+A setup is **live only where it applies** — its mode, and its dropzone.
+Elsewhere it is DORMANT (`awaySetup`): still what you were working on,
+still there when you come back, but it cannot be dirty or saved. Both
+halves earn their keep, and the second was a real bug: standing at another
+dropzone read as "unsaved place, target and course", so Save would have
+quietly moved the ZHills setup to Eloy.
+
+`setupDiff(snapshot, stored)` reports WHICH parts differ rather than a
+boolean, so the toolbar's amber dot has a tooltip ("unsaved pattern and
+target") and **Save changes** / **Discard changes** appear only when there
+is something to save. Discard is also "reload the setup I wandered off",
+which re-selecting the active one never did. Loading discards unsaved
+changes silently — a confirm on every switch would tax the one thing setups
+are for — with an **Undo** in the snackbar. Comparison of the target is to
+1e-7 deg, so a storage round-trip cannot strand a setup as modified while a
+drag (metres) or a one-degree heading step still counts.
+
+**Copy to \<dropzone\>** takes a setup somewhere else keeping where it sits
+relative to a COURSE. The relative position is not stored anywhere — the
+Courses panel derives it from the absolute target on every render — so
+`planSetupCopy` measures depth, offset and approach angle off the original
+and lays them out again against the course at the destination, which is why
+the copy is turned the way the new course is turned. The destination course
+is chosen **silently**: the one selected there, else one of the source's
+type, else the first there, else none. One switch in the dialog falls back
+to the target as it stands. (Owner's call: no course picker — the offset is
+visible on the map the moment the copy loads.)
+
+The **canopy is a label on the setup** ("SAW 75"), typed rather than
+derived, because nothing in the app models a canopy yet and the glide ratio
+and descent rate that describe one are numbers you cannot read a name off.
+It can go stale against them; BACKLOG's canopy + wing-loading entry is what
+eventually replaces it. Everything else in the row's second line IS derived
+and cannot disagree with the setup: the turn (`turnLabel`, measured off the
+path for tracks and samples), the course, and the mode when it is not the
+one you are in.
 
 **Keyboard + help.** `core/keymap.ts` is one table driving both the key
 handler (`hooks/useKeyboardShortcuts`) and the `?` overlay, gated per
@@ -342,7 +399,7 @@ hand.
 | WindsComponent | `components/WindsComponent.tsx` | Wind table, forecast time picker, stations |
 | CoursesComponent | `components/CoursesComponent.tsx` | Course selection and editing |
 | SettingsComponent | `components/SettingsComponent.tsx` | App preferences |
-| PresetSelector | `components/PresetSelector.tsx` | Save/load named setups |
+| SetupSelector | `components/SetupSelector.tsx` | The setups menu: switch, save, discard, copy |
 | FlockingComponent | `components/FlockingComponent.tsx` | Flocking panel: classic/free/solve sub-modes |
 
 ## State Management
@@ -352,7 +409,7 @@ manoeuvreConfig, flockingParams, per-mode targets, settings) are the
 source of truth, persisted via Toolpad's `useLocalStorageState` behind
 **versioned codecs** (`util/storage.ts` + `migrate*` in `core/model.ts`,
 which must never throw on bad data); flight paths are derived with
-`useMemo`. Presets snapshot/restore these configs (`hooks/usePresets.ts`).
+`useMemo`. Setups snapshot/restore these configs (`hooks/useSetups.ts`).
 
 Settings resolution: mode defaults apply only to settings the user has
 never changed — `flip.settings.touched` records explicit edits, so a
@@ -375,6 +432,7 @@ user can force a mode-overridden setting back to the global default.
 | `core/model.ts` | Versioned document defaults + `migrate*` loaders |
 | `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`); place ids (`dropzonePlaceId`, `placeNameFromId`) |
 | `core/regions.ts` | State/country short forms, so "az" finds Arizona |
+| `core/setups.ts` | Setups: `setupDiff` (which parts are unsaved), `describeSetup`/`turnLabel` (the chip line), `groupSetups`, `planSetupCopy` (the course-relative copy) |
 | `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
 | `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |
 | `modes/nerd.ts` | Nerd-mode flag: `withNerd()` mode transform, `applyNerdGate()` settings mask |
