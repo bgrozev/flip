@@ -7,8 +7,9 @@ newest-first below; each one says what changed and what it left open, and
 
 **The owner's first dropzone curation pass landed** (`aa3c041`, `00e4ad4`):
 212 entries promoted to hand-checked positions/headings, 69 removed, 4
-renamed, 2 added — 339 -> **272 entries**. The conventions in "The
-dropzone import" below still govern any further curation.
+renamed, 2 added — 339 -> 272, and **274 today** with two later additions.
+**219 of them now carry a landing heading; 55 do not.** The conventions in
+"The dropzone import" below still govern any further curation.
 
 ## Read order
 
@@ -20,6 +21,8 @@ dropzone import" below still govern any further curation.
 4. `docs/ux/pain-points.md` + `docs/ux/roles-and-tasks.md` — a walkthrough
    of the running app: prioritised friction (P1–P9) and a role/task
    inventory with the trust-state, accounts-sync, and Nerd-mode concerns.
+   **Dated records, not trackers** — they describe 2026-07-22 and are left
+   unedited; BACKLOG says what has since been fixed.
 5. `NOTES.md` — running log: per-phase history, owner Q&A, commit refs.
    Read for "why is it like this", not for "what's next".
 6. `UIUX.md` — UX improvements + feature ideas, ⭐ = owner-prioritized.
@@ -40,7 +43,7 @@ lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases used to need a 15 s timeout for the unfiltered place-list render; the
 Location rework removed the unfiltered render and both are back on the
-default.
+default, taking the whole suite from ~31 s to ~9 s.
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
@@ -694,7 +697,9 @@ existing FWC-ported set.
 **Curation still open** (this was always going to be a second pass):
 
 - Verify/tighten coordinates and add landing headings — the bulk of it.
-  325 of 339 have no `direction` yet (only 14 were ever hand-checked).
+  **Largely done by the owner's curation pass**: 55 of 274 are still without
+  a `direction` (it was 325 of 339 when this was written). The Location
+  panel's country-grouped browse is a convenient way through the rest.
 - Spot-check the `http`->`https` upgrade on the ~230 sites it touched —
   not fetched or verified, just string-substituted.
 - Consider filling `town` for the ~230 rows that have no town at all
@@ -713,8 +718,8 @@ and still the checklist for hand-curating individual entries going forward:
 
 - **No duplicate names, and no two entries within ~0.01 deg** of each
   other. The second one is the real guard: the same DZ under two spellings
-  is exactly what a bulk import produces. Expect collisions with the 339
-  entries already there.
+  is exactly what a bulk import produces. Expect collisions with the entries
+  already there.
 - **The list is sorted by name** for display.
 - **`country` is set on every entry.** The other location fields are
   best-effort and only shape-checked.
@@ -731,8 +736,8 @@ Conventions worth keeping straight during curation:
   direction. An entry **without** one came from a bulk import (FWC
   originally, now also the owner's CSV) at ~100-500 m precision, and
   selecting it lands into wind. Promoting an entry means tightening the
-  coordinates *and* adding the heading. 325 of 339 are still unpromoted;
-  that is the bulk of the curation.
+  coordinates *and* adding the heading. 55 of 274 are still unpromoted, down
+  from 325 of 339 before the owner's pass.
 - **`town` is filled for 74 entries and blank for 265.** The blanks are
   deliberate, not forgotten — most of the CSV rows had no locality data at
   all (`USPA directory` / `OSM sport=parachuting` sourcing), and the ones
@@ -778,15 +783,15 @@ Then, owner priorities most-ready first:
 
 | Item | Notes |
 |---|---|
-| **Owner feedback on what shipped** | The spot readout, the UI pass, the place picker, shortcuts, help panel — all browser-verified, none used in anger |
+| **Owner feedback on what shipped** | The Location panel, the mobile split, the spot readout, the UI pass, shortcuts, help panel — all browser-verified, only the phone layout used in anger so far |
 | **Per-mode dropzone data** | The CSV import dropped the per-mode targets the owner had defined for some DZs; BACKLOG has it, and it needs his localStorage dump to redo |
 | **P1's other half** | The Help topic gives dashed-vs-solid a home, but only for someone who goes looking. A legend or first-run pointer ON the map is still the higher-reach half |
 | **Trust banner → help link** | The banner says "don't trust this"; "why?" has an answer now (`/help?topic=winds`) but nothing links to it. Small and obvious |
 | **Flocking shortcuts** | Rotate jumprun, step the exit along it, cycle sub-mode, toggle a corridor by number. The keymap is ready for them |
 | **Corridor direction ranges** | "anything 250–290°" — solver structure supports it, schema stores fixed headings. Small |
-| **Landing headings for the remaining DZs** | 60 of 272 still have no `direction`; promote them as they are checked against imagery |
+| **Landing headings for the remaining DZs** | 55 of 274 still have no `direction`; promote them as they are checked against imagery. The country-grouped browse in the Location panel is now a convenient way to work through them |
 | **Dropzone `timezone`** | Deferred by the owner. Forecast times render in *browser* local time, so a coach planning a DZ two zones away reads the wrong clock |
-| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3). P5–P9 are done |
+| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), mobile Wind-panel density (F6). P5–P9 are done |
 | **Trust state — finish it** | `◐`: out-of-bounds "silly value" call-out, stale-age tuning |
 | ⭐ **Shareable setup links** | Needs a *design session with the owner*; fragment-encoding proposal parked in BACKLOG |
 | **Better wind visualization** | windy.com-like particle/flow rendering. ✎ design |
@@ -924,7 +929,25 @@ verify another way:
 
 Recorded here because they were judgement calls, not deductions.
 
-**2026-08-08:**
+**2026-08-08 (the Location rework):**
+
+- The Target panel is **Location**: the panel only chooses a place now, and
+  the intro paragraph goes with the rename.
+- **The final-heading field goes away** — the map's handle and the keyboard
+  own the heading. `,` and `.` become a one-degree step (so Settings needed a
+  new key), and "into wind" needed a way in without a keyboard.
+- Of the four placements offered for that, the owner took **folding it into
+  the heading handle** (a click on it faces the wind) over a second map
+  button, an action on the winds indicator, or a Pattern-panel button.
+- Favorites and recents are **one list** rather than two headed ones, and
+  browsing all the dropzones is a **country-grouped disclosure**.
+- The exact heading came **back behind nerd mode**, in the Location panel
+  between the hero card and the search — raised as the cost of removing the
+  field, and taken.
+- Fixed bugs are **deleted from BACKLOG rather than ticked**: "a list of
+  solved problems is not a backlog". NOTES keeps the reasoning.
+
+**2026-08-08 (earlier):**
 
 - The manoeuvre mirror is bound to **`Shift+X` only** — one shortcut, not
   two; `Z` was tried and dropped.
@@ -984,6 +1007,9 @@ Recorded here because they were judgement calls, not deductions.
   or closure.
 - Default pattern params: backlog says "3:1 glide, 8 kts descent" but the
   current default is 9 **mph** — the unit is ambiguous, unresolved.
+- **The phone toolbar still takes two rows** at 375px, and the density
+  altitude is no longer in it. One row means taking AVG/GND out of the bar
+  entirely; AVG is nowhere else in the UI. See BACKLOG, Polish.
 - Should FWC itself get the PAST left/right fix?
 - Should presets (and later share-links) snapshot `flockingParams` too?
   They currently do not.

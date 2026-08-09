@@ -3,6 +3,12 @@
 Owner's raw idea/bug list, organized by scope. Companion to `NOTES.md`.
 Status legend: ☐ open · ◐ partially done · ☑ believed done (verify) · ✎ needs clarification
 
+**A fixed bug is deleted, not ticked** (owner, 2026-08-08) — "a list of
+solved problems is not a backlog", and NOTES keeps the reasoning. Shipped
+FEATURES do keep a ☑ entry, because their text records the decisions taken
+along the way and several still carry open sub-items; skim past them for the
+☐ and ◐ lines, which are the actual work.
+
 Categories: **Bugs** → **Polish** (trivial UI/text fixes) → **Small features**
 (days) → **Medium features** (weeks, self-contained) → **Large features**
 (architecture-relevant) → **Ideas / research** (unscoped, needs design).
@@ -30,18 +36,16 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ### Harder-than-necessary
 
-- ◐ **P6 / F5 · DZ discovery** (tasks 1–3) — FIRST VERSION DONE. The
+- ☑ **P6 / F5 · DZ discovery** (tasks 1–3) — DONE, in two passes. The
   three-tab Locations panel became one search box over one list
-  (`components/PlacePicker.tsx` + pure `core/places.ts`): saved places
-  first, then the 58 dropzones (44 of them ported from FWC), then the
-  geocoder's hits in the same list. Star a dropzone to pin it; custom
-  places rename / move / delete in place. Geolocation now exists
-  (`hooks/useGeolocation.ts`) behind a "Nearest dropzone" button — opt-in,
-  never prompts on load, and every failure path leaves the list working.
-  Google Places moved to a promise API and now loads without the map,
-  which is what makes search work on mobile at all.
-  Still open ✎: distances/nearest-first ordering were deliberately left
-  out (owner: not useful); recents and DZ country/region are below.
+  (`components/PlacePicker.tsx` + pure `core/places.ts`), with geolocation
+  behind an opt-in "Nearest dropzone" button and Google Places on a promise
+  API so search works without the map (which is what makes it work on mobile
+  at all). The second pass (2026-08-08) made the panel **Location**: a hero
+  card for the active place, favorites and recents in one starred-first list,
+  and the 274 dropzones only rendered when searched or under a
+  country-grouped browse. Distances/nearest-first ordering stay out (owner:
+  not useful).
 - ☐ **Re-selecting the active preset does nothing** (spotted while
   verifying the above) — `PresetSelector.handleSelect` skips `onSelect`
   when the id is already active, so once you have wandered off a preset
@@ -85,6 +89,9 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
     not re-proposed: forecast-model selection and comparison, all unit
     pickers, `showPreWind` (the dashed pre-wind line), `showCrabArrow`.
     The full 41k ft wind table needs addressing but **outside** nerd.
+  - ☑ **Ruled IN 2026-08-08**: the numeric final-heading field
+    (`headingField`), which came back into the Location panel behind the
+    gate after the panel dropped it.
   - ☐ Candidates not yet ruled on: custom course *authoring*. Adding one
     is a single line in `NERD_SETTING_KEYS` or `NERD_FEATURES`.
   - ☐ Nerd's own positive content, so it is not only a gate: a
@@ -106,8 +113,15 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 ## From the 2026-07-28 session
 
 - ◐ **Import the owner's dropzone list, then curate all of it** — import
-  DONE (2026-07-28): 280 new entries from the owner's CSV, 59 -> 339,
-  30 CSV rows dropped as duplicates of existing entries. The import was NOT done properly -- dropzones for which I defined different targets for modes 1 and 2 only have 1 mode. Need to revisit with the localStorage dump.
+  DONE (2026-07-28): 280 new entries from the owner's CSV, 59 -> 339, 30 CSV
+  rows dropped as duplicates. The owner's curation pass then took it to 272
+  (274 today), and **219 of 274 now carry a landing heading**, so the bulk of
+  the curation is behind us. Two things still open:
+  - **The import dropped per-mode targets.** Dropzones where the owner had
+    defined different targets for modes 1 and 2 only have one mode now.
+    Needs his localStorage dump to redo.
+  - 55 entries still have no `direction`; the Location panel's
+    country-grouped browse is a convenient way through them.
 - ☐ **Dropzone `timezone`** — deferred, not rejected. Forecast times render
   in *browser* local time, so a coach or traveling jumper planning a DZ two
   zones away is reading the wrong clock. One IANA string per entry.
@@ -125,7 +139,6 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   wrap to a second line. One row needs one of them to go — the owner's call
   which, if any: the readings could leave the bar entirely and live only on
   the winds indicator, at the cost of AVG, which is nowhere else.
-
 - ☐ **Settings has no `?` in its panel header** while every other panel
   does (spotted in the 2026-08-08 UI pass). Either give it a help topic in
   `core/help.ts` or decide the icon does not belong there — as it stands it
@@ -142,7 +155,6 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   label would shadow the drag handles beside it. Fixable with an
   `interactive` flag on `MapOverlay` plus separation from the exit, if the
   owner wants it.
-
 - ☐ **Round altitude/number display in both feet and metres** — labels and
   readouts should land on round numbers in the active unit (e.g. 1000 ft
   ↔ ~300 m shown as a clean 300 m, not 305 m), rather than converting an
@@ -215,7 +227,9 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   (2026-07-16: build the shared `core/reach/` primitive *before* Phase 6 —
   flocking's reachability zones want the same math.)
 - ☐ **Direction overlays** — average-wind arrow overlay, degree-circle
-  (compass rose) around target.
+  (compass rose) around target. Worth more now than when it was written:
+  the final heading has no numeric field outside nerd mode, so a rose around
+  the target is the only way to READ the heading off the map.
 - ☐ **Turn drift calculation** — drift accumulated during the turn itself.
 - ◐ **Model/sounding comparison view** — FIRST PASS DONE; visualization
   design open for owner iteration. 

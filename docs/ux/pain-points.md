@@ -8,6 +8,13 @@ back to) and `docs/redesign/UIUX.md` (improvement ideas).
 Each item: who feels it, the friction, and why it matters. Grouped by *type* of
 pain — worst first within each group.
 
+> **This is a dated observation record, not a tracker.** The findings below
+> describe the app as it was on 2026-07-22 and are left unedited so the
+> walkthrough stays honest. For what has since been FIXED, read
+> `docs/redesign/BACKLOG.md` — as of 2026-08-08, P5, P6, P7, P8 and P9 are
+> done, and P1 has its Help topic but still wants a map-side affordance.
+> P2, P3 and P4 are open as written.
+
 ---
 
 ## Not intuitive (unclear what to do / hidden / misleading)
