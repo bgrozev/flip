@@ -70,15 +70,10 @@ export default function TargetComponent({
             <span>
               <Button
                 variant="outlined"
+                size="small"
                 disabled={upwindHeading === null}
                 onClick={() => setTarget({ ...target, finalHeading: upwindHeading ?? 0 })}
-                sx={{
-                  textTransform: 'none',
-                  alignSelf: 'center',
-                  paddingTop: '4px',
-                  paddingBottom: '4px',
-                  minHeight: 'auto'
-                }}
+                sx={{ alignSelf: 'center' }}
               >
                 Upwind
               </Button>

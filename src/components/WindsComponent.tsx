@@ -704,7 +704,7 @@ export default function WindsComponent({
             {allowManualEdit && (
               <Stack direction="row" spacing={1} sx={{ mt: 2, alignItems: 'center' }}>
                 {lock ? (
-                  <Button variant="outlined" size="small" onClick={unlock}>
+                  <Button size="small" onClick={unlock}>
                       Unlock
                   </Button>
                 ) : (
@@ -714,14 +714,22 @@ export default function WindsComponent({
                         <AddIcon />
                       </IconButton>
                     </Tooltip>
-                    <Button variant="outlined" size="small" onClick={invertWind}>
+                    <Button size="small" onClick={invertWind}>
                         Invert
                     </Button>
                   </>
                 )}
-                <Button variant="outlined" size="small" onClick={reset}>
-                    Reset
-                </Button>
+                {/* Only when there is a profile to throw away. `describeChild`
+                    because without it MUI makes the tooltip the button's
+                    accessible NAME, and "Reset" stops being called Reset by
+                    anything that reads the page. */}
+                {winds.winds.length > 0 && (
+                  <Tooltip title="Discard this profile and start from nothing." describeChild>
+                    <Button size="small" color="inherit" onClick={reset}>
+                        Reset
+                    </Button>
+                  </Tooltip>
+                )}
               </Stack>
             )}
           </>

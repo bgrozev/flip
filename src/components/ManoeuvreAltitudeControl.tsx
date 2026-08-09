@@ -98,7 +98,7 @@ export default function ManoeuvreAltitudeControl({
             >
               {offsetText}
             </Typography>
-            <Tooltip title="Put the initiation back at the recorded altitude.">
+            <Tooltip title="Put the initiation back at the recorded altitude." describeChild>
               <Button size="small" onClick={handleReset} sx={{ p: 0, minWidth: 0 }}>
                 Reset
               </Button>

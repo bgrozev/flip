@@ -854,7 +854,7 @@ export default function FlockingComponent({
             {/* Corridors belong to the dropzone, so "default" means what the
                 dropzone declares — nothing, where the database is silent. */}
             {flockingCorridorsAreCustom && (
-              <Tooltip title="Discard the corridor changes made at this place.">
+              <Tooltip title="Discard the corridor changes made at this place." describeChild>
                 <Button size="small" color="inherit" onClick={resetFlockingCorridors}>
                   Reset to default
                 </Button>

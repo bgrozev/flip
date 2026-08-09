@@ -375,7 +375,7 @@ function SaveCurrentTargetButton({ onSave }: SaveCurrentTargetButtonProps) {
 
   return (
     <>
-      <Button variant="outlined" onClick={() => setOpen(true)} sx={{ alignSelf: 'flex-start' }}>
+      <Button variant="outlined" size="small" onClick={() => setOpen(true)} sx={{ alignSelf: 'flex-start' }}>
         Save current target
       </Button>
       <NameDialog
