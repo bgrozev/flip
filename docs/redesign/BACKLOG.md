@@ -118,6 +118,11 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Polish (trivial)
 
+- ☐ **No way to type an exact final heading.** The field left with the Target
+  panel, so the heading is the map's rotate handle plus `<` `>` (5°), `,` `.`
+  (1°) and `u`/handle-click for into wind. Fine for flying; a coach wanting
+  "set final to 247" has no way in. The Location hero card is where a small
+  editable heading line would go, if the owner wants one. ✎
 - ☐ **The phone toolbar still takes two rows** (375px). Nothing is clipped
   any more and the density altitude was dropped there to make room (it is in
   the map's winds indicator and the Wind panel), but AVG + GND + the mode
@@ -190,11 +195,17 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ## Medium features (weeks, self-contained)
 
-- ◐ **Improve DZ/target selection UI** — search, favorites, map-pick flow.
-  In progress: see P6 / F5 above. Deferred out of that work, owner's call:
-  - ☐ **Recently used places** — a short recents list/chips in the place
-    picker's empty state. Favorites cover most of this need.
-  - ☐ **Cleanup UI** — no need to include the whole long list
+- ☑ **Improve DZ/target selection UI** — search, favorites, map-pick flow.
+  Second pass DONE 2026-08-08: the Target panel became **Location** (hero
+  card for the active place, one starred-first list of favorites and recents,
+  search-first with a country-grouped browse), and the final-heading field
+  left with it — the map's rotate handle and the keyboard own the heading
+  now. The two deferrals below are closed by it:
+  - ☑ **Recently used places** — DONE 2026-08-08 as part of the Location
+    rework: `flip.places.recent`, six entries, in one list with the saved
+    ones (see below).
+  - ☑ **Cleanup UI** — DONE 2026-08-08: the dropzones only render when
+    searched, or under a country-grouped "All dropzones" disclosure.
 - ☐ **Expected GR & ground speed up high** — e.g. "at 4000 ft heading south
   expect GR 1.5" for comparison against wrist GPS in flight. Table/overlay
   of expected GR/speed by altitude+heading.

@@ -1765,3 +1765,92 @@ will get before a human taps it.
 Rejected: a plain DOM listener on the map container. A `click` fires after a
 pan (down and up on the same element), so the panel would close every time the
 user dragged the map.
+
+## Session 2026-08-08 (4) — Target becomes Location
+
+Owner: the panel is confusing now that the target is movable on the map — it
+is only useful for searching locations, so Location is a better name; the top
+text is unnecessary; the dropzone list is far too long. He asked for options
+and chose: hero card, one starred-first list, country-grouped browse, and
+"adjust heading just goes away".
+
+### What the rename evicted
+
+The final-heading field and its "Upwind" button were the last target-EDITING
+left in the panel, and the map has owned the heading since the rotate handle
+landed. They are gone. The keyboard keeps the heading, and gained a fine step
+because five degrees is too coarse for lining up on a runway: `<` `>` are
+still 5°, `,` `.` are 1°, `u` is still into wind. Settings gave up `,` and
+took `shift+s` — expressible only because the Shift+X work made a shifted
+letter its own combo.
+
+Then the gap that leaves: a phone has no keyboard, and "Upwind" was a button.
+Four placements were put to the owner (fold into the heading handle; a second
+puck on the heading line; on the winds indicator; back in the Pattern panel).
+He took the first. A CLICK on the rotate handle now snaps the heading into
+wind — the handle already means "landing direction", it costs no pixels, and
+the overlay's two gesture lines read as the sequence they are: hover the
+target, click that handle.
+
+That surfaced a real defect one layer down. **MapLibre's drag handle fired
+`onClick` at the end of every drag** although the contract says "(no drag)":
+it listens for a raw DOM `click`, which fires whenever mousedown and mouseup
+land on the same element. Google's marker suppresses it; MapLibre does not.
+Nothing had depended on it (the one existing `onClick` re-revealed an
+already-revealed handle), so it had gone unnoticed — and this feature would
+have snapped the heading into wind at the end of every rotate drag on that
+provider.
+
+Not implemented, and worth knowing: **there is no way to type an exact
+heading any more.** If "set final to 247" ever matters, the hero card is
+where it would go.
+
+### Favorites and recents are one list
+
+The design question the owner actually asked ("an intuitive way to do it")
+has one fact behind it: **favorites and recents overlap.** A favorite you
+used an hour ago is both, so two headed lists either show it twice or need an
+invisible rule about which wins. One list dissolves that — saved places sort
+first, recents follow, and the star on each row is simultaneously the marker
+("this one is saved") and the control that moves a place between the halves.
+Verified in the browser: starring a recent leaves exactly one row and drops
+its history icon.
+
+Recents are a new store and are **snapshots, not references**, unlike
+favorites — which name a dropzone precisely so that corrections to the
+database reach them. A recent cannot: it may be a geocoder hit, which is in
+no database, and "that field I searched yesterday" is the case recents exist
+for. Where a recent still resolves to a place, the place wins on re-selection
+(it carries the per-mode config); where it does not, the snapshot is all
+there is, and that is the point. Only the picker writes them: a preset load
+also selects a place, and that is not somewhere you went.
+
+### Search-first, and browsing by country
+
+274 dropzones rendered unfiltered under the saved ones is not a list anyone
+reads — and it is why two of `PlacePicker.test.tsx`'s cases carried a
+15-second timeout. Idle now shows only your places; searching filters
+everything and queries the geocoder as before; browsing is a disclosure
+grouping every dropzone by country. 41 countries is a list. Both timeouts are
+gone and the whole suite went from 31s to 9s.
+
+### Three bugs the rework surfaced
+
+Each has a test confirmed to fail without its fix:
+
+- **Confirming a row's rename dialog also selected that row.** A portal
+  renders elsewhere in the DOM but stays a CHILD in the React tree, so the
+  click bubbled to the place row containing the dialog — and the row's job is
+  to select the place. The `Menu` beside it already guarded this; `NameDialog`
+  did not. Invisible until recents made selections leave a trace, which is
+  the second time this session a new readout has exposed an old write.
+- **Starring a dropzone removed it from "All dropzones".** `buildPlaces`
+  moves a favorite into the saved group — right for search results, wrong for
+  a list calling itself all: the count and the country totals went with it.
+- **`DEFAULT_TARGET` sat ~250 ft and 90° from the ZHills entry it is paired
+  with** by `DEFAULT_ACTIVE_PLACE_ID`. The hero card measures the target
+  against its place, so a fresh install opened saying "target moved 258 ft
+  from the dropzone" with nobody having moved it. The dropzone entry is the
+  hand-checked one (it carries a `direction`), so it wins. Worth noting for
+  the general case: the two were only ever *asserted* to be the same place,
+  and nothing compared them until something displayed the difference.

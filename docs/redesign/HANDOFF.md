@@ -35,12 +35,12 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **907 tests in 46 files, 0 lint errors, 52 known
+Baseline on the branch: **929 tests in 46 files, 0 lint errors, 52 known
 lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
-cases now run with a 15 s timeout instead of the 5 s default — the
-unfiltered place-list render (still no grouping/limit — BACKLOG) scales
-with dropzone count and jsdom is slow at 272 of them.
+cases used to need a 15 s timeout for the unfiltered place-list render; the
+Location rework removed the unfiltered render and both are back on the
+default.
 
 Done: **Phases 0–6.** Phases 0–5 (Vite/Vitest/TS5 · core extraction ·
 map layerization · router + modes · wind subsystem · PWA) plus a
@@ -73,6 +73,46 @@ roughly in order:
 - **Flocking map interactions** — see below.
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
+
+### Session 2026-08-08 (4) — Target becomes Location
+
+**The panel no longer edits the target — the map does.** The final-heading
+field and its "Upwind" button are gone (the last target-editing left in it),
+the intro paragraph with them. It opens with a **hero card**: the active
+place's name in display type, town/region/country, coordinates, star,
+website, and how far the target has been dragged off the dropzone with a way
+back. **Your places is ONE list**, saved first then recent — they overlap, so
+two headed lists would show a used favorite twice, and the star on each row
+both marks and moves a place between the halves. **Recents** are new
+(`flip.places.recent`, six, snapshots not references — a geocoder hit is in
+no database; only the picker writes them). **The dropzones only appear when
+searched**, or under an "All dropzones" disclosure grouping all 274 by
+country.
+
+**The heading keeps the keyboard, and gained a fine step**: `<` `>` five
+degrees, `,` `.` one, `u` into wind. Settings gave up `,` and took
+`shift+s`. Since a phone has no keyboard, **clicking the map's rotate handle
+snaps the heading into wind** — the owner picked that over a new map button.
+
+Four bugs, each pinned by a test that fails without its fix:
+
+- Confirming a row's rename dialog **also selected that row** — a portal is a
+  DOM escape but a React child, so the click bubbled to the place row.
+- Starring a dropzone **removed it from "All dropzones"** (and from its
+  country's count).
+- **`DEFAULT_TARGET` sat ~250 ft and 90° from the ZHills entry** it is paired
+  with, so a fresh install opened saying "target moved 258 ft" with nobody
+  having moved it. The dropzone entry wins.
+- **MapLibre's drag handle fired `onClick` at the end of every drag**, against
+  its own contract — which would have snapped the heading into wind after
+  every rotate drag on that provider.
+
+Two side effects worth knowing: the suite went from **31s to 9s** (both
+`PlacePicker` 15-second timeouts are gone — the unfiltered 274-row render was
+the cost), and **there is no way to type an exact heading any more**. If "set
+final to 247" matters, the hero card is where it would go.
+
+⚠️ Not verified by a real pointer: the click-the-handle-for-upwind gesture.
 
 ### Session 2026-08-08 (3) — the phone toolbar, and an empty map explained
 
@@ -861,6 +901,9 @@ verify another way:
   dispatch rule is unit-tested, but automated clicks never reach the Maps
   click handler here, so the tap itself has never happened. Confirm it also
   does NOT fire when panning the map.
+- **Clicking the heading rotate handle to land into wind** (2026-08-08). The
+  layer logic is unit-tested (the click snaps, a drag does not, no wind is
+  inert), but automated clicks do not reach map markers here.
 - **The mobile map/panel split** (2026-08-08). Verified at 375x812 in the
   preview — both states, the compact winds chip, the app-bar overlap — but
   not on a real handset, where the open questions are whether 40% is enough

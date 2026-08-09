@@ -263,9 +263,31 @@ ground-wind detail on hover), a **wind-trust banner** (`WindTrustBanner` +
 the heading-rotate handle, shift-click the map to jump it). Winds
 auto-fetch on load and again whenever the target moves to a new place.
 
+**The Location panel chooses a place; the map edits the target.** The panel
+(still `PanelId` `target`, route `/target`) used to carry a final-heading
+field and an "Upwind" button under a paragraph explaining that you could drag
+the target instead. Both are gone: the target is always draggable and its
+heading has a rotate handle, so the panel opens with a hero card naming the
+active place — town/region/country, coordinates, star, website, and how far
+the target has been dragged off the dropzone with a way back. Below it,
+**Your places** is ONE list, saved first then recent: the two overlap (a
+favorite you just used is both), so separate headed lists would show it
+twice, and the star on each row is both the marker and the way to move a
+place between them. Recents live in `flip.places.recent` (six, and snapshots
+rather than references — a geocoder hit is in no database); only the picker
+writes them, since a preset load also selects a place and that is not
+somewhere you went. The dropzones appear when searched, or under an **All
+dropzones** disclosure grouping all 274 by country — 41 countries is a list,
+274 dropzones is not, and rendering them all is what used to make this
+panel's tests need a 15-second timeout.
+
 **Keyboard + help.** `core/keymap.ts` is one table driving both the key
 handler (`hooks/useKeyboardShortcuts`) and the `?` overlay, gated per
-mode; it also documents mouse gestures. `F` hides all chrome but the map.
+mode; it also documents mouse gestures. With no heading field left, four
+bindings ARE the heading's typed interface: `<` `>` turn five degrees, `,`
+`.` turn one, and `u` lands into wind — as does CLICKING the map's rotate
+handle, which had no meaning before. Settings gave up `,` for the fine step
+and took `shift+s`. `F` hides all chrome but the map.
 `X` flips the pattern's turns; `Shift+X` mirrors the MANOEUVRE —
 `core/manoeuvre.mirrorManoeuvre` decides what that means per type: flip
 `turnDirection` for a parametric turn (the offset is measured on the turn
@@ -309,7 +331,8 @@ hand.
 | MapComponent | `components/MapComponent.tsx` | Google Maps: paths, tooltips, drag handles, stations, winds indicator |
 | PatternComponent | `components/PatternComponent.tsx` | Landing pattern parameters UI |
 | ManoeuvreComponent | `components/ManoeuvreComponent.tsx` | Manoeuvre source selection (params/track/samples) |
-| TargetComponent | `components/TargetComponent.tsx` | Landing target and heading UI |
+| TargetComponent | `components/TargetComponent.tsx` | The Location panel: hero card + place picker |
+| LocationHero | `components/LocationHero.tsx` | The active place, at the top of the Location panel |
 | PlacePicker | `components/PlacePicker.tsx` | One searchable list: saved places, dropzones, geocoder hits |
 | HelpComponent | `components/HelpComponent.tsx` | In-app reference: topic list, drill-in; absorbed About |
 | WindsComponent | `components/WindsComponent.tsx` | Wind table, forecast time picker, stations |
