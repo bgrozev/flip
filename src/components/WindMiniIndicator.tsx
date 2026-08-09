@@ -37,6 +37,15 @@ interface WindMiniIndicatorProps {
   fetching: boolean;
   /** Distance from the top of the map, in px (raised when a banner shows). */
   topOffset?: number;
+  /**
+   * The map has little room (a phone, with a panel open beside it). The chip
+   * form is forced and its expand chevron withdraws: the expanded card is
+   * taller than the map strip it would cover, and tapping the chip already
+   * opens the Wind panel, which is the better answer on a small screen. The
+   * stored preference is neither read nor written here, so it comes back
+   * untouched on a full-size map.
+   */
+  compact?: boolean;
   /** Nearest observed station injected as ground wind — shown on GND hover. */
   groundStation?: ObservedWindStation;
   /** Forecast ground wind (when no observed station) — shown on GND hover. */
@@ -145,10 +154,12 @@ export default function WindMiniIndicator({
   fetching,
   topOffset = 10,
   groundStation,
-  forecastGround
+  forecastGround,
+  compact = false
 }: WindMiniIndicatorProps) {
   const { formatWindSpeed, windSpeedLabel, formatAltitude, altitudeLabel, formatTemperature } = useUnits();
-  const [collapsed, setCollapsed] = useCollapsed();
+  const [storedCollapsed, setCollapsed] = useCollapsed();
+  const collapsed = compact || storedCollapsed;
   const [groundHover, setGroundHover] = React.useState(false);
   const groundHideTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -263,7 +274,9 @@ export default function WindMiniIndicator({
       >
         <WindArrow direction={ground.direction} speedKts={ground.speedKts} />
         <span style={{ whiteSpace: 'nowrap' }}>{fmtSpeed(ground.speedKts)}</span>
-        <ExpandMoreIcon onClick={toggle} sx={{ ...chevron }} aria-label="Expand winds" />
+        {!compact && (
+          <ExpandMoreIcon onClick={toggle} sx={{ ...chevron }} aria-label="Expand winds" />
+        )}
         {groundTooltip}
       </div>
     );

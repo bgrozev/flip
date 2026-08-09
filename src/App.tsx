@@ -3,6 +3,8 @@ import {
   Adjust as AdjustIcon,
   Air as AirIcon,
   Crop as CropIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
   FavoriteSharp as FavoriteIcon,
   Flag as FlagIcon,
   Groups as GroupsIcon,
@@ -1020,6 +1022,9 @@ function DashboardContent() {
       settings={modeSettings}
       pointTooltips={hasFeature(mode, 'pointTooltips')}
       layers={mode.mapLayers}
+      // On a phone the map shares the screen with the open panel, so the
+      // corner overlays have to give the strip back.
+      compactOverlays={isMobile && activePanel !== null && !focusMap}
       shortcutHint={{
         show: !isMobile && !focusMap,
         onOpen: () => setShortcutsOpen(true)
@@ -1126,7 +1131,7 @@ function DashboardContent() {
       // reload tiles and lose the camera.
       slots={focusMap ? { ...slots, header: HiddenHeader } : slots}
     >
-      <LayoutWithSidebar box={focusMap ? null : sidebar} map={map} />
+      <LayoutWithSidebar box={focusMap ? null : sidebar} map={map} focusMap={focusMap} />
     </DashboardLayout>
   );
 
@@ -1240,28 +1245,143 @@ function CustomAppTitle({ wind, spot }: { wind?: WindSummaryData; spot?: SpotTex
 interface LayoutWithSidebarProps {
   box: React.ReactNode;
   map: React.ReactNode;
+  /** Focus map: the header is replaced, so the overlap has to be re-measured. */
+  focusMap: boolean;
 }
 
-function LayoutWithSidebar({ box, map }: LayoutWithSidebarProps) {
-  const isMobile = useMediaQuery('(max-width:600px)');
+/**
+ * How far the app bar overhangs the content, in px.
+ *
+ * Toolpad's DashboardLayout reserves ONE toolbar height for `main` and pins the
+ * bar over it. On a phone the bar's contents — the wind summary or the spot,
+ * the mode switch, the presets menu — wrap to a second row and the bar grows
+ * past that reservation, so the top of `main` sits underneath it. On the map
+ * that hid the winds indicator's own header (refresh and collapse included).
+ * Measured rather than assumed: how tall the bar gets depends on what the
+ * active mode puts in it.
+ */
+function useAppBarOverlap(focusMap: boolean): number {
+  const [overlap, setOverlap] = useState(0);
 
-  // On mobile: show either the panel (full-width) or the map — not both
+  useEffect(() => {
+    const bar = document.querySelector('header');
+    const main = document.querySelector('main');
+
+    if (!bar || !main) {
+      setOverlap(0);
+
+      return;
+    }
+
+    // Padding is applied inside `main`, so measuring cannot move either of
+    // these — no feedback loop.
+    const measure = () => setOverlap(Math.max(
+      0,
+      Math.round(bar.getBoundingClientRect().bottom - main.getBoundingClientRect().top)
+    ));
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
+
+    observer.observe(bar);
+    observer.observe(main);
+
+    return () => observer.disconnect();
+  }, [focusMap]);
+
+  return overlap;
+}
+
+/** How much of the mobile content area the map keeps while a panel is open. */
+const MOBILE_MAP_SPLIT = '40%';
+
+/**
+ * The map strip when the split is collapsed. Not zero, deliberately: the map
+ * is never unmounted or given a zero-sized viewport, so its tiles and camera
+ * survive a trip through a panel — which is the whole point of the split.
+ */
+const MOBILE_MAP_PEEK = 88;
+
+function LayoutWithSidebar({ box, map, focusMap }: LayoutWithSidebarProps) {
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const appBarOverlap = useAppBarOverlap(focusMap);
+  // Collapsing is per-session, not persisted: it is a "give me the form" gesture
+  // for one long panel, not a preference. Survives panel navigation because this
+  // component stays mounted.
+  const [mapCollapsed, setMapCollapsed] = useState(false);
+
+  // On mobile the panel used to REPLACE the map, which broke seeing what an
+  // edit does and tore the map down on every panel visit (tiles reload, camera
+  // lost). They now split the screen: the map keeps the top, the panel scrolls
+  // below it, and the divider collapses the map to a strip when the form needs
+  // the room.
   if (isMobile) {
     return (
-      <Box sx={{ width: '100%', height: '100%', overflow: 'auto', pb: '56px' }}>
-        {box ? (
-          <Box sx={{ px: 2, pt: 2 }}>
-            {box}
-          </Box>
-        ) : (
-          map
+      <Box
+        sx={{
+          width: '100%',
+          height: '100%',
+          boxSizing: 'border-box',
+          pt: `${appBarOverlap}px`,
+          pb: '56px',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            overflow: 'hidden',
+            flex: box
+              ? `0 0 ${mapCollapsed ? `${MOBILE_MAP_PEEK}px` : MOBILE_MAP_SPLIT}`
+              : '1 1 auto',
+            minHeight: 0
+          }}
+        >
+          {map}
+        </Box>
+        {box && (
+          <>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                flexShrink: 0,
+                borderTop: 1,
+                borderBottom: 1,
+                borderColor: 'divider',
+                bgcolor: 'background.paper'
+              }}
+            >
+              <Tooltip title={mapCollapsed ? 'Show more map' : 'Show more panel'}>
+                <IconButton
+                  size="small"
+                  aria-label={mapCollapsed ? 'Show more map' : 'Show more panel'}
+                  onClick={() => setMapCollapsed(v => !v)}
+                  sx={{ py: 0 }}
+                >
+                  {mapCollapsed ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Box sx={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto', px: 2, pt: 2 }}>
+              {box}
+            </Box>
+          </>
         )}
       </Box>
     );
   }
 
   return (
-    <Stack direction="row" spacing={2} sx={{ width: '100%', height: '100%' }}>
+    <Stack
+      direction="row"
+      spacing={2}
+      sx={{ width: '100%', height: '100%', boxSizing: 'border-box', pt: `${appBarOverlap}px` }}
+    >
       {box && (
         <Box
           sx={{

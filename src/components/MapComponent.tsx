@@ -60,6 +60,11 @@ interface MapComponentProps {
   layers?: readonly MapLayerId[];
   /** Wind-trust verdict for the top-of-map status banner (hidden when fresh). */
   windTrust?: { trust: WindTrust; forecastTime?: Date };
+  /**
+   * The map is sharing the screen with a panel (phone split). Corner overlays
+   * shrink so they don't cover the strip of map that is left.
+   */
+  compactOverlays?: boolean;
   /** Compact winds indicator overlay data (gated by settings.displayMapWinds). */
   /** One-time "press ? for shortcuts" nudge; omitted where it makes no sense. */
   shortcutHint?: {
@@ -102,7 +107,8 @@ function MapComponent({
   layers = MAP_LAYER_IDS,
   mapWinds,
   shortcutHint,
-  windTrust
+  windTrust,
+  compactOverlays = false
 }: MapComponentProps) {
   const has = (layer: MapLayerId) => layers.includes(layer);
   const {
@@ -183,6 +189,7 @@ function MapComponent({
             fetching={mapWinds.fetching}
             groundStation={mapWinds.groundStation}
             forecastGround={mapWinds.forecastGround}
+            compact={compactOverlays}
             topOffset={windTrust && windTrust.trust.level !== 'fresh' ? 46 : 10}
           />
         </MapControl>
