@@ -289,6 +289,7 @@ writing a new look.
 | Thing | Use | Notes |
 |---|---|---|
 | A number | `components/NumberField` | Floating label, unit inside, helper text free for a bound. Bounds required (`limits`) unless the value is cyclic (`wrap`), and the type enforces the choice. 220px alone; `fullWidth` when sharing a row. |
+| A prefilled field | `components/selectOnFocus` | `onFocus` handler selecting the value, so the next keystroke replaces it. `NumberField` applies it already; use it directly on what cannot be one — a coordinate, the current name in a rename dialog. Not on free text or a native date/time input. |
 | A section | `components/PanelSection` / `SectionHeading` | Uppercase caption, optional action on the heading row. The Accordion (Flocking) is only for sections long enough to be worth collapsing. |
 | A folded section | `components/DisclosureRow` | Chevron carries the state, so the label never renames itself. |
 | A panel title | the App panel header | Panels never render their own — Courses used to, and said "Courses" twice. Panel-scoped actions (Wind's refresh, Courses' New) go in the header or on a section heading. |

@@ -29,6 +29,8 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { Preset } from '../types';
 
+import selectOnFocus from './selectOnFocus';
+
 interface PresetSelectorProps {
   presets: Preset[];
   activePresetId: string | null;
@@ -283,6 +285,7 @@ export default function PresetSelector({
             variant="outlined"
             value={inputName}
             onChange={e => setInputName(e.target.value)}
+            onFocus={selectOnFocus}
             onKeyDown={e => e.key === 'Enter' && handleRenameConfirm()}
           />
         </DialogContent>

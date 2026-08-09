@@ -54,6 +54,7 @@ import { LatLng } from '../types';
 import { useAppState, useCopySpot, useUnits } from '../hooks';
 
 import NumberField from './NumberField';
+import selectOnFocus from './selectOnFocus';
 
 // FWC's presets (Input.kt): descent / horizontal, mph
 const PRESETS = [
@@ -749,6 +750,7 @@ export default function FlockingComponent({
                     placeholder={`Corridor ${i + 1}`}
                     value={c.name}
                     onChange={e => setCorridor(i, { name: e.target.value })}
+                    onFocus={selectOnFocus}
                     inputProps={{ 'aria-label': `Corridor ${i + 1} name` }}
                     sx={{ flex: 1, minWidth: 0 }}
                   />

@@ -24,6 +24,8 @@ import React, { useEffect, useState } from 'react';
 
 import { NumericLimits, clampNumber } from '../core/validation';
 
+import selectOnFocus from './selectOnFocus';
+
 /**
  * How wide a numeric field gets. A three- or four-digit number in a 400 px
  * panel does not need the whole width, and a column of full-width boxes
@@ -123,7 +125,7 @@ export default function NumberField({
       fullWidth={fullWidth}
       value={text}
       onChange={handleChange}
-      onFocus={event => event.target.select()}
+      onFocus={selectOnFocus}
       onBlur={handleBlur}
       helperText={helperText}
       sx={fullWidth ? undefined : { width: NUMBER_FIELD_WIDTH, maxWidth: '100%' }}

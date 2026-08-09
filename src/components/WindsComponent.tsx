@@ -36,6 +36,7 @@ import { useAppState, useUnits } from '../hooks';
 import WindComparison from './WindComparison';
 import DisclosureRow from './DisclosureRow';
 import { SectionHeading } from './PanelSection';
+import selectOnFocus from './selectOnFocus';
 import { LatLng, ObservedWindStation } from '../types';
 import {
   DaSeverity,
@@ -101,11 +102,6 @@ const FEET_PER_MILE = 5280;
 
 const EDIT_CELL_SX = { px: 0.5 };
 const NUMBER_FIELD_SX = { width: '100%', minWidth: 56, '& input': { px: 0.75 } };
-
-/** Select a field's value on focus: these are retyped, not edited in place. */
-function selectOnFocus(e: React.FocusEvent<HTMLInputElement>): void {
-  e.target.select();
-}
 
 /** Windy deep link for a location: `?lat,lng,zoom`. */
 function windyUrl({ lat, lng }: LatLng): string {

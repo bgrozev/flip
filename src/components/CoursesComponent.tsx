@@ -45,6 +45,7 @@ import { downloadCourseKmz } from '../util/exportKmz';
 import { AltitudeUnit } from '../core/units';
 
 import NumberField from './NumberField';
+import selectOnFocus from './selectOnFocus';
 import { SectionHeading } from './PanelSection';
 
 const M_PER_FT = 0.3048;
@@ -302,6 +303,7 @@ function CoursesComponent({
             fullWidth
             value={editName}
             onChange={e => setEditName(e.target.value)}
+            onFocus={selectOnFocus}
             onBlur={commitName}
             onKeyDown={e => { if (e.key === 'Enter') commitName(); }}
           />
@@ -347,7 +349,7 @@ function CoursesComponent({
               size="small"
               value={editLat}
               onChange={e => setEditLat(e.target.value)}
-              onFocus={() => { latFocusedRef.current = true; }}
+              onFocus={e => { latFocusedRef.current = true; selectOnFocus(e); }}
               onBlur={() => { latFocusedRef.current = false; commitLat(); }}
               onKeyDown={e => { if (e.key === 'Enter') commitLat(); }}
               sx={{ flex: 1 }}
@@ -357,7 +359,7 @@ function CoursesComponent({
               size="small"
               value={editLng}
               onChange={e => setEditLng(e.target.value)}
-              onFocus={() => { lngFocusedRef.current = true; }}
+              onFocus={e => { lngFocusedRef.current = true; selectOnFocus(e); }}
               onBlur={() => { lngFocusedRef.current = false; commitLng(); }}
               onKeyDown={e => { if (e.key === 'Enter') commitLng(); }}
               sx={{ flex: 1 }}

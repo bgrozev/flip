@@ -50,6 +50,8 @@ import { PlaceSearchLoader, resolvePlaceSuggestion, searchPlaceSuggestions } fro
 import { Dropzone, MapProvider, Place, PlaceSuggestion } from '../types';
 import { findClosestDropzone } from '../util/dropzones';
 
+import selectOnFocus from './selectOnFocus';
+
 /** Below this a geocoder query is noise; the local list is doing the work. */
 const MIN_SEARCH_CHARS = 3;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -434,6 +436,7 @@ function NameDialog({
             label="Name"
             value={name}
             onChange={event => setName(event.target.value)}
+            onFocus={selectOnFocus}
           />
         </DialogContent>
         <DialogActions>

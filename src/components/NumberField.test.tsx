@@ -77,6 +77,22 @@ describe('NumberField', () => {
     expect(input.max).toBe('');
   });
 
+  // These are retyped wholesale far more often than edited in place, so the
+  // next keystroke should replace the value rather than append to it.
+  // (Asserted through `select` rather than the selection offsets: a
+  // `type=number` input does not expose them.)
+  it('selects its value on focus', () => {
+    const select = vi.spyOn(HTMLInputElement.prototype, 'select');
+    const { input } = renderField();
+
+    fireEvent.focus(input);
+
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(select.mock.instances[0]).toBe(input);
+
+    select.mockRestore();
+  });
+
   it('follows the value when it changes from outside', () => {
     const { rerender } = render(
       <NumberField label="Depth" value={300} limits={LIMITS} onChange={vi.fn()} />
