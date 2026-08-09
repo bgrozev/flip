@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
-import { CustomLocation, Dropzone } from '../types';
+import { CustomLocation, Dropzone, Place } from '../types';
 
 import {
+  NO_COUNTRY_GROUP,
   buildPlaces,
+  dropzonePlaceId,
+  groupPlacesByCountry,
   normalizeForSearch,
   placeModeTargets,
   placeNameFromId,
@@ -217,5 +220,37 @@ describe('placeNameFromId', () => {
   it('has no name for no place', () => {
     expect(placeNameFromId(null)).toBeNull();
     expect(placeNameFromId('dz:')).toBeNull();
+  });
+});
+
+describe('groupPlacesByCountry', () => {
+  const place = (name: string, country?: string): Place => ({
+    id: dropzonePlaceId(name), kind: 'dropzone', name, lat: 0, lng: 0, ...country ? { country } : {}
+  });
+
+  it('groups by country, alphabetically inside and out', () => {
+    const groups = groupPlacesByCountry([
+      place('Zebra', 'United States'),
+      place('Alpha', 'Spain'),
+      place('Beta', 'United States')
+    ]);
+
+    expect(groups.map(group => group.country)).toEqual(['Spain', 'United States']);
+    expect(groups[1].places.map(entry => entry.name)).toEqual(['Beta', 'Zebra']);
+  });
+
+  // The browse view is the one place every dropzone must be reachable from,
+  // so an entry with no country cannot simply be dropped.
+  it('collects the countryless into one group, last', () => {
+    const groups = groupPlacesByCountry([place('Nowhere'), place('Alpha', 'Spain')]);
+
+    expect(groups.map(group => group.country)).toEqual(['Spain', NO_COUNTRY_GROUP]);
+    expect(groups[1].places.map(entry => entry.name)).toEqual(['Nowhere']);
+  });
+
+  it('treats a blank country as no country', () => {
+    const groups = groupPlacesByCountry([place('Blank', '   ')]);
+
+    expect(groups.map(group => group.country)).toEqual([NO_COUNTRY_GROUP]);
   });
 });

@@ -317,6 +317,25 @@ export interface Place {
   country?: string;
 }
 
+/**
+ * A place the user picked recently, stored as a snapshot (`flip.places.recent`).
+ *
+ * Not a reference like a favorite: a recent may be a geocoder hit, which has
+ * no id in any database. `id` is the `Place.id` where there is one and empty
+ * otherwise, and is what re-selecting uses to restore the place's memory.
+ */
+export interface RecentPlace {
+  /** `Place.id`, or empty for a place that belongs to no database. */
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  /** Usual landing heading, where the place knew one. */
+  direction?: number;
+  /** Where it is, in words — already formatted, since a hit has no fields. */
+  subtitle?: string;
+}
+
 /** A manoeuvre track saved by the user ("My tracks"); keyed by name. */
 export interface StoredTrack {
   name: string;

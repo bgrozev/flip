@@ -221,3 +221,45 @@ describe('shifted letters', () => {
     expect(without.some(s => s.id === 'manoeuvre.mirror')).toBe(false);
   });
 });
+
+// The final heading has no input field any more, so these ARE the interface.
+describe('the heading bindings', () => {
+  const keysFor = (id: string) => SHORTCUTS.find(shortcut => shortcut.id === id)?.keys;
+
+  it('has a coarse and a fine step, in both directions', () => {
+    expect(keysFor('target.rotateLeft')).toEqual(['<']);
+    expect(keysFor('target.rotateRight')).toEqual(['>']);
+    expect(keysFor('target.rotateLeftFine')).toEqual([',']);
+    expect(keysFor('target.rotateRightFine')).toEqual(['.']);
+  });
+
+  it('still lands into wind on one key', () => {
+    expect(keysFor('target.upwind')).toEqual(['u']);
+  });
+
+  // `,` used to open Settings; the fine step took it, so Settings moved.
+  it('leaves Settings somewhere that is not the fine step', () => {
+    const settings = keysFor('panel.settings');
+
+    expect(settings).toEqual(['shift+s']);
+    expect(settings).not.toContain(',');
+  });
+
+  it('binds every heading key exactly once across the whole map', () => {
+    const combos = SHORTCUTS.flatMap(shortcut => shortcut.keys);
+
+    for (const key of [',', '.', '<', '>', 'u', 'shift+s']) {
+      expect(combos.filter(combo => combo === key)).toHaveLength(1);
+    }
+  });
+
+  // They belong to the target's heading, which flocking does not have.
+  it('hides them where the final heading does not apply', () => {
+    const visible = visibleShortcuts({
+      navPanels: ['flocking', 'target'], features: [], headingRelevant: false
+    });
+
+    expect(visible.some(shortcut => shortcut.id.startsWith('target.rotate'))).toBe(false);
+    expect(visible.some(shortcut => shortcut.id === 'target.upwind')).toBe(false);
+  });
+});

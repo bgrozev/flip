@@ -28,7 +28,9 @@ import {
   migrateTargetsByMode,
   migrateTargetsByPlace,
   migrateTouchedSettings,
-  seedTouchedSettings
+  seedTouchedSettings,
+  MAX_RECENT_PLACES,
+  migrateRecentPlaces
 } from './model';
 
 const GARBAGE: unknown[] = [
@@ -866,5 +868,59 @@ describe('migrateStoredWinds', () => {
     expect(restored!.winds[0].validTime).toBeInstanceOf(Date);
     expect(codec.parse('garbage')).toBeNull();
     expect(codec.parse('{"schemaVersion":1,"doc":{"winds":[]}}')).toBeNull();
+  });
+});
+
+describe('migrateRecentPlaces', () => {
+  const entry = (over: Record<string, unknown> = {}) =>
+    ({ id: 'dz:A', name: 'A', lat: 1, lng: 2, ...over });
+
+  it('keeps well-formed entries in order', () => {
+    const recents = migrateRecentPlaces([entry(), entry({ id: 'dz:B', name: 'B' })]);
+
+    expect(recents.map(place => place.name)).toEqual(['A', 'B']);
+  });
+
+  it('drops entries with no name or no position', () => {
+    expect(migrateRecentPlaces([
+      entry({ name: '' }),
+      entry({ lat: 'x' }),
+      { id: 'dz:C' },
+      'nonsense'
+    ])).toEqual([]);
+  });
+
+  // The list is an MRU, so the first occurrence is the current one.
+  it('collapses duplicates, keeping the earlier position', () => {
+    const recents = migrateRecentPlaces([
+      entry({ lat: 1 }),
+      entry({ lat: 9 })
+    ]);
+
+    expect(recents).toHaveLength(1);
+    expect(recents[0].lat).toBe(1);
+  });
+
+  // A geocoder hit has no id, so the name is all there is to key it on.
+  it('keys an id-less entry by its name', () => {
+    const recents = migrateRecentPlaces([
+      { id: '', name: 'A field', lat: 1, lng: 2 },
+      { id: '', name: 'A field', lat: 3, lng: 4 },
+      { id: '', name: 'Another', lat: 5, lng: 6 }
+    ]);
+
+    expect(recents.map(place => place.name)).toEqual(['A field', 'Another']);
+  });
+
+  it('caps the list', () => {
+    const many = Array.from({ length: MAX_RECENT_PLACES + 5 }, (_v, i) =>
+      entry({ id: `dz:${i}`, name: `DZ ${i}` }));
+
+    expect(migrateRecentPlaces(many)).toHaveLength(MAX_RECENT_PLACES);
+  });
+
+  it('returns nothing for junk', () => {
+    expect(migrateRecentPlaces(undefined)).toEqual([]);
+    expect(migrateRecentPlaces({ nope: true })).toEqual([]);
   });
 });

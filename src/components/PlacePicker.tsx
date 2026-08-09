@@ -1,16 +1,28 @@
 /**
- * The target picker: one search box over one list.
+ * The place picker, in three states rather than one long list.
  *
- * The list is the user's saved places (starred dropzones and their own saved
- * locations) followed by the known dropzones; typing filters it. The same
- * box also queries the map provider's geocoder, whose hits are appended as
- * their own group — so "where do I want to land" is one control, not a
- * choice between a dropzone dropdown and a separate search box.
+ * It used to render all 274 dropzones unfiltered under the user's saved
+ * places, which is not a list anyone reads — and is why two of this file's
+ * tests need a 15-second timeout. Now:
+ *
+ * - **Idle** shows YOUR PLACES: starred dropzones and your own saved
+ *   locations first, then the ones you picked recently. One list, not two —
+ *   a favorite you just used would otherwise appear in both, and the star on
+ *   each row is what tells them apart (and promotes a recent to a favorite
+ *   where it stands).
+ * - **Searching** filters your places and the dropzones together, and asks
+ *   the map provider's geocoder in the same breath, so "where do I want to
+ *   land" stays one control.
+ * - **Browsing** is the disclosure at the bottom: all the dropzones, grouped
+ *   by country. 41 countries is a list; 274 dropzones is not.
  *
  * Everything works without location permission; "Nearest dropzone" is the
  * only thing that asks for it, and only when tapped.
  */
 import ClearIcon from '@mui/icons-material/Clear';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import HistoryIcon from '@mui/icons-material/History';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -44,12 +56,19 @@ import {
 } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { dropzonePlaceId, rankPlaces } from '../core/places';
-import { useAppState, useGeolocation, useSavedPlaces, useTarget } from '../hooks';
+import { dropzonePlaceId, groupPlacesByCountry, rankPlaces } from '../core/places';
+import {
+  useAppState,
+  useGeolocation,
+  useRecentPlaces,
+  useSavedPlaces,
+  useTarget
+} from '../hooks';
 import { PlaceSearchLoader, resolvePlaceSuggestion, searchPlaceSuggestions } from '../map';
-import { Dropzone, MapProvider, Place, PlaceSuggestion } from '../types';
+import { Dropzone, MapProvider, Place, PlaceSuggestion, RecentPlace } from '../types';
 import { findClosestDropzone } from '../util/dropzones';
 
+import DisclosureRow from './DisclosureRow';
 import selectOnFocus from './selectOnFocus';
 
 /** Below this a geocoder query is noise; the local list is doing the work. */
@@ -72,11 +91,44 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
   const provider = settings.mapProvider;
   const { places, isFavorite, toggleFavorite, saveCustom, renameCustom, removeCustom } =
     useSavedPlaces();
+  const { recents, record } = useRecentPlaces();
   const [query, setQuery] = useState('');
+  const [browsing, setBrowsing] = useState(false);
 
-  const matches = useMemo(() => rankPlaces(query, places), [query, places]);
-  const saved = matches.filter(place => place.kind !== 'dropzone');
-  const dropzones = matches.filter(place => place.kind === 'dropzone');
+  const searchingList = query.trim() !== '';
+
+  const matches = useMemo(
+    () => (searchingList ? rankPlaces(query, places) : []),
+    [searchingList, query, places]
+  );
+  const savedMatches = matches.filter(place => place.kind !== 'dropzone');
+  const dropzoneMatches = matches.filter(place => place.kind === 'dropzone');
+
+  // Every dropzone, INCLUDING the starred ones. `buildPlaces` moves a
+  // favourite into the saved group, which is right for the search results and
+  // wrong here: a browse list called "All dropzones" that quietly loses one
+  // each time you star it is lying, and its country counts go with it.
+  const allDropzones = useMemo(
+    () => places.filter(place => place.kind !== 'custom'),
+    [places]
+  );
+  const countries = useMemo(
+    () => (browsing ? groupPlacesByCountry(allDropzones) : []),
+    [browsing, allDropzones]
+  );
+
+  // Your places: saved first (they are a decision), then the ones you merely
+  // passed through. A recent already saved is not repeated — it is the same
+  // place, and the star on its row is where that distinction lives.
+  const saved = useMemo(
+    () => places.filter(place => place.kind !== 'dropzone'),
+    [places]
+  );
+  const unsavedRecents = useMemo(() => {
+    const savedIds = new Set(saved.map(place => place.id));
+
+    return recents.filter(entry => entry.id === '' || !savedIds.has(entry.id));
+  }, [recents, saved]);
 
   // The geocoder may not be usable yet (Google's lives in the Maps JS API,
   // which on mobile nothing else has loaded); re-run the query once it is.
@@ -85,6 +137,14 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
   const { suggestions, searching } = usePlaceSearch(query, provider, geocoderReady);
 
   const handleSelectPlace = (place: Place) => {
+    record({
+      id: place.id,
+      name: place.name,
+      lat: place.lat,
+      lng: place.lng,
+      ...place.direction !== undefined ? { direction: place.direction } : {},
+      ...placeLocationLabel(place) ? { subtitle: placeLocationLabel(place) } : {}
+    });
     selectLocation(
       { lat: place.lat, lng: place.lng },
       headingFor(place, upwindHeading),
@@ -92,10 +152,37 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
     );
   };
 
+  // A recent is a snapshot, so it can be re-selected even when whatever it
+  // came from is gone. Where it still resolves to a place, the place wins:
+  // it carries the per-mode config and the corrected coordinates.
+  const handleSelectRecent = (entry: RecentPlace) => {
+    const place = entry.id === '' ? undefined : places.find(candidate => candidate.id === entry.id);
+
+    if (place) {
+      handleSelectPlace(place);
+
+      return;
+    }
+
+    record(entry);
+    selectLocation(
+      { lat: entry.lat, lng: entry.lng },
+      entry.direction ?? upwindHeading ?? undefined,
+      entry.id === '' ? undefined : { id: entry.id }
+    );
+  };
+
   const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
     const position = await resolvePlaceSuggestion(suggestion.id, provider);
 
     if (position) {
+      record({
+        id: '',
+        name: suggestion.label,
+        lat: position.lat,
+        lng: position.lng,
+        ...suggestion.detail ? { subtitle: suggestion.detail } : {}
+      });
       selectLocation(position, upwindHeading ?? undefined);
     }
   };
@@ -125,79 +212,127 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
       />
 
       <NearestDropzoneButton
-        onFound={dz => selectLocation(
-          { lat: dz.lat, lng: dz.lng },
-          dz.direction ?? upwindHeading ?? undefined,
-          { id: dropzonePlaceId(dz.name), modes: dz.modes }
-        )}
+        onFound={dz => handleSelectPlace({
+          id: dropzonePlaceId(dz.name),
+          kind: 'dropzone',
+          name: dz.name,
+          lat: dz.lat,
+          lng: dz.lng,
+          ...dz.direction !== undefined ? { direction: dz.direction } : {},
+          ...dz.modes ? { modes: dz.modes } : {},
+          ...dz.town ? { town: dz.town } : {},
+          ...dz.region ? { region: dz.region } : {},
+          ...dz.country ? { country: dz.country } : {}
+        })}
       />
 
-      <List
-        dense
-        disablePadding
-        sx={{ maxHeight: 360, overflowY: 'auto' }}
-        aria-label="Places"
-      >
-        {saved.length > 0 && (
-          <PlaceGroup
-            title="My places"
-            places={saved}
-            onSelect={handleSelectPlace}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            onRename={renameCustom}
-            onMoveHere={name => saveCustom({
-              name,
-              lat: target.target.lat,
-              lng: target.target.lng,
-              direction: target.finalHeading
-            })}
-            onRemove={removeCustom}
-          />
-        )}
+      {searchingList ? (
+        <List dense disablePadding sx={{ maxHeight: 360, overflowY: 'auto' }} aria-label="Search results">
+          {savedMatches.length > 0 && (
+            <PlaceGroup
+              title="Your places"
+              places={savedMatches}
+              onSelect={handleSelectPlace}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onRename={renameCustom}
+              onMoveHere={name => saveCustom({
+                name,
+                lat: target.target.lat,
+                lng: target.target.lng,
+                direction: target.finalHeading
+              })}
+              onRemove={removeCustom}
+            />
+          )}
 
-        {dropzones.length > 0 && (
-          <PlaceGroup
-            title="Dropzones"
-            places={dropzones}
-            onSelect={handleSelectPlace}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-          />
-        )}
+          {dropzoneMatches.length > 0 && (
+            <PlaceGroup
+              title="Dropzones"
+              places={dropzoneMatches}
+              onSelect={handleSelectPlace}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+            />
+          )}
 
-        {matches.length === 0 && !searching && suggestions.length === 0 && (
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Typography variant="body2" color="text.secondary">
-              {query.length < MIN_SEARCH_CHARS
-                ? 'No dropzone matches. Type a bit more to search the map.'
-                : 'Nothing found.'}
-            </Typography>
-          </Box>
-        )}
+          {matches.length === 0 && !searching && suggestions.length === 0 && (
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                {query.trim().length < MIN_SEARCH_CHARS
+                  ? 'No dropzone matches. Type a bit more to search the map.'
+                  : 'Nothing found.'}
+              </Typography>
+            </Box>
+          )}
 
-        {(suggestions.length > 0 || searching) && (
-          <>
-            <ListSubheader disableSticky>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <span>Search results</span>
-                {searching && <CircularProgress size={12} />}
-              </Stack>
-            </ListSubheader>
-            {suggestions.map(suggestion => (
-              <ListItemButton
-                key={suggestion.id}
-                onClick={() => handleSelectSuggestion(suggestion)}
-              >
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <PlaceIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={suggestion.label} secondary={suggestion.detail} />
-              </ListItemButton>
+          {(suggestions.length > 0 || searching) && (
+            <>
+              <ListSubheader disableSticky>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <span>Search results</span>
+                  {searching && <CircularProgress size={12} />}
+                </Stack>
+              </ListSubheader>
+              {suggestions.map(suggestion => (
+                <ListItemButton
+                  key={suggestion.id}
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <PlaceIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={suggestion.label} secondary={suggestion.detail} />
+                </ListItemButton>
+              ))}
+            </>
+          )}
+        </List>
+      ) : (
+        <YourPlaces
+          saved={saved}
+          recents={unsavedRecents}
+          onSelectPlace={handleSelectPlace}
+          onSelectRecent={handleSelectRecent}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          onRename={renameCustom}
+          onMoveHere={name => saveCustom({
+            name,
+            lat: target.target.lat,
+            lng: target.target.lng,
+            direction: target.finalHeading
+          })}
+          onRemove={removeCustom}
+        />
+      )}
+
+      <Box>
+        <DisclosureRow
+          label={`All dropzones (${allDropzones.length})`}
+          open={browsing}
+          onToggle={() => setBrowsing(open => !open)}
+        />
+        {browsing && (
+          <List
+            dense
+            disablePadding
+            sx={{ maxHeight: 360, overflowY: 'auto' }}
+            aria-label="Dropzones by country"
+          >
+            {countries.map(group => (
+              <CountryGroup
+                key={group.country}
+                country={group.country}
+                places={group.places}
+                onSelect={handleSelectPlace}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
-          </>
+          </List>
         )}
-      </List>
+      </Box>
 
       <SaveCurrentTargetButton
         onSave={name => saveCustom({
@@ -208,6 +343,132 @@ export default function PlacePicker({ upwindHeading }: PlacePickerProps) {
         })}
       />
     </Stack>
+  );
+}
+
+interface YourPlacesProps {
+  saved: Place[];
+  recents: RecentPlace[];
+  onSelectPlace: (place: Place) => void;
+  onSelectRecent: (entry: RecentPlace) => void;
+  isFavorite: (name: string) => boolean;
+  onToggleFavorite: (name: string) => void;
+  onRename: (oldName: string, newName: string) => void;
+  onMoveHere: (name: string) => void;
+  onRemove: (name: string) => void;
+}
+
+/**
+ * One list, saved first. The two halves are not separately headed on purpose:
+ * a favorite you used an hour ago is both saved and recent, and two headed
+ * lists would either show it twice or need an invisible rule about which one
+ * wins. Position says which is which, and the star says how to change it.
+ */
+function YourPlaces({
+  saved,
+  recents,
+  onSelectPlace,
+  onSelectRecent,
+  isFavorite,
+  onToggleFavorite,
+  onRename,
+  onMoveHere,
+  onRemove
+}: YourPlacesProps) {
+  if (saved.length === 0 && recents.length === 0) {
+    return (
+      <Box sx={{ px: 1, py: 1.5 }}>
+        <Typography variant="body2" color="text.secondary">
+          Search for a dropzone, or open the list below. Star one and it will
+          be waiting here next time.
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <List dense disablePadding sx={{ maxHeight: 360, overflowY: 'auto' }} aria-label="Your places">
+      <ListSubheader disableSticky>Your places</ListSubheader>
+      {saved.map(place => (
+        <ListItemButton key={place.id} onClick={() => onSelectPlace(place)}>
+          <ListItemText primary={place.name} secondary={placeLocationLabel(place)} />
+          {place.website && <WebsiteLink place={place} />}
+          {place.kind === 'custom' ? (
+            <CustomPlaceMenu
+              place={place}
+              onRename={onRename}
+              onMoveHere={onMoveHere}
+              onRemove={onRemove}
+            />
+          ) : (
+            <FavoriteToggle
+              name={place.name}
+              favorite={isFavorite(place.name)}
+              onToggle={onToggleFavorite}
+            />
+          )}
+        </ListItemButton>
+      ))}
+      {recents.map(entry => (
+        <ListItemButton key={entry.id || `name:${entry.name}`} onClick={() => onSelectRecent(entry)}>
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <HistoryIcon fontSize="small" color="disabled" />
+          </ListItemIcon>
+          <ListItemText primary={entry.name} secondary={entry.subtitle} />
+          {/* Only a dropzone can be starred — a favorite names one, so a
+              geocoder hit has nothing to name. Saving one is what
+              "Save current target" is for. */}
+          {entry.id.startsWith('dz:') && (
+            <FavoriteToggle
+              name={entry.name}
+              favorite={isFavorite(entry.name)}
+              onToggle={onToggleFavorite}
+            />
+          )}
+        </ListItemButton>
+      ))}
+    </List>
+  );
+}
+
+interface CountryGroupProps {
+  country: string;
+  places: Place[];
+  onSelect: (place: Place) => void;
+  isFavorite: (name: string) => boolean;
+  onToggleFavorite: (name: string) => void;
+}
+
+/** One country, collapsed until asked: the whole point of grouping. */
+function CountryGroup({
+  country,
+  places,
+  onSelect,
+  isFavorite,
+  onToggleFavorite
+}: CountryGroupProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <ListItemButton onClick={() => setOpen(value => !value)}>
+        <ListItemIcon sx={{ minWidth: 36 }}>
+          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        </ListItemIcon>
+        <ListItemText primary={country} secondary={`${places.length}`} />
+      </ListItemButton>
+      {open && places.map(place => (
+        <ListItemButton key={place.id} sx={{ pl: 5 }} onClick={() => onSelect(place)}>
+          <ListItemText primary={place.name} secondary={placeLocationLabel(place)} />
+          {place.website && <WebsiteLink place={place} />}
+          <FavoriteToggle
+            name={place.name}
+            favorite={isFavorite(place.name)}
+            onToggle={onToggleFavorite}
+          />
+        </ListItemButton>
+      ))}
+    </>
   );
 }
 
@@ -401,6 +662,11 @@ interface NameDialogProps {
   onConfirm: (name: string) => void;
 }
 
+/** Keep a click inside a row's dialog from reaching the row underneath. */
+function stopClick(event: React.MouseEvent): void {
+  event.stopPropagation();
+}
+
 function NameDialog({
   open, title, initialName, confirmLabel, onClose, onConfirm
 }: NameDialogProps) {
@@ -425,7 +691,12 @@ function NameDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+    // A portal renders elsewhere in the DOM but stays a child in the REACT
+    // tree, so a click in here bubbles to whatever contains the dialog — and
+    // this one is rendered inside a place row, whose job is to select the
+    // place. Confirming a rename therefore also moved the target to it. The
+    // `Menu` beside it already guards this the same way.
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" onClick={stopClick}>
       <form onSubmit={submit}>
         <DialogTitle>{title}</DialogTitle>
         <DialogContent>

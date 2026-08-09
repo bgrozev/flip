@@ -310,3 +310,51 @@ export function rankPlaces(query: string, places: readonly Place[]): Place[] {
     })
     .map(entry => entry.place);
 }
+
+/**
+ * The dropzone list grouped by country, for browsing rather than searching.
+ *
+ * 274 dropzones is not a list anyone reads; 41 countries is. The group is the
+ * first thing shown and the dropzones inside it come second, which turns
+ * "scroll until you see it" into two decisions.
+ *
+ * Countries sort alphabetically, and entries with no country at all collect
+ * under a final "Elsewhere" so nothing can go missing from the browse view.
+ */
+export const NO_COUNTRY_GROUP = 'Elsewhere';
+
+export interface PlaceGroupByCountry {
+  country: string;
+  places: Place[];
+}
+
+export function groupPlacesByCountry(places: readonly Place[]): PlaceGroupByCountry[] {
+  const groups = new Map<string, Place[]>();
+
+  places.forEach(place => {
+    const country = place.country?.trim() || NO_COUNTRY_GROUP;
+    const group = groups.get(country);
+
+    if (group) {
+      group.push(place);
+    } else {
+      groups.set(country, [place]);
+    }
+  });
+
+  return [...groups.entries()]
+    .map(([country, entries]): PlaceGroupByCountry => ({
+      country,
+      places: [...entries].sort((a, b) => a.name.localeCompare(b.name))
+    }))
+    .sort((a, b) => {
+      if (a.country === NO_COUNTRY_GROUP) {
+        return 1;
+      }
+      if (b.country === NO_COUNTRY_GROUP) {
+        return -1;
+      }
+
+      return a.country.localeCompare(b.country);
+    });
+}

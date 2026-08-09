@@ -131,23 +131,28 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
   },
   {
     id: 'target',
-    title: 'Target and places',
-    summary: 'Choosing where you land, and which way you land.',
+    title: 'Location',
+    summary: 'Choosing which dropzone you are planning at.',
     panel: 'target',
     blocks: [
       {
         kind: 'terms',
         items: [
-          { term: 'Search', text: 'One list: your saved places first, then the known dropzones, then anywhere the map can find. Type to filter all of it at once.' },
-          { term: 'Star', text: 'Stars a dropzone into “My places” so it is always at the top.' },
-          { term: 'Save current target', text: 'Saves wherever the target is right now under a name — a back field, a student area, a demo landing.' },
-          { term: 'Nearest dropzone', text: 'Uses your location, and only when you tap it. Everything else works without location permission.' },
-          { term: 'Final heading', text: 'The direction you land in. “Upwind” sets it against the current wind.' }
+          { term: 'The card at the top', text: 'Where you are planning right now. It also says how far you have dragged the target from the dropzone\u2019s own coordinates, with a way to put it back.' },
+          { term: 'Your places', text: 'Starred dropzones and your own saved locations first, then the ones you picked recently. One list \u2014 the star tells you which is which, and moves a place between them.' },
+          { term: 'Search', text: 'Filters your places and the dropzones together, and asks the map at the same time, so a field with no name is found the same way a dropzone is.' },
+          { term: 'All dropzones', text: 'Every dropzone FliP knows, grouped by country. For browsing; searching is faster when you know the name.' },
+          { term: 'Save current target', text: 'Saves wherever the target is right now under a name \u2014 a back field, a student area, a demo landing.' },
+          { term: 'Nearest dropzone', text: 'Uses your location, and only when you tap it. Everything else works without location permission.' }
         ]
       },
       {
         kind: 'note',
-        text: 'Choosing a place moves the target in every mode — the dropzone you are at is not a per-mode thing. Dragging the target or changing the heading only affects the mode you are in.'
+        text: 'Where you LAND is set on the map, not here: drag the target, or shift-click to jump it. The landing direction is the handle that appears when you hover it, or the keyboard \u2014 see the shortcuts for the coarse and fine steps and for landing into wind.'
+      },
+      {
+        kind: 'note',
+        text: 'Choosing a place moves the target in every mode \u2014 the dropzone you are at is not a per-mode thing. Dragging the target or changing the heading only affects the mode you are in.'
       }
     ]
   },

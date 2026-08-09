@@ -75,10 +75,17 @@ import {
   useKeyboardShortcuts,
   useMode,
   usePresets,
+  useSavedPlaces,
   useWinds
 } from './hooks';
 import { Course, FlightPath, LatLng, PanelId, PatternParams, Target, WindSummaryData } from './types';
-import { destinationPoint, hasTargetMovedTooFar, WIND_INVALIDATE_THRESHOLD_FT } from './core/geometry';
+import {
+  destinationPoint,
+  distanceFeet,
+  hasTargetMovedTooFar,
+  WIND_INVALIDATE_THRESHOLD_FT
+} from './core/geometry';
+import { formatDistanceFeet } from './core/units';
 import {
   exitForFixedEnd,
   jumprunFromExit,
@@ -103,6 +110,10 @@ const NUDGE_FT = 25;
 const NUDGE_FAR_FT = 250;
 const FT_TO_M = 0.3048;
 const HEADING_STEP_DEG = 5;
+/** The fine heading step: `,` and `.`, for landing exactly on a runway. */
+const HEADING_FINE_STEP_DEG = 1;
+/** Below this the target counts as "at" the place, and no offset is reported. */
+const PLACE_OFFSET_MIN_FT = 100;
 const NUDGE_BEARINGS: Record<string, number> = {
   arrowup: 0, arrowright: 90, arrowdown: 180, arrowleft: 270
 };
@@ -110,7 +121,7 @@ const NUDGE_BEARINGS: Record<string, number> = {
 const PANEL_NAV: Record<PanelId, { title: string; icon: React.ReactElement }> = {
   pattern: { title: 'Pattern', icon: <CropIcon /> },
   manoeuvre: { title: 'Manoeuvre', icon: <RotateLeftIcon /> },
-  target: { title: 'Target', icon: <AdjustIcon /> },
+  target: { title: 'Location', icon: <AdjustIcon /> },
   wind: { title: 'Wind', icon: <AirIcon /> },
   courses: { title: 'Courses', icon: <FlagIcon /> },
   flocking: { title: 'Flocking', icon: <GroupsIcon /> },
@@ -510,6 +521,41 @@ function DashboardContent() {
       };
   }, [isFlocking, flockingParams.mode, flockingParams.solveCorridors, flocking.solve]);
 
+  // What the Location panel puts at the top: which place, and how far the
+  // target has been dragged off it. The dropzone's own coordinates are only
+  // a starting point (places remember what you moved to), so the offset is
+  // information rather than a fault — with a way back when it was a mistake.
+  const { places: savedPlaces, isFavorite, toggleFavorite } = useSavedPlaces();
+  const activePlace = useMemo(
+    () => savedPlaces.find(place => place.id === activePlaceId) ?? null,
+    [savedPlaces, activePlaceId]
+  );
+  const activePlaceIsFavorite = activePlace ? isFavorite(activePlace.name) : false;
+  const placeOffsetLabel = useMemo(() => {
+    if (!activePlace) {
+      return undefined;
+    }
+
+    const offsetFt = distanceFeet(
+      { lat: activePlace.lat, lng: activePlace.lng },
+      target.target
+    );
+
+    // Below a canopy's own length the target is "there"; saying it moved 12 ft
+    // would be noise on every plan, since dragging it is the normal thing.
+    return offsetFt < PLACE_OFFSET_MIN_FT
+      ? undefined
+      : formatDistanceFeet(offsetFt, modeSettings.units.altitude);
+  }, [activePlace, target.target, modeSettings.units.altitude]);
+  const resetTargetToPlace = useCallback(() => {
+    if (activePlace) {
+      setTarget({
+        target: { lat: activePlace.lat, lng: activePlace.lng },
+        finalHeading: activePlace.direction ?? target.finalHeading
+      });
+    }
+  }, [activePlace, setTarget, target.finalHeading]);
+
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
   // Altitude bands for the map winds indicator: 5k ft for pattern, 15k for
@@ -784,6 +830,8 @@ function DashboardContent() {
     'target.nudgeFar': (combo: string) => nudgeTarget(combo, NUDGE_FAR_FT),
     'target.rotateLeft': () => rotateHeading(-HEADING_STEP_DEG),
     'target.rotateRight': () => rotateHeading(HEADING_STEP_DEG),
+    'target.rotateLeftFine': () => rotateHeading(-HEADING_FINE_STEP_DEG),
+    'target.rotateRightFine': () => rotateHeading(HEADING_FINE_STEP_DEG),
     'target.upwind': () => {
       if (upwindHeading !== null) {
         setTarget({ ...target, finalHeading: upwindHeading });
@@ -851,7 +899,13 @@ function DashboardContent() {
         setTarget={setTarget}
         selectPlace={selectPlace}
         upwindHeading={upwindHeading}
-        headingRelevant={!isFlocking}
+        activePlace={activePlace}
+        placeOffsetLabel={placeOffsetLabel}
+        onResetToPlace={resetTargetToPlace}
+        isFavorite={activePlaceIsFavorite}
+        onToggleFavorite={activePlace?.kind === 'dropzone' || activePlace?.kind === 'favorite'
+          ? () => toggleFavorite(activePlace.name)
+          : undefined}
       />
     );
   } else if (activePanel === 'wind') {

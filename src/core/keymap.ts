@@ -8,6 +8,13 @@
  * Some entries are mouse gestures with no keys (shift-click to move the
  * target). They are here because the overlay is where someone looks to find
  * out what they can do, and "how do I move the target" is that question.
+ *
+ * The final heading has no input field any more — it is the map's rotate
+ * handle and these keys — so the four bindings that set it (`<` `>` coarse,
+ * `,` `.` fine, `u` into wind) are the whole interface for typing one in, and
+ * the overlay is the only place they are written down. Settings gave up `,`
+ * for the fine step and took `shift+s`, which is expressible now that a
+ * shifted letter is its own combo.
  */
 import { PanelId } from '../types';
 
@@ -63,11 +70,11 @@ export const SHORTCUTS: readonly Shortcut[] = [
   // Panels — pressing the key again closes the panel
   { id: 'panel.pattern', keys: ['p'], label: 'Pattern', category: 'panels', panel: 'pattern' },
   { id: 'panel.manoeuvre', keys: ['m'], label: 'Manoeuvre', category: 'panels', panel: 'manoeuvre' },
-  { id: 'panel.target', keys: ['t'], label: 'Target', category: 'panels', panel: 'target' },
+  { id: 'panel.target', keys: ['l'], label: 'Location', category: 'panels', panel: 'target' },
   { id: 'panel.wind', keys: ['w'], label: 'Wind', category: 'panels', panel: 'wind' },
   { id: 'panel.courses', keys: ['c'], label: 'Courses', category: 'panels', panel: 'courses' },
   { id: 'panel.flocking', keys: ['g'], label: 'Flocking', category: 'panels', panel: 'flocking' },
-  { id: 'panel.settings', keys: [','], label: 'Settings', category: 'panels', panel: 'settings' },
+  { id: 'panel.settings', keys: ['shift+s'], label: 'Settings', category: 'panels', panel: 'settings' },
 
   // Pattern
   {
@@ -107,6 +114,14 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     id: 'target.rotateRight',
     keys: ['>'], label: 'Turn the final heading right', category: 'target', headingOnly: true
+  },
+  {
+    id: 'target.rotateLeftFine',
+    keys: [','], label: 'Turn it left one degree', category: 'target', headingOnly: true
+  },
+  {
+    id: 'target.rotateRightFine',
+    keys: ['.'], label: 'Turn it right one degree', category: 'target', headingOnly: true
   },
   { id: 'target.upwind', keys: ['u'], label: 'Land into wind', category: 'target', headingOnly: true },
 

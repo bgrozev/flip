@@ -29,12 +29,18 @@ function renderPicker({
   return setTarget;
 }
 
-/** Row labels in the list, in order, ignoring the group headers. */
-function rowNames(): string[] {
-  return within(screen.getByRole('list', { name: 'Places' }))
+/** Row labels in a named list, in order, ignoring the group headers. */
+function rowNames(listName = 'Search results'): string[] {
+  return within(screen.getByRole('list', { name: listName }))
     .getAllByRole('button')
     .map(row => row.textContent ?? '')
     .filter(text => text !== '');
+}
+
+/** Open the "All dropzones" disclosure, and the named country inside it. */
+function browseCountry(country: string) {
+  fireEvent.click(screen.getByRole('button', { name: /All dropzones/ }));
+  fireEvent.click(screen.getByText(country));
 }
 
 /**
@@ -56,12 +62,63 @@ describe('PlacePicker', () => {
     window.localStorage.clear();
   });
 
-  it('lists the dropzones with no saved places yet', () => {
+  // The panel used to open with all 274 dropzones under the saved ones,
+  // which is not a list anyone reads.
+  it('lists no dropzones until you ask, with nothing saved yet', () => {
     renderPicker();
 
-    expect(screen.getByText('Dropzones')).toBeTruthy();
-    expect(screen.queryByText('My places')).toBeNull();
-    expect(rowNames().some(name => name.includes('Skydive City (ZHills)'))).toBe(true);
+    expect(screen.queryByText('Skydive City (ZHills)')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Your places' })).toBeNull();
+    expect(screen.getByRole('button', { name: /All dropzones/ })).toBeTruthy();
+  });
+
+  it('browses the dropzones by country when asked', () => {
+    renderPicker();
+
+    browseCountry('United States');
+
+    expect(rowNames('Dropzones by country')
+      .some(name => name.includes('Skydive City (ZHills)'))).toBe(true);
+    // A country you did not open stays folded
+    expect(screen.queryByText('Whistler Skydiving Pemberton')).toBeNull();
+  });
+
+  // buildPlaces moves a starred dropzone into the saved group, which must not
+  // take it out of the list that calls itself "all".
+  it('keeps a starred dropzone in the browse list', () => {
+    renderPicker();
+    search('jumptown');
+    fireEvent.click(screen.getByLabelText('Star Jumptown'));
+    search('');
+
+    browseCountry('United States');
+
+    expect(rowNames('Dropzones by country').some(name => name.includes('Jumptown'))).toBe(true);
+  });
+
+  it('remembers what you picked, and offers it back', () => {
+    renderPicker();
+    search('zhills');
+    fireEvent.click(screen.getByText('Skydive City (ZHills)'));
+    search('');
+
+    expect(rowNames('Your places').some(name => name.includes('Skydive City (ZHills)')))
+      .toBe(true);
+  });
+
+  // A place that is both starred and recent is ONE row: position says which
+  // half it is in, and the star is how you move it between them.
+  it('does not list a saved place twice when it is also recent', () => {
+    renderPicker();
+    search('zhills');
+    fireEvent.click(screen.getByLabelText('Star Skydive City (ZHills)'));
+    fireEvent.click(screen.getByText('Skydive City (ZHills)'));
+    search('');
+
+    const rows = rowNames('Your places')
+      .filter(name => name.includes('Skydive City (ZHills)'));
+
+    expect(rows).toHaveLength(1);
   });
 
   it('filters the list as you type, across the whole name', () => {
@@ -116,12 +173,12 @@ describe('PlacePicker', () => {
 
     fireEvent.click(screen.getByLabelText('Star Jumptown'));
 
-    expect(screen.getByText('My places')).toBeTruthy();
+    expect(screen.getByText('Your places')).toBeTruthy();
     expect(screen.queryByText('Dropzones')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Unstar Jumptown'));
 
-    expect(screen.queryByText('My places')).toBeNull();
+    expect(screen.queryByText('Your places')).toBeNull();
     expect(screen.getByText('Dropzones')).toBeTruthy();
   });
 
@@ -134,6 +191,9 @@ describe('PlacePicker', () => {
       </AppStateProvider>
     );
 
+    fireEvent.change(screen.getByLabelText('Search dropzones and places'), {
+      target: { value: 'jumptown' }
+    });
     fireEvent.click(screen.getByLabelText('Star Jumptown'));
     unmount();
 
@@ -143,8 +203,6 @@ describe('PlacePicker', () => {
   });
 
   it('saves the current target as a custom place, then renames and deletes it', async () => {
-    // Timeout bumped: rendering the unfiltered place list (now 339+
-    // dropzones after the CSV import) is slow in jsdom.
     renderPicker();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save current target' }));
@@ -166,11 +224,30 @@ describe('PlacePicker', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
     expect(screen.queryByText('North field')).toBeNull();
-  }, 15000);
+  });
+
+  // A dialog is a portal in the DOM but a CHILD in the React tree, so its
+  // clicks bubble to the row it is rendered inside — and that row selects the
+  // place. Renaming used to move the target as a side effect.
+  it('renaming a place does not also select it', async () => {
+    const selectPlace = vi.fn();
+    const setTarget = renderPicker({ selectPlace });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save current target' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Back field' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitForDialogsToClose();
+
+    fireEvent.click(screen.getByLabelText('Edit Back field'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'North field' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+
+    expect(selectPlace).not.toHaveBeenCalled();
+    expect(setTarget).not.toHaveBeenCalled();
+  });
 
   it('selects a custom place at its own coordinates and heading', () => {
-    // Timeout bumped: rendering the unfiltered place list (now 339+
-    // dropzones after the CSV import) is slow in jsdom.
     const setTarget = vi.fn();
 
     renderPicker({ setTarget });
@@ -185,7 +262,7 @@ describe('PlacePicker', () => {
       target: TARGET.target,
       finalHeading: TARGET.finalHeading
     });
-  }, 15000);
+  });
 
   it('applies a chosen place through selectPlace, not the per-mode setter', () => {
     // App passes the every-mode setter here: which dropzone you are at is
@@ -288,6 +365,7 @@ describe('PlacePicker', () => {
     vi.stubGlobal('navigator', { ...window.navigator, geolocation: undefined });
 
     renderPicker();
+    search('zhills');
 
     expect(rowNames().some(name => name.includes('Skydive City (ZHills)'))).toBe(true);
 

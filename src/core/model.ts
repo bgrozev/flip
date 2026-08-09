@@ -23,6 +23,7 @@ import {
   PatternType,
   PlaceTargets,
   Preset,
+  RecentPlace,
   Settings,
   StoredTrack,
   Target
@@ -66,12 +67,22 @@ export const SCHEMA_VERSION = 1;
 // Defaults
 // ---------------------------------------------------------------------------
 
+/**
+ * Where a brand-new install starts: Skydive City (ZHills), and deliberately
+ * the SAME coordinates and heading as its entry in `util/dropzones.ts`.
+ *
+ * They used to differ by ~250 ft and 90 degrees while `DEFAULT_ACTIVE_PLACE_ID`
+ * paired them as one place, so the Location panel opened on a fresh install
+ * saying "target moved 258 ft from the dropzone" — true, and nobody had moved
+ * it. The dropzone entry is the hand-checked one (it carries a `direction`),
+ * so it wins.
+ */
 export const DEFAULT_TARGET: Target = {
   target: {
-    lat: 28.21887,
-    lng: -82.15122
+    lat: 28.21952,
+    lng: -82.15154
   },
-  finalHeading: 270
+  finalHeading: 180
 };
 
 export const DEFAULT_PATTERN_PARAMS: PatternParams = {
@@ -293,6 +304,13 @@ export function migratePatternParamsByMode(raw: unknown): Record<string, Pattern
 
   return params;
 }
+
+/**
+ * How many recents to keep. Short on purpose: the list sits above the search
+ * box and competes with it for the top of the panel, and a recents list you
+ * have to scan is not faster than typing three letters.
+ */
+export const MAX_RECENT_PLACES = 6;
 
 const PATTERN_TYPES: readonly PatternType[] = ['none', 'one-leg', 'two-leg', 'three-leg'];
 
@@ -685,6 +703,54 @@ export function migrateFavoriteDropzones(raw: unknown): string[] {
   const names = raw.filter((entry): entry is string => typeof entry === 'string' && entry !== '');
 
   return [...new Set(names)];
+}
+
+/**
+ * The recently-picked places (`flip.places.recent`), most recent first.
+ *
+ * A SNAPSHOT of each place rather than a reference to one, unlike favorites:
+ * a recent may be a geocoder hit, which has no id in any database and would
+ * otherwise be unrepresentable — and "that field I searched yesterday" is
+ * exactly the thing a recents list is for. The cost is that a recent does not
+ * follow a correction to the dropzone data; picking it again refreshes it.
+ */
+export function migrateRecentPlaces(raw: unknown): RecentPlace[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const recents: RecentPlace[] = [];
+  const seen = new Set<string>();
+
+  raw.forEach(entry => {
+    if (!isRecord(entry) || typeof entry.name !== 'string' || entry.name === '') {
+      return;
+    }
+
+    const position = latLngOrNull(entry);
+    const id = typeof entry.id === 'string' ? entry.id : '';
+
+    // The key is the id where there is one and the name otherwise, so two
+    // geocoder hits with the same name collapse the way two picks of one
+    // dropzone do.
+    const key = id || `name:${entry.name}`;
+
+    if (!position || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+
+    recents.push({
+      id,
+      name: entry.name,
+      lat: position.lat,
+      lng: position.lng,
+      ...typeof entry.direction === 'number' ? { direction: entry.direction } : {},
+      ...typeof entry.subtitle === 'string' ? { subtitle: entry.subtitle } : {}
+    });
+  });
+
+  return recents.slice(0, MAX_RECENT_PLACES);
 }
 
 export function migrateStoredTracks(raw: unknown): StoredTrack[] {

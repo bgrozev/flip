@@ -14,6 +14,8 @@ export { useMode } from './useMode';
 export { NotificationsProvider, useNotifications } from './useNotifications';
 export { useObservedWind } from './useObservedWind';
 export { usePresets } from './usePresets';
+export { useRecentPlaces } from './useRecentPlaces';
+export type { RecentPlaces } from './useRecentPlaces';
 export { useSavedPlaces } from './useSavedPlaces';
 export type { SavedPlaces } from './useSavedPlaces';
 export { TargetProvider, useTarget } from './useTargetContext';
