@@ -47,9 +47,21 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   when the id is already active, so once you have wandered off a preset
   there is no way to reload it. Pre-existing; wants a "revert to preset"
   affordance rather than just dropping the guard.
-- ☐ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — opening any
-  panel on mobile replaces the map, breaking see-while-editing. (The
-  top-bar + WINDS-indicator refresh already work from the map view.)
+- ☑ **P7 / F2 · Mobile: panels page-swap the map** (UIUX #3) — DONE
+  2026-08-08. The map and the panel now split the screen: the map keeps the
+  top 40%, the panel scrolls below, and a chevron on the divider collapses
+  the map to an 88px strip when a long form needs the room (never to zero —
+  the map is not unmounted or given a zero-sized viewport, so the tiles and
+  camera survive). The winds indicator is forced to its chip form while the
+  split is on (`MapComponent.compactOverlays` → `WindMiniIndicator.compact`),
+  without touching the stored collapse preference.
+  Fixed on the way, because it was hiding the indicator's header on the
+  mobile map view too: the app bar overhangs `main` by ~34px at 375px, since
+  Toolpad reserves one toolbar height and the bar's contents wrap to a second
+  row. `useAppBarOverlap` measures it and pads it out.
+  Still open ✎: whether 40% is the right default, and whether the split
+  should be free-dragged rather than a two-state toggle (a toggle was chosen
+  because a drag is one more thing automation cannot verify).
 - ☑ **P8 / task 40 · Jumprun handoff copy/share** — DONE 2026-08-03. The
   spot is now built by one formatter (`core/spotText`) and shown as the
   panel's sticky hero, in the top bar (replacing the wind summary in
@@ -136,9 +148,16 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   ↔ ~300 m shown as a clean 300 m, not 305 m), rather than converting an
   exact value and showing an odd figure. Affects POM altitude labels, the
   winds indicator, tables, hovers. Pick round-number targets per unit.
-- ☑ Input fields UX — highlight/select content on click. DONE 2026-08-08:
-  every numeric field is `components/NumberField`, which selects on focus
-  (they are retyped far more often than edited in place).
+- ☑ Input fields UX — highlight/select content on click. DONE 2026-08-08,
+  finished the same day. Every numeric field is `components/NumberField`,
+  which selects on focus; the remaining prefilled fields — a course's name
+  and lat/lng, a corridor's name, the export dialog's ground elevation, and
+  the preset and place RENAME dialogs, which open on the current name —
+  now share one handler, `components/selectOnFocus` (the wind table's local
+  copy folded into it). The rule is in CLAUDE.md's UI conventions table:
+  a field that arrives with a value the user replaces wholesale. Free text
+  (the manoeuvre's description, the place search box) and native date/time
+  inputs are deliberately excluded.
 - ☐ Default pattern params → student-friendly: 3:1 glide, 8 kts descent
   (current default: 9 mph descent, 3.0 GR — confirm intended units kts vs mph).
 - ☑ Beaufort colors elsewhere — DONE. Wind table rows (`185c2d8`, a colour
@@ -295,32 +314,53 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ---
 
+All three sections re-checked against the code on **2026-08-08**; each entry
+now says what was found.
+
 ## Phase-2 follow-ups (found during implementation, 2026-07-14)
 
-- ☐ Target-edit handles overlap at mid zoom — heading handle's hit area
-  beats the target handle when ~10px apart; needs separation or
-  hit-priority for the target handle.
-- ☐ `attachPlaceAutocomplete` re-attaches on every callback identity change
-  with no listener cleanup (pre-existing bug, carried over) — effect should
-  return a disposer; ref-stabilize the callback.
+- ☑ Target-edit handles overlap at mid zoom — FIXED, and the fix is
+  `HEADING_HANDLE_OFFSET_PX` in `map/layers/TargetEditLayer.tsx`: the rotate
+  handle is placed 44 **pixels** out and converted to metres for the current
+  zoom, so it cannot close on the target the way a fixed distance in metres
+  did. Two later changes make the collision impossible rather than merely
+  unlikely: the rotate handle only exists while the target is hovered, and it
+  is withdrawn outright while the target is being dragged.
+- ☑ `attachPlaceAutocomplete` — OBSOLETE, the function is gone. Place search
+  became a promise API (`searchPlaceSuggestions` / `resolvePlaceSuggestion`)
+  in the P6/F5 work; there is no attached widget and no listener to dispose.
 
 ## Phase-3 follow-ups (found during implementation, 2026-07-14)
 
-- ☐ Settings panel shows stored (not effective) values — add "set by
-  mode" indicators; consider hiding swoop-only settings in pattern mode.
-- ☐ `SECONDARY_PANELS` (Settings/About) split hardcoded in App.tsx —
-  fold into the Mode shape as nav groups.
+- ◐ Settings panel shows stored (not effective) values — TRUE of the code
+  (App passes `settings` to `SettingsComponent` while the app runs on
+  `modeSettings`) but **not observable today**: all three modes declare
+  `defaults: {}`, so `applyModeDefaults` changes nothing, and the nerd gate
+  only masks settings whose controls it also hides. The discrepancy appears
+  the moment any mode declares a default — worth an indicator then, not
+  before. The other half (hiding swoop-only settings in pattern mode) is
+  live and tracked as **P4 · mode-filtered Settings** above.
+- ✎ `SECONDARY_PANELS` (Settings/Help) split hardcoded in App.tsx — still
+  hardcoded (`App.tsx`), and arguably right where it is: "Settings and Help
+  are secondary" is a fact about the app, not about a mode, so moving it
+  into `Mode` would have all three modes repeat the same pair. Worth doing
+  only if a mode ever needs a different secondary group. Owner's call
+  whether to keep the item open.
 - ☐ Presets don't carry their mode yet (ARCHITECTURE: Plan carries mode)
-  — part of the Phase-7 Plan document work.
-- ☐ Mode picker cards are unnamed buttons (no accessible name) — a11y
-  fix: aria-label per card.
+  — still true (`Preset` has target/pattern/manoeuvre/course/place, no mode);
+  part of the Phase-7 Plan document work.
+- ☑ Mode picker cards are unnamed buttons — FIXED: `ModePicker.tsx` gives
+  each `CardActionArea` an `aria-label` naming the mode and its description.
 
 ## Phase-4 follow-ups (found during implementation + spot check, 2026-07-15)
 
-- ☐ Elevation cache eviction is insertion-order, not true LRU — fine at
-  500 entries; revisit only if it grows.
-- ☐ Soundings can be dense in the low-altitude band — consider thinning
-  levels for the table if it feels noisy.
+- ☐ Elevation cache eviction is insertion-order, not true LRU — still
+  accurate (`data/wind/elevation.ts` deletes from the front of
+  `Object.keys` past `MAX_ENTRIES = 500`). Deliberately left: at 500 entries
+  the difference cannot be felt. Revisit only if the cap grows.
+- ☐ Soundings can be dense in the low-altitude band — still open; no
+  thinning anywhere in `data/wind/soundings.ts`. Needs a judgement about
+  the table, not a fix.
 
 ## Architecture-review follow-ups (2026-07-16)
 

@@ -1,7 +1,7 @@
 # Redesign hand-off — start here
 
 Entry point for a new session picking up the FliP redesign. Last revised
-**2026-08-08**, at the end of the UI-consistency pass. Sessions are logged
+**2026-08-08**, after a backlog re-check pass. Sessions are logged
 newest-first below; each one says what changed and what it left open, and
 `NOTES.md` has the reasoning behind every entry.
 
@@ -35,7 +35,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **896 tests in 44 files, 0 lint errors, 51 known
+Baseline on the branch: **901 tests in 45 files, 0 lint errors, 52 known
 lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -73,6 +73,53 @@ roughly in order:
 - **Flocking map interactions** — see below.
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
+
+### Session 2026-08-08 (2) — three backlog items, re-checked
+
+The owner named three entries and asked which still applied.
+
+**The map now stays on screen when a panel is open on a phone** (P7/F2,
+closed). They split the screen — map on top at 40%, panel scrolling below,
+a chevron on the divider collapsing the map to an 88px strip. The panel used
+to render INSTEAD of the map, which also **unmounted** it on every panel
+visit: tiles reloaded and the camera was lost. A split rather than a
+floating bottom sheet, because the map's corner furniture (the fullscreen
+control is bottom-right) would end up under a sheet, and because a sheet
+needs camera padding that neither provider exposes; 88px rather than zero,
+so the provider is never handed a zero-sized viewport. The winds indicator
+takes a `compact` prop for the strip: chip form, no expand chevron, stored
+preference untouched.
+
+Fixed on the way: **the app bar overhangs `main` by ~34px at 375px** —
+Toolpad reserves one toolbar height and the bar's contents wrap to a second
+row — which had been hiding the winds indicator's own header (refresh
+included) on the mobile map view too. `useAppBarOverlap` measures it.
+
+**Select-on-focus got a rule and the fields it had missed.** It was done for
+numbers (`NumberField`); the same argument covers fields that cannot be one
+— a course's name and lat/lng, a corridor's name, the export dialog's ground
+elevation, and both rename dialogs, which open on the current name.
+`components/selectOnFocus` is the one handler, listed in CLAUDE.md's
+conventions table. Free text and native date/time inputs are excluded on
+purpose.
+
+**The Phase-N follow-up lists were re-checked entry by entry** and BACKLOG
+now records what each one is: two already fixed (the target/heading handle
+overlap, the mode-picker cards' accessible names), one obsolete
+(`attachPlaceAutocomplete` is gone — place search is a promise API), one
+**latent rather than live** (Settings does show stored rather than effective
+values, but all three modes declare `defaults: {}`, so nothing is overridden
+today), and the rest still true. `SECONDARY_PANELS` is left open with an
+argument against doing it.
+
+⚠️ Worth a real device: the split's default 40% and whether the divider
+should be draggable rather than a two-state toggle. A toggle was chosen
+because a drag is one more thing automation here cannot verify.
+
+Verification note worth keeping: **a scripted `element.focus()` does not
+reach React's `onFocus`** in this browser tooling — the page is not the
+platform's focused window, so no focus event fires at all. Dispatch
+`focusin` instead. A green check from `.focus()` would have proved nothing.
 
 ### Session 2026-08-08 — UI consistency, and three small ones
 
@@ -664,7 +711,7 @@ Then, owner priorities most-ready first:
 | **Corridor direction ranges** | "anything 250–290°" — solver structure supports it, schema stores fixed headings. Small |
 | **Landing headings for the remaining DZs** | 60 of 272 still have no `direction`; promote them as they are checked against imagery |
 | **Dropzone `timezone`** | Deferred by the owner. Forecast times render in *browser* local time, so a coach planning a DZ two zones away reads the wrong clock |
-| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3), mobile panels page-swap the map (P7). P5, P6, P8, P9 are done |
+| **UX-analysis items** | Remaining: mode-filtered Settings (P4), wind panel read-only-first (P3). P5–P9 are done |
 | **Trust state — finish it** | `◐`: out-of-bounds "silly value" call-out, stale-age tuning |
 | ⭐ **Shareable setup links** | Needs a *design session with the owner*; fragment-encoding proposal parked in BACKLOG |
 | **Better wind visualization** | windy.com-like particle/flow rendering. ✎ design |
@@ -779,6 +826,10 @@ verify another way:
   pattern, and no shifted letter falls through to its plain binding.
 - **Focus map (`F`) and the help `?` icons on a phone.** Verified at
   375px in the preview, not on a real handset.
+- **The mobile map/panel split** (2026-08-08). Verified at 375x812 in the
+  preview — both states, the compact winds chip, the app-bar overlap — but
+  not on a real handset, where the open questions are whether 40% is enough
+  map and whether the divider wants to be draggable.
 - The **winds indicator hover** works via real DOM (not a marker), so it
   *was* verified — ground-station detail shows on GND-row hover.
 - **Copying the spot** was verified through the browser's real input path

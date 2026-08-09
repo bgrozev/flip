@@ -1585,3 +1585,100 @@ carries no hand to flip.
 **Beaufort in the top bar** — the last of that backlog item. The AVG and
 GND arrows take `beaufortColor`, the same function behind the map arrows
 and the wind table's dots.
+
+## Session 2026-08-08 (2) — three backlog items, re-checked
+
+The owner named three entries and asked which were still real. Two were,
+one was already done and had grown a second half nobody had noticed.
+
+### The map stays on screen on a phone (P7 / F2)
+
+Opening a panel on mobile rendered the panel INSTEAD of the map
+(`LayoutWithSidebar`: `box ? panel : map`). Two costs, only one of them in
+the backlog: you could not see what an edit did, and the map was
+**unmounted** on every panel visit, so its tiles reloaded and its camera
+was lost each time you came back.
+
+They now split the screen — map on top at 40%, panel scrolling below, a
+chevron on the divider collapsing the map to an 88px strip. Three choices
+worth recording:
+
+- **Split, not an overlay sheet.** The obvious mobile idiom is a bottom
+  sheet floating over a full-height map, and it was rejected: the map's own
+  corner furniture lives at the corners. The fullscreen control sits
+  bottom-right (moved there so it would stop colliding with the winds
+  indicator), and a sheet covering the bottom half would bury it along with
+  any label near the bottom edge. It also needs camera padding, which
+  neither provider exposes through `MapAdapter` — Google has no map-level
+  padding at all, so it would have meant shifting the centre by half the
+  sheet height in metres-per-pixel, in both providers. A split makes the
+  map viewport genuinely BE the visible area, so every existing camera,
+  hit-test and overlay-position assumption stays true with no plumbing.
+- **The collapsed state is 88px, not zero.** Zero (or `display: none`)
+  would put the provider back in the situation the split exists to avoid —
+  a torn-down or zero-sized viewport that has to recover on the way back.
+- **A toggle, not a drag.** A dragged divider is nicer and is one more
+  thing that automated verification here cannot touch (see the "never
+  exercised by a real pointer" list, which is already long enough). The
+  toggle is a button, so it is verifiable today.
+
+The winds indicator is the size of the strip it sits on, so it takes a
+`compact` prop: the chip form is forced and its expand chevron withdraws,
+since tapping the chip already opens the Wind panel — the better answer on
+a phone than growing the card back over the map. The stored collapse
+preference is neither read nor written in that mode, so a desktop user's
+expanded card is still expanded when they go back to a full-size map.
+
+**The app bar was already overhanging the content by 34px**, and that is
+what had been hiding the indicator's own header — refresh and collapse
+included — on the mobile map view too. Toolpad's `DashboardLayout` reserves
+one toolbar height for `main` and pins the bar over it; at 375px the bar's
+contents (the wind summary or the spot, the mode switch, the presets menu)
+wrap to a second row and it grows past the reservation. `useAppBarOverlap`
+measures the overhang and pads it out rather than assuming a number: how
+tall the bar gets depends on what the active mode puts in it. Measuring
+cannot move either element it measures — the padding is applied inside
+`main` — so there is no feedback loop.
+
+### Select-on-focus: the rule, and the fields it had missed
+
+The backlog called this done, and it was, for numbers: every numeric field
+is `NumberField` and selects on focus. But the same argument — this field
+arrives with a value you REPLACE, not one you edit letter by letter —
+covers a set of fields that cannot be a `NumberField`, and none of them did
+it: a course's name and its lat/lng, a corridor's name, the export dialog's
+ground elevation, and both rename dialogs, which open on the current name.
+The wind table had its own private copy of the handler.
+
+`components/selectOnFocus` is now the one handler and its doc carries the
+rule, which is also in CLAUDE.md's conventions table. What is deliberately
+NOT included is as much of the rule as what is: free text (the manoeuvre's
+description, the place search box you refine) wants the caret where you
+clicked, and a native date or time input owns its own selection behaviour.
+
+Verification note: a scripted `element.focus()` does **not** reach React's
+`onFocus` in this browser tooling — the page is not the platform's focused
+window, so no focus event is dispatched at all. Dispatching `focusin`
+directly does reach it (React delegates on `focusin`), and that is how the
+course fields were confirmed to select whole. Same family as the existing
+notes about synthetic clicks not reaching the Maps handler: a green check
+from `.focus()` alone would have proved nothing.
+
+### The Phase-N follow-up lists
+
+Re-checked entry by entry against the code; BACKLOG now says what each one
+is. Two were already fixed (the target/heading handle overlap — solved by
+placing the rotate handle 44 **pixels** out rather than a fixed distance in
+metres, plus hover-gating it; the mode-picker cards' accessible names), one
+is obsolete (`attachPlaceAutocomplete` no longer exists — place search
+became a promise API), and one turned out to be **latent rather than
+live**: the Settings panel does show stored rather than effective values,
+but all three modes declare `defaults: {}`, so nothing is currently
+overridden, and the nerd gate only masks settings whose controls it also
+hides. The indicator that entry asks for is worth building when a mode
+first declares a default, not before.
+
+The `SECONDARY_PANELS` entry is left open with an argument against it:
+"Settings and Help are secondary" is a fact about the app rather than about
+a mode, so folding it into `Mode` would have all three modes repeat the
+same pair. Worth doing only if a mode ever needs a different one.
