@@ -168,11 +168,23 @@ export interface MapClickModifiers {
   shift: boolean;
 }
 
+/** How a registered click handler takes part in a background click. */
+export interface MapClickOptions {
+  /**
+   * Watch every background click instead of competing for it. An observer is
+   * always notified and never consumes the click, so the layer that owns the
+   * gesture still gets it. For behaviour that hangs off "the map was pressed"
+   * rather than "the map was pressed AT this point" — closing a panel, say.
+   */
+  observe?: boolean;
+}
+
 export interface MapInteractions {
   /** Register a map click handler. Returns an unregister function. */
   registerClickHandler: (
     handler: (pos: LatLng, mods: MapClickModifiers) => void,
-    priority: number
+    priority: number,
+    options?: MapClickOptions
   ) => () => void;
   /** Register a cursor override. Returns a function removing the override. */
   registerCursor: (cursor: string) => () => void;
@@ -221,11 +233,13 @@ export function useMapZoom(): number {
 
 /**
  * Handle clicks on the map background. When several layers are interested,
- * only the enabled handler with the highest priority receives the click.
+ * only the enabled handler with the highest priority receives the click —
+ * unless it registers with `observe`, which watches without competing.
  */
 export function useMapClick(
   handler: (pos: LatLng, mods: MapClickModifiers) => void,
-  { enabled = true, priority = 0 }: { enabled?: boolean; priority?: number } = {}
+  { enabled = true, priority = 0, observe = false }:
+    { enabled?: boolean; priority?: number; observe?: boolean } = {}
 ): void {
   const interactions = useContext(MapInteractionsContext);
   const handlerRef = useRef(handler);
@@ -241,9 +255,10 @@ export function useMapClick(
 
     return interactions.registerClickHandler(
       (pos, mods) => handlerRef.current(pos, mods),
-      priority
+      priority,
+      { observe }
     );
-  }, [interactions, enabled, priority]);
+  }, [interactions, enabled, priority, observe]);
 }
 
 /**

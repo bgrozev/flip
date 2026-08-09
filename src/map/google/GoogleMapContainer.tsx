@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_CURSOR,
   DEFAULT_ZOOM,
-  MapClickModifiers,
   MapContainerProps,
   MapControlHostContext,
   MapInteractions,
@@ -12,7 +11,7 @@ import {
   MapViewContext,
   MapViewState
 } from '../MapAdapter';
-import { LatLng } from '../../types';
+import { ClickEntry, dispatchMapClick } from '../clickDispatch';
 
 import {
   DEFAULT_MAP_OPTIONS,
@@ -21,12 +20,6 @@ import {
   GOOGLE_MAPS_SCRIPT_ID,
   MAP_CONTAINER_STYLE
 } from './mapConfig';
-
-interface ClickEntry {
-  handler: (pos: LatLng, mods: MapClickModifiers) => void;
-  priority: number;
-  seq: number;
-}
 
 /**
  * Google Maps implementation of the MapContainer contract: loads the Maps
@@ -62,8 +55,10 @@ export default function GoogleMapContainer({
   const handleDraggingRef = useRef(false);
 
   const interactions = useMemo<MapInteractions>(() => ({
-    registerClickHandler: (handler, priority) => {
-      const entry: ClickEntry = { handler, priority, seq: seqRef.current++ };
+    registerClickHandler: (handler, priority, options) => {
+      const entry: ClickEntry = {
+        handler, priority, seq: seqRef.current++, observe: options?.observe ?? false
+      };
 
       clickHandlersRef.current.push(entry);
 
@@ -138,18 +133,9 @@ export default function GoogleMapContainer({
       return;
     }
     const pos = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
-    const handlers = clickHandlersRef.current;
-
-    if (handlers.length === 0) {
-      return;
-    }
-
-    // Dispatch to the highest-priority handler (latest registration wins ties).
-    const top = handlers.reduce((a, b) =>
-      (b.priority > a.priority || (b.priority === a.priority && b.seq > a.seq) ? b : a));
-
     const shift = Boolean((ev.domEvent as MouseEvent | undefined)?.shiftKey);
-    top.handler(pos, { shift });
+
+    dispatchMapClick(clickHandlersRef.current, pos, { shift });
   }, []);
 
   const onZoomChanged = useCallback(() => {

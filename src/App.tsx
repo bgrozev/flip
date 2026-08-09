@@ -19,7 +19,6 @@ import {
   BottomNavigationAction,
   Box,
   CircularProgress,
-  Divider,
   IconButton,
   Paper,
   Stack,
@@ -489,6 +488,27 @@ function DashboardContent() {
       : null),
     [isFlocking, flocking.spot, flocking.missMi, flocking.tier, modeSettings.units.distance]
   );
+
+  // The solver draws NOTHING when no corridor reaches the target — including
+  // when a dropzone declares no corridors at all, which is the usual case
+  // right after moving to a new one, since corridors deliberately never
+  // travel. An empty map is indistinguishable from a broken one, so the map
+  // says why.
+  const emptyNotice = useMemo(() => {
+    if (!isFlocking || flockingParams.mode !== 'solve' || flocking.solve?.best) {
+      return undefined;
+    }
+
+    return flockingParams.solveCorridors.some(corridor => corridor.enabled)
+      ? {
+        title: 'No jumprun solves',
+        detail: 'No corridor gets the group close enough — widen one, or check the winds.'
+      }
+      : {
+        title: 'No jumprun corridors here',
+        detail: 'Corridors belong to a dropzone. Add one in the Flocking panel.'
+      };
+  }, [isFlocking, flockingParams.mode, flockingParams.solveCorridors, flocking.solve]);
 
   const averageWind_ = isFlocking ? flocking.averageWind : paths.averageWind;
 
@@ -1049,6 +1069,11 @@ function DashboardContent() {
           : undefined
       }}
       windTrust={{ trust, forecastTime: forecastTime ?? effectiveWinds.validTime }}
+      emptyNotice={emptyNotice}
+      // On a phone the map is a strip beside the open panel; pressing it means
+      // "put the panel away and let me look". On a desktop the two are side by
+      // side, so there is nothing in the way and nothing to close.
+      onBackgroundPress={isMobile && activePanel ? () => navigate(MAP_PATH) : undefined}
       courses={enabledCourses}
       courseEditTarget={courseEditTarget}
       targetEditTarget={targetEditTarget}
@@ -1205,7 +1230,7 @@ function SidebarFooter({ mini }: { mini?: boolean }) {
  */
 function CustomAppTitle({ wind, spot }: { wind?: WindSummaryData; spot?: SpotText }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={2} sx={{ minWidth: 0 }}>
+    <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} sx={{ minWidth: 0 }}>
       <FlipIcon />
       <Typography
         variant="h6"
@@ -1213,14 +1238,15 @@ function CustomAppTitle({ wind, spot }: { wind?: WindSummaryData; spot?: SpotTex
           fontWeight: 'bold',
           color: '#4ade80',
           textTransform: 'uppercase',
-          // The spot is long, and on a phone the bar cannot hold both. The
-          // wordmark is the part nobody needs to read.
-          display: spot ? { xs: 'none', sm: 'block' } : 'block'
+          // On a phone the bar cannot hold the wordmark AND the readings it
+          // exists for — whether that is the spot or the wind summary — and
+          // the wordmark is the part nobody needs to read. The logo beside it
+          // still says which app this is.
+          display: { xs: 'none', sm: 'block' }
         }}
       >
         FliP
       </Typography>
-      <Divider />
       {spot && <SpotSummary spot={spot} />}
       {!spot && wind && wind.average && wind.ground && (
         <WindSummary

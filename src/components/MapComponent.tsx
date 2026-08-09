@@ -1,7 +1,8 @@
+import { InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
 import { Box } from '@mui/material';
 import React from 'react';
 
-import { MapContainer, MapControl } from '../map';
+import { MapContainer, MapControl, useMapClick } from '../map';
 import {
   CourseEditLayer,
   CourseEditTarget,
@@ -29,6 +30,7 @@ import {
 } from '../types';
 
 import WindMiniIndicator from './WindMiniIndicator';
+import MapNotice, { MAP_NOTICE_HEIGHT } from './MapNotice';
 import ShortcutHint from './ShortcutHint';
 import WindTrustBanner from './WindTrustBanner';
 
@@ -60,6 +62,18 @@ interface MapComponentProps {
   layers?: readonly MapLayerId[];
   /** Wind-trust verdict for the top-of-map status banner (hidden when fresh). */
   windTrust?: { trust: WindTrust; forecastTime?: Date };
+  /**
+   * Why the map is showing no plan, when it is showing none on purpose. The
+   * flocking solver draws nothing at all when no corridor reaches the target,
+   * and an empty map is indistinguishable from a broken one.
+   */
+  emptyNotice?: { title: string; detail: string };
+  /**
+   * Pressing the map background. Fires on every background click alongside
+   * whichever layer owns the gesture — used on a phone, where a press on the
+   * map means "put the panel away and let me look".
+   */
+  onBackgroundPress?: () => void;
   /**
    * The map is sharing the screen with a panel (phone split). Corner overlays
    * shrink so they don't cover the strip of map that is left.
@@ -108,9 +122,14 @@ function MapComponent({
   mapWinds,
   shortcutHint,
   windTrust,
+  emptyNotice,
+  onBackgroundPress,
   compactOverlays = false
 }: MapComponentProps) {
   const has = (layer: MapLayerId) => layers.includes(layer);
+  // The corner overlays start below whatever strips are showing.
+  const noticeCount =
+    (windTrust && windTrust.trust.level !== 'fresh' ? 1 : 0) + (emptyNotice ? 1 : 0);
   const {
     showPoms,
     showPomAltitudes,
@@ -171,9 +190,22 @@ function MapComponent({
 
       {has('courseEdit') && courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
 
-      {windTrust && (
+      {onBackgroundPress && <BackgroundPressWatcher onPress={onBackgroundPress} />}
+
+      {(windTrust || emptyNotice) && (
         <MapControl>
-          <WindTrustBanner trust={windTrust.trust} forecastTime={windTrust.forecastTime} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1100 }}>
+            {windTrust && (
+              <WindTrustBanner trust={windTrust.trust} forecastTime={windTrust.forecastTime} />
+            )}
+            {emptyNotice && (
+              <MapNotice
+                icon={InfoOutlinedIcon}
+                title={emptyNotice.title}
+                detail={emptyNotice.detail}
+              />
+            )}
+          </div>
         </MapControl>
       )}
 
@@ -190,7 +222,7 @@ function MapComponent({
             groundStation={mapWinds.groundStation}
             forecastGround={mapWinds.forecastGround}
             compact={compactOverlays}
-            topOffset={windTrust && windTrust.trust.level !== 'fresh' ? 46 : 10}
+            topOffset={10 + noticeCount * MAP_NOTICE_HEIGHT}
           />
         </MapControl>
       )}
@@ -204,6 +236,20 @@ function MapComponent({
       )}
     </MapContainer>
   );
+}
+
+/**
+ * Reports a press on the map background without taking it from the layer that
+ * owns the gesture — it registers as an OBSERVER, so shift-click still moves
+ * the target and a tap still dismisses the heading handle.
+ *
+ * It has to live inside `MapContainer` to see the interactions context, which
+ * is why it is a component rather than a hook call in `MapComponent`.
+ */
+function BackgroundPressWatcher({ onPress }: { onPress: () => void }) {
+  useMapClick(() => onPress(), { observe: true });
+
+  return null;
 }
 
 export default React.memo(MapComponent);

@@ -159,10 +159,13 @@ export default function PresetSelector({
         color="inherit"
         sx={{ textTransform: 'none', minWidth: 0 }}
       >
+        {/* On a phone the bookmark and the chevron say "presets" on their own,
+            and the ~70px the label costs is the difference between the toolbar
+            fitting on one row and wrapping onto two. */}
         <Typography
           variant="body2"
           noWrap
-          sx={{ maxWidth: { xs: 90, sm: 130 }, display: 'block' }}
+          sx={{ maxWidth: { sm: 130 }, display: { xs: 'none', sm: 'block' } }}
         >
           {activePreset ? activePreset.name : 'Presets'}
         </Typography>

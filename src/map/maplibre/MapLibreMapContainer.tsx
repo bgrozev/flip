@@ -12,7 +12,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   DEFAULT_CURSOR,
   DEFAULT_ZOOM,
-  MapClickModifiers,
   MapContainerProps,
   MapControlHostContext,
   MapInteractions,
@@ -20,16 +19,10 @@ import {
   MapViewContext,
   MapViewState
 } from '../MapAdapter';
-import { LatLng } from '../../types';
+import { ClickEntry, dispatchMapClick } from '../clickDispatch';
 
 import { DEFAULT_MAPLIBRE_STYLE } from './mapConfig';
 import { MapLibreMapContext } from './context';
-
-interface ClickEntry {
-  handler: (pos: LatLng, mods: MapClickModifiers) => void;
-  priority: number;
-  seq: number;
-}
 
 /**
  * MapLibre max zoom is capped a little below Google's satellite depth; 22 is
@@ -64,8 +57,10 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
   const handleDraggingRef = useRef(false);
 
   const interactions = useMemo<MapInteractions>(() => ({
-    registerClickHandler: (handler, priority) => {
-      const entry: ClickEntry = { handler, priority, seq: seqRef.current++ };
+    registerClickHandler: (handler, priority, options) => {
+      const entry: ClickEntry = {
+        handler, priority, seq: seqRef.current++, observe: options?.observe ?? false
+      };
 
       clickHandlersRef.current.push(entry);
 
@@ -139,17 +134,11 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
       map.on('zoom', () => setZoom(map.getZoom()));
 
       map.on('click', ev => {
-        const handlers = clickHandlersRef.current;
-
-        if (handlers.length === 0) {
-          return;
-        }
-        const pos = { lat: ev.lngLat.lat, lng: ev.lngLat.lng };
-        // Highest-priority handler wins; latest registration breaks ties.
-        const top = handlers.reduce((a, b) =>
-          (b.priority > a.priority || (b.priority === a.priority && b.seq > a.seq) ? b : a));
-
-        top.handler(pos, { shift: Boolean(ev.originalEvent?.shiftKey) });
+        dispatchMapClick(
+          clickHandlersRef.current,
+          { lat: ev.lngLat.lat, lng: ev.lngLat.lng },
+          { shift: Boolean(ev.originalEvent?.shiftKey) }
+        );
       });
 
       // Reflow on later container size changes (e.g. the side panel opening or
