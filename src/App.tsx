@@ -891,8 +891,13 @@ function DashboardContent() {
           pb: 4,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'left',
-          textAlign: 'center'
+          // Panels read left-to-right like a form. This used to be
+          // `alignItems: 'left'` (not a value align-items has, so it did
+          // nothing) over `textAlign: 'center'`, which every panel then had
+          // to undo line by line — and anything that forgot came out
+          // centred.
+          alignItems: 'stretch',
+          textAlign: 'left'
         }}
       >
         {/* One header for every panel, so the reference is reachable from

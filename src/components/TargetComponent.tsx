@@ -16,6 +16,7 @@ import { Target } from '../types';
 import { normalizeDirection } from '../core/validation';
 
 import { PlacePicker } from './';
+import { SectionHeading } from './PanelSection';
 
 interface TargetComponentProps {
   target: Target;
@@ -54,7 +55,7 @@ export default function TargetComponent({
 
   return (
     <Stack spacing={3}>
-      <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'left' }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         Drag the target on the map to move it
         {headingRelevant ? '; hover it to rotate the final heading' : ''}.
         Shift-click the map to jump it there.
@@ -92,7 +93,7 @@ export default function TargetComponent({
       )}
       <Divider />
       <TargetProvider target={target} setTarget={setTarget} selectPlace={selectPlace}>
-        <Typography variant="h6" sx={{ textAlign: 'left' }}>Location</Typography>
+        <SectionHeading>Location</SectionHeading>
         <PlacePicker upwindHeading={upwindHeading} />
       </TargetProvider>
     </Stack>

@@ -1,7 +1,6 @@
 import {
   Add as AddIcon,
   Close as CloseIcon,
-  ExpandMore as ExpandMoreIcon,
   Public as PublicIcon,
   CloudOutlined as CloudOutlinedIcon,
   DeviceThermostat as DeviceThermostatIcon,
@@ -35,6 +34,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { useAppState, useUnits } from '../hooks';
 import WindComparison from './WindComparison';
+import DisclosureRow from './DisclosureRow';
+import { SectionHeading } from './PanelSection';
 import { LatLng, ObservedWindStation } from '../types';
 import {
   DaSeverity,
@@ -335,9 +336,7 @@ export default function WindsComponent({
             time control here would be inert. */}
         {!soundingSelected && <Box sx={{ mb: 1.5 }}>
           <Stack direction="row" alignItems="center" sx={{ mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">
-                Forecast time
-            </Typography>
+            <SectionHeading>Forecast time</SectionHeading>
             {forecastTime && (
               <Button
                 variant="text"
@@ -692,25 +691,13 @@ export default function WindsComponent({
             </TableContainer>
 
             {lock && summary.length > 1 && (
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => setShowAllLevels(v => !v)}
-                startIcon={
-                  <ExpandMoreIcon
-                    fontSize="small"
-                    sx={{
-                      transform: showAllLevels ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 150ms'
-                    }}
-                  />
-                }
-                sx={{ mt: 0.5, alignSelf: 'flex-start', textTransform: 'none' }}
-              >
-                {showAllLevels
-                  ? 'Show summary'
-                  : `Show all ${winds.winds.length} levels`}
-              </Button>
+              <Box sx={{ mt: 0.5 }}>
+                <DisclosureRow
+                  label={`All ${winds.winds.length} levels`}
+                  open={showAllLevels}
+                  onToggle={() => setShowAllLevels(v => !v)}
+                />
+              </Box>
             )}
 
             {/* Every editing action in one row, all of it nerd-only. */}
@@ -748,12 +735,11 @@ export default function WindsComponent({
         {forecastTime === null && (fetchingObserved || stationsFetched) && (
           <>
             <Divider sx={{ my: 2 }} />
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                  Observed Stations
-              </Typography>
-              {fetchingObserved && <CircularProgress size={12} />}
-            </Stack>
+            <SectionHeading
+              action={fetchingObserved ? <CircularProgress size={12} /> : undefined}
+            >
+              Observed stations
+            </SectionHeading>
             {fetchingObserved ? null : stations.length === 0 ? (
               <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>
                   No stations found within 10 miles.

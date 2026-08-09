@@ -16,6 +16,7 @@ import React from 'react';
 
 import { MapProvider, Settings } from '../types';
 import { OPEN_METEO_MODELS } from '../core/wind';
+import { SectionHeading } from './PanelSection';
 import {
   ALTITUDE_UNIT_OPTIONS,
   AltitudeUnit,
@@ -158,24 +159,6 @@ interface SettingsComponentProps {
   setSettings: (settings: Settings) => void;
 }
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <Typography
-      variant="caption"
-      sx={{
-        textAlign: 'left',
-        color: 'text.secondary',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-        pt: 0.5
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
 function SettingRow({
   label,
   tooltip,
@@ -237,7 +220,7 @@ export default function SettingsComponent({
     <Stack direction="column" spacing={0.5} alignItems="flex-start" sx={{ width: '100%', textAlign: 'left' }}>
       {/* First, because toggling it makes rows appear BELOW — at the bottom
           of the panel the change would happen off-screen. */}
-      <SectionHeader>Nerd mode</SectionHeader>
+      <SectionHeading>Nerd mode</SectionHeading>
       <SettingRow
         label="Nerd mode"
         tooltip="Unlocks manual wind entry, exports and extra map detail, and adds more options to this panel."
@@ -254,7 +237,7 @@ export default function SettingsComponent({
       </Typography>
 
       <Divider sx={{ width: '100%', mt: 1 }} />
-      <SectionHeader>Appearance</SectionHeader>
+      <SectionHeading>Appearance</SectionHeading>
       <SettingRow label="Light / Dark theme">
         <ThemeSwitcher />
       </SettingRow>
@@ -271,7 +254,7 @@ export default function SettingsComponent({
       {settingsGroups.slice(1).filter(groupVisible).map(group => (
         <React.Fragment key={group.title}>
           <Divider sx={{ width: '100%', mt: 1 }} />
-          <SectionHeader>{group.title}</SectionHeader>
+          <SectionHeading>{group.title}</SectionHeading>
           {visible(group.options).map(({ key, label, tooltip }) => (
             <SettingRow key={key} label={label} tooltip={tooltip}>
               <Switch
@@ -338,7 +321,7 @@ export default function SettingsComponent({
       ))}
 
       <Divider sx={{ width: '100%', mt: 1 }} />
-      <SectionHeader>Units</SectionHeader>
+      <SectionHeading>Units</SectionHeading>
 
       <FormControl fullWidth size="small" sx={{ mt: 0.5 }}>
         <InputLabel id="altitude-unit-label">Altitude</InputLabel>

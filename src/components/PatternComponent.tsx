@@ -31,6 +31,7 @@ import {
 import { LIMITS } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
+import { SectionHeading } from './PanelSection';
 import NumberInput from './NumberInput';
 
 interface PatternComponentProps {
@@ -113,13 +114,12 @@ export default function PatternComponent({
             </ToggleButton>
           </ToggleButtonGroup>
 
-          <Divider orientation="vertical" flexItem />
         </>
       )}
       {showPatternWideSwitch && (params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (
         <>
           <Stack direction="row" spacing={2} alignItems="center">
-            <Typography sx={{ flexGrow: 1, textAlign: 'left' }}>Pattern turns</Typography>
+            <Typography sx={{ flexGrow: 1 }}>Pattern turns</Typography>
             <DirectionSwitch
               title="Left-hand or right-hand pattern: both turns switch together (shortcut: X). A mixed pattern resolves to left."
               value={patternIsAllLeft}
@@ -131,7 +131,7 @@ export default function PatternComponent({
       )}
       {params.type !== PATTERN_NONE && (
         <>
-          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Final leg</Typography>
+          <SectionHeading>Final leg</SectionHeading>
           <Stack direction="row" spacing={2}>
             <LegAltitudeSelector
               title="Altitude for the final leg of the pattern."
@@ -146,11 +146,10 @@ export default function PatternComponent({
         </>
       )}
 
-      <Divider orientation="vertical" flexItem />
       {(params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (
         <>
           <Divider />
-          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Base leg</Typography>
+          <SectionHeading>Base leg</SectionHeading>
           <Stack direction="row" spacing={2} alignItems="center">
             <LegAltitudeSelector
               title="Altitude for the base leg of the pattern. This determines how long the leg is."
@@ -175,11 +174,10 @@ export default function PatternComponent({
         </>
       )}
 
-      <Divider orientation="vertical" flexItem />
       {params.type === PATTERN_THREE_LEG && (
         <>
           <Divider />
-          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Downwind leg</Typography>
+          <SectionHeading>Downwind leg</SectionHeading>
           <Stack direction="row" spacing={2} alignItems="center">
             <LegAltitudeSelector
               title="Altitude for the downwind leg of the pattern. This determines how long the leg is."
@@ -206,7 +204,6 @@ export default function PatternComponent({
 
       {params.type !== PATTERN_NONE && (
         <>
-          <Divider orientation="vertical" flexItem />
           <Divider />
           <Stack direction="row" spacing={2}>
             <NumberInput

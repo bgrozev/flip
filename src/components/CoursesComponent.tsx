@@ -45,6 +45,8 @@ import { normalizeRelativeAngle } from '../core/validation';
 import { downloadCourseKmz } from '../util/exportKmz';
 import { AltitudeUnit } from '../core/units';
 
+import { SectionHeading } from './PanelSection';
+
 const M_PER_FT = 0.3048;
 
 /** The three course types, in the order the New menu offers them. */
@@ -476,15 +478,22 @@ function CoursesComponent({
 
   return (
     <>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Typography variant="h6">Courses</Typography>
-        <Button
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={e => setNewMenuAnchor(e.currentTarget)}
-        >
-          New
-        </Button>
+      {/* No title here: the panel header above already says "Courses", and a
+          second one competed with it. The heading row carries the action. */}
+      <SectionHeading
+        action={
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={e => setNewMenuAnchor(e.currentTarget)}
+          >
+            New
+          </Button>
+        }
+      >
+        At this dropzone
+      </SectionHeading>
+      <Box>
         <Menu
           anchorEl={newMenuAnchor}
           open={newMenuAnchor !== null}
@@ -496,7 +505,7 @@ function CoursesComponent({
             </MenuItem>
           ))}
         </Menu>
-      </Stack>
+      </Box>
 
       {/* ── Course selector: a radio list, not a dropdown. There are only ever
           a handful at one dropzone, so showing them all costs less than the
@@ -548,9 +557,9 @@ function CoursesComponent({
         <>
           <Divider sx={{ my: 2 }} />
           <Tooltip title="Your turn position relative to the course">
-            <Typography variant="subtitle1" gutterBottom sx={{ display: 'inline-block' }}>
-              Relative Position
-            </Typography>
+            <span>
+              <SectionHeading>Relative position</SectionHeading>
+            </span>
           </Tooltip>
           {/* One field per line: three side by side wrapped unpredictably in a
               narrow panel, and the labels are too long to read at a glance. */}

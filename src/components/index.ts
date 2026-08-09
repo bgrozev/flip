@@ -1,5 +1,6 @@
 export { default as AboutComponent } from './AboutComponent';
 export { default as CoursesComponent } from './CoursesComponent';
+export { default as DisclosureRow } from './DisclosureRow';
 export { default as ExportDialog } from './ExportDialog';
 export { default as DirectionSwitch } from './DirectionSwitch';
 export { default as FlipIcon } from './FlipIcon';
@@ -13,6 +14,7 @@ export { default as MapComponent } from './MapComponent';
 export { default as ModePicker } from './ModePicker';
 export { default as ModeSwitcher } from './ModeSwitcher';
 export { default as NumberInput } from './NumberInput';
+export { default as PanelSection, SectionHeading } from './PanelSection';
 export { default as PatternComponent } from './PatternComponent';
 export { default as PlacePicker } from './PlacePicker';
 export { default as PresetSelector } from './PresetSelector';

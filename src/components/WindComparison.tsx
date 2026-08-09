@@ -5,7 +5,6 @@
  * pass for owner feedback; the visualization is expected to iterate.
  */
 import {
-  ExpandMore as ExpandMoreIcon,
   OpenInNew as OpenInNewIcon
 } from '@mui/icons-material';
 import {
@@ -33,6 +32,8 @@ import {
   comparisonAltitudes
 } from '../core/windCompare';
 import { WindProfile, forecastHourOffset, soundingStationUrl } from '../core/wind';
+
+import DisclosureRow from './DisclosureRow';
 
 /** Highlight for bands where sources disagree (works in both themes). */
 const DISAGREE_ROW_SX = { bgcolor: 'rgba(255, 152, 0, 0.18)' } as const;
@@ -220,33 +221,12 @@ export default function WindComparison({ forecastTime = null }: WindComparisonPr
       {/* A disclosure row, not a button that renames itself: the old
           "Compare sources" / "Hide comparison" toggle gave no hint that a
           section was about to appear below it, or that it was already open. */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        spacing={0.5}
-        onClick={toggle}
-        role="button"
-        aria-expanded={open}
-        aria-label="Compare sources"
-        sx={{ cursor: 'pointer', userSelect: 'none', width: 'fit-content' }}
-      >
-        <ExpandMoreIcon
-          fontSize="small"
-          sx={{
-            color: 'text.secondary',
-            transform: open ? 'none' : 'rotate(-90deg)',
-            transition: 'transform 150ms'
-          }}
-        />
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}
-        >
-          Compare sources
-        </Typography>
-        {open && loading && <CircularProgress size={12} />}
-      </Stack>
+      <DisclosureRow
+        label="Compare sources"
+        open={open}
+        onToggle={toggle}
+        busy={open && loading}
+      />
 
       {open && (
         <Box sx={{ mt: 1 }}>

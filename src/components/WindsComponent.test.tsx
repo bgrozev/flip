@@ -90,12 +90,14 @@ describe('WindsComponent manual-wind gating', () => {
     expect(screen.getByText('GND')).toBeTruthy();
     expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(3);
 
-    fireEvent.click(screen.getByRole('button', { name: /Show all 4 levels/ }));
+    // One disclosure row, whose chevron carries the state — so the label
+    // stays put instead of renaming itself on open.
+    fireEvent.click(screen.getByRole('button', { name: /All 4 levels/ }));
 
     expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(4);
     expect(screen.queryByText('GND')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /Show summary/ }));
+    fireEvent.click(screen.getByRole('button', { name: /All 4 levels/ }));
 
     expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(3);
   });
@@ -104,7 +106,7 @@ describe('WindsComponent manual-wind gating', () => {
     renderWinds({ allowManualEdit: false });
 
     expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(4);
-    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /All 4 levels/ })).toBeNull();
   });
 
   it('forces the full table while the profile is unlocked', () => {
@@ -112,7 +114,7 @@ describe('WindsComponent manual-wind gating', () => {
     renderWinds({ allowManualEdit: true, manual: true, bands: [1000, 3000] });
 
     expect(screen.getByRole('table').querySelectorAll('tbody tr')).toHaveLength(4);
-    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /All 4 levels/ })).toBeNull();
   });
 
   it('keeps Reset with the other editing actions, behind the feature', () => {
