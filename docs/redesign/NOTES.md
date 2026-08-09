@@ -1682,3 +1682,86 @@ The `SECONDARY_PANELS` entry is left open with an argument against it:
 "Settings and Help are secondary" is a fact about the app rather than about
 a mode, so folding it into `Mode` would have all three modes repeat the
 same pair. Worth doing only if a mode ever needs a different one.
+
+## Session 2026-08-08 (3) — the phone toolbar, and an empty map explained
+
+Three owner reports, all from using the new split on a real phone.
+
+### The top bar
+
+Four separate things, one symptom:
+
+- **The observed-conditions eye drew at 24px.** `<Tooltip sx={{fontSize:16}}>`
+  — the `sx` was on the Tooltip, which is not the element that renders, so it
+  did nothing. Owner noticed it as "the observed condition icon takes a lot of
+  space", which it did: it was half again the size of everything around it.
+- **Every reading could wrap inside itself**, so "140˚@6.6" broke under its
+  own "AVG" and "2552 FT" split across two lines. Each is one token now.
+- **The gaps were `spacing={3}`** — 24px between four items, on a 375px
+  screen. 8px at xs, 24px from sm.
+- **The group overflowed its row**, which is why the density altitude was
+  sliced off at the right edge.
+
+Then the arithmetic, which is the part worth recording, because it is what
+makes this a judgement rather than a fix. At 375px the toolbar has 355px of
+usable width. The two readings measure 119 + 121; the mode switch is 40, the
+presets button 64 with its label and 40 without; the burger is 40 and the logo
+32. Fitting title AND actions on one row needs ≈ 240px for the readings and
+there is no honest way to get there — dropping the labels leaves two bare
+arrows, and shrinking the font to 0.75rem buys 34px of the 104 needed.
+
+So: **the density altitude is not in the bar at xs.** It was chosen because it
+is the only item there that is also somewhere else — the winds indicator's
+header carries temperature and DA, and the Wind panel has the whole conditions
+row. The two wind readings are only in the bar. With DA gone the title group
+is 344 ≤ 355 and nothing is clipped; the actions still wrap to a second row.
+That is left as the owner's call (BACKLOG, Polish), because the only way to
+one row is to take the readings out of the bar entirely, and AVG — the wind
+through the pattern, weighted by descent rate — exists nowhere else in the UI.
+
+### Flocking's empty map
+
+Owner: "if I have flocking selected and I move to a different spot I only see
+spot reference and target — no jumprun". Reproduced at Skydive Sebastian in
+**solve** sub-mode, and it is not a regression: `deriveSolve` returns the
+EMPTY derived state whenever the solver has no `best`, which includes the case
+of no enabled corridors at all. Corridors belong to a dropzone and never
+travel, so *every* move to a DZ that declares none lands in exactly this
+state — and the top bar's spot disappears with the map's, because there is no
+spot to write.
+
+Everything about that is intended except that nothing said so. The Flocking
+panel did say it ("No corridors — add one to describe an allowed jumprun"),
+but it is below the fold on a phone and the map is where the user is looking.
+
+The map says it now. The wind-trust banner's strip was extracted as
+`MapNotice` — same amber plate, icon, title, detail — and the two stack in one
+absolutely-positioned column, with the winds indicator's `topOffset` computed
+from how many strips are showing instead of assuming one. Two messages:
+"No jumprun corridors here" when none are configured, "No jumprun solves"
+when they are but none reaches.
+
+One layout note: title and detail were two flex items and wrapped
+independently, which stranded the "·" at the start of the second column. They
+are one flowing sentence in a single child now, with the icon aligned to the
+first line rather than centred.
+
+### Pressing the map to close the panel
+
+The click registry dispatched to exactly ONE handler — the highest priority,
+latest registration breaking ties. That is right for a layer answering "the
+map was pressed HERE" and wrong for behaviour hanging off "the map was
+pressed at all", and closing the panel is the second kind. A registration may
+now pass `observe`: always notified, never consuming, so `TargetEditLayer`
+still gets its shift-click and its tap-to-dismiss.
+
+The winner-selection rule moved into `map/clickDispatch.ts`. It belongs to the
+adapter's contract rather than to any map library, both provider containers
+had their own copy of the same `reduce`, and neither copy was tested — the
+pure version is. That matters more than usual here: the browser tooling cannot
+drive a Google map click at all, so a unit test is the only check this rule
+will get before a human taps it.
+
+Rejected: a plain DOM listener on the map container. A `click` fires after a
+pan (down and up on the same element), so the panel would close every time the
+user dragged the map.

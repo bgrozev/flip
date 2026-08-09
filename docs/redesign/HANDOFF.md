@@ -35,7 +35,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **901 tests in 45 files, 0 lint errors, 52 known
+Baseline on the branch: **907 tests in 46 files, 0 lint errors, 52 known
 lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases now run with a 15 s timeout instead of the 5 s default — the
@@ -74,6 +74,33 @@ roughly in order:
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
 
+### Session 2026-08-08 (3) — the phone toolbar, and an empty map explained
+
+Three owner reports from using the split on a real phone.
+
+**The top bar rendered badly.** The observed-conditions eye drew at 24px
+because its `sx` sat on the Tooltip rather than the icon; the readings wrapped
+under their own labels; and the group overflowed, clipping the density
+altitude off the right edge. Fixed, and **DA is not shown in the bar at
+375px** — it is the only item there that is also somewhere else (the winds
+indicator's header, the Wind panel). The toolbar still takes **two rows** at
+that width: AVG + GND + mode switch + presets are 344px of the 355px
+available, so one row would mean losing a reading. Owner's call — BACKLOG
+has it under Polish.
+
+**Flocking could look broken.** In solve, when no corridor reaches the target
+the map draws NOTHING and the top bar's spot goes with it — which is exactly
+the state you land in after moving to another dropzone, since corridors never
+travel. The map now says which it is (`MapNotice`, shared with the wind-trust
+banner, and the two stack). This was the owner's "I only see the spot
+reference and the target".
+
+**Pressing the map closes the panel on a phone.** The click registry gave a
+click to one handler only; a registration may now `observe` — always
+notified, never consuming — so shift-click still moves the target. The
+winner-selection rule moved to `map/clickDispatch`, shared by both providers
+and now tested.
+
 ### Session 2026-08-08 (2) — three backlog items, re-checked
 
 The owner named three entries and asked which still applied.
@@ -103,14 +130,18 @@ elevation, and both rename dialogs, which open on the current name.
 conventions table. Free text and native date/time inputs are excluded on
 purpose.
 
-**The Phase-N follow-up lists were re-checked entry by entry** and BACKLOG
-now records what each one is: two already fixed (the target/heading handle
-overlap, the mode-picker cards' accessible names), one obsolete
-(`attachPlaceAutocomplete` is gone — place search is a promise API), one
-**latent rather than live** (Settings does show stored rather than effective
+**The Phase-N follow-up lists were re-checked entry by entry.** Two were
+already fixed (the target/heading handle overlap — solved by placing the
+rotate handle 44 **pixels** out rather than a fixed distance in metres; the
+mode-picker cards' accessible names) and one was obsolete
+(`attachPlaceAutocomplete` is gone — place search is a promise API); at the
+owner's instruction those were **deleted from BACKLOG rather than ticked**,
+along with the manoeuvre offset bug, which emptied the Phase-2 and Bugs
+sections outright. NOTES keeps the reasoning. One entry turned out to be
+**latent rather than live**: Settings does show stored rather than effective
 values, but all three modes declare `defaults: {}`, so nothing is overridden
-today), and the rest still true. `SECONDARY_PANELS` is left open with an
-argument against doing it.
+today and there is no discrepancy to indicate. `SECONDARY_PANELS` is left
+open with an argument against doing it.
 
 ⚠️ Worth a real device: the split's default 40% and whether the divider
 should be draggable rather than a two-state toggle. A toggle was chosen
@@ -826,6 +857,10 @@ verify another way:
   pattern, and no shifted letter falls through to its plain binding.
 - **Focus map (`F`) and the help `?` icons on a phone.** Verified at
   375px in the preview, not on a real handset.
+- **Pressing the map to close the panel on a phone** (2026-08-08). The
+  dispatch rule is unit-tested, but automated clicks never reach the Maps
+  click handler here, so the tap itself has never happened. Confirm it also
+  does NOT fire when panning the map.
 - **The mobile map/panel split** (2026-08-08). Verified at 375x812 in the
   preview — both states, the compact winds chip, the app-bar overlap — but
   not on a real handset, where the open questions are whether 40% is enough

@@ -103,14 +103,6 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ---
 
-## Bugs
-
-- ☑ **Manoeuvre-from-params offset bug** — FIXED Phase 1 (`85e967d`).
-  `offsetXFt` = 0 now produces correct geometry (0.01 ft epsilon segment,
-  needed because `setFinalHeading` derives direction from the last two
-  points); negative offsets place the initiation point on the opposite
-  side of the final-approach line. Tests cover positive/zero/negative.
-
 ## From the 2026-07-28 session
 
 - ◐ **Import the owner's dropzone list, then curate all of it** — import
@@ -125,6 +117,14 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
   DZ. 
 
 ## Polish (trivial)
+
+- ☐ **The phone toolbar still takes two rows** (375px). Nothing is clipped
+  any more and the density altitude was dropped there to make room (it is in
+  the map's winds indicator and the Wind panel), but AVG + GND + the mode
+  switch + the presets menu are 344px of the 355px available, so the actions
+  wrap to a second line. One row needs one of them to go — the owner's call
+  which, if any: the readings could leave the bar entirely and live only on
+  the winds indicator, at the cost of AVG, which is nowhere else.
 
 - ☐ **Settings has no `?` in its panel header** while every other panel
   does (spotted in the 2026-08-08 UI pass). Either give it a help topic in
@@ -314,21 +314,11 @@ tag. Some overlap existing entries elsewhere in this file (cross-referenced).
 
 ---
 
-All three sections re-checked against the code on **2026-08-08**; each entry
-now says what was found.
-
-## Phase-2 follow-ups (found during implementation, 2026-07-14)
-
-- ☑ Target-edit handles overlap at mid zoom — FIXED, and the fix is
-  `HEADING_HANDLE_OFFSET_PX` in `map/layers/TargetEditLayer.tsx`: the rotate
-  handle is placed 44 **pixels** out and converted to metres for the current
-  zoom, so it cannot close on the target the way a fixed distance in metres
-  did. Two later changes make the collision impossible rather than merely
-  unlikely: the rotate handle only exists while the target is hovered, and it
-  is withdrawn outright while the target is being dragged.
-- ☑ `attachPlaceAutocomplete` — OBSOLETE, the function is gone. Place search
-  became a promise API (`searchPlaceSuggestions` / `resolvePlaceSuggestion`)
-  in the P6/F5 work; there is no attached widget and no listener to dispose.
+Re-checked against the code on **2026-08-08**. What was already fixed has
+been deleted rather than ticked — `NOTES.md` keeps the reasoning, and a list
+of solved problems is not a backlog. The Phase-2 section is gone entirely for
+that reason, along with the manoeuvre offset bug and the mode picker's missing
+accessible names.
 
 ## Phase-3 follow-ups (found during implementation, 2026-07-14)
 
@@ -349,8 +339,6 @@ now says what was found.
 - ☐ Presets don't carry their mode yet (ARCHITECTURE: Plan carries mode)
   — still true (`Preset` has target/pattern/manoeuvre/course/place, no mode);
   part of the Phase-7 Plan document work.
-- ☑ Mode picker cards are unnamed buttons — FIXED: `ModePicker.tsx` gives
-  each `CardActionArea` an `aria-label` naming the mode and its description.
 
 ## Phase-4 follow-ups (found during implementation + spot check, 2026-07-15)
 
