@@ -1,7 +1,7 @@
 import { Feature, Point } from 'geojson';
 
 import { DaSeverity } from '../core/atmosphere';
-import { SolveCorridorParams } from '../core/flocking';
+import { FlockingParams, SolveCorridorParams } from '../core/flocking';
 import { UnitPreferences } from '../core/units';
 
 // Flight point properties
@@ -449,23 +449,63 @@ export interface ManoeuvreConfig {
   initiationAltitudeOffset?: number;
 }
 
-export interface Preset {
+/**
+ * Where a setup lands: the place, the target within it, and the course the
+ * target is positioned against. Optional as a GROUP, and that is the point —
+ * a target without the place it belongs to is meaningless, since the same
+ * coordinates at another dropzone are a field two states away.
+ */
+export interface SetupSite {
+  /**
+   * The place the setup was saved at (a `Place.id`). Courses belong to a
+   * place, so a setup that names a course has to name the place too —
+   * otherwise loading it would select a course the picker no longer lists.
+   * The setup's own target still wins over whatever that place remembers:
+   * the setup IS the remembered arrangement.
+   *
+   * Null for a setup built on a geocoder hit, which belongs to no place.
+   */
+  placeId: string | null;
+  target: Target;
+  selectedCourseId: string | null;
+}
+
+/**
+ * A named arrangement of everything a jump is planned with. Splits on one
+ * axis: what travels between dropzones (the canopy's pattern, the turn) is
+ * always here, and what belongs to one place (`site`) is optional — so a
+ * setup is either "my ZoneAcc at ZHills" or "my comp canopy and turn,
+ * anywhere".
+ */
+export interface Setup {
   id: string;
   name: string;
-  target: Target;
+  /**
+   * What is being flown, as a label: "SAW 75". Typed rather than derived —
+   * nothing in the app models a canopy yet, and the glide ratio and descent
+   * rate that describe one are numbers you cannot read a name off. It can
+   * therefore go stale against them; see BACKLOG's canopy + wing-loading
+   * entry for what eventually replaces it.
+   */
+  canopy?: string;
+  note?: string;
+  /**
+   * The mode the setup was saved in. Pattern params are per-mode, so a setup
+   * without one would drop a swooper's numbers into Standard Pattern's slot;
+   * loading switches mode first. Absent for setups saved before setups
+   * carried a mode, which means "apply to whatever is active".
+   */
+  modeId?: string;
   patternParams: PatternParams;
   manoeuvre: ManoeuvreConfig;
-  selectedCourseId?: string | null;
+  /** Flocking setups only — the mode's own document, in place of the turn. */
+  flockingParams?: FlockingParams;
   /**
-   * The place that was active when the preset was saved (a `Place.id`).
-   * Courses belong to a place, so a preset that names a course has to name
-   * the place too — otherwise loading it would select a course the picker no
-   * longer lists. The preset's own target still wins over whatever was
-   * remembered at that place: the preset IS the remembered setup.
-   *
-   * Absent for presets saved before this existed, and for a setup built on a
-   * geocoder hit, which belongs to no place.
+   * Explicitly null when the setup travels, rather than absent: a preset
+   * from before setups had a site half carries neither key, and the two have
+   * to be told apart on the way back in. Absent therefore means "this is an
+   * old preset", which was always site-bound.
    */
-  placeId?: string | null;
+  site?: SetupSite | null;
   createdAt: number;
 }

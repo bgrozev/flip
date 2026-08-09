@@ -2,11 +2,11 @@ import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
 import { Chip, Divider, IconButton, Stack, Tooltip } from '@mui/material';
 import React from 'react';
 
+import { UseSetupsResult } from '../hooks/useSetups';
 import { ModeId } from '../modes';
-import { Preset } from '../types';
 
 import ModeSwitcher from './ModeSwitcher';
-import PresetSelector from './PresetSelector';
+import SetupSelector from './SetupSelector';
 
 interface ToolbarActionsProps {
   modeId: ModeId;
@@ -17,16 +17,15 @@ interface ToolbarActionsProps {
   /** Nerd mode is on — shown as a chip so the state is never invisible. */
   nerd: boolean;
   onNerdOff: () => void;
-  showPresets: boolean;
-  presets: Preset[];
-  activePresetId: string | null;
-  onPresetSelect: (id: string | null) => void;
-  onPresetSave: (name?: string) => void;
-  onPresetDelete: () => void;
-  onPresetRename: (id: string, newName: string) => void;
-  /** Preset menu open state, owned by App so `S` can open it. */
-  presetsOpen: boolean;
-  onPresetsOpenChange: (open: boolean) => void;
+  showSetups: boolean;
+  setups: UseSetupsResult;
+  /** The mode in play, so a setup saved in another one can say which. */
+  activeModeId: ModeId;
+  placeId: string | null;
+  placeName: string | null;
+  /** Setup menu open state, owned by App so `S` can open it. */
+  setupsOpen: boolean;
+  onSetupsOpenChange: (open: boolean) => void;
 }
 
 export default function ToolbarActions({
@@ -36,15 +35,13 @@ export default function ToolbarActions({
   showExport,
   nerd,
   onNerdOff,
-  showPresets,
-  presets,
-  activePresetId,
-  onPresetSelect,
-  onPresetSave,
-  onPresetDelete,
-  onPresetRename,
-  presetsOpen,
-  onPresetsOpenChange
+  showSetups,
+  setups,
+  activeModeId,
+  placeId,
+  placeName,
+  setupsOpen,
+  onSetupsOpenChange
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
@@ -55,16 +52,14 @@ export default function ToolbarActions({
           indicator, next to what it changes — not in the global toolbar. */}
       {showExport && <ExportButton onClick={onExportClick} />}
       {showExport && <Divider orientation="vertical" flexItem />}
-      {showPresets && (
-        <PresetSelector
-          presets={presets}
-          activePresetId={activePresetId}
-          onSelect={onPresetSelect}
-          onSave={onPresetSave}
-          onDelete={onPresetDelete}
-          onRename={onPresetRename}
-          open={presetsOpen}
-          onOpenChange={onPresetsOpenChange}
+      {showSetups && (
+        <SetupSelector
+          setups={setups}
+          activeModeId={activeModeId}
+          placeId={placeId}
+          placeName={placeName}
+          open={setupsOpen}
+          onOpenChange={onSetupsOpenChange}
         />
       )}
     </Stack>

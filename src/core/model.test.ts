@@ -20,7 +20,7 @@ import {
   migrateManoeuvreConfig,
   migrateManoeuvreParams,
   migratePatternParams,
-  migratePresets,
+  migrateSetups,
   migrateSettings,
   migrateStoredTracks,
   migrateStoredWinds,
@@ -471,13 +471,13 @@ describe('seedTouchedSettings', () => {
   });
 });
 
-describe('migratePresets', () => {
+describe('migrateSetups', () => {
   it.each(GARBAGE.filter(g => !Array.isArray(g)).map(g => [g]))('returns [] for %j', raw => {
-    expect(migratePresets(raw)).toEqual([]);
+    expect(migrateSetups(raw)).toEqual([]);
   });
 
   it('drops non-object entries and repairs the rest', () => {
-    const result = migratePresets([
+    const result = migrateSetups([
       'garbage',
       42,
       null,
@@ -496,25 +496,62 @@ describe('migratePresets', () => {
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe('preset_1');
     expect(result[0].name).toBe('Main');
-    expect(result[0].target.finalHeading).toBe(90);
+    expect(result[0].site?.target.finalHeading).toBe(90);
     // Second entry gets defaults for everything missing
-    expect(result[1].id).toBe('preset_migrated_4');
+    expect(result[1].id).toBe('setup_migrated_4');
     expect(result[1].name).toBe('no id or content');
-    expect(result[1].target).toEqual(DEFAULT_TARGET);
+    expect(result[1].site?.target).toEqual(DEFAULT_TARGET);
     expect(result[1].patternParams).toEqual(DEFAULT_PATTERN_PARAMS);
     expect(result[1].manoeuvre).toEqual(DEFAULT_MANOEUVRE_CONFIG);
   });
 
-  it('keeps the place a preset was saved at, and nulls a missing one', () => {
-    const result = migratePresets([
+  it('keeps the place a setup was saved at, and nulls a missing one', () => {
+    const result = migrateSetups([
       { id: 'p1', placeId: 'dz:Skydive Arizona' },
       { id: 'p2' },
       { id: 'p3', placeId: '' },
       { id: 'p4', placeId: 42 }
     ]);
 
-    expect(result.map(p => p.placeId))
+    expect(result.map(p => p.site?.placeId))
       .toEqual(['dz:Skydive Arizona', null, null, null]);
+  });
+
+  // Every preset carried a target, so an entry with no `site` key at all is
+  // one of those and is site-bound. A setup that travels says so with an
+  // explicit null, which is the only thing that tells the two apart.
+  it('reads a preset as site-bound and an explicit null as portable', () => {
+    const result = migrateSetups([
+      { id: 'old', target: { target: { lat: 1, lng: 2 }, finalHeading: 90 } },
+      { id: 'travels', site: null },
+      {
+        id: 'bound',
+        site: {
+          placeId: 'dz:Skydive Arizona',
+          target: { target: { lat: 3, lng: 4 }, finalHeading: 30 },
+          selectedCourseId: 'az_distance'
+        }
+      }
+    ]);
+
+    expect(result[0].site?.target.finalHeading).toBe(90);
+    expect(result[1].site).toBeNull();
+    expect(result[2].site?.selectedCourseId).toBe('az_distance');
+  });
+
+  it('carries the mode, the canopy and a flocking setup\u2019s own params', () => {
+    const result = migrateSetups([
+      { id: 'a', modeId: 'swoop', canopy: 'SAW 75', site: null },
+      { id: 'b', modeId: 'flocking', flockingParams: { windowTopFt: 13000 }, site: null },
+      { id: 'c', modeId: 42, canopy: '', site: null }
+    ]);
+
+    expect(result[0].modeId).toBe('swoop');
+    expect(result[0].canopy).toBe('SAW 75');
+    expect(result[1].flockingParams?.windowTopFt).toBe(13000);
+    // Garbage falls back to "apply to whatever is active" and no label.
+    expect(result[2].modeId).toBeUndefined();
+    expect(result[2].canopy).toBeUndefined();
   });
 });
 

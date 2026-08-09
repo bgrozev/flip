@@ -1,7 +1,7 @@
 /**
  * Versioned document schemas: defaults + validating loaders for the
  * persisted documents (target, pattern params, manoeuvre config, settings,
- * presets, custom courses, custom locations, stored tracks).
+ * setups, custom courses, custom locations, stored tracks).
  *
  * Every migrate*() function accepts unknown JSON and returns a valid
  * document, defaulting missing or invalid fields and clamping numeric
@@ -22,9 +22,9 @@ import {
   PatternParams,
   PatternType,
   PlaceTargets,
-  Preset,
   RecentPlace,
   Settings,
+  Setup,
   StoredTrack,
   Target
 } from '../types';
@@ -581,34 +581,76 @@ export function seedTouchedSettings(settings: Settings): (keyof Settings)[] {
   );
 }
 
-export function migratePresets(raw: unknown): Preset[] {
+/**
+ * Setups were "presets", and a preset was always site-bound: it stored a
+ * target and a place id at the top level, with no way to say "this one
+ * travels". Those become a `site`, since they do all carry a target — the
+ * portable kind can only be created deliberately, from here on.
+ */
+export function migrateSetups(raw: unknown): Setup[] {
   if (!Array.isArray(raw)) {
     return [];
   }
 
-  const presets: Preset[] = [];
+  const setups: Setup[] = [];
 
   raw.forEach((entry, i) => {
     if (!isRecord(entry)) {
       return; // drop garbage entries
     }
 
-    presets.push({
-      id: typeof entry.id === 'string' && entry.id !== '' ? entry.id : `preset_migrated_${i}`,
+    const setup: Setup = {
+      id: typeof entry.id === 'string' && entry.id !== '' ? entry.id : `setup_migrated_${i}`,
       name: stringOr(entry.name, 'Unnamed'),
-      target: migrateTarget(entry.target),
       patternParams: migratePatternParams(entry.patternParams),
       manoeuvre: migrateManoeuvreConfig(entry.manoeuvre),
-      selectedCourseId: typeof entry.selectedCourseId === 'string' ? entry.selectedCourseId : null,
-      // Null for presets saved before presets named a place, and for a setup
-      // built on a geocoder hit — both mean "no place", which is exactly what
-      // loading one restores.
-      placeId: typeof entry.placeId === 'string' && entry.placeId !== '' ? entry.placeId : null,
       createdAt: finiteNumber(entry.createdAt, 0)
-    });
+    };
+
+    if (typeof entry.canopy === 'string' && entry.canopy !== '') {
+      setup.canopy = entry.canopy;
+    }
+
+    if (typeof entry.note === 'string' && entry.note !== '') {
+      setup.note = entry.note;
+    }
+
+    // Left absent for a preset saved before setups carried a mode: it means
+    // "apply to whatever is active", which is what those did.
+    if (typeof entry.modeId === 'string' && entry.modeId !== '') {
+      setup.modeId = entry.modeId;
+    }
+
+    if (isRecord(entry.flockingParams)) {
+      setup.flockingParams = migrateFlockingParams(entry.flockingParams);
+    }
+
+    // A preset's site sat at the top level; a setup's is one optional group,
+    // so that a target can never arrive without the place it belongs to.
+    // A setup that travels stores `site: null`, which is what distinguishes
+    // it from a preset written before any of this existed.
+    if (entry.site === null) {
+      setup.site = null;
+    } else {
+      const rawSite = isRecord(entry.site) ? entry.site : entry;
+
+      setup.site = {
+        // Null for a setup built on a geocoder hit, which belongs to no
+        // place, and for presets saved before they named one.
+        placeId: typeof rawSite.placeId === 'string' && rawSite.placeId !== ''
+          ? rawSite.placeId
+          : null,
+        target: migrateTarget(rawSite.target),
+        selectedCourseId: typeof rawSite.selectedCourseId === 'string'
+          ? rawSite.selectedCourseId
+          : null
+      };
+    }
+
+    setups.push(setup);
   });
 
-  return presets;
+  return setups;
 }
 
 const COURSE_TYPES: readonly CourseType[] = ['distance', 'zone-accuracy', 'speed'];

@@ -17,7 +17,7 @@ export { default as NumberField } from './NumberField';
 export { default as PanelSection, SectionHeading } from './PanelSection';
 export { default as PatternComponent } from './PatternComponent';
 export { default as PlacePicker } from './PlacePicker';
-export { default as PresetSelector } from './PresetSelector';
+export { default as SetupSelector } from './SetupSelector';
 export { default as selectOnFocus } from './selectOnFocus';
 export { default as SettingsComponent } from './SettingsComponent';
 export { default as ShortcutHint } from './ShortcutHint';

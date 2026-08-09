@@ -74,7 +74,7 @@ import {
   useFlockingPath,
   useKeyboardShortcuts,
   useMode,
-  usePresets,
+  useSetups,
   useSavedPlaces,
   useWinds
 } from './hooks';
@@ -104,6 +104,7 @@ import { windTrust } from './core/windTrust';
 import { visibleShortcuts } from './core/keymap';
 import { topicForPanel } from './core/help';
 import { normalizeDirection } from './core/validation';
+import { SetupSnapshot } from './core/setups';
 
 /** Keyboard target nudges: a fine step and a coarse one. */
 const NUDGE_FT = 25;
@@ -225,8 +226,8 @@ function DashboardContent() {
   // Ephemeral: "show me just the map" is a way of looking at the plan, not a
   // preference, so it is deliberately not persisted.
   const [focusMap, setFocusMap] = useState(false);
-  // Owned here so the `S` shortcut can open it (see PresetSelector).
-  const [presetsOpen, setPresetsOpen] = useState(false);
+  // Owned here so the `S` shortcut can open it (see SetupSelector).
+  const [setupsOpen, setSetupsOpen] = useState(false);
 
   const router = useToolpadRouter();
   const navigate = useNavigate();
@@ -352,11 +353,11 @@ function DashboardContent() {
     [target.target, selectPlaceTarget, invalidateWinds]
   );
 
-  // Loading a preset is a place selection too — a preset names the dropzone
-  // it was saved at, so that the course it names is still one the Courses
-  // panel lists. `useGivenTarget` keeps the preset's own target: the preset
-  // IS the remembered setup for that place.
-  const applyPresetTarget = useCallback(
+  // Loading a setup is a place selection too — a setup names the dropzone it
+  // was saved at, so that the course it names is still one the Courses panel
+  // lists. `useGivenTarget` keeps the setup's own target: the setup IS the
+  // remembered arrangement for that place.
+  const applySetupTarget = useCallback(
     (newTarget: Target, placeId: string | null) => {
       selectPlace(
         newTarget,
@@ -374,39 +375,50 @@ function DashboardContent() {
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  const {
-    presets,
-    activePresetId,
-    createPreset,
-    loadPreset,
-    updatePreset,
-    deletePreset,
-    renamePreset
-  } = usePresets({
-    target,
-    patternParams: modePatternParams,
-    manoeuvreConfig,
-    selectedCourseId,
-    activePlaceId,
-    applyTarget: applyPresetTarget,
-    setPatternParams: setModePatternParams,
+  // Everything a setup can store, as it is right now: what the toolbar
+  // compares against to say whether the loaded setup is still what is on
+  // screen, and what "save" writes.
+  const setupSnapshot: SetupSnapshot = useMemo(
+    () => ({
+      modeId: mode.id,
+      patternParams: modePatternParams,
+      manoeuvre: manoeuvreConfig,
+      flockingParams,
+      target,
+      placeId: activePlaceId,
+      selectedCourseId
+    }),
+    [
+      mode.id,
+      modePatternParams,
+      manoeuvreConfig,
+      flockingParams,
+      target,
+      activePlaceId,
+      selectedCourseId
+    ]
+  );
+
+  // A stored mode id is data, so it is validated on the way back in rather
+  // than trusted: an id from a retired mode leaves the mode alone.
+  const applySetupMode = useCallback(
+    (id: string) => {
+      const modeId = migrateModeId(id);
+
+      if (modeId) setModeId(modeId);
+    },
+    [setModeId]
+  );
+
+  const setups = useSetups({
+    snapshot: setupSnapshot,
+    applyTarget: applySetupTarget,
+    setModeId: applySetupMode,
+    setPatternParamsForMode,
     setManoeuvreConfig,
+    setFlockingParams,
     setSelectedCourseId
   });
-
-  const handlePresetSave = (name?: string) => {
-    if (name) {
-      createPreset(name);
-    } else if (activePresetId) {
-      updatePreset(activePresetId);
-    }
-  };
-
-  const handlePresetDelete = () => {
-    if (activePresetId) {
-      deletePreset(activePresetId);
-    }
-  };
 
   // Flocking mode replaces the pattern/manoeuvre derivation with its own
   // descent-path pipeline; each derivation only runs in its own mode.
@@ -810,7 +822,7 @@ function DashboardContent() {
     'app.mode.swoop': () => setModeId('swoop'),
     'app.mode.flocking': () => setModeId('flocking'),
     'app.export': () => setExportOpen(true),
-    'app.presets': () => setPresetsOpen(true),
+    'app.presets': () => setSetupsOpen(true),
     'panel.pattern': () => router.navigate(panelPath('pattern')),
     'panel.manoeuvre': () => router.navigate(panelPath('manoeuvre')),
     'panel.target': () => router.navigate(panelPath('target')),
@@ -1187,15 +1199,13 @@ function DashboardContent() {
     showExport: hasFeature(mode, 'export'),
     nerd: settings.nerd,
     onNerdOff: () => setSettings({ ...settings, nerd: false }),
-    showPresets: modeSettings.showPresets && hasFeature(mode, 'presets'),
-    presets,
-    activePresetId,
-    onPresetSelect: loadPreset,
-    onPresetSave: handlePresetSave,
-    onPresetDelete: handlePresetDelete,
-    onPresetRename: renamePreset,
-    presetsOpen,
-    onPresetsOpenChange: setPresetsOpen
+    showSetups: modeSettings.showPresets && hasFeature(mode, 'presets'),
+    setups,
+    activeModeId: mode.id,
+    placeId: activePlaceId,
+    placeName: placeNameFromId(activePlaceId),
+    setupsOpen,
+    onSetupsOpenChange: setSetupsOpen
   };
 
   const appTitlePropsRef = useRef<{ wind?: WindSummaryData; spot?: SpotText }>({});
@@ -1224,7 +1234,7 @@ function DashboardContent() {
   const bottomNavPanels = mode.nav.filter(id => !SECONDARY_PANELS.includes(id));
   const bottomNavValue = activePanel ? bottomNavPanels.indexOf(activePanel) : -1;
 
-  const activePresetName = presets.find(preset => preset.id === activePresetId)?.name ?? 'unnamed';
+  const activeSetupName = setups.activeSetup?.name ?? 'unnamed';
 
   const navigation = useMemo(() => buildNavigation(mode.nav), [mode]);
 
@@ -1243,7 +1253,7 @@ function DashboardContent() {
         onClose={() => setExportOpen(false)}
         path={isFlocking ? flocking.corrected : paths.display}
         target={target.target}
-        presetName={activePresetName}
+        presetName={activeSetupName}
       />
       {isMobile && !focusMap && (
         <Paper
