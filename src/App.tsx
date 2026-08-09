@@ -906,6 +906,7 @@ function DashboardContent() {
         onToggleFavorite={activePlace?.kind === 'dropzone' || activePlace?.kind === 'favorite'
           ? () => toggleFavorite(activePlace.name)
           : undefined}
+        showHeadingField={hasFeature(mode, 'headingField') && !isFlocking}
       />
     );
   } else if (activePanel === 'wind') {

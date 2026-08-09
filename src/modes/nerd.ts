@@ -18,9 +18,18 @@ import { PanelId, Settings } from '../types';
 
 import { FeatureId, Mode } from './index';
 
-/** Features that exist only under nerd mode. */
+/**
+ * Features that exist only under nerd mode.
+ *
+ * `headingField` is the numeric final-heading input in the Location panel.
+ * The heading is set on the map (drag the handle, click it for into-wind) and
+ * from the keyboard, which is what flying needs; typing an exact number is
+ * for the person who already knows the runway heading, which is the nerd test
+ * exactly. Hiding it changes no path math — it edits the same value the
+ * handle does.
+ */
 export const NERD_FEATURES: readonly FeatureId[] =
-  ['export', 'manualWind', 'pointTooltips'];
+  ['export', 'manualWind', 'pointTooltips', 'headingField'];
 
 /** Panels that exist only under nerd mode (none yet — the Export panel is next). */
 export const NERD_PANELS: readonly PanelId[] = [];

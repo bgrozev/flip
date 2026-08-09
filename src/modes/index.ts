@@ -18,7 +18,7 @@ export type ModeId = 'pattern' | 'swoop' | 'flocking';
  */
 export const FEATURE_IDS = [
   'manoeuvre', 'courses', 'presets', 'export', 'patternLegCount', 'manualWind',
-  'pointTooltips'
+  'pointTooltips', 'headingField'
 ] as const;
 export type FeatureId = typeof FEATURE_IDS[number];
 

@@ -11,14 +11,21 @@
  *
  * So the panel opens with the answer to its own question — which place, in
  * display type — and everything below it is how to change that.
+ *
+ * The one exception is the numeric heading field, which comes back under NERD
+ * mode between the card and the search: flying wants the handle, but someone
+ * who already knows the runway heading wants to type it, and that is the nerd
+ * test exactly.
  */
 import { Stack } from '@mui/material';
 import React from 'react';
 
 import { TargetProvider } from '../hooks';
+import { normalizeDirection } from '../core/validation';
 import { Place, Target } from '../types';
 
 import LocationHero from './LocationHero';
+import NumberField from './NumberField';
 import { PlacePicker } from './';
 
 interface TargetComponentProps {
@@ -40,6 +47,12 @@ interface TargetComponentProps {
   onResetToPlace: () => void;
   isFavorite: boolean;
   onToggleFavorite?: () => void;
+  /**
+   * Offer the numeric final-heading field (nerd mode's `headingField`, and
+   * never in flocking, which has no final heading). Everyone else sets the
+   * heading on the map or from the keyboard.
+   */
+  showHeadingField?: boolean;
 }
 
 export default function TargetComponent({
@@ -51,7 +64,8 @@ export default function TargetComponent({
   placeOffsetLabel,
   onResetToPlace,
   isFavorite,
-  onToggleFavorite
+  onToggleFavorite,
+  showHeadingField = false
 }: TargetComponentProps) {
   return (
     <Stack spacing={2}>
@@ -64,6 +78,18 @@ export default function TargetComponent({
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite}
       />
+      {showHeadingField && (
+        <NumberField
+          title="The direction of the final approach. Set it on the map by dragging the target's heading handle, or click that handle to face the wind."
+          label="Final heading"
+          value={Math.round(target.finalHeading)}
+          step={1}
+          wrap={360}
+          unit="°"
+          onChange={value =>
+            setTarget({ ...target, finalHeading: normalizeDirection(value) })}
+        />
+      )}
       <TargetProvider target={target} setTarget={setTarget} selectPlace={selectPlace}>
         <PlacePicker upwindHeading={upwindHeading} />
       </TargetProvider>

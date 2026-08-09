@@ -19,6 +19,13 @@ describe('nerd feature table integrity', () => {
     }
   });
 
+  // Named explicitly, not just covered by the loops above: the numeric
+  // final-heading field is the only way to TYPE a heading, so whether it is
+  // gated is a product decision rather than an implementation detail.
+  it('gates the numeric heading field', () => {
+    expect(NERD_FEATURES).toContain('headingField');
+  });
+
   it('references only real Settings keys', () => {
     const settingKeys = Object.keys(DEFAULT_SETTINGS);
 
