@@ -2058,3 +2058,48 @@ The panel had no test file at all before this. Worth noting for the rest of
 the panels: the bug was in the exact shape of code (local state mirroring a
 prop, with an effect that deliberately under-subscribes) that a component
 test catches immediately and a unit test never sees.
+
+### A sweep for the same shape (2026-08-08)
+
+After the Courses fix, the owner asked for a sweep: same shape elsewhere,
+tests where there were none, fixes for whatever turned up. The shape is
+**local state mirroring a value the panel does not own**, and the tell is an
+`exhaustive-deps` suppression or a `useState(props...)` initialiser.
+
+Found and fixed: **the manoeuvre's rotation toggle**. `rotationCustom` was
+initialised from the params and never re-synced, so clicking Custom and then
+loading a setup with a 450 left the panel showing the custom field with no
+preset lit — the panel disagreeing with the turn it was drawing. Setups made
+it easy to reach; before them only a preset load could. Fixed with the same
+one-line effect `PatternComponent`'s leg-altitude selector already had, so
+the two now state one rule.
+
+Checked and found correct, now pinned by tests rather than by reading:
+
+- **The custom course's lat/lng/direction** follow a map drag, guarded by
+  focus refs so an incoming value cannot overwrite half-typed text. Confirmed
+  non-vacuous by breaking the sync and watching the test fail.
+- **`ManoeuvreAltitudeControl`** follows an offset applied from outside; its
+  bounds are the ±15% the recorded shape can be scaled to.
+- **Flocking's corridor collapse flags**, which are held by POSITION:
+  `removeCorridor` already reindexes them, so a fold stays on its own
+  corridor when an earlier one is deleted. (Misread first time round as a
+  bug — the reindexing is there, just below the `filter`.)
+- **`DirectionSwitch`** and the manoeuvre's depth/offset are derived from
+  props outright, so the initiation handle on the map moves them.
+- **`SetupManagerDialog`** — rename, canopy, bind/unbind, and the delete
+  confirmation.
+
+Left alone, with reasons:
+
+- **Flocking's collapse flags survive a change of dropzone**, where the
+  corridor list is replaced wholesale, so an unrelated corridor can come up
+  folded. Cosmetic, and fixing it properly needs corridor identities, which
+  the schema does not have.
+- **`map/**/primitives.tsx`** carry most of the remaining `exhaustive-deps`
+  suppressions. They are imperative sync to a map SDK, not a panel mirroring
+  a prop — a different problem, and not one a jsdom test can reach.
+
+Four component test files added (manoeuvre parameters, manoeuvre altitude,
+flocking corridors, setup manager) plus cases on the courses and pattern
+panels: 980 -> 1017 tests.

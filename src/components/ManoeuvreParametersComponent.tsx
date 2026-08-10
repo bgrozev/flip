@@ -6,7 +6,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { DEFAULT_MANOEUVRE_PARAMS } from '../core/model';
 import { manoeuvreBounds, solveManoeuvre } from '../core/manoeuvre';
@@ -80,6 +80,17 @@ export default function ManoeuvreParametersComponent({
   };
   const isPreset = ROTATION_PRESETS.includes(params.rotationDeg);
   const [rotationCustom, setRotationCustom] = useState(!isPreset);
+
+  // "The user asked for Custom" must not outlive the rotation it describes: a
+  // setup load or a preset restore can put a 450 in from outside, and the flag
+  // alone left the panel showing the custom field with no preset lit. Same
+  // rule (and same effect) as the pattern panel's leg-altitude selector.
+  useEffect(() => {
+    if (isPreset) {
+      setRotationCustom(false);
+    }
+  }, [params.rotationDeg]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const showCustomRotation = rotationCustom || !isPreset;
 
   return (

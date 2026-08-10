@@ -400,6 +400,17 @@ Panels are left-aligned by their container (`App.tsx`), not by each
 component: the container used to centre text and every panel undid it by
 hand.
 
+**A panel's local state must not outlive the value it describes.** This has
+bitten twice: the Courses panel's depth/offset (state synced by an effect
+that deliberately excluded the target, so a drag left it stale AND wrote the
+stale value back), and the manoeuvre's "the user asked for Custom" flag,
+which stayed on when a setup load put a preset rotation in. A value the map,
+a shortcut, or a setup can also change has to be *derived* — `NumberField`
+holds its own text while typing, so deriving does not fight the user — and a
+mode flag over such a value has to be reset when the value lands somewhere
+that contradicts it. `PatternComponent`'s leg-altitude selector is the
+worked example, and every case above is now pinned by a component test.
+
 ## Key Components
 
 | Component | File | Purpose |

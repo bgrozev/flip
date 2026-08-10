@@ -70,6 +70,51 @@ function renderPanel(target: Target) {
   return { onTargetChange, rerenderWith };
 }
 
+/** A custom course in storage, so the panel offers its edit fields. */
+function seedCustomCourse(over: Partial<typeof CUSTOM> = {}) {
+  window.localStorage.setItem(
+    'flip.courses.custom',
+    JSON.stringify({ schemaVersion: 1, doc: [{ ...CUSTOM, ...over }] })
+  );
+}
+
+const CUSTOM = {
+  id: 'custom-1',
+  name: 'Big pond',
+  type: 'distance' as const,
+  lat: 28.2187,
+  lng: -82.1514,
+  direction: 197,
+  placeId: COURSE.placeId
+};
+
+function renderWithCustom(course: typeof CUSTOM) {
+  const onTargetChange = vi.fn();
+  const props = (c: typeof CUSTOM) => ({
+    selectedCourseId: c.id,
+    onSelect: vi.fn(),
+    target: targetAt(100, 25),
+    onTargetChange,
+    editOpen: false,
+    onEditOpenChange: vi.fn(),
+    altitudeUnit: 'ft' as const,
+    placeId: COURSE.placeId ?? null,
+    placeName: 'Skydive City (ZHills)'
+  });
+
+  seedCustomCourse(course);
+  const view = render(<CoursesComponent {...props(course)} />);
+
+  return {
+    /** Re-seed storage as a map drag would, then re-render. */
+    moveTo: (next: typeof CUSTOM) => {
+      seedCustomCourse(next);
+      window.dispatchEvent(new StorageEvent('storage', { key: 'flip.courses.custom' }));
+      view.rerender(<CoursesComponent {...props(next)} />);
+    }
+  };
+}
+
 const depthField = () => screen.getByLabelText('Depth') as HTMLInputElement;
 const offsetField = () => screen.getByLabelText('Offset') as HTMLInputElement;
 const angleField = () => screen.getByLabelText('Approach angle') as HTMLInputElement;
@@ -143,5 +188,55 @@ describe('CoursesComponent — relative position', () => {
     const written = relativeFeet(onTargetChange.mock.calls.at(-1)![0]);
 
     expect(written.offset).toBeCloseTo(relativeFeet(start).offset, 6);
+  });
+});
+
+// A custom course is dragged and rotated on the map in "Position on map"
+// mode, so its own fields have the same obligation to follow.
+describe('CoursesComponent — a custom course’s own fields', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  const latField = () => screen.getByLabelText('Lat') as HTMLInputElement;
+  const lngField = () => screen.getByLabelText('Lng') as HTMLInputElement;
+  const dirField = () => screen.getByLabelText('Direction') as HTMLInputElement;
+
+  it('shows where the course is', () => {
+    renderWithCustom(CUSTOM);
+
+    expect(latField().value).toBe(String(CUSTOM.lat));
+    expect(lngField().value).toBe(String(CUSTOM.lng));
+    expect(dirField().value).toBe(String(CUSTOM.direction));
+  });
+
+  it('follows a drag on the map', () => {
+    const { moveTo } = renderWithCustom(CUSTOM);
+
+    moveTo({ ...CUSTOM, lat: 28.22, lng: -82.15 });
+
+    expect(latField().value).toBe('28.22');
+    expect(lngField().value).toBe('-82.15');
+  });
+
+  it('follows a rotation on the map', () => {
+    const { moveTo } = renderWithCustom(CUSTOM);
+
+    moveTo({ ...CUSTOM, direction: 214.7563 });
+
+    // Rounded to the thousandth: a rotate handle produces arbitrary precision.
+    expect(dirField().value).toBe('214.756');
+  });
+
+  // The coordinate fields commit on blur, so an incoming value must not
+  // overwrite half-typed text — which is what the focus refs are for.
+  it('does not overwrite a coordinate being typed', () => {
+    const { moveTo } = renderWithCustom(CUSTOM);
+
+    fireEvent.focus(latField());
+    fireEvent.change(latField(), { target: { value: '28.9' } });
+    moveTo({ ...CUSTOM, lat: 28.5 });
+
+    expect(latField().value).toBe('28.9');
   });
 });

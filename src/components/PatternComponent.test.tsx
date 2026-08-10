@@ -24,6 +24,74 @@ describe('PatternComponent', () => {
     window.localStorage.clear();
   });
 
+  // The same shape that bit the Courses panel and the manoeuvre's rotation
+  // toggle: a flag saying "the user asked for Custom", which must not outlive
+  // the value it describes. Here it is handled, and this pins it.
+  describe('the leg-altitude selector', () => {
+    const withFinalLeg = (altitude: number) => ({
+      ...DEFAULT_PATTERN_PARAMS,
+      legs: DEFAULT_PATTERN_PARAMS.legs.map((leg, i) =>
+        i === 0 ? { ...leg, altitude } : leg
+      )
+    });
+
+    const renderWith = (altitude: number) => {
+      const onParamsChange = vi.fn();
+      const view = render(
+        <AppStateProvider>
+          <PatternComponent params={withFinalLeg(altitude)} onParamsChange={onParamsChange} />
+        </AppStateProvider>
+      );
+
+      return {
+        onParamsChange,
+        rerenderWith: (next: number) =>
+          view.rerender(
+            <AppStateProvider>
+              <PatternComponent
+                params={withFinalLeg(next)}
+                onParamsChange={onParamsChange}
+              />
+            </AppStateProvider>
+          )
+      };
+    };
+
+    const customField = () =>
+      screen.queryByLabelText('Final leg altitude') as HTMLInputElement | null;
+
+    it('shows the preset a leg is already on', () => {
+      renderWith(300);
+
+      expect(customField()).toBeNull();
+    });
+
+    it('opens the custom field for an altitude that is not a preset', () => {
+      renderWith(275);
+
+      expect(customField()).not.toBeNull();
+      expect(customField()!.value).toBe('275');
+    });
+
+    it('leaves custom mode when the altitude lands on a preset from outside', () => {
+      const { rerenderWith } = renderWith(275);
+
+      expect(customField()).not.toBeNull();
+      // A setup load, a preset restore — anything that writes the params.
+      rerenderWith(300);
+
+      expect(customField()).toBeNull();
+    });
+
+    it('follows an outside change that is still custom', () => {
+      const { rerenderWith } = renderWith(275);
+
+      rerenderWith(425);
+
+      expect(customField()!.value).toBe('425');
+    });
+  });
+
   it('renders the pattern controls for the default three-leg pattern', () => {
     renderPattern();
 
