@@ -70,14 +70,6 @@ function renderPanel(target: Target) {
   return { onTargetChange, rerenderWith };
 }
 
-/** A custom course in storage, so the panel offers its edit fields. */
-function seedCustomCourse(over: Partial<typeof CUSTOM> = {}) {
-  window.localStorage.setItem(
-    'flip.courses.custom',
-    JSON.stringify({ schemaVersion: 1, doc: [{ ...CUSTOM, ...over }] })
-  );
-}
-
 const CUSTOM = {
   id: 'custom-1',
   name: 'Big pond',
@@ -87,6 +79,14 @@ const CUSTOM = {
   direction: 197,
   placeId: COURSE.placeId
 };
+
+/** A custom course in storage, so the panel offers its edit fields. */
+function seedCustomCourse(over: Partial<typeof CUSTOM> = {}) {
+  window.localStorage.setItem(
+    'flip.courses.custom',
+    JSON.stringify({ schemaVersion: 1, doc: [{ ...CUSTOM, ...over }] })
+  );
+}
 
 function renderWithCustom(course: typeof CUSTOM) {
   const onTargetChange = vi.fn();
