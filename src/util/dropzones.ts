@@ -939,6 +939,13 @@ export const DROPZONES: Dropzone[] = [
     region: 'Arizona',
     country: 'United States',
     direction: 181,
+    modes: {
+      swoop: {
+        lat: 32.80803252966774,
+        lng: -111.5816122113228,
+        direction: 216
+      },
+    },
   },
   {
     name: 'Skydive Atlanta',
