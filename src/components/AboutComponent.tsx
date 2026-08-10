@@ -78,9 +78,21 @@ export default function AboutComponent() {
             >
               Spaceland Load Clock
             </Link>
-            {' '}and{' '}
+            {', '}
             <Link href="https://wx.skydivecsc.com/" target="_blank" rel="noopener">
               CSC Weather
+            </Link>
+            {' '}and{' '}
+            <Link href="https://www.weather.gov/" target="_blank" rel="noopener">
+              the National Weather Service
+            </Link>
+            .
+          </Typography>
+
+          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+            Sounding data from{' '}
+            <Link href="https://mesonet.agron.iastate.edu/" target="_blank" rel="noopener">
+              Iowa Environmental Mesonet
             </Link>
             .
           </Typography>
