@@ -1,9 +1,9 @@
 # Redesign hand-off — start here
 
 Entry point for a new session picking up the FliP redesign. Last revised
-**2026-08-08**, after the Setups rework. Sessions are logged
-newest-first below; each one says what changed and what it left open, and
-`NOTES.md` has the reasoning behind every entry.
+**2026-08-08**, after the Setups rework and a follow-up bug fix + test
+sweep. Sessions are logged newest-first below; each one says what changed
+and what it left open, and `NOTES.md` has the reasoning behind every entry.
 
 **The owner's first dropzone curation pass landed** (`aa3c041`, `00e4ad4`):
 212 entries promoted to hand-checked positions/headings, 69 removed, 4
@@ -38,7 +38,7 @@ Branch `claude/flip-redesign-architecture-e767df`, in a worktree at
 `.claude/worktrees/flip-redesign-architecture-e767df`. **Nothing is
 merged to main and nothing is deployed** — deliberate (see Hard rules).
 
-Baseline on the branch: **967 tests in 47 files, 0 lint errors, 46 known
+Baseline on the branch: **1017 tests in 52 files, 0 lint errors, 46 known
 lint warnings, build green, tree clean.** (`.claude/launch.json` is untracked
 on purpose — it is the local dev-server config.) Two `PlacePicker.test.tsx`
 cases used to need a 15 s timeout for the unfiltered place-list render; the
@@ -76,6 +76,52 @@ roughly in order:
 - **Flocking map interactions** — see below.
 - **Removed the measure tool** (to be reimplemented — BACKLOG).
 - **Docs**: ported the UX-analysis docs into `docs/ux/`.
+
+### Session 2026-08-08 (6) — a course-position bug, and a sweep for its shape
+
+Three owner-driven follow-ups on the Setups work above.
+
+**The setup lists name the dropzone, not the setup.** Two setups both called
+"ZoneAcc" (one per dropzone) needed to be tellable apart without the name
+carrying the place. The dropzone is now a chip, first in the line, in the two
+lists that do not already say it — the toolbar menu's "Other dropzones" group
+and the manage dialog, which has no grouping at all — and left out under
+"At \<place\>", where it would repeat the heading on every row. Both lists
+also shorten the course label ("Zone Accuracy" → "ZoneAcc";
+`courseChipLabel`, which only shortens a built-in's name, since a custom
+course keeps whatever its owner called it). TypeScript caught a real bug on
+the way: `grouped.here.map(rowFor)` passed the array INDEX as the new
+optional parameter, so every row but the first would have grown a place chip.
+
+**Bug: the Courses panel's depth/offset/approach-angle fields did not follow
+a drag on the map, and stepping one afterwards moved the target sideways.**
+One cause, two symptoms — the three fields were local state synced by an
+effect that deliberately excluded the target ("to avoid feedback loops"), but
+the target is exactly what they describe; and because depth+offset are one
+position expressed as two numbers, each field writes BOTH, so stepping depth
+after a drag wrote the offset's stale value back with it. Fixed by measuring
+the position on every render instead of remembering it — no feedback loop,
+since `NumberField` only re-syncs when the value it is GIVEN changes. Five
+tests, confirmed failing first. Also moved depth+offset onto one row (depth
+first), matching the Manoeuvre panel's pairing for the same two numbers.
+
+**A sweep for the same shape** (local state mirroring a prop, no test): found
+one more live bug — the manoeuvre panel's "user asked for Custom" rotation
+flag never left custom mode when a setup (or a preset, before) put a preset
+rotation in from outside, so the panel could show 450° selected on the
+toggles while also showing the custom field. Fixed with the same one-line
+resync effect `PatternComponent`'s leg-altitude selector already had. Five
+other spots checked and found correct — the custom course's lat/lng/direction,
+the manoeuvre altitude control, flocking's corridor collapse (position-keyed,
+reindexed correctly on delete), `DirectionSwitch`, the setup manager — all now
+pinned by new component test files rather than left to be re-verified by
+reading. 967 → 1017 tests, 47 → 52 files. `map/**/primitives.tsx` still
+carries most of the remaining `exhaustive-deps` suppressions; that is
+imperative sync to a map SDK, a different problem, left alone.
+
+⚠️ Not verified by a real pointer: the Courses fix was confirmed with
+synthetic nudges (arrow keys, direct value writes) standing in for a drag —
+see "Never exercised by a real pointer" below, this belongs on that list too.
 
 ### Session 2026-08-08 (5) — presets become setups
 
@@ -933,6 +979,10 @@ verify another way:
   heading-rotate handle, shift-click the map to jump it. The map must stay
   put while dragging.
 - The **Spot Reference** drag (dragging pins it).
+- **The Courses panel's depth/offset following a drag** (2026-08-08 bug fix).
+  Confirmed with synthetic nudges and direct value writes standing in for the
+  map, plus the existing "map click/drag doesn't reach the handler" limit —
+  never confirmed with an actual pointer drag on the course-relative fields.
 - **A real geolocation grant** ("Nearest dropzone" in the Target panel).
   The permission prompt cannot be answered from automation, so only the
   denied and unavailable paths were exercised in a browser; the granted
