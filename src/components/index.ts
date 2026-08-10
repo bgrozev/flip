@@ -3,7 +3,7 @@ export { default as CoursesComponent } from './CoursesComponent';
 export { default as DisclosureRow } from './DisclosureRow';
 export { default as ExportDialog } from './ExportDialog';
 export { default as DirectionSwitch } from './DirectionSwitch';
-export { default as FlipIcon } from './FlipIcon';
+export { default as Wordmark, FlipMark } from './Wordmark';
 export { default as HelpComponent } from './HelpComponent';
 export { default as FlockingComponent } from './FlockingComponent';
 export { default as ManoeuvreComponent } from './ManoeuvreComponent';

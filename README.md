@@ -111,8 +111,8 @@ No. My primary motivation for creating FliP is to use it myself for canopy pilot
 with my students to plan straight-in landings.
 
 ## Where does the name FliP come from?
-It's my years long setup for a joke. When I have the time to build a Flocking Planner you'll be able to
-FliP/FloP between the two.
+It's my years long setup for a joke. FliP is the FLIght Planner; the Flocking Planner is FloP. Now that flocking
+mode exists, clicking the logo FliP/FloPs between the two.
 
 # Authors and License
 FliP is open-source, licensed under the [Apache 2.0 license](./LICENSE.txt). It was created by Boris Grozev.

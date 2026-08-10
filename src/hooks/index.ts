@@ -4,6 +4,7 @@ export { useCopySpot } from './useCopySpot';
 export { useCustomCourses } from './useCustomCourses';
 export { useFetchForecast } from './useFetchForecast';
 export { useFlightPaths } from './useFlightPaths';
+export { useFlipFlop } from './useFlipFlop';
 export { useGeolocation } from './useGeolocation';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export type { ShortcutHandlers } from './useKeyboardShortcuts';

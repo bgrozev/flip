@@ -194,6 +194,44 @@ the old DZ produced spots thousands of miles out) and comes back with its
 place. Targets belonging to no place — a setup, a geocoder hit — pass no
 place id and are not remembered.
 
+**The wordmark is the flocking switch** (`components/Wordmark.tsx` +
+`hooks/useFlipFlop.ts`). The name was always a setup for a joke — FliP is
+the FLIght Planner, FloP the FLOcking Planner the README promised years
+before flocking mode existed — so now that it does, clicking the wordmark
+switches between flocking and the planner you were in before it. That
+"before" is stored (`flip.mode.beforeFlocking`) rather than derived:
+flocking is one mode and there are two it can return to, and a reload must
+not forget which — a Standard Pattern jumper coming back tomorrow must not
+land in swoop just because swoop is `FALLBACK_MODE_ID`. It is recorded on
+ARRIVAL in a non-flocking mode, not on the way out, because the wordmark is
+not the only door into flocking (the mode menu, a shortcut, a setup and
+`?mode=` are the others). The mark is the logo's own artwork, which was
+always the joke drawn rather than told: **an F, and the same F turned 180
+degrees** in the other colour, interlocking to fill the square. That is why
+FloP is a colour SWAP and not a redraw — the two halves are already each
+other's inversion, so exchanging them turns the F over. `Wordmark.ART` is the
+14x14 transcription and a test pins the property (all 196 cells obey the
+rotation-with-colours-exchanged rule); an agent who "cleans up" the mark into
+an abstract pattern has thrown the letterforms away, which is exactly what
+happened once. Only the rendering changed: vector rather than a 16x16 base64
+PNG, so it is crisp at any size, plus rounded corners.
+
+**Only the two colours change between the marks** — the cells drawn are always
+the same ones. Swapping both (background AND which cells are painted) cancels
+out and yields a mark identical in both states, which also shipped for a
+moment; a test pins that the geometry is untouched while every colour is
+exchanged.
+
+**FliP and FloP are the same width, with F, l and P in the same places**, so
+the switch reads as one letter turning over rather than the name being re-set.
+Both letters occupy ONE grid cell and the inactive one is hidden rather than
+removed, so the slot is as wide as the wider of the two in whatever font is
+resolved — no measured constant to go stale — and the narrow `i` gets the
+difference as air on either side. `visibility` is set as an inline style, not
+through `sx`, so the state is legible to a test without resolving emotion's
+classes. The lettering drops on a phone, as it always did; the mark stays, and
+still switches.
+
 **"No place" is stored explicitly** (`NO_PLACE`, the empty string). It
 cannot be stored as null: `useLocalStorageState` encodes null as *delete
 the key*, and a missing key reads back as that key's DEFAULT — which for
@@ -428,6 +466,7 @@ worked example, and every case above is now pinned by a component test.
 | SettingsComponent | `components/SettingsComponent.tsx` | App preferences |
 | SetupSelector | `components/SetupSelector.tsx` | The setups menu: switch, save, discard, copy |
 | FlockingComponent | `components/FlockingComponent.tsx` | Flocking panel: classic/free/solve sub-modes |
+| Wordmark | `components/Wordmark.tsx` | The FliP/FloP mark and name, and the switch between them |
 
 ## State Management
 

@@ -47,7 +47,6 @@ import { applyNerdGate, withNerd } from './modes/nerd';
 import {
   CoursesComponent,
   ExportDialog,
-  FlipIcon,
   FlockingComponent,
   HelpComponent,
   ManoeuvreComponent,
@@ -60,7 +59,8 @@ import {
   ToolbarActions,
   SpotSummary,
   WindSummary,
-  WindsComponent
+  WindsComponent,
+  Wordmark
 } from './components';
 import { CourseEditTarget, ManoeuvreEditTarget, TargetEditTarget } from './map/layers';
 import {
@@ -71,6 +71,7 @@ import {
   useCustomCourses,
   NotificationsProvider,
   useFlightPaths,
+  useFlipFlop,
   useFlockingPath,
   useKeyboardShortcuts,
   useMode,
@@ -423,6 +424,10 @@ function DashboardContent() {
   // Flocking mode replaces the pattern/manoeuvre derivation with its own
   // descent-path pipeline; each derivation only runs in its own mode.
   const isFlocking = mode.id === 'flocking';
+
+  // The wordmark is the FliP/FloP switch, so it needs to know which planner
+  // it is showing and which one to go back to.
+  const flipFlop = useFlipFlop(mode.id, setModeId);
 
   // Modes without the leg-count control always fly the full pattern. The
   // override is applied on READ, never written back: a swooper's stored
@@ -1208,9 +1213,14 @@ function DashboardContent() {
     onSetupsOpenChange: setSetupsOpen
   };
 
-  const appTitlePropsRef = useRef<{ wind?: WindSummaryData; spot?: SpotText }>({});
+  const appTitlePropsRef = useRef<React.ComponentProps<typeof CustomAppTitle>>(null!);
 
-  appTitlePropsRef.current = { wind: windSummary, spot: spotText ?? undefined };
+  appTitlePropsRef.current = {
+    wind: windSummary,
+    spot: spotText ?? undefined,
+    flocking: flipFlop.flocking,
+    onToggleFlocking: flipFlop.toggle
+  };
 
   const slots = useMemo(() => ({
     toolbarActions: () => <ToolbarActions {...toolbarPropsRef.current} />,
@@ -1298,26 +1308,23 @@ function SidebarFooter({ mini }: { mini?: boolean }) {
  * that mode's whole output and the thing a flocker reads out to the pilot —
  * and the wind it displaces is already on the map's winds indicator. Every
  * other mode is unchanged.
+ *
+ * The wordmark leading it is also the FliP/FloP switch — see `Wordmark`.
  */
-function CustomAppTitle({ wind, spot }: { wind?: WindSummaryData; spot?: SpotText }) {
+function CustomAppTitle({
+  wind,
+  spot,
+  flocking,
+  onToggleFlocking
+}: {
+  wind?: WindSummaryData;
+  spot?: SpotText;
+  flocking: boolean;
+  onToggleFlocking: () => void;
+}) {
   return (
     <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} sx={{ minWidth: 0 }}>
-      <FlipIcon />
-      <Typography
-        variant="h6"
-        sx={{
-          fontWeight: 'bold',
-          color: '#4ade80',
-          textTransform: 'uppercase',
-          // On a phone the bar cannot hold the wordmark AND the readings it
-          // exists for — whether that is the spot or the wind summary — and
-          // the wordmark is the part nobody needs to read. The logo beside it
-          // still says which app this is.
-          display: { xs: 'none', sm: 'block' }
-        }}
-      >
-        FliP
-      </Typography>
+      <Wordmark flocking={flocking} onToggle={onToggleFlocking} />
       {spot && <SpotSummary spot={spot} />}
       {!spot && wind && wind.average && wind.ground && (
         <WindSummary
