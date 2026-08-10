@@ -338,9 +338,18 @@ derived, because nothing in the app models a canopy yet and the glide ratio
 and descent rate that describe one are numbers you cannot read a name off.
 It can go stale against them; BACKLOG's canopy + wing-loading entry is what
 eventually replaces it. Everything else in the row's second line IS derived
-and cannot disagree with the setup: the turn (`turnLabel`, measured off the
-path for tracks and samples), the course, and the mode when it is not the
-one you are in.
+and cannot disagree with the setup: the DROPZONE, the turn (`turnLabel`,
+measured off the path for tracks and samples), the course, and the mode when
+it is not the one you are in.
+
+The dropzone is named only where the list does not already say it — the
+menu's "Other dropzones" group and the manage dialog, which has no groups at
+all; under "At \<place\>" it would repeat that heading on every row. It comes
+first, since it is what tells two setups called "ZoneAcc" apart, and it is
+why the NAME does not have to carry the place. Those two lists also shorten
+the course (`courseChipLabel(course, true)` → "ZoneAcc"), which shortens the
+TYPE: a built-in course is named after its type, while a custom one keeps
+the name its owner gave it.
 
 **Keyboard + help.** `core/keymap.ts` is one table driving both the key
 handler (`hooks/useKeyboardShortcuts`) and the `?` overlay, gated per
@@ -433,6 +442,7 @@ user can force a mode-overridden setting back to the global default.
 | `core/places.ts` | Place list assembly + search ranking (`buildPlaces`, `rankPlaces`); place ids (`dropzonePlaceId`, `placeNameFromId`) |
 | `core/regions.ts` | State/country short forms, so "az" finds Arizona |
 | `core/setups.ts` | Setups: `setupDiff` (which parts are unsaved), `describeSetup`/`turnLabel` (the chip line), `groupSetups`, `planSetupCopy` (the course-relative copy) |
+| `core/courses.ts` (labels) | `courseTypeLabel`, `courseTypeShortLabel`, `courseChipLabel` — the last picks between a custom course's own name and the short type |
 | `core/keymap.ts` | Keyboard bindings + gestures; one table for handler and overlay |
 | `core/help.ts` | Help topics as data (`HELP_TOPICS`, `topicForPanel`) |
 | `modes/nerd.ts` | Nerd-mode flag: `withNerd()` mode transform, `applyNerdGate()` settings mask |

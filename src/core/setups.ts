@@ -17,7 +17,7 @@ import {
   Target
 } from '../types';
 
-import { courseTypeLabel, fromCourseRelative, getTargetRelativeToCourse } from './courses';
+import { courseChipLabel, fromCourseRelative, getTargetRelativeToCourse } from './courses';
 import { FlockingParams } from './flocking';
 import { describeManoeuvrePath } from './manoeuvre';
 import { normalizeDirection, normalizeRelativeAngle } from './validation';
@@ -172,12 +172,21 @@ export interface DescribeSetupContext {
   /** Named only when it differs from the mode the user is in. */
   activeModeId?: string;
   modeLabel?: (modeId: string) => string;
+  /**
+   * The setup's dropzone, when the list it is in does not already say — the
+   * menu's "Other dropzones" group and the manage dialog, which has no
+   * grouping at all. Left out under "At <place>", where it would repeat the
+   * heading on every row.
+   */
+  place?: string | null;
+  /** Compact list: "ZoneAcc" rather than "Zone Accuracy". */
+  shortCourse?: boolean;
 }
 
 /**
- * The line under a setup's name: "SAW 75 · 450 L · Zone Accuracy". Every part
- * but the canopy is derived, so nothing here can disagree with the setup it
- * describes. Flocking has no turn to name.
+ * The line under a setup's name: "ZHills · SAW 75 · 450 L · ZoneAcc". Every
+ * part but the canopy is derived, so nothing here can disagree with the setup
+ * it describes. Flocking has no turn to name.
  */
 export function describeSetup(setup: Setup, ctx: DescribeSetupContext = {}): string[] {
   const chips: string[] = [];
@@ -185,6 +194,12 @@ export function describeSetup(setup: Setup, ctx: DescribeSetupContext = {}): str
 
   if (setup.modeId && ctx.activeModeId && setup.modeId !== ctx.activeModeId) {
     chips.push(ctx.modeLabel ? ctx.modeLabel(setup.modeId) : setup.modeId);
+  }
+
+  // First: it is what tells two otherwise identical setups apart, which is
+  // exactly why the name no longer has to carry it.
+  if (ctx.place) {
+    chips.push(ctx.place);
   }
 
   if (setup.canopy) {
@@ -198,7 +213,7 @@ export function describeSetup(setup: Setup, ctx: DescribeSetupContext = {}): str
   }
 
   if (ctx.course) {
-    chips.push(ctx.course.name || courseTypeLabel(ctx.course.type));
+    chips.push(courseChipLabel(ctx.course, ctx.shortCourse));
   }
 
   return chips;

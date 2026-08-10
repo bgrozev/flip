@@ -2004,3 +2004,27 @@ are in.
   buys a migration and nothing else; nobody but the hook reads them.
 - Setups do not carry winds. That is the same snapshot-vs-refetch question
   share-links have to answer, and it should be answered once.
+
+### The chip line names the dropzone (2026-08-08, same session)
+
+Owner: "I don't want to add the location name into the setup name
+manually." Two setups called "ZoneAcc", one per dropzone, is the natural
+thing to save — the place is already in the document, so the NAME should not
+have to repeat it.
+
+So the place became a chip, first in the line, in exactly the two lists that
+do not already say it: the menu's "Other dropzones" group and the manage
+dialog, which has no grouping at all. Under "At <place>" it is left out,
+since it would repeat that heading on every row. `groupSetups` already made
+this a one-flag decision at the call site rather than something
+`describeSetup` has to work out.
+
+Both lists also shorten the course to "ZoneAcc". Implemented as
+`courseChipLabel(course, short)` rather than a string replace: a built-in
+course is NAMED after its type, so shortening its label is shortening the
+type, while a custom course keeps whatever its owner called it.
+
+TypeScript caught the one bug on the way: `grouped.here.map(rowFor)` passes
+the array INDEX as the new second parameter, so every row but the first
+would have grown a place chip. Worth remembering wherever a render helper
+gains an optional flag — `.map(fn)` is not a one-argument call.

@@ -32,6 +32,7 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { BUILT_IN_PARAMS } from '../core/courses';
+import { placeNameFromId } from '../core/places';
 import {
   describeSetup,
   describeSetupDiff,
@@ -116,7 +117,13 @@ export default function SetupSelector({
   // Five conversions, once: a sample's rotation is measured off its path.
   const samplePaths = useMemo(() => samples.map(sample => sample.getPath()), []);
 
-  const chipsFor = (setup: Setup) =>
+  /**
+   * `withPlace` names the setup's dropzone in the line — for the lists whose
+   * own heading does not, which is "Other dropzones" here and the manage
+   * dialog, which has no headings at all. Under "At <place>" it would repeat
+   * that heading on every row.
+   */
+  const chipsFor = (setup: Setup, withPlace = false) =>
     describeSetup(setup, {
       course: setup.site?.selectedCourseId
         ? courseById.get(setup.site.selectedCourseId) ?? null
@@ -125,7 +132,9 @@ export default function SetupSelector({
         ? samplePaths[setup.manoeuvre.sampleIndex ?? 0] ?? null
         : null,
       activeModeId,
-      modeLabel: id => getMode(id as ModeId).label
+      modeLabel: id => getMode(id as ModeId).label,
+      place: withPlace && setup.site ? placeNameFromId(setup.site.placeId) : null,
+      shortCourse: true
     });
 
   const grouped = useMemo(() => groupSetups(all, placeId), [all, placeId]);
@@ -182,9 +191,9 @@ export default function SetupSelector({
     closeMenu();
   };
 
-  const rowFor = (setup: Setup) => {
+  const rowFor = (setup: Setup, withPlace = false) => {
     const index = numbered.indexOf(setup);
-    const chips = chipsFor(setup);
+    const chips = chipsFor(setup, withPlace);
 
     return (
       <MenuItem
@@ -293,14 +302,14 @@ export default function SetupSelector({
             {hereLabel}
           </ListSubheader>
         )}
-        {grouped.here.map(rowFor)}
+        {grouped.here.map(setup => rowFor(setup))}
 
         {grouped.anywhere.length > 0 && (
           <ListSubheader sx={{ lineHeight: 2, bgcolor: 'transparent' }}>
             Anywhere
           </ListSubheader>
         )}
-        {grouped.anywhere.map(rowFor)}
+        {grouped.anywhere.map(setup => rowFor(setup))}
 
         {grouped.elsewhere.length > 0 && (
           <Box sx={{ px: 2, py: 0.5 }}>
@@ -311,7 +320,7 @@ export default function SetupSelector({
             />
           </Box>
         )}
-        {showElsewhere && grouped.elsewhere.map(rowFor)}
+        {showElsewhere && grouped.elsewhere.map(setup => rowFor(setup, true))}
 
         <Divider />
 
@@ -412,7 +421,7 @@ export default function SetupSelector({
         open={manageOpen}
         setups={setups}
         placeName={placeName}
-        chipsFor={chipsFor}
+        chipsFor={setup => chipsFor(setup, true)}
         onClose={() => setManageOpen(false)}
       />
 

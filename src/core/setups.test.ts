@@ -222,6 +222,29 @@ describe('describeSetup', () => {
     expect(describeSetup(siteBound, { course })).toEqual(['SAW 75', '90 L', 'Zone Accuracy']);
   });
 
+  // Under "At <place>" the heading already says it; under "Other dropzones"
+  // and in the manage dialog nothing does, which is why the name no longer
+  // has to carry it.
+  it('names the dropzone when asked, first', () => {
+    expect(describeSetup(siteBound, { place: 'Skydive City (ZHills)' }))
+      .toEqual(['Skydive City (ZHills)', 'SAW 75', '90 L']);
+    expect(describeSetup(siteBound)).toEqual(['SAW 75', '90 L']);
+  });
+
+  it('shortens the course label on request', () => {
+    const course: CourseParams = {
+      id: 'za',
+      name: 'Zone Accuracy',
+      type: 'zone-accuracy',
+      lat: 28.2,
+      lng: -82.15,
+      direction: 0
+    };
+
+    expect(describeSetup(siteBound, { course, shortCourse: true }))
+      .toEqual(['SAW 75', '90 L', 'ZoneAcc']);
+  });
+
   it('names the mode only when it is not the one you are in', () => {
     expect(describeSetup(siteBound, { activeModeId: 'swoop' })).toEqual(['SAW 75', '90 L']);
     expect(describeSetup(siteBound, { activeModeId: 'pattern' }))

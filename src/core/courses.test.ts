@@ -5,7 +5,9 @@ import { CourseParams } from '../types';
 import {
   BUILT_IN_PARAMS,
   courseIsAtPlace,
+  courseChipLabel,
   courseTypeLabel,
+  courseTypeShortLabel,
   coursesForPlace,
   defaultCourseName,
   duplicateCourseParams
@@ -112,11 +114,52 @@ describe('defaultCourseName', () => {
   });
 });
 
+describe('courseChipLabel', () => {
+  const za = (over: Partial<CourseParams>): CourseParams => ({
+    id: 'c1',
+    name: 'Zone Accuracy',
+    type: 'zone-accuracy',
+    lat: 0,
+    lng: 0,
+    direction: 0,
+    ...over
+  });
+
+  it('keeps the full name unless asked to shorten', () => {
+    expect(courseChipLabel(za({}))).toBe('Zone Accuracy');
+  });
+
+  // A built-in is named after its type, so shortening its label is
+  // shortening the type.
+  it('shortens a built-in name', () => {
+    expect(courseChipLabel(za({}), true)).toBe('ZoneAcc');
+    expect(courseChipLabel(za({ name: 'Distance', type: 'distance' }), true))
+      .toBe('Distance');
+  });
+
+  // A custom course keeps the name its owner gave it — that is the point of
+  // naming one.
+  it('leaves a custom name alone', () => {
+    expect(courseChipLabel(za({ name: 'Big pond' }), true)).toBe('Big pond');
+  });
+
+  it('falls back to the type when there is no name', () => {
+    expect(courseChipLabel(za({ name: '' }), true)).toBe('ZoneAcc');
+    expect(courseChipLabel(za({ name: '' }))).toBe('Zone Accuracy');
+  });
+});
+
 describe('courseTypeLabel', () => {
   it('labels every type', () => {
     expect(courseTypeLabel('distance')).toBe('Distance');
     expect(courseTypeLabel('speed')).toBe('Speed');
     expect(courseTypeLabel('zone-accuracy')).toBe('Zone Accuracy');
+  });
+
+  it('has a short form for the one that needs it', () => {
+    expect(courseTypeShortLabel('zone-accuracy')).toBe('ZoneAcc');
+    expect(courseTypeShortLabel('distance')).toBe('Distance');
+    expect(courseTypeShortLabel('speed')).toBe('Speed');
   });
 
   // The built-in courses are named for their type, which is what lets the

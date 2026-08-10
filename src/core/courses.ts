@@ -447,6 +447,30 @@ export function courseTypeLabel(type: CourseType): string {
 }
 
 /**
+ * The short form, for a line that is already a list of small facts — a
+ * setup's "SAW 75 · 450 L · ZoneAcc". Only zone accuracy is long enough to
+ * be worth shortening.
+ */
+export function courseTypeShortLabel(type: CourseType): string {
+  return type === 'zone-accuracy' ? 'ZoneAcc' : courseTypeLabel(type);
+}
+
+/**
+ * What to call a course in a compact list. A custom course keeps the name
+ * its owner gave it — that is the whole point of naming one — but a built-in
+ * is named after its type, so shortening the label is shortening the type.
+ */
+export function courseChipLabel(course: CourseParams, short = false): string {
+  if (!short) {
+    return course.name || courseTypeLabel(course.type);
+  }
+
+  return !course.name || course.name === courseTypeLabel(course.type)
+    ? courseTypeShortLabel(course.type)
+    : course.name;
+}
+
+/**
  * The name a newly created course gets: its type, which is what the built-in
  * courses are called now that the dropzone is the group above them. A second
  * one of the same type at the same place is numbered rather than made a
