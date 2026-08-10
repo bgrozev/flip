@@ -2028,3 +2028,33 @@ TypeScript caught the one bug on the way: `grouped.here.map(rowFor)` passes
 the array INDEX as the new second parameter, so every row but the first
 would have grown a place chip. Worth remembering wherever a render helper
 gains an optional flag — `.map(fn)` is not a one-argument call.
+
+### The Courses panel's relative position went stale (2026-08-08)
+
+Owner report: with the Courses panel open, drag the target on the map and
+depth/offset do not move; then step one of them and the target jumps.
+
+One cause, two symptoms. The three fields were local state synced by an
+effect whose dependency list ended with the comment "Deliberately excludes
+target changes to avoid feedback loops" — but the target is precisely what
+the fields describe, so excluding it meant they only ever showed where the
+target was when the course was last selected. And because depth and offset
+are one position expressed as two numbers, EACH field writes both: stepping
+the depth wrote the stale offset back with it, which is the jump.
+
+Fixed by measuring rather than remembering — `getTargetRelativeToCourse` on
+every render, no state. The loop the comment feared does not exist:
+`NumberField` holds its own text while typing and only re-syncs when the
+value it is GIVEN changes, so a keystroke that rounds to the number already
+shown leaves the field alone. Values are rounded to 0.1 for display but the
+RAW measurement is what an edit to the other coordinate writes back, so
+editing depth cannot quantise the offset to the tenth of a foot the field
+happens to show.
+
+Five tests, all confirmed failing first — including the sideways jump, which
+reported an offset of +25 ft where the drag had left −40.
+
+The panel had no test file at all before this. Worth noting for the rest of
+the panels: the bug was in the exact shape of code (local state mirroring a
+prop, with an effect that deliberately under-subscribes) that a component
+test catches immediately and a unit test never sees.

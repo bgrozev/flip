@@ -242,7 +242,14 @@ its drag handles sit on top of the target's and one set has to yield —
 while it is on the target is not draggable. It is off by default and
 resets whenever the selection changes. Below the list, **Relative
 Position** (depth / offset / approach angle, one field per line) places
-the turn against the course.
+the turn against the course. Depth and offset share a row, depth first, the
+same pairing the Manoeuvre panel uses for the same two numbers. All three are
+MEASURED off the target on every render rather than held in local state: they
+describe the target, so held state went stale the moment it was dragged on
+the map, and since each field writes BOTH coordinates, stepping one then
+wrote the other's stale value back and the target jumped sideways. There is
+no feedback loop to fear — `NumberField` keeps its own text while typing and
+only re-syncs when the value it is handed changes.
 Choosing another dropzone drops a selection that belongs to the one being
 left (`selectPlaceTarget`), since it is meaningless there and the map
 camera would chase it. Two escapes keep that lossless: a course with no

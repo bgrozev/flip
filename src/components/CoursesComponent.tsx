@@ -26,7 +26,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { useCustomCourses } from '../hooks';
 import { CourseParams, CourseType, LatLng, Target } from '../types';
@@ -120,52 +120,75 @@ function CoursesComponent({
     min: Math.round(metersToDisplay(LIMITS.courseRelativeFt.min * FT_TO_M, altitudeUnit)),
     max: Math.round(metersToDisplay(LIMITS.courseRelativeFt.max * FT_TO_M, altitudeUnit))
   };
-  const [depthStr, setDepthStr] = useState('0');
-  const [offsetStr, setOffsetStr] = useState('0');
-  const [dirStr, setDirStr] = useState('0');
+  /**
+   * Where the target sits relative to the course, MEASURED rather than
+   * remembered.
+   *
+   * These three fields used to be local state, synced by an effect that
+   * deliberately excluded the target "to avoid feedback loops". The target is
+   * exactly what they describe, so dragging it on the map left them showing
+   * the old position — and, worse, each field writes BOTH coordinates, so
+   * stepping the depth afterwards wrote the stale offset back and the target
+   * jumped sideways.
+   *
+   * There is no loop to avoid: `NumberField` keeps its own text while typing
+   * and only re-syncs when the value it is GIVEN changes, so a keystroke that
+   * rounds to the value already shown does not disturb it.
+   */
+  const relative = useMemo(() => {
+    if (!selectedCourseParams) {
+      return null;
+    }
 
-  useEffect(() => {
-    if (!selectedCourseParams) return;
     const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
-    const rel = getTargetRelativeToCourse(target.target, center, selectedCourseParams.direction);
-    const toDisp = (m: number) => metersToDisplay(m, altitudeUnit);
-    setDepthStr(String(Math.round(toDisp(rel.depth) * 10) / 10));
-    setOffsetStr(String(Math.round(toDisp(rel.offset) * 10) / 10));
-    // Folded to (-180, 180]: a plain subtraction reads "-270" for what is
-    // really 90 degrees the other way, which is what the UX pass flagged.
-    const approachAngle = normalizeRelativeAngle(
-      selectedCourseParams.direction - target.finalHeading
+    const measured = getTargetRelativeToCourse(
+      target.target,
+      center,
+      selectedCourseParams.direction
     );
-    setDirStr(String(Math.round(approachAngle)));
-  // Re-sync when the selected course changes OR when the course is moved/rotated.
-  // Deliberately excludes target changes to avoid feedback loops.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourseId, selectedCourseParams?.lat, selectedCourseParams?.lng, selectedCourseParams?.direction, altitudeUnit]);
+    const depth = metersToDisplay(measured.depth, altitudeUnit);
+    const offset = metersToDisplay(measured.offset, altitudeUnit);
+    const round = (n: number) => Math.round(n * 10) / 10;
 
-  const handleDepth = (v: number) => {
-    setDepthStr(String(v));
-    if (!selectedCourseParams) return;
-    const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
-    const off = parseFloat(offsetStr);
-    const depM = displayToMeters(v, altitudeUnit);
-    const offM = displayToMeters(isNaN(off) ? 0 : off, altitudeUnit);
-    onTargetChange({ ...target, target: fromCourseRelative(depM, offM, center, selectedCourseParams.direction) });
+    return {
+      center,
+      // Rounded for display; the raw values are what an edit to the OTHER
+      // coordinate writes back, so editing depth cannot quantise the offset.
+      depth,
+      offset,
+      shownDepth: round(depth),
+      shownOffset: round(offset),
+      // Folded to (-180, 180]: a plain subtraction reads "-270" for what is
+      // really 90 degrees the other way, which is what the UX pass flagged.
+      shownApproachAngle: round(
+        normalizeRelativeAngle(selectedCourseParams.direction - target.finalHeading)
+      )
+    };
+  }, [selectedCourseParams, target, altitudeUnit]);
+
+  /** Depth and offset are one position, so either field writes both. */
+  const setRelative = (depthDisplay: number, offsetDisplay: number) => {
+    if (!selectedCourseParams || !relative) return;
+
+    onTargetChange({
+      ...target,
+      target: fromCourseRelative(
+        displayToMeters(depthDisplay, altitudeUnit),
+        displayToMeters(offsetDisplay, altitudeUnit),
+        relative.center,
+        selectedCourseParams.direction
+      )
+    });
   };
 
-  const handleOffset = (v: number) => {
-    setOffsetStr(String(v));
-    if (!selectedCourseParams) return;
-    const center: LatLng = { lat: selectedCourseParams.lat, lng: selectedCourseParams.lng };
-    const dep = parseFloat(depthStr);
-    const depM = displayToMeters(isNaN(dep) ? 0 : dep, altitudeUnit);
-    const offM = displayToMeters(v, altitudeUnit);
-    onTargetChange({ ...target, target: fromCourseRelative(depM, offM, center, selectedCourseParams.direction) });
-  };
+  const handleDepth = (v: number) => setRelative(v, relative?.offset ?? 0);
+
+  const handleOffset = (v: number) => setRelative(relative?.depth ?? 0, v);
 
   const handleApproachAngle = (v: number) => {
-    setDirStr(String(v));
     if (!selectedCourseParams) return;
     const finalHeading = ((selectedCourseParams.direction - v) % 360 + 360) % 360;
+
     onTargetChange({ ...target, finalHeading });
   };
 
@@ -552,35 +575,39 @@ function CoursesComponent({
               <SectionHeading>Relative position</SectionHeading>
             </span>
           </Tooltip>
-          {/* One field per line: three side by side wrapped unpredictably in a
-              narrow panel, and the labels are too long to read at a glance. */}
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <NumberField
-              label="Depth"
-              title="Distance back from the course centre along the course axis. Positive is away from the course, in the direction you fly it from."
-              value={Number(depthStr)}
-              unit={altitudeUnit}
-              step={altitudeUnit === 'ft' ? 1 : 0.5}
-              limits={relativeLimits}
-              fullWidth
-              onChange={handleDepth}
-            />
+            {/* Depth and offset are one position expressed as two numbers, so
+                they share a row — the same pairing the Manoeuvre panel uses
+                for the same two. The approach angle is a separate quantity
+                and keeps its own line. */}
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <NumberField
+                label="Depth"
+                title="Distance back from the course centre along the course axis. Positive is away from the course, in the direction you fly it from."
+                value={relative?.shownDepth ?? 0}
+                unit={altitudeUnit}
+                step={altitudeUnit === 'ft' ? 1 : 0.5}
+                limits={relativeLimits}
+                fullWidth
+                onChange={handleDepth}
+              />
 
-            <NumberField
-              label="Offset"
-              title="Distance across the course from its centreline. Positive is to the right of the course direction."
-              value={Number(offsetStr)}
-              unit={altitudeUnit}
-              step={altitudeUnit === 'ft' ? 1 : 0.5}
-              limits={relativeLimits}
-              fullWidth
-              onChange={handleOffset}
-            />
+              <NumberField
+                label="Offset"
+                title="Distance across the course from its centreline. Positive is to the right of the course direction."
+                value={relative?.shownOffset ?? 0}
+                unit={altitudeUnit}
+                step={altitudeUnit === 'ft' ? 1 : 0.5}
+                limits={relativeLimits}
+                fullWidth
+                onChange={handleOffset}
+              />
+            </Stack>
 
             <NumberField
               label="Approach angle"
               title="How far your final heading is turned from the course direction. 0 flies straight down the course; positive means the course runs to the right of your approach."
-              value={Number(dirStr)}
+              value={relative?.shownApproachAngle ?? 0}
               unit="°"
               step={0.5}
               limits={{ min: -180, max: 180 }}
