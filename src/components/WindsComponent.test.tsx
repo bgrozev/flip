@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppStateProvider } from '../hooks/useAppState';
 import { SOURCE_MANUAL, createWindProfile, createWindRow } from '../core/wind';
 
-import WindsComponent from './WindsComponent';
+import WindsComponent, { forecastLabel } from './WindsComponent';
 
 function renderWinds({
   allowManualEdit,
@@ -132,5 +132,60 @@ describe('WindsComponent manual-wind gating', () => {
     renderWinds({ allowManualEdit: true });
 
     expect(screen.queryByRole('button', { name: 'Fetch forecast' })).toBeNull();
+  });
+});
+
+/** The same formatters the label uses, so these assert assembly, not locale. */
+const clock = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const weekday = (d: Date) => d.toLocaleDateString([], { weekday: 'short' });
+
+function hoursFromNow(hours: number): Date {
+  return new Date(Date.now() + hours * 3600000);
+}
+
+describe('forecastLabel', () => {
+  it('says Now rather than an offset of zero', () => {
+    expect(forecastLabel(null, 0)).toBe('Now');
+  });
+
+  it('gives the offset and the clock time', () => {
+    // Both, because they answer different questions: how far ahead you are
+    // looking, and what to tell somebody.
+    const t = hoursFromNow(3);
+
+    expect(forecastLabel(t, 3)).toBe(`+3h · ${clock(t)}`);
+  });
+
+  // A bare clock time is ambiguous by a day once the selection rolls over,
+  // and the forecast window runs a week out.
+  it('names the weekday only once the selection leaves today', () => {
+    const today = hoursFromNow(1);
+    const later = hoursFromNow(30);
+
+    expect(forecastLabel(today, 1)).not.toContain(weekday(today));
+
+    // Guard the fixture: 30 hours out is only another day if it really is.
+    if (later.toDateString() !== new Date().toDateString()) {
+      expect(forecastLabel(later, 30)).toBe(`+30h · ${weekday(later)} ${clock(later)}`);
+    }
+  });
+});
+
+describe('the forecast time controls', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  // Four controls for one number is what made the panel's top heavy: the
+  // date and time fields are the precise path and the least used, so they
+  // are folded away until asked for.
+  it('keeps the exact date and time fields folded away', () => {
+    renderWinds({ allowManualEdit: false });
+
+    expect(document.querySelector('input[type=date]')).toBeNull();
+    expect(document.querySelector('input[type=time]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /exact date and time/i }));
+
+    expect(document.querySelector('input[type=date]')).toBeTruthy();
+    expect(document.querySelector('input[type=time]')).toBeTruthy();
   });
 });

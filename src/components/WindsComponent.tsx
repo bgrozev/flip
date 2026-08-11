@@ -1,5 +1,6 @@
 import {
   Add as AddIcon,
+  CalendarMonth as CalendarMonthIcon,
   Close as CloseIcon,
   Public as PublicIcon,
   CloudOutlined as CloudOutlinedIcon,
@@ -284,6 +285,8 @@ export default function WindsComponent({
   // shows, and expands to every level the source returned (~35 rows).
   // Editing needs the real levels, so unlocking forces the full table.
   const [showAllLevels, setShowAllLevels] = useState(false);
+  // The exact date/time fields, folded away by default — see the heading row.
+  const [exactOpen, setExactOpen] = useState(false);
   const summary = sampleWindBands(winds, bandAltitudesFt, interpolate);
   // A summary of nothing but GND is not a summary — fall back to the full
   // table rather than hiding every level behind an expander.
@@ -367,28 +370,81 @@ export default function WindsComponent({
             whatever was last launched, so the source ignores hourOffset and a
             time control here would be inert. */}
         {!soundingSelected && <Box sx={{ mb: 1.5 }}>
-          <Stack direction="row" alignItems="center" sx={{ mb: 0.5 }}>
-            <SectionHeading>Forecast time</SectionHeading>
-            {forecastTime && (
-              <Button
-                variant="text"
+          {/* One line, not four controls. The date and time fields are the
+              precise path and were the heaviest thing in the panel while
+              being the least used; the scrubber is what people actually
+              drag. So the heading row carries a compact stepper whose label
+              IS the selection, the scrubber sits under it, and the exact
+              fields open only when the label is clicked. */}
+          <SectionHeading
+            action={
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                {forecastTime && (
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => { onForecastTimeChange(null); fetch(null); }}
+                    sx={{ minWidth: 0, px: 0.5, py: 0, fontSize: '0.65rem', lineHeight: 1.2 }}
+                  >
+                      now
+                  </Button>
+                )}
+                <Tooltip title="One hour earlier">
+                  <IconButton size="small" onClick={() => adjustForecastHour(-1)}>
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={exactOpen ? 'Hide the exact time' : 'Set an exact date and time'}>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => setExactOpen(v => !v)}
+                    endIcon={<CalendarMonthIcon fontSize="small" />}
+                    sx={{ minWidth: 0, px: 0.75, py: 0, textTransform: 'none' }}
+                  >
+                    {forecastLabel(forecastTime, scrubValue)}
+                  </Button>
+                </Tooltip>
+                <Tooltip title="One hour later">
+                  <IconButton size="small" onClick={() => adjustForecastHour(1)}>
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            }
+          >
+            Forecast time
+          </SectionHeading>
+          {/* Time scrubber: drag through the locally cached forecast hours.
+              Each step re-selects the hour from the prefetched window (no
+              network fetch), so the table and the map paths morph live.
+              Hidden until a fetch has filled the cache. */}
+          {scrubHours !== null && scrubHours > 1 && (
+            <Box sx={{ px: 1 }}>
+              <Slider
                 size="small"
-                onClick={() => { onForecastTimeChange(null); fetch(null); }}
-                sx={{ minWidth: 0, px: 0.5, py: 0, ml: 0.5, fontSize: '0.65rem', lineHeight: 1.2 }}
-              >
-                  now
-              </Button>
-            )}
-          </Stack>
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <Tooltip title="One hour earlier">
-              <IconButton size="small" onClick={() => adjustForecastHour(-1)}>
-                <RemoveIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            {/* Two separate inputs for cross-browser compatibility (Firefox datetime-local has no time picker) */}
+                aria-label="Scrub forecast hour"
+                min={0}
+                max={scrubHours - 1}
+                step={1}
+                value={Math.min(scrubValue, scrubHours - 1)}
+                onChange={(_e, v) => {
+                  const h = v as number;
+                  const newTime = h === 0 ? null : new Date(Date.now() + h * 3600000);
+
+                  onForecastTimeChange(newTime);
+                  fetch(newTime);
+                }}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(h: number) => (h === 0 ? 'now' : `+${h}h`)}
+              />
+            </Box>
+          )}
+          {exactOpen && (
+            /* Two separate inputs for cross-browser compatibility (Firefox
+               datetime-local has no time picker). */
             <Box
-              sx={{ display: 'flex', gap: 0.5, flex: 1 }}
+              sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}
               onBlur={e => {
                 // Only fetch when focus leaves the whole date+time group
                 if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -422,37 +478,6 @@ export default function WindsComponent({
                   onForecastTimeChange(e.target.value ? new Date(`${dateStr}T${e.target.value}`) : null);
                 }}
                 sx={{ width: 110 }}
-              />
-            </Box>
-            <Tooltip title="One hour later">
-              <IconButton size="small" onClick={() => adjustForecastHour(1)}>
-                <AddIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-          {/* Time scrubber: drag through the locally cached forecast hours.
-              Each step re-selects the hour from the prefetched window (no
-              network fetch), so the table and the map paths morph live. The
-              fast path to the picker's precise path; hidden until a fetch
-              has filled the cache. */}
-          {scrubHours !== null && scrubHours > 1 && (
-            <Box sx={{ px: 1 }}>
-              <Slider
-                size="small"
-                aria-label="Scrub forecast hour"
-                min={0}
-                max={scrubHours - 1}
-                step={1}
-                value={Math.min(scrubValue, scrubHours - 1)}
-                onChange={(_e, v) => {
-                  const h = v as number;
-                  const newTime = h === 0 ? null : new Date(Date.now() + h * 3600000);
-
-                  onForecastTimeChange(newTime);
-                  fetch(newTime);
-                }}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(h: number) => (h === 0 ? 'now' : `+${h}h`)}
               />
             </Box>
           )}
@@ -788,6 +813,27 @@ function stationAge(date: Date): string {
   if (diffMin < 1) return 'just now';
   if (diffMin < 60) return `${diffMin} min ago`;
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * What the forecast-time button says, which is also the whole readout now
+ * that the date and time fields are folded away.
+ *
+ * An offset AND a clock time, because they answer different questions: how
+ * far ahead you are looking, and what to tell somebody. The weekday appears
+ * only once the selection leaves today, where a bare clock time would be
+ * ambiguous by a day.
+ */
+export function forecastLabel(forecastTime: Date | null, hoursAhead: number): string {
+  if (!forecastTime) {
+    return 'Now';
+  }
+
+  const clock = forecastTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const today = new Date().toDateString() === forecastTime.toDateString();
+  const day = today ? '' : `${forecastTime.toLocaleDateString([], { weekday: 'short' })} `;
+
+  return `+${hoursAhead}h · ${day}${clock}`;
 }
 
 /**
