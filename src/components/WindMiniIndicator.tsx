@@ -39,12 +39,18 @@ interface WindMiniIndicatorProps {
   /** Distance from the top of the map, in px (raised when a banner shows). */
   topOffset?: number;
   /**
-   * The map has little room (a phone, with a panel open beside it). The chip
-   * form is forced and its expand chevron withdraws: the expanded card is
-   * taller than the map strip it would cover, and tapping the chip already
-   * opens the Wind panel, which is the better answer on a small screen. The
-   * stored preference is neither read nor written here, so it comes back
-   * untouched on a full-size map.
+   * Show the chip rather than the card, for a reason the user did not choose.
+   * The expand chevron withdraws with it, and the stored preference is
+   * neither read nor written, so it comes back untouched afterwards.
+   *
+   * Two reasons, both "the card is not what is wanted here":
+   * - A phone with a panel open beside the map: the expanded card is taller
+   *   than the strip of map it would cover, and tapping the chip opens the
+   *   Wind panel, which is the better answer on a small screen.
+   * - The WIND PANEL is open, at any size: the panel's table is this same
+   *   summary (both call `sampleWindBands`), so the card would be the same
+   *   ten rows twice on one screen. The chip keeps a glanceable ground
+   *   reading without repeating the panel.
    */
   compact?: boolean;
   /** Nearest observed station injected as ground wind — shown on GND hover. */

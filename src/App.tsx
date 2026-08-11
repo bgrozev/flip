@@ -1128,7 +1128,11 @@ function DashboardContent() {
       layers={mode.mapLayers}
       // On a phone the map shares the screen with the open panel, so the
       // corner overlays have to give the strip back.
-      compactOverlays={isMobile && activePanel !== null && !focusMap}
+      // A panel is squeezing the map (phone), or the Wind panel is open and
+      // the indicator would be the panel's own table a second time.
+      compactOverlays={
+        (isMobile && activePanel !== null && !focusMap) || activePanel === 'wind'
+      }
       shortcutHint={{
         show: !isMobile && !focusMap,
         onOpen: () => setShortcutsOpen(true)

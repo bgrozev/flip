@@ -77,8 +77,10 @@ interface MapComponentProps {
    */
   onBackgroundPress?: () => void;
   /**
-   * The map is sharing the screen with a panel (phone split). Corner overlays
-   * shrink so they don't cover the strip of map that is left.
+   * Shrink the corner overlays to their chip form. Either the map is sharing
+   * the screen with a panel (phone split) and they would cover the strip of
+   * map that is left, or the panel showing the same data is open and they
+   * would be saying it twice.
    */
   compactOverlays?: boolean;
   /** Compact winds indicator overlay data (gated by settings.displayMapWinds). */
