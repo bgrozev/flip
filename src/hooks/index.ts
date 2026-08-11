@@ -12,6 +12,7 @@ export type { Geolocation, GeolocationStatus } from './useGeolocation';
 export { useFlockingPath } from './useFlockingPath';
 export type { FlockingDerived } from './useFlockingPath';
 export { useMode } from './useMode';
+export { useModeZoom } from './useModeZoom';
 export { NotificationsProvider, useNotifications } from './useNotifications';
 export { useObservedWind } from './useObservedWind';
 export { useSetups } from './useSetups';

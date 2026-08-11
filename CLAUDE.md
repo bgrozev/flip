@@ -262,6 +262,21 @@ Pattern params are per-mode too (`flip.pattern.byMode`, falling back to
 the shared legacy `flip.pattern.params`): a swooper's descent rate and
 long legs describe their canopy, not the student pattern next to it.
 
+**So is the map zoom** (`hooks/useModeZoom.ts`, `flip.map.zoomByMode`). A
+mode's `defaultZoom` says how wide its picture is — flocking spans miles of
+jumprun, a pattern spans hundreds of feet — but it is where the mode STARTS,
+not a preference to be re-imposed: a flocker who zooms in to read the spot
+against the ground finds that zoom again after a trip through another mode.
+The zoom travels up from the provider (`MapContainerProps.onZoomChange`,
+reported on the settled value — MapLibre fires `zoom` every frame for label
+thinning and `zoomend` for this) and back down as `initialZoom`, which is a
+loop: both containers therefore skip re-applying a zoom the map is already
+at, or `setZoom` and the zoom event bounce off each other. `recordZoom` also
+drops a value it already holds, and that check must be in the CALLER rather
+than in a state updater returning the previous object — `useLocalStorageState`
+encodes and writes whatever it is handed, so a no-op update still writes to
+localStorage and still notifies every subscriber of the key.
+
 **Courses belong to a place.** A course is a fixed set of buoys in one
 pond, so `CourseParams.placeId` (a `Place.id`) scopes both the shipped
 courses in `core/courses.BUILT_IN_PARAMS` and the user's own — one field,

@@ -983,6 +983,13 @@ verify another way:
   Confirmed with synthetic nudges and direct value writes standing in for the
   map, plus the existing "map click/drag doesn't reach the handler" limit —
   never confirmed with an actual pointer drag on the course-relative fields.
+- **Zooming the map by hand, and finding that zoom again** (2026-08-10). The
+  per-mode zoom memory is unit-tested and the map→app channel was confirmed in
+  the browser (entering a mode writes its zoom to `flip.map.zoomByMode`), but
+  no zoom was ever performed by a real gesture: automated wheel-zoom hangs the
+  tooling, and synthetic `wheel`/`keydown` events drive neither provider.
+  Confirm: zoom in flocking, switch to another mode and back, and the zoom is
+  the one you left rather than the mode default.
 - **A real geolocation grant** ("Nearest dropzone" in the Target panel).
   The permission prompt cannot be answered from automation, so only the
   denied and unavailable paths were exercised in a browser; the granted

@@ -45,6 +45,8 @@ interface MapComponentProps {
   cameraCenter?: LatLng;
   /** Initial/mode-default zoom; re-applied when it changes (mode switch). */
   initialZoom?: number;
+  /** The zoom the user settled on, so the caller can remember it per mode. */
+  onZoomChange?: (zoom: number) => void;
   pathA: FlightPath;
   pathB: FlightPath;
   settings: Settings;
@@ -108,6 +110,7 @@ function MapComponent({
   center,
   cameraCenter,
   initialZoom,
+  onZoomChange,
   pathA,
   pathB,
   settings,
@@ -143,6 +146,7 @@ function MapComponent({
     <MapContainer
       center={cameraCenter ?? center}
       initialZoom={initialZoom}
+      onZoomChange={onZoomChange}
       provider={settings.mapProvider}
       showLabels={settings.showMapLabels}
     >

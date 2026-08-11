@@ -39,6 +39,13 @@ export interface MapContainerProps {
    */
   initialZoom?: number;
   /**
+   * The zoom the user has settled on, so a caller can remember it. Reported
+   * once a gesture ENDS rather than on every frame of a pinch — the caller
+   * persists it, and the intermediate levels are not anywhere the user chose
+   * to be.
+   */
+  onZoomChange?: (zoom: number) => void;
+  /**
    * Show place/road labels over the satellite imagery. Only the Google
    * provider has a labeled variant (`hybrid`); MapLibre's raster style has
    * no label layer, so it has nothing to toggle.

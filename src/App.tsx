@@ -73,6 +73,7 @@ import {
   useFlightPaths,
   useFlipFlop,
   useFlockingPath,
+  useModeZoom,
   useKeyboardShortcuts,
   useMode,
   useSetups,
@@ -428,6 +429,10 @@ function DashboardContent() {
   // The wordmark is the FliP/FloP switch, so it needs to know which planner
   // it is showing and which one to go back to.
   const flipFlop = useFlipFlop(mode.id, setModeId);
+
+  // How wide this mode's picture is: its default until the user zooms, then
+  // whatever they left it on, per mode.
+  const modeZoom = useModeZoom(mode.id, mode.defaultZoom);
 
   // Modes without the leg-count control always fly the full pattern. The
   // override is applied on READ, never written back: a swooper's stored
@@ -1114,7 +1119,8 @@ function DashboardContent() {
     <MapComponent
       center={target.target}
       cameraCenter={mapCenter}
-      initialZoom={mode.defaultZoom}
+      initialZoom={modeZoom.zoom}
+      onZoomChange={modeZoom.recordZoom}
       pathA={paths.ideal}
       pathB={paths.display}
       settings={modeSettings}

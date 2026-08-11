@@ -29,6 +29,7 @@ import {
 export default function GoogleMapContainer({
   center,
   initialZoom = DEFAULT_ZOOM,
+  onZoomChange,
   showLabels = false,
   children
 }: MapContainerProps) {
@@ -119,12 +120,20 @@ export default function GoogleMapContainer({
 
   // Re-apply when the requested initial zoom changes (e.g. a mode switch);
   // user zooming in between stays untouched.
+  //
+  // The caller may also be REMEMBERING the zoom, which feeds the user's own
+  // zooming straight back in as a new `initialZoom` — so a value the map is
+  // already at is not re-applied, and the loop stops at one render instead of
+  // bouncing setZoom against zoom_changed.
   const prevInitialZoomRef = useRef(initialZoom);
 
   useEffect(() => {
     if (mapRef.current && prevInitialZoomRef.current !== initialZoom) {
-      mapRef.current.setZoom(initialZoom);
       prevInitialZoomRef.current = initialZoom;
+
+      if (mapRef.current.getZoom() !== initialZoom) {
+        mapRef.current.setZoom(initialZoom);
+      }
     }
   }, [initialZoom]);
 
@@ -138,9 +147,18 @@ export default function GoogleMapContainer({
     dispatchMapClick(clickHandlersRef.current, pos, { shift });
   }, []);
 
+  // Read through a ref so the handler stays stable across renders — it is a
+  // prop on the map element, and a fresh identity rebinds the listener.
+  const onZoomChangeRef = useRef(onZoomChange);
+
+  onZoomChangeRef.current = onZoomChange;
+
   const onZoomChanged = useCallback(() => {
     if (mapRef.current) {
-      setZoom(mapRef.current.getZoom() ?? DEFAULT_ZOOM);
+      const next = mapRef.current.getZoom() ?? DEFAULT_ZOOM;
+
+      setZoom(next);
+      onZoomChangeRef.current?.(next);
     }
   }, []);
 

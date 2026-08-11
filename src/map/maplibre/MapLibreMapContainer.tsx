@@ -31,7 +31,12 @@ import { MapLibreMapContext } from './context';
  */
 const MAX_ZOOM = 22;
 
-export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOOM, children }: MapContainerProps) {
+export default function MapLibreMapContainer({
+  center,
+  initialZoom = DEFAULT_ZOOM,
+  onZoomChange,
+  children
+}: MapContainerProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [map, setMap] = useState<maplibregl.Map | null>(null);
@@ -96,6 +101,11 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
 
   initialZoomRef.current = initialZoom;
 
+  // The map is created once, so its listeners must not close over a stale prop.
+  const onZoomChangeRef = useRef(onZoomChange);
+
+  onZoomChangeRef.current = onZoomChange;
+
   // Create the map once, on mount.
   useEffect(() => {
     const wrap = wrapperRef.current;
@@ -131,7 +141,10 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
         setMap(map);
       });
 
+      // Every frame for the view state (label thinning has to keep up), but
+      // only the settled value is handed to the caller, which persists it.
       map.on('zoom', () => setZoom(map.getZoom()));
+      map.on('zoomend', () => onZoomChangeRef.current?.(map.getZoom()));
 
       map.on('click', ev => {
         dispatchMapClick(
@@ -186,13 +199,18 @@ export default function MapLibreMapContainer({ center, initialZoom = DEFAULT_ZOO
   }, [center]);
 
   // Re-apply when the requested initial zoom changes (e.g. a mode switch);
-  // user zooming in between stays untouched.
+  // user zooming in between stays untouched. A value the map is already at is
+  // not re-applied — see the Google container for why that matters once the
+  // caller remembers the zoom.
   const prevInitialZoomRef = useRef(initialZoom);
 
   useEffect(() => {
     if (mapRef.current && prevInitialZoomRef.current !== initialZoom) {
-      mapRef.current.setZoom(initialZoom);
       prevInitialZoomRef.current = initialZoom;
+
+      if (mapRef.current.getZoom() !== initialZoom) {
+        mapRef.current.setZoom(initialZoom);
+      }
     }
   }, [initialZoom]);
 

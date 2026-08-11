@@ -89,7 +89,7 @@ export const MODES: readonly Mode[] = [
     // Export and manual wind entry are nerd-only in every mode (nerd.ts).
     features: [],
     // The flocking picture (descent + 3 nm jumprun) spans several miles
-    defaultZoom: 12
+    defaultZoom: 13
   }
 ];
 
