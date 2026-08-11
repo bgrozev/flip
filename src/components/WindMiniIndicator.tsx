@@ -1,7 +1,6 @@
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
-  Navigation as NavigationIcon,
   Refresh as RefreshIcon,
   Terrain as TerrainIcon
 } from '@mui/icons-material';
@@ -15,10 +14,12 @@ import {
   temperatureSeverity,
   tryDensityAltitudeFt
 } from '../core/atmosphere';
-import { beaufortColor, groundConditions, sampleWindBands, WindProfile } from '../core/wind';
+import { groundConditions, sampleWindBands, WindProfile } from '../core/wind';
 import { useUnits } from '../hooks';
 import { StationDetails } from '../map/layers';
 import { ObservedWindStation } from '../types';
+
+import WindArrow from './WindArrow';
 
 interface WindMiniIndicatorProps {
   /** The effective wind profile (aloft + any observed ground). */
@@ -122,20 +123,6 @@ function useCollapsed(): [boolean, (v: boolean) => void] {
     }
   }, []);
   return [collapsed, set];
-}
-
-/** A small downwind-pointing arrow coloured by Beaufort speed. */
-function WindArrow({ direction, speedKts, size = 15 }: { direction: number; speedKts: number; size?: number }) {
-  return (
-    <NavigationIcon
-      sx={{
-        fontSize: size,
-        color: beaufortColor(speedKts),
-        transform: `rotate(${180 + direction}deg)`,
-        verticalAlign: 'middle'
-      }}
-    />
-  );
 }
 
 /**
@@ -272,7 +259,7 @@ export default function WindMiniIndicator({
         tabIndex={0}
         aria-label="Winds; open the wind panel"
       >
-        <WindArrow direction={ground.direction} speedKts={ground.speedKts} />
+        <WindArrow direction={ground.direction} speedKts={ground.speedKts} degreesTooltip />
         <span style={{ whiteSpace: 'nowrap' }}>{fmtSpeed(ground.speedKts)}</span>
         {!compact && (
           <ExpandMoreIcon onClick={toggle} sx={{ ...chevron }} aria-label="Expand winds" />
@@ -380,7 +367,7 @@ export default function WindMiniIndicator({
                   {row.label}
                 </td>
                 <td style={{ padding: '1px 6px', lineHeight: 1 }}>
-                  <WindArrow direction={row.direction} speedKts={row.speedKts} size={14} />
+                  <WindArrow direction={row.direction} speedKts={row.speedKts} size={14} degreesTooltip />
                 </td>
                 <td style={{ padding: '1px 0 1px 8px', textAlign: 'right' }}>
                   {fmtSpeed(row.speedKts)}

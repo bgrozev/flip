@@ -25,6 +25,7 @@ export { default as ShortcutList } from './ShortcutList';
 export { default as ShortcutsOverlay } from './ShortcutsOverlay';
 export { default as TargetComponent } from './TargetComponent';
 export { default as ToolbarActions } from './ToolbarActions';
+export { default as WindArrow } from './WindArrow';
 export { default as WindComparison } from './WindComparison';
 export { default as SpotSummary } from './SpotSummary';
 export { default as WindSummary } from './WindSummary';

@@ -35,6 +35,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppState, useUnits } from '../hooks';
 import WindComparison from './WindComparison';
 import DisclosureRow from './DisclosureRow';
+import WindArrow from './WindArrow';
 import { SectionHeading } from './PanelSection';
 import selectOnFocus from './selectOnFocus';
 import { LatLng, ObservedWindStation } from '../types';
@@ -54,7 +55,6 @@ import {
   SOURCE_SOUNDING,
   WindProfile,
   WindRow,
-  beaufortColor,
   createWindProfile,
   createWindRow,
   groundConditions,
@@ -610,25 +610,15 @@ export default function WindsComponent({
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">{Math.round(band.direction)}</Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center">
+                          <WindArrow direction={band.direction} speedKts={band.speedKts} size={14} />
+                          <Typography variant="body2">{Math.round(band.direction)}</Typography>
+                        </Stack>
                       </TableCell>
                       <TableCell>
-                        <Stack direction="row" spacing={0.75} alignItems="center">
-                          <Box
-                            component="span"
-                            sx={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: '50%',
-                              flexShrink: 0,
-                              bgcolor: beaufortColor(band.speedKts),
-                              border: '1px solid rgba(0,0,0,0.25)'
-                            }}
-                          />
-                          <Typography variant="body2">
-                            {formatWindSpeed(band.speedKts).value.toFixed(1)}
-                          </Typography>
-                        </Stack>
+                        <Typography variant="body2">
+                          {formatWindSpeed(band.speedKts).value.toFixed(1)}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -661,7 +651,10 @@ export default function WindsComponent({
                       </TableCell>
                       <TableCell sx={lock ? undefined : EDIT_CELL_SX}>
                         {lock ? (
-                          <Typography variant="body2">{row.direction}</Typography>
+                          <Stack direction="row" spacing={0.75} alignItems="center">
+                            <WindArrow direction={row.direction} speedKts={row.speedKts} size={14} />
+                            <Typography variant="body2">{row.direction}</Typography>
+                          </Stack>
                         ) : (
                           <TextField
                             type="number"
@@ -678,22 +671,9 @@ export default function WindsComponent({
                       </TableCell>
                       <TableCell sx={lock ? undefined : EDIT_CELL_SX}>
                         {lock ? (
-                          <Stack direction="row" spacing={0.75} alignItems="center">
-                            <Box
-                              component="span"
-                              sx={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                flexShrink: 0,
-                                bgcolor: beaufortColor(row.speedKts),
-                                border: '1px solid rgba(0,0,0,0.25)'
-                              }}
-                            />
-                            <Typography variant="body2">
-                              {formatWindSpeed(row.speedKts).value.toFixed(1)}
-                            </Typography>
-                          </Stack>
+                          <Typography variant="body2">
+                            {formatWindSpeed(row.speedKts).value.toFixed(1)}
+                          </Typography>
                         ) : (
                           <TextField
                             type="number"
