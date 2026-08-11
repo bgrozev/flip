@@ -487,44 +487,6 @@ export default function WindsComponent({
             full-width button down here; Reset moved down next to Unlock,
             since both are editing actions and both are nerd-only. */}
 
-        <Stack direction="row" spacing={2.5} sx={{ mb: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-          <ConditionStat
-            icon={<DeviceThermostatIcon fontSize="small" />}
-            label="Temperature"
-            value={tempC !== undefined ? `${formatTemperature(tempC).value.toFixed(0)}${formatTemperature(tempC).label}` : null}
-            severity={temperatureSeverity(tempC)}
-          />
-          <ConditionStat
-            icon={<WaterDropIcon fontSize="small" />}
-            label="Relative Humidity"
-            value={humidityPct !== undefined ? `${Math.round(humidityPct)}%` : null}
-          />
-          <ConditionStat
-            icon={<TerrainIcon fontSize="small" />}
-            label={`Density altitude (elevation ${elevationFt !== undefined ? Math.round(formatAltitude(elevationFt).value) : '?'} ${altitudeLabel})`}
-            value={densityAltFt !== undefined ? `${Math.round(formatAltitude(densityAltFt).value)} ${altitudeLabel}` : null}
-            severity={densitySeverity}
-          />
-          {/* Second opinion: the same spot on Windy's own maps. An icon on
-              this row rather than its own line of prose — it is a side
-              door, not a step in the workflow. A globe rather than a wind
-              glyph: `Air` is the Wind nav item's icon, and Windy's own
-              mark would mean either fetching it from windy.com on every
-              render (a third-party request from a PWA meant to work
-              offline) or shipping their trademark artwork. */}
-          <Tooltip title="Open this location in Windy">
-            <IconButton
-              size="small"
-              aria-label="Open this location in Windy"
-              href={windyUrl(target.target)}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ color: 'text.secondary' }}
-            >
-              <PublicIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
 
         {fetching ? (
           <Box sx={{ mt: 2 }}>
@@ -775,33 +737,81 @@ export default function WindsComponent({
             unmount it (which would silently close an open comparison). */}
         <WindComparison forecastTime={forecastTime} />
 
-        {forecastTime === null && (fetchingObserved || stationsFetched) && (
-          <>
-            <Divider sx={{ my: 2 }} />
-            <SectionHeading
-              action={fetchingObserved ? <CircularProgress size={12} /> : undefined}
+        {/* Ground conditions in ONE place. Temperature, humidity and density
+            altitude used to sit at the top of the panel, above the winds
+            aloft they are not about, and then be reported a second time by
+            the station card below — which is also where the wind that
+            produced them comes from. The derived row leads (it is the
+            EFFECTIVE value, which falls back to the forecast when no station
+            is in use) and the stations that fed it follow.
+
+            Always rendered, unlike the stations: scrub to a future hour and
+            the observations stop applying, but the forecast's temperature and
+            density altitude still do. */}
+        <Divider sx={{ my: 2 }} />
+        <SectionHeading
+          action={fetchingObserved ? <CircularProgress size={12} /> : undefined}
+        >
+          Ground conditions
+        </SectionHeading>
+        <Stack direction="row" spacing={2.5} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
+          <ConditionStat
+            icon={<DeviceThermostatIcon fontSize="small" />}
+            label="Temperature"
+            value={tempC !== undefined ? `${formatTemperature(tempC).value.toFixed(0)}${formatTemperature(tempC).label}` : null}
+            severity={temperatureSeverity(tempC)}
+          />
+          <ConditionStat
+            icon={<WaterDropIcon fontSize="small" />}
+            label="Relative Humidity"
+            value={humidityPct !== undefined ? `${Math.round(humidityPct)}%` : null}
+          />
+          <ConditionStat
+            icon={<TerrainIcon fontSize="small" />}
+            label={`Density altitude (elevation ${elevationFt !== undefined ? Math.round(formatAltitude(elevationFt).value) : '?'} ${altitudeLabel})`}
+            value={densityAltFt !== undefined ? `${Math.round(formatAltitude(densityAltFt).value)} ${altitudeLabel}` : null}
+            severity={densitySeverity}
+          />
+          {/* Second opinion: the same spot on Windy's own maps. An icon on
+                this row rather than its own line of prose — it is a side
+                door, not a step in the workflow. A globe rather than a wind
+                glyph: `Air` is the Wind nav item's icon, and Windy's own
+                mark would mean either fetching it from windy.com on every
+                render (a third-party request from a PWA meant to work
+                offline) or shipping their trademark artwork. */}
+          <Tooltip title="Open this location in Windy">
+            <IconButton
+              size="small"
+              aria-label="Open this location in Windy"
+              href={windyUrl(target.target)}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: 'text.secondary' }}
             >
-              Observed stations
-            </SectionHeading>
-            {fetchingObserved ? null : stations.length === 0 ? (
-              <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-                  No stations found within 10 miles.
-              </Typography>
-            ) : (
-              <Stack spacing={1}>
-                {stations.map(station => (
-                  <StationCard
-                    key={station.id}
-                    station={station}
-                    formatWindSpeed={formatWindSpeed}
-                    windSpeedLabel={windSpeedLabel}
-                    formatTemperature={formatTemperature}
-                    formatPressure={formatPressure}
-                  />
-                ))}
-              </Stack>
-            )}
-          </>
+              <PublicIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+
+        {forecastTime === null && (fetchingObserved || stationsFetched) && (
+          fetchingObserved ? null : stations.length === 0 ? (
+            <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                No stations found within 10 miles.
+            </Typography>
+          ) : (
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              {stations.map(station => (
+                <StationCard
+                  key={station.id}
+                  station={station}
+                  formatWindSpeed={formatWindSpeed}
+                  windSpeedLabel={windSpeedLabel}
+                  formatTemperature={formatTemperature}
+                  formatPressure={formatPressure}
+                />
+              ))}
+            </Stack>
+          )
         )}
       </>
     </Box>
@@ -894,6 +904,7 @@ interface StationCardProps {
 }
 
 function StationCard({ station, formatWindSpeed, windSpeedLabel, formatTemperature, formatPressure }: StationCardProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const wind = formatWindSpeed(station.wind.speedKts);
   const gust = station.wind.gustKts !== undefined ? formatWindSpeed(station.wind.gustKts) : null;
   const distMiles = (station.distanceFt / 5280).toFixed(1);
@@ -924,52 +935,64 @@ function StationCard({ station, formatWindSpeed, windSpeedLabel, formatTemperatu
         </Typography>
       )}
 
+      {/* The two the wind planner acts on stay out. Everything below is a
+          weather report — worth having, not worth nine rows of label/value
+          (several of them em-dashes) between the reader and the next
+          section. */}
       <DataRow label="Wind" value={`${wind.value.toFixed(1)} ${windSpeedLabel} ${Math.round(station.wind.direction)}°`} />
       <DataRow label="Gusts" value={gust !== null ? `${gust.value.toFixed(1)} ${windSpeedLabel}` : null} />
 
-      {station.temperatureC !== undefined ? (
-        <DataRow label="Temp" value={`${formatTemperature(station.temperatureC).value} ${formatTemperature(station.temperatureC).label}`} />
-      ) : (
-        <DataRow label="Temp" value={null} />
-      )}
-      {station.dewpointC !== undefined && (
-        <DataRow label="Dewpoint" value={`${formatTemperature(station.dewpointC).value} ${formatTemperature(station.dewpointC).label}`} />
-      )}
-      {station.windChillC !== undefined && (
-        <DataRow label="Wind chill" value={`${formatTemperature(station.windChillC).value} ${formatTemperature(station.windChillC).label}`} />
-      )}
-      {station.heatIndexC !== undefined && (
-        <DataRow label="Heat index" value={`${formatTemperature(station.heatIndexC).value} ${formatTemperature(station.heatIndexC).label}`} />
-      )}
-      {station.humidityPct !== undefined ? (
-        <DataRow label="Relative Humidity" value={`${Math.round(station.humidityPct)}%`} />
-      ) : (
-        <DataRow label="Relative Humidity" value={null} />
-      )}
-      {(station.seaLevelPressureHpa !== undefined || station.pressureHpa !== undefined) ? (
-        <DataRow
-          label={station.seaLevelPressureHpa !== undefined ? 'SLP' : 'Pressure'}
-          value={(() => {
-            const p = formatPressure(station.seaLevelPressureHpa ?? station.pressureHpa!);
-            return `${p.value} ${p.label}`;
-          })()}
-        />
-      ) : (
-        <DataRow label="Pressure" value={null} />
-      )}
-      {station.visibilityM !== undefined && (
-        <DataRow label="Visibility" value={`${(station.visibilityM / 1609).toFixed(1)} mi`} />
-      )}
-      {station.cloudLayers && station.cloudLayers.length > 0 && (
-        <DataRow
-          label="Sky"
-          value={station.cloudLayers.map(l => {
-            const label = CLOUD_AMOUNT_LABELS[l.amount] ?? l.amount;
-            const base = l.baseM !== null ? ` @ ${Math.round(l.baseM * 3.28084)} ft` : '';
-            return `${label}${base}`;
-          }).join(', ')}
-        />
-      )}
+      <DisclosureRow
+        label="Full report"
+        open={detailsOpen}
+        onToggle={() => setDetailsOpen(v => !v)}
+      />
+
+      {detailsOpen && <>
+        {station.temperatureC !== undefined ? (
+          <DataRow label="Temp" value={`${formatTemperature(station.temperatureC).value} ${formatTemperature(station.temperatureC).label}`} />
+        ) : (
+          <DataRow label="Temp" value={null} />
+        )}
+        {station.dewpointC !== undefined && (
+          <DataRow label="Dewpoint" value={`${formatTemperature(station.dewpointC).value} ${formatTemperature(station.dewpointC).label}`} />
+        )}
+        {station.windChillC !== undefined && (
+          <DataRow label="Wind chill" value={`${formatTemperature(station.windChillC).value} ${formatTemperature(station.windChillC).label}`} />
+        )}
+        {station.heatIndexC !== undefined && (
+          <DataRow label="Heat index" value={`${formatTemperature(station.heatIndexC).value} ${formatTemperature(station.heatIndexC).label}`} />
+        )}
+        {station.humidityPct !== undefined ? (
+          <DataRow label="Relative Humidity" value={`${Math.round(station.humidityPct)}%`} />
+        ) : (
+          <DataRow label="Relative Humidity" value={null} />
+        )}
+        {(station.seaLevelPressureHpa !== undefined || station.pressureHpa !== undefined) ? (
+          <DataRow
+            label={station.seaLevelPressureHpa !== undefined ? 'SLP' : 'Pressure'}
+            value={(() => {
+              const p = formatPressure(station.seaLevelPressureHpa ?? station.pressureHpa!);
+              return `${p.value} ${p.label}`;
+            })()}
+          />
+        ) : (
+          <DataRow label="Pressure" value={null} />
+        )}
+        {station.visibilityM !== undefined && (
+          <DataRow label="Visibility" value={`${(station.visibilityM / 1609).toFixed(1)} mi`} />
+        )}
+        {station.cloudLayers && station.cloudLayers.length > 0 && (
+          <DataRow
+            label="Sky"
+            value={station.cloudLayers.map(l => {
+              const label = CLOUD_AMOUNT_LABELS[l.amount] ?? l.amount;
+              const base = l.baseM !== null ? ` @ ${Math.round(l.baseM * 3.28084)} ft` : '';
+              return `${label}${base}`;
+            }).join(', ')}
+          />
+        )}
+      </>}
     </Paper>
   );
 }

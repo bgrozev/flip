@@ -5,17 +5,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppStateProvider } from '../hooks/useAppState';
 import { SOURCE_MANUAL, createWindProfile, createWindRow } from '../core/wind';
+import { ObservedWindStation } from '../types';
 
 import WindsComponent, { forecastLabel } from './WindsComponent';
 
 function renderWinds({
   allowManualEdit,
   manual = false,
-  bands = []
+  bands = [],
+  forecastTime = null,
+  stations = []
 }: {
   allowManualEdit: boolean;
   manual?: boolean;
   bands?: number[];
+  forecastTime?: Date | null;
+  stations?: ObservedWindStation[];
 }) {
   const rows = [
     createWindRow(0, 270, 8),
@@ -34,10 +39,12 @@ function renderWinds({
         setWinds={vi.fn()}
         fetching={false}
         fetch={vi.fn()}
-        forecastTime={null}
+        forecastTime={forecastTime}
         onForecastTimeChange={vi.fn()}
         allowManualEdit={allowManualEdit}
         bandAltitudesFt={bands}
+        stations={stations}
+        stationsFetched={stations.length > 0}
       />
     </AppStateProvider>
   );
@@ -187,5 +194,57 @@ describe('the forecast time controls', () => {
 
     expect(document.querySelector('input[type=date]')).toBeTruthy();
     expect(document.querySelector('input[type=time]')).toBeTruthy();
+  });
+});
+
+const STATION: ObservedWindStation = {
+  id: 'KZPH',
+  name: 'Zephyrhills Airport',
+  source: 'NWS',
+  lat: 28.22,
+  lng: -82.15,
+  distanceFt: 3168,
+  observedAt: new Date(),
+  wind: { direction: 160, speedKts: 6 },
+  temperatureC: 32,
+  dewpointC: 22.9,
+  humidityPct: 59
+};
+
+describe('ground conditions', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  // Temperature, humidity and density altitude used to sit above the winds
+  // aloft, which they are not about, and be reported again by the station
+  // card below. One section now, after the wind.
+  it('are one section, below the wind table', () => {
+    renderWinds({ allowManualEdit: false, stations: [STATION] });
+
+    const heading = screen.getByText('Ground conditions');
+    const table = screen.getByRole('table');
+
+    expect(heading.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_PRECEDING)
+      .toBeTruthy();
+  });
+
+  // Scrub to a future hour and the observations stop applying, but the
+  // forecast's temperature and density altitude still do.
+  it('survive a forecast time that has no observations', () => {
+    renderWinds({ allowManualEdit: false, forecastTime: new Date(Date.now() + 3600000) });
+
+    expect(screen.getByText('Ground conditions')).toBeTruthy();
+    expect(screen.queryByText('Zephyrhills Airport')).toBeNull();
+  });
+
+  it('fold the station report down to what a wind planner acts on', () => {
+    renderWinds({ allowManualEdit: false, stations: [STATION] });
+
+    expect(screen.getByText('Wind')).toBeTruthy();
+    expect(screen.getByText('Gusts')).toBeTruthy();
+    expect(screen.queryByText('Dewpoint')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Full report/ }));
+
+    expect(screen.getByText('Dewpoint')).toBeTruthy();
   });
 });
