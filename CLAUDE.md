@@ -324,6 +324,29 @@ ground-wind detail on hover), a **wind-trust banner** (`WindTrustBanner` +
 the heading-rotate handle, shift-click the map to jump it). Winds
 auto-fetch on load and again whenever the target moves to a new place.
 
+**The Wind panel reads top-down as: when, what the wind is, what the air
+is.** It had drifted into the opposite — its subject was fourth, behind
+279px of preamble — so three things were pulled apart:
+
+- **The forecast time is one line**, on the section heading: a stepper whose
+  label IS the selection (`Now`, `+3h · 2:00 PM`, weekday once the day rolls
+  over), the scrubber beneath, and the exact date/time fields folded away
+  behind it. They are the precise path and the least used, and they were the
+  heaviest thing in the panel.
+- **The table draws the direction** (`WindArrow`) instead of printing three
+  columns of digits, and the Speed column gave up its Beaufort DOT — the
+  arrow already carries that colour, and two coloured glyphs per row is what
+  the panel was asked to have less of.
+- **Ground conditions are one section**, after the wind rather than above it,
+  with the observed stations that feed them underneath and everything past
+  wind/gusts behind a "Full report" disclosure. The section renders even when
+  the stations do not: a future forecast hour has no observations but still
+  has a temperature and a density altitude.
+
+And **the map's winds indicator takes its chip form while the Wind panel is
+open** — both draw `sampleWindBands` over the same band list, so the card
+would be the same ten rows twice on one screen.
+
 **The Location panel chooses a place; the map edits the target.** The panel
 (still `PanelId` `target`, route `/target`) used to carry a final-heading
 field and an "Upwind" button under a paragraph explaining that you could drag
@@ -448,6 +471,7 @@ writing a new look.
 | A button | `contained` in dialogs only | `outlined` for a panel's own action, `text` inline, `size="small"` throughout. |
 | A reset | text button, gated | Shown only when there is something to restore, with a `describeChild` tooltip naming what — without that flag MUI makes the tooltip the button's accessible NAME. |
 | A map label | `map/layers/labelStyles.mapLabel()` | One background, one radius, three sizes (`sm` annotates, `md` is default, `lg` is an answer). Colour is meaning; nothing else varies. |
+| A wind direction | `components/WindArrow` | Downwind-pointing, Beaufort-coloured. `degreesTooltip` only where the arrow is the sole direction cue — beside a printed number it would repeat the screen. |
 
 Panels are left-aligned by their container (`App.tsx`), not by each
 component: the container used to centre text and every panel undid it by
