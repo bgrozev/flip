@@ -4,6 +4,7 @@
  * data must never crash the app.
  */
 import { createVersionedCodec } from '../util/storage';
+import { LIMITS } from './validation';
 
 import {
   DEFAULT_FLOCKING_PARAMS,
@@ -864,8 +865,12 @@ describe('migrateStoredWinds', () => {
   it('degrades invalid fields without throwing', () => {
     const profile = migrateStoredWinds({
       winds: [
+        // No usable altitude: dropped, not filed at ground level. A wind
+        // belongs at the altitude it was measured or nowhere.
         { altFt: 'high', direction: 725, speedKts: 1e9 },
         null,
+        // Degraded in place, since its altitude is real.
+        { altFt: 0, direction: 725, speedKts: 1e9 },
         { altFt: 500, direction: 90, speedKts: 8, validTime: 'not-a-date' }
       ],
       groundSource: 'mystery-source',
@@ -879,6 +884,7 @@ describe('migrateStoredWinds', () => {
     expect(profile!.winds).toHaveLength(2);
     expect(profile!.winds[0].altFt).toBe(0);
     expect(profile!.winds[0].direction).toBe(5); // 725 normalized
+    expect(profile!.winds[0].speedKts).toBe(LIMITS.windSpeedKts.max); // still clamped
     expect(profile!.winds[1].validTime).toBeUndefined();
     expect(profile!.groundSource).toBe('manual');
     expect(profile!.aloftSource).toBe('manual');
@@ -959,5 +965,43 @@ describe('migrateRecentPlaces', () => {
   it('returns nothing for junk', () => {
     expect(migrateRecentPlaces(undefined)).toEqual([]);
     expect(migrateRecentPlaces({ nope: true })).toEqual([]);
+  });
+});
+
+describe('migrateStoredWinds altitudes', () => {
+  /** What a radiosonde ascent looks like near the top: past 60,000 ft. */
+  const soundingTop = [
+    { altFt: 59158, direction: 350, speedKts: 5 },
+    { altFt: 59681, direction: 280, speedKts: 1 },
+    { altFt: 65000, direction: 325, speedKts: 5 },
+    { altFt: 80000, direction: 160, speedKts: 12 },
+    { altFt: 103000, direction: 290, speedKts: 6 }
+  ];
+
+  // A sounding reaches ~110,000 ft, and clamping altitude to a 60,000 ft
+  // ceiling collapsed every level above it onto one — a table of rows all
+  // labelled 60000 with contradictory winds, and an interpolation whose
+  // answer at that altitude depends on row order.
+  it('keeps a sounding that climbs past 60,000 ft, each level distinct', () => {
+    const profile = migrateStoredWinds({ winds: soundingTop });
+    const altitudes = profile!.winds.map(row => row.altFt);
+
+    expect(altitudes).toEqual([59158, 59681, 65000, 80000, 103000]);
+    expect(new Set(altitudes).size).toBe(altitudes.length);
+  });
+
+  // Altitude is a coordinate, not a magnitude: a wind measured nowhere real
+  // must not be moved to an altitude where it was not measured.
+  it('drops an impossible altitude rather than clamping it onto a real one', () => {
+    const profile = migrateStoredWinds({
+      winds: [
+        { altFt: 1000, direction: 270, speedKts: 10 },
+        { altFt: 5e9, direction: 90, speedKts: 3 },
+        { altFt: -400, direction: 180, speedKts: 2 },
+        { altFt: 'high', direction: 10, speedKts: 1 }
+      ]
+    });
+
+    expect(profile!.winds.map(row => row.altFt)).toEqual([1000]);
   });
 });

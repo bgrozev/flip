@@ -60,8 +60,16 @@ export const LIMITS = {
   flockingYellowRadiusMi: { min: 0.1, max: 10 },
   /** Solve-mode canopy deviation tolerance from the run (deg) */
   flockingCanopyToleranceDeg: { min: 0, max: 90 },
-  /** Wind row altitude (ft) */
-  windAltFt: { min: 0, max: 60000 },
+  /**
+   * Wind row altitude (ft).
+   *
+   * High enough for a radiosonde, which is the only source that reaches
+   * anywhere near it: a sounding balloon bursts around 30–35 km and the
+   * deepest ascents get past 40 km, so a 60,000 ft ceiling cut a real
+   * profile in half. This is a plausibility bound on stored data, not a
+   * planning ceiling — nobody is jumping from here.
+   */
+  windAltFt: { min: 0, max: 150000 },
   /** Wind speed (kts) */
   windSpeedKts: { min: 0, max: 200 },
   /** Any compass direction (degrees) */

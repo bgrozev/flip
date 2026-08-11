@@ -870,8 +870,19 @@ export function migrateStoredWinds(raw: unknown): WindProfile | null {
       return;
     }
 
+    // Altitude is a COORDINATE, so an unusable one drops the row rather than
+    // being clamped into range. Clamping moved every sounding level above the
+    // ceiling onto it — a dozen rows all reading 60000 ft with contradictory
+    // winds, and an interpolated value there that depended on row order.
+    // Speed and direction are magnitudes at a real altitude and still clamp.
+    const altFt = finiteNumber(entry.altFt, NaN);
+
+    if (altFt < LIMITS.windAltFt.min || altFt > LIMITS.windAltFt.max || !Number.isFinite(altFt)) {
+      return;
+    }
+
     const row: WindRow = {
-      altFt: limitedNumber(entry.altFt, 0, LIMITS.windAltFt),
+      altFt,
       direction: normalizeDirection(finiteNumber(entry.direction, 0)),
       speedKts: limitedNumber(entry.speedKts, 0, LIMITS.windSpeedKts)
     };
