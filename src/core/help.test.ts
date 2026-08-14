@@ -79,7 +79,7 @@ describe('lookups', () => {
   });
 
   it('finds a topic by id, and tolerates junk', () => {
-    expect(topicById('glossary')?.title).toBe('Glossary');
+    expect(topicById('how-it-works')?.title).toBe('How FliP works');
     expect(topicById('nonsense')).toBeUndefined();
     expect(topicById(null)).toBeUndefined();
     expect(topicById(undefined)).toBeUndefined();

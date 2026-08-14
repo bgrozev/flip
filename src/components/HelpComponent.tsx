@@ -181,7 +181,7 @@ function PathLegend() {
           <line x1="2" y1="7" x2="42" y2="7" stroke="currentColor" strokeWidth="2" strokeDasharray="5 4" opacity="0.6" />
         </Box>
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>Dashed — the shape you fly</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>Dashed</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
             Your pattern in still air, anchored at the target.
           </Typography>
@@ -192,9 +192,9 @@ function PathLegend() {
           <line x1="2" y1="7" x2="42" y2="7" stroke="currentColor" strokeWidth="2.5" />
         </Box>
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>Solid — where you actually go</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>Solid</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
-            The same pattern after the wind has pushed each point downwind.
+            The same pattern adjusted for the wind conditions.
           </Typography>
         </Box>
       </Stack>

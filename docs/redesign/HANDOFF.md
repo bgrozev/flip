@@ -670,7 +670,7 @@ steps back. The guard — ignore keys from inputs and from anything with
 preset menu own the digits.
 
 **Help panel** (`core/help.ts` + `components/HelpComponent`): topics as
-DATA, one per panel plus How-it-works / Reading-the-map / Glossary /
+DATA, one per panel plus How-it-works / Reading-the-map /
 Shortcuts / About. The `about` panel is gone; About is a topic and
 `/about` redirects to `/help?topic=about`. Every panel header now has a
 `?` deep-linking to its own topic. **The prose is placeholder** — see

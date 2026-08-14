@@ -60,10 +60,6 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
       {
         kind: 'paragraph',
         text: 'The wind is applied from the ground up: the landing point stays where you put it, and every point earlier in the jump is pushed downwind of where it would otherwise be. That is why the start of the pattern moves while the target does not.'
-      },
-      {
-        kind: 'note',
-        text: 'The further apart the two lines are, the more the wind is doing. Fly the solid line — the dashed one only shows the shape you are flying.'
       }
     ]
   },
@@ -75,8 +71,8 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
       {
         kind: 'terms',
         items: [
-          { term: 'Target', text: 'Where you intend to land. Drag it to move it, or shift-click anywhere on the map to jump it there.' },
-          { term: 'Heading handle', text: 'Hover the target to reveal it. Drag it to turn the final approach direction.' },
+          { term: 'Target', text: 'The blue dot: where you intend to land. Drag it to move it, or shift-click anywhere on the map to jump it there.' },
+          { term: 'Heading handle', text: 'The orange dot beside the target — hover the target to reveal it. Drag it to turn the final approach direction.' },
           { term: 'Altitude labels', text: 'The altitude at that point of the jump. They thin out as you zoom out so they stay readable.' },
           { term: 'Winds indicator', text: 'The corner panel: ground wind plus the altitudes that matter for this plan. Hover the ground row for the station or forecast behind it; tap it to open the Wind panel.' }
         ]
@@ -96,7 +92,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
       {
         kind: 'terms',
         items: [
-          { term: 'Leg altitude', text: 'The height used by that leg, not the height it starts at. The three add up: 300, 600 and 900 make a pattern that begins at 1800 ft.' },
+          { term: 'Leg altitude', text: 'The height each leg USES, not the height it starts at. So the usual 300 / 600 / 900 pattern — final at 300, base at 600, downwind at 900 — is entered as 300 for every leg: three legs of 300 ft each, starting at 900.' },
           { term: 'Descent rate', text: 'How fast you come down in the pattern. Together with glide ratio this sets how far each leg reaches.' },
           { term: 'Glide ratio', text: 'How far you travel forward per unit of height lost, in still air. Higher means flatter and longer legs.' },
           { term: 'Turn direction', text: 'Which way you turn at the end of that leg — left or right.' }
@@ -126,6 +122,10 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
           { term: 'Samples', text: 'Use one of the built-in example turns when you have no track of your own.' },
           { term: 'Initiation altitude', text: 'Raises or lowers the altitude the turn begins at, without changing its shape. Applies to tracks and samples.' }
         ]
+      },
+      {
+        kind: 'note',
+        text: 'The manoeuvre ends where you first arrive at the ground, not where you stop — and the built-in samples are cut that way. The swoop that follows is yours to account for: the dotted final-approach line through the target shows the direction it runs in.'
       }
     ]
   },
@@ -178,6 +178,10 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
       {
         kind: 'note',
         text: 'The banner across the top of the map is the trust signal: it appears when the winds are manual, stale, or were never fetched, and hides itself when the forecast is fresh.'
+      },
+      {
+        kind: 'note',
+        text: 'These numbers are a FORECAST, and a forecast is never a fact. FliP warns you when it has reason to doubt one — old data, manual entry, sources that disagree — but silence is not a guarantee: the real air can differ from the model on a perfectly fresh forecast. Treat the plan as one input, check it against what you can see and feel on the day, and remember the jump is yours: applying any of this to a real canopy flight is the jumper’s call and the jumper’s responsibility.'
       }
     ]
   },
@@ -216,15 +220,6 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
       {
         kind: 'paragraph',
         text: 'Courses belong to a dropzone, so the list only shows the ones at the place you are at, and "New" adds a course there. Switching dropzone clears a course that belongs to the one you left. A setup remembers both, so loading it brings back the dropzone and its course together.'
-      },
-      {
-        kind: 'terms',
-        items: [
-          { term: 'Distance', text: 'Entry gate and a measured run — how far you carry the swoop.' },
-          { term: 'Zone accuracy', text: 'Scoring zones, entered on a set line.' },
-          { term: 'Speed', text: 'A timed carve; the carve direction says which way it turns.' },
-          { term: 'Direction', text: 'Which way the course is laid out — normally into the prevailing wind.' }
-        ]
       }
     ]
   },
@@ -234,25 +229,6 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
     summary: 'Every key, for the mode you are in.',
     desktopOnly: true,
     blocks: [{ kind: 'shortcuts' }]
-  },
-  {
-    id: 'glossary',
-    title: 'Glossary',
-    summary: 'The words, briefly.',
-    blocks: [
-      {
-        kind: 'terms',
-        items: [
-          { term: 'Spot', text: 'Where the aircraft puts you out.' },
-          { term: 'Jumprun', text: 'The line the aircraft flies while people exit.' },
-          { term: 'Drift', text: 'How far the wind carries you while you descend.' },
-          { term: 'Crab', text: 'Flying angled into the wind so your track over the ground is the one you want.' },
-          { term: 'Glide ratio', text: 'Distance forward per unit of height lost.' },
-          { term: 'POM', text: 'Point of measurement — the marked points along the path, normally one per 1000 ft.' },
-          { term: 'Setup', text: 'A named arrangement you can switch between: the pattern and the turn, and optionally the dropzone, target and course. One that remembers a target belongs to its dropzone; one that does not works anywhere.' }
-        ]
-      }
-    ]
   },
   {
     id: 'about',
