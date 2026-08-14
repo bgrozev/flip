@@ -1,5 +1,5 @@
 import { FlightPath } from '../types';
-import { LegacyFlipPoint } from '../util/migration';
+import { LegacyFlipPoint } from '../core/migration';
 
 export interface Sample {
   name: string;

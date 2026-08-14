@@ -1,12 +1,13 @@
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { useMemo } from 'react';
 
+import { SCHEMA_VERSION, migrateCustomCourses } from '../core/model';
 import { CourseParams } from '../types';
-import { buildCourse } from '../util/courses';
-import { createSimpleCodec } from '../util/storage';
+import { buildCourse } from '../core/courses';
+import { createVersionedCodec } from '../util/storage';
 
 const EMPTY: CourseParams[] = [];
-const codec = createSimpleCodec<CourseParams[]>(EMPTY);
+const codec = createVersionedCodec(SCHEMA_VERSION, migrateCustomCourses);
 
 export function useCustomCourses() {
   const [stored, setStored] = useLocalStorageState<CourseParams[]>(
@@ -18,6 +19,12 @@ export function useCustomCourses() {
 
   const customCourses = useMemo(() => customParams.map(buildCourse), [customParams]);
 
+  /**
+   * `params.placeId` is the dropzone the course belongs to — the caller
+   * passes the active place, so a course is created where the user is. Omit
+   * it (or pass undefined, which is what "no place is active" looks like) and
+   * the course belongs to no dropzone and is offered at all of them.
+   */
   const createCourse = (params: Omit<CourseParams, 'id'>): string => {
     const id = `custom-${Date.now()}`;
     setStored([...customParams, { ...params, id }]);

@@ -6,8 +6,6 @@ import {
 import {
   Box,
   Divider,
-  FormControl,
-  FormHelperText,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -24,19 +22,40 @@ import {
   PATTERN_THREE_LEG,
   PATTERN_TWO_LEG,
   booleanToDirection,
+  flipPatternSides,
   isLeftTurn,
   PatternLeg
-} from '../util/pattern';
+} from '../core/pattern';
+import { LIMITS } from '../core/validation';
 
 import DirectionSwitch from './DirectionSwitch';
-import NumberInput from './NumberInput';
+import { SectionHeading } from './PanelSection';
+import NumberField from './NumberField';
 
 interface PatternComponentProps {
   params: PatternParams;
   onParamsChange: (params: PatternParams) => void;
+  /**
+   * Whether the user may choose how many legs the pattern has. Standard
+   * Pattern hides it and always flies three (see modes/): picking NONE/1/2
+   * is a swooper's decision, not something a regular jumper should face.
+   */
+  legCountSelectable?: boolean;
+  /**
+   * Nerd mode. A swooper always gets the per-leg left/right switches (their
+   * pattern can be asymmetric); the everyday Standard Pattern jumper gets a
+   * single pattern-wide left/right control instead, unless nerd mode is on,
+   * which restores the per-leg switches for them too.
+   */
+  nerd?: boolean;
 }
 
-export default function PatternComponent({ params, onParamsChange }: PatternComponentProps) {
+export default function PatternComponent({
+  params,
+  onParamsChange,
+  legCountSelectable = true,
+  nerd = false
+}: PatternComponentProps) {
   const {
     formatDescentRate,
     parseDescentRate,
@@ -57,59 +76,60 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
     });
   };
 
+  // Swoop always gets the per-leg switches (an asymmetric "Z" pattern is a
+  // swooper's call); Standard Pattern gets them only under nerd mode, and
+  // the single pattern-wide control otherwise.
+  const showPerLegSwitches = legCountSelectable || nerd;
+  const showPatternWideSwitch = !showPerLegSwitches;
+  const patternIsAllLeft = isLeftTurn(params.legs[1].direction) && isLeftTurn(params.legs[2].direction);
+
   return (
     <Box display="flex" flexDirection="column" gap={2}>
-      <ToggleButtonGroup
-        value={params.type}
-        exclusive
-        onChange={(_e, value) => value !== null && handleChange('type', value)}
-        fullWidth
-        color="primary"
-      >
-        <ToggleButton value={PATTERN_NONE}>None</ToggleButton>
-        <ToggleButton value={PATTERN_ONE_LEG}>
-          <Tooltip title="Single leg">
-            <LooksOneIcon />
-          </Tooltip>
-        </ToggleButton>
-        <ToggleButton value={PATTERN_TWO_LEG}>
-          <Tooltip title="Two-leg pattern">
-            <LooksTwoIcon />
-          </Tooltip>
-        </ToggleButton>
-        <ToggleButton value={PATTERN_THREE_LEG}>
-          <Tooltip title="Three-leg pattern">
-            <Looks3Icon />
-          </Tooltip>
-        </ToggleButton>
-      </ToggleButtonGroup>
-
-      <Divider orientation="vertical" flexItem />
-      {params.type !== PATTERN_NONE && (
+      {legCountSelectable && (
         <>
-          <Stack direction="row" spacing={2}>
-            <NumberInput
-              title="Vertical speed in the pattern."
-              label="Descent Rate"
-              initialValue={formatDescentRate(params.descentRateMph).value}
-              step={1}
-              min={1}
-              unit={descentRateLabel}
-              onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
-            />
-            <NumberInput
-              title="Glide ratio in the pattern with no wind."
-              label="Glide Ratio"
-              initialValue={params.glideRatio}
-              step={0.1}
-              min={0.1}
-              unit=""
-              onChange={value => handleChange('glideRatio', value)}
+          <ToggleButtonGroup
+            value={params.type}
+            exclusive
+            onChange={(_e, value) => value !== null && handleChange('type', value)}
+            fullWidth
+            color="primary"
+          >
+            <ToggleButton value={PATTERN_NONE}>None</ToggleButton>
+            <ToggleButton value={PATTERN_ONE_LEG}>
+              <Tooltip title="Single leg">
+                <LooksOneIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value={PATTERN_TWO_LEG}>
+              <Tooltip title="Two-leg pattern">
+                <LooksTwoIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value={PATTERN_THREE_LEG}>
+              <Tooltip title="Three-leg pattern">
+                <Looks3Icon />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+        </>
+      )}
+      {showPatternWideSwitch && (params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (
+        <>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography sx={{ flexGrow: 1 }}>Pattern turns</Typography>
+            <DirectionSwitch
+              title="Left-hand or right-hand pattern: both turns switch together (shortcut: X). A mixed pattern resolves to left."
+              value={patternIsAllLeft}
+              onChange={() => onParamsChange(flipPatternSides(params))}
             />
           </Stack>
-
           <Divider />
-          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Final leg</Typography>
+        </>
+      )}
+      {params.type !== PATTERN_NONE && (
+        <>
+          <SectionHeading>Final leg</SectionHeading>
           <Stack direction="row" spacing={2}>
             <LegAltitudeSelector
               title="Altitude for the final leg of the pattern."
@@ -124,11 +144,10 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
         </>
       )}
 
-      <Divider orientation="vertical" flexItem />
       {(params.type === PATTERN_TWO_LEG || params.type === PATTERN_THREE_LEG) && (
         <>
           <Divider />
-          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Base leg</Typography>
+          <SectionHeading>Base leg</SectionHeading>
           <Stack direction="row" spacing={2} alignItems="center">
             <LegAltitudeSelector
               title="Altitude for the base leg of the pattern. This determines how long the leg is."
@@ -139,23 +158,24 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
               parseAltitude={parseAltitude}
               altitudeLabel={altitudeLabel}
             />
-            <DirectionSwitch
-              title="Direction for the turn after this pattern leg."
-              value={isLeftTurn(params.legs[1].direction)}
-              onChange={() => {
-                const wasChecked = isLeftTurn(params.legs[1].direction);
-                handleLegChange(1, 'direction', booleanToDirection(!wasChecked));
-              }}
-            />
+            {showPerLegSwitches && (
+              <DirectionSwitch
+                title="Direction for the turn after this pattern leg."
+                value={isLeftTurn(params.legs[1].direction)}
+                onChange={() => {
+                  const wasChecked = isLeftTurn(params.legs[1].direction);
+                  handleLegChange(1, 'direction', booleanToDirection(!wasChecked));
+                }}
+              />
+            )}
           </Stack>
         </>
       )}
 
-      <Divider orientation="vertical" flexItem />
       {params.type === PATTERN_THREE_LEG && (
         <>
           <Divider />
-          <Typography variant="body2" sx={{ textAlign: 'left', color: 'text.secondary' }}>Downwind leg</Typography>
+          <SectionHeading>Downwind leg</SectionHeading>
           <Stack direction="row" spacing={2} alignItems="center">
             <LegAltitudeSelector
               title="Altitude for the downwind leg of the pattern. This determines how long the leg is."
@@ -166,13 +186,45 @@ export default function PatternComponent({ params, onParamsChange }: PatternComp
               parseAltitude={parseAltitude}
               altitudeLabel={altitudeLabel}
             />
-            <DirectionSwitch
-              title="Direction for the turn after this pattern leg."
-              value={isLeftTurn(params.legs[2].direction)}
-              onChange={() => {
-                const wasChecked = isLeftTurn(params.legs[2].direction);
-                handleLegChange(2, 'direction', booleanToDirection(!wasChecked));
+            {showPerLegSwitches && (
+              <DirectionSwitch
+                title="Direction for the turn after this pattern leg."
+                value={isLeftTurn(params.legs[2].direction)}
+                onChange={() => {
+                  const wasChecked = isLeftTurn(params.legs[2].direction);
+                  handleLegChange(2, 'direction', booleanToDirection(!wasChecked));
+                }}
+              />
+            )}
+          </Stack>
+        </>
+      )}
+
+      {params.type !== PATTERN_NONE && (
+        <>
+          <Divider />
+          <Stack direction="row" spacing={2}>
+            <NumberField
+              title="Vertical speed in the pattern."
+              label="Descent Rate"
+              value={formatDescentRate(params.descentRateMph).value}
+              step={1}
+              limits={{
+                min: formatDescentRate(LIMITS.descentRateMph.min).value,
+                max: formatDescentRate(LIMITS.descentRateMph.max).value
               }}
+              unit={descentRateLabel}
+              fullWidth
+              onChange={value => handleChange('descentRateMph', parseDescentRate(value))}
+            />
+            <NumberField
+              title="Glide ratio in the pattern with no wind."
+              label="Glide Ratio"
+              value={params.glideRatio}
+              step={0.1}
+              limits={LIMITS.glideRatio}
+              fullWidth
+              onChange={value => handleChange('glideRatio', value)}
             />
           </Stack>
         </>
@@ -242,7 +294,7 @@ function LegAltitudeSelector({
   };
 
   return (
-    <FormControl sx={{ m: 1, width: '20ch' }} variant="outlined">
+    <Box sx={{ flex: 1, minWidth: 0 }}>
       <Tooltip title={title}>
         <ToggleButtonGroup
           value={mode}
@@ -261,18 +313,22 @@ function LegAltitudeSelector({
       </Tooltip>
 
       {isCustom && (
-        <NumberInput
-          title={title}
-          label={label}
-          initialValue={Math.round(formatAltitude(value).value)}
-          step={altitudeLabel === 'ft' ? 100 : 10}
-          min={altitudeLabel === 'ft' ? 100 : 30}
-          unit={altitudeLabel}
-          onChange={handleCustomChange}
-        />
+        <Box sx={{ mt: 1 }}>
+          <NumberField
+            title={title}
+            label={label}
+            value={Math.round(formatAltitude(value).value)}
+            step={altitudeLabel === 'ft' ? 100 : 10}
+            limits={{
+              min: Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.min).value),
+              max: Math.round(formatAltitude(LIMITS.patternLegAltitudeFt.max).value)
+            }}
+            unit={altitudeLabel}
+            fullWidth
+            onChange={handleCustomChange}
+          />
+        </Box>
       )}
-
-      <FormHelperText>Altitude ({altitudeLabel})</FormHelperText>
-    </FormControl>
+    </Box>
   );
 }

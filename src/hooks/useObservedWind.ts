@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { fetchObservedStations, nearestGroundWindStation } from '../forecast/observedWind';
+import { fetchObservedStations, nearestGroundWindStation } from '../data/wind';
 import { LatLng, ObservedWindStation } from '../types';
 
 interface UseObservedWindResult {

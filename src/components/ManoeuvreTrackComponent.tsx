@@ -14,22 +14,20 @@ import {
   Stack,
   TextField,
   Tooltip,
-  Typography
 } from '@mui/material';
 import { useLocalStorageState } from '@toolpad/core/useLocalStorageState';
 import { csvParse } from 'd3';
 import React, { useEffect, useState } from 'react';
 
-import { CsvRow, FlightPath } from '../types';
+import { CsvRow, FlightPath, StoredTrack } from '../types';
 import { convertFromGnss, extractPathFromCsv } from '../util/csv';
-import { mirror as mirrorPath } from '../util/geo';
-import { createSimpleCodec } from '../util/storage';
+import { mirror as mirrorPath } from '../core/geometry';
+import { SCHEMA_VERSION, migrateStoredTracks } from '../core/model';
+import { createVersionedCodec } from '../util/storage';
 
-interface Track {
-  name: string;
-  description: string;
-  track: FlightPath;
-}
+import { SectionHeading } from './PanelSection';
+
+const codec = createVersionedCodec(SCHEMA_VERSION, migrateStoredTracks);
 
 interface ManoeuvreTrackComponentProps {
   manoeuvreToSave: FlightPath;
@@ -44,10 +42,10 @@ export default function ManoeuvreTrackComponent({
   selectedTrackData,
   onTrackChange
 }: ManoeuvreTrackComponentProps) {
-  const [storedTracks, setTracks] = useLocalStorageState<Track[]>(
+  const [storedTracks, setTracks] = useLocalStorageState<StoredTrack[]>(
     'flip.manoeuvre.track.tracks',
     [],
-    { codec: createSimpleCodec<Track[]>([]) }
+    { codec }
   );
   const tracks = storedTracks ?? [];
   const [name, setName] = useState('');
@@ -85,7 +83,7 @@ export default function ManoeuvreTrackComponent({
   const save = (ev: React.FormEvent) => {
     ev.preventDefault();
 
-    const newTrack: Track = { name, description, track: manoeuvreToSave };
+    const newTrack: StoredTrack = { name, description, track: manoeuvreToSave };
     setTracks([...tracks.filter(t => t.name !== name), newTrack]);
   };
 
@@ -106,7 +104,7 @@ export default function ManoeuvreTrackComponent({
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h6">My tracks</Typography>
+      <SectionHeading>My tracks</SectionHeading>
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>Select track</InputLabel>
         <Select
@@ -152,17 +150,17 @@ export default function ManoeuvreTrackComponent({
           fullWidth
           sx={{ mb: 2 }}
         />
-        <Tooltip title="Save the current manoeuvre, with wind correction applied. It will be added to the list above.">
-          <Button variant="contained" type="submit">
+        <Tooltip title="Save the current manoeuvre, with wind correction applied. It will be added to the list above." describeChild>
+          <Button variant="outlined" size="small" type="submit">
             Save current manoeuvre
           </Button>
         </Tooltip>
       </Box>
 
       <Divider sx={{ mt: 3, mb: 1 }} />
-      <Typography variant="h6">Import</Typography>
-      <Tooltip title="Import a FlySight file. It has to be trimmed in FlySight Viewer first.">
-        <Button variant="outlined" component="label" sx={{ my: 2 }}>
+      <SectionHeading>Import</SectionHeading>
+      <Tooltip title="Import a FlySight file. It has to be trimmed in FlySight Viewer first." describeChild>
+        <Button variant="outlined" size="small" component="label" sx={{ my: 2 }}>
           Choose file
           <input
             type="file"

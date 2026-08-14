@@ -12,7 +12,7 @@ import {
   UNIT_LABELS,
   windSpeedFromDisplay,
   windSpeedToDisplay
-} from '../util/units';
+} from '../core/units';
 
 import { useAppState } from './useAppState';
 

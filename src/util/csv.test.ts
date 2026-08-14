@@ -1,15 +1,15 @@
-/* eslint-env jest */
+import { vi } from 'vitest';
 
 import { convertFromGnss, extractPathFromCsv, trim } from './csv';
 import { CsvRow } from '../types';
 
 // Mock console.log to prevent test output noise
 beforeEach(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => { /* noop */ });
+  vi.spyOn(console, 'log').mockImplementation(() => { /* noop */ });
 });
 
 afterEach(() => {
-  (console.log as jest.Mock).mockRestore();
+  (console.log as ReturnType<typeof vi.fn>).mockRestore();
 });
 
 describe('extractPathFromCsv', () => {

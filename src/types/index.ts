@@ -1,6 +1,8 @@
 import { Feature, Point } from 'geojson';
 
-import { UnitPreferences } from '../util/units';
+import { DaSeverity } from '../core/atmosphere';
+import { FlockingParams, SolveCorridorParams } from '../core/flocking';
+import { UnitPreferences } from '../core/units';
 
 // Flight point properties
 export interface FlightPointProperties {
@@ -26,6 +28,56 @@ export interface Target {
   finalHeading: number;
 }
 
+/**
+ * The target state remembered for one place: the place's own target plus the
+ * per-mode overrides made while there. A dropzone's stored coordinates are
+ * only a starting point — the landing spot a user shift-clicks to is the one
+ * they mean, so returning to a place restores it rather than snapping back.
+ */
+export interface PlaceTargets {
+  shared: Target;
+  byMode: Record<string, Target>;
+  /**
+   * Flocking's pinned Spot Reference ("C"). The only other absolute
+   * coordinate in the app: everything else in the flocking params is a
+   * heading or a distance, so this is the one that turns into a spot
+   * thousands of miles out if it follows you to another dropzone.
+   */
+  flockingReference?: LatLng | null;
+  /** The jumprun corridors in force here (flocking solve mode). */
+  flockingCorridors?: SolveCorridorParams[];
+}
+
+/**
+ * A dropzone's starting configuration for one mode. Anything omitted falls
+ * back to the dropzone's own coordinates and heading, so an entry only has
+ * to say what differs — a swoop pond away from the student LZ, a flocking
+ * end point out in the big field.
+ */
+export interface DropzoneModeConfig {
+  lat?: number;
+  lng?: number;
+  /**
+   * Landing heading. Meaningless for `flocking`, which has no final-heading
+   * UI (its target is where the canopy flight ends, not a landing direction).
+   */
+  direction?: number;
+  /**
+   * Allowed jumprun corridors (`flocking` only) — the DZ's own airspace and
+   * traffic restrictions, which is what makes them dropzone data rather than
+   * group data. Speeds, window altitudes and the ring radii deliberately
+   * stay out: those describe the flock, not the place.
+   */
+  solveCorridors?: SolveCorridorParams[];
+  /**
+   * The DZ's canonical Spot Reference (`flocking` only): the landmark a spot
+   * is quoted against when talking to the pilot, who knows the airport but
+   * not where this particular flock means to land. Pinned on arrival; absent
+   * means the spot stays relative to the target, as it is today.
+   */
+  spotReference?: LatLng;
+}
+
 // Wind types
 export interface IWindRow {
   altFt: number;
@@ -49,13 +101,45 @@ export interface PatternParams {
 }
 
 // Manoeuvre types
+export type TurnDirection = 'left' | 'right';
+
+/**
+ * A parametric turn to final, described in the frame of the FINAL HEADING
+ * rather than relative to the target. The final heading is fixed by the
+ * target, so what a turn is free to choose is: which way it rotates, how
+ * far, and where it puts the initiation point relative to where it rolls
+ * out. Everything here is measured against that axis, which is why a sign
+ * change moves a point instead of spinning the whole manoeuvre (the bug in
+ * the old offsetX/offsetY model).
+ */
 export interface ManoeuvreParams {
-  offsetXFt: number;
-  offsetYFt: number;
+  /** Which way you rotate. The entry heading follows from this + rotation. */
+  turnDirection: TurnDirection;
+  /** Total degrees rotated onto final: 90, 135, 270, 450, ... */
+  rotationDeg: number;
+  /** Initiation altitude (ft). */
   altitudeFt: number;
+  /**
+   * How far back the initiation point sits from the landing point, along the
+   * final heading. Positive is away from the target (behind it).
+   */
+  depthFt: number;
+  /**
+   * How far the initiation point sits to the side, across the final heading,
+   * on the side you turn FROM — the side the whole turn happens on. For a
+   * quarter/three-quarter/450 turn this is exactly the turn radius. Signed
+   * relative to the turn direction, so flipping left/right mirrors the turn
+   * instead of making it geometrically impossible.
+   */
+  offsetFt: number;
+  /** Time from initiation to touchdown (s). */
   duration: number;
-  left: boolean;
 }
+
+// Map providers (see src/map). The active provider renders the map and
+// supplies concrete implementations of the adapter primitives.
+export const MAP_PROVIDERS = ['google', 'maplibre'] as const;
+export type MapProvider = typeof MAP_PROVIDERS[number];
 
 // Settings types
 export interface Settings {
@@ -63,25 +147,82 @@ export interface Settings {
   showPomAltitudes: boolean;
   showPomTooltips: boolean;
   showPreWind: boolean;
-  displayWindArrow: boolean;
   displayWindSummary: boolean;
+  /** Show the compact winds indicator overlaid on the map corner. */
+  displayMapWinds: boolean;
+  /** Show place/road labels over the satellite imagery (Google only). */
+  showMapLabels: boolean;
+  /**
+   * Draw the turn hint on the map: the heading you start the turn on and
+   * how far round it goes.
+   */
+  showManoeuvreHint: boolean;
+  /**
+   * Draw the final approach line through the target. Separate from the turn
+   * hint: it is the reference frame the manoeuvre's depth and offset are
+   * measured against, and it is worth seeing on its own.
+   */
+  showFinalApproachLine: boolean;
   interpolateWind: boolean;
   correctPatternHeading: boolean;
   straightenLegs: boolean;
   useDzGroundWind: boolean;
-  limitWind: number;
+  /** Which winds-aloft source to use: 'forecast' (OpenMeteo) or 'sounding'. */
+  windAloftSource: 'forecast' | 'sounding';
+  /** OpenMeteo forecast model id (see core/wind OPEN_METEO_MODELS). */
+  windModel: string;
+  /** Which map provider renders the map: Google Maps or MapLibre GL. */
+  mapProvider: MapProvider;
   showPresets: boolean;
-  showMeasureTool: boolean;
   highlightCorrespondingPoints: boolean;
   showCrabArrow: boolean;
+  /**
+   * Nerd mode: exposes the tools an everyday jumper never needs on the day
+   * they fly (manual wind entry, exports, extra map detail). Orthogonal to
+   * the mode — it answers "how much UI", not "what jump" — so it is a
+   * single global flag rather than a fourth Mode. See modes/nerd.ts.
+   */
+  nerd: boolean;
   units: UnitPreferences;
 }
+
+// Navigation panels. Each panel is a route (`/${id}`); modes expose a subset.
+export const PANEL_IDS = [
+  'pattern',
+  'manoeuvre',
+  'target',
+  'wind',
+  'courses',
+  'flocking',
+  'settings',
+  'help'
+] as const;
+export type PanelId = typeof PANEL_IDS[number];
+
+// Map layers (src/map/layers). Modes select which ones render.
+export const MAP_LAYER_IDS = [
+  'flightPaths',
+  'courses',
+  'stations',
+  'targetEdit',
+  'courseEdit',
+  'flocking',
+  'manoeuvreHint',
+  'manoeuvreEdit'
+] as const;
+export type MapLayerId = typeof MAP_LAYER_IDS[number];
 
 // Wind summary for display
 export interface WindSummaryData {
   average: { speedKts?: number; direction?: number };
   ground?: { direction: number; speedKts: number; observed?: boolean };
   forecastTime?: Date;
+  /** Density altitude (ft) at the target's elevation, when computable. */
+  densityAltitudeFt?: number;
+  /** How far above field elevation the density altitude sits. */
+  densityAltitudeSeverity?: DaSeverity;
+  /** Field elevation (ft), shown alongside density altitude. */
+  elevationFt?: number;
 }
 
 // CSV parsing types (note: d3 csvParse returns strings, but JS coerces to number in arithmetic)
@@ -98,8 +239,108 @@ export interface Dropzone {
   name: string;
   lat: number;
   lng: number;
-  direction: number;
+  /**
+   * Usual landing heading, where it is known. Absent for the bulk-imported
+   * entries (see `util/dropzones.ts`) — selecting one of those moves the
+   * target but leaves the final heading as the user set it.
+   */
+  direction?: number;
   nearbyStations?: string[]; // ICAO station IDs not in NWS gridpoints (e.g. AWOS at small airports)
+  /** The dropzone's own site, linked from the place picker. */
+  website?: string;
+  /**
+   * Where it is, in words. Searchable and shown under the name in the
+   * picker, so "eloy" or "az" finds Skydive Arizona and the four Spacelands
+   * tell themselves apart. `region` is a state/province; short forms like
+   * "AZ" come from `core/regions`, not from repeating them here.
+   */
+  town?: string;
+  region?: string;
+  country?: string;
+  /**
+   * Per-mode starting configuration, keyed by mode id (`pattern` / `swoop` /
+   * `flocking` — a plain string key because `types` cannot import `modes`
+   * without a cycle; `dropzones.test.ts` checks the keys against the real
+   * mode list). A mode with no entry starts from the dropzone's own
+   * coordinates, so this only has to record what actually differs.
+   */
+  modes?: Record<string, DropzoneModeConfig>;
+}
+
+/** A landing location saved by the user ("My Locations"); keyed by name. */
+export interface CustomLocation {
+  name: string;
+  lat: number;
+  lng: number;
+  direction: number;
+}
+
+/**
+ * How a place in the picker got there. `favorite` is a starred known
+ * dropzone (stored as a name reference, so corrections to the dropzone data
+ * reach it); `custom` is a position the user saved themselves.
+ */
+export type PlaceKind = 'dropzone' | 'favorite' | 'custom';
+
+/**
+ * A geocoder hit. Not a `Place`: its coordinates are only fetched when the
+ * user picks it (`resolvePlaceSuggestion`), so it can't be used as a target
+ * until it is resolved. `id` is provider-specific and opaque.
+ */
+export interface PlaceSuggestion {
+  id: string;
+  label: string;
+  detail?: string;
+}
+
+/**
+ * A selectable landing place: the known dropzones plus everything the user
+ * saved, flattened into one list for the picker. Geocoder results are NOT
+ * places — they have no coordinates until they are resolved.
+ */
+export interface Place {
+  /** Stable across renders and unique within a list: `dz:<name>` / `custom:<name>`. */
+  id: string;
+  kind: PlaceKind;
+  name: string;
+  lat: number;
+  lng: number;
+  /** Usual landing heading, where known (see `Dropzone.direction`). */
+  direction?: number;
+  /** Per-mode starting config, for places that come from the DZ database. */
+  modes?: Record<string, DropzoneModeConfig>;
+  /** The dropzone's own site, where one is known. */
+  website?: string;
+  /** Where it is, in words (see `Dropzone`). */
+  town?: string;
+  region?: string;
+  country?: string;
+}
+
+/**
+ * A place the user picked recently, stored as a snapshot (`flip.places.recent`).
+ *
+ * Not a reference like a favorite: a recent may be a geocoder hit, which has
+ * no id in any database. `id` is the `Place.id` where there is one and empty
+ * otherwise, and is what re-selecting uses to restore the place's memory.
+ */
+export interface RecentPlace {
+  /** `Place.id`, or empty for a place that belongs to no database. */
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  /** Usual landing heading, where the place knew one. */
+  direction?: number;
+  /** Where it is, in words — already formatted, since a hit has no fields. */
+  subtitle?: string;
+}
+
+/** A manoeuvre track saved by the user ("My tracks"); keyed by name. */
+export interface StoredTrack {
+  name: string;
+  description: string;
+  track: FlightPath;
 }
 
 // Course types
@@ -112,6 +353,17 @@ export interface CourseParams {
   lat: number;
   lng: number;
   direction: number;
+  /**
+   * The place this course belongs to (a `Place.id`, e.g. `dz:Skydive
+   * Arizona`). A course is a set of buoys in a particular pond, so the
+   * picker only offers the ones at the dropzone you are at — built-in and
+   * custom alike, which is why this is one field rather than two mechanisms.
+   *
+   * Absent means "belongs to no place": the custom courses of users from
+   * before courses were dropzone-scoped, which are offered everywhere rather
+   * than guessed at.
+   */
+  placeId?: string;
   /** Speed courses only */
   carveDirection?: 'left' | 'right';
 }
@@ -179,7 +431,9 @@ export interface ObservedWindStation {
 }
 
 // Preset types
-export type ManoeuvreType = 'none' | 'parameters' | 'track' | 'samples';
+// "None" is gone: a jump with no turn to final IS Standard Pattern mode, so
+// the type only lists the ways of describing a turn.
+export type ManoeuvreType = 'parameters' | 'track' | 'samples';
 
 export interface ManoeuvreConfig {
   type: ManoeuvreType;
@@ -195,12 +449,63 @@ export interface ManoeuvreConfig {
   initiationAltitudeOffset?: number;
 }
 
-export interface Preset {
+/**
+ * Where a setup lands: the place, the target within it, and the course the
+ * target is positioned against. Optional as a GROUP, and that is the point —
+ * a target without the place it belongs to is meaningless, since the same
+ * coordinates at another dropzone are a field two states away.
+ */
+export interface SetupSite {
+  /**
+   * The place the setup was saved at (a `Place.id`). Courses belong to a
+   * place, so a setup that names a course has to name the place too —
+   * otherwise loading it would select a course the picker no longer lists.
+   * The setup's own target still wins over whatever that place remembers:
+   * the setup IS the remembered arrangement.
+   *
+   * Null for a setup built on a geocoder hit, which belongs to no place.
+   */
+  placeId: string | null;
+  target: Target;
+  selectedCourseId: string | null;
+}
+
+/**
+ * A named arrangement of everything a jump is planned with. Splits on one
+ * axis: what travels between dropzones (the canopy's pattern, the turn) is
+ * always here, and what belongs to one place (`site`) is optional — so a
+ * setup is either "my ZoneAcc at ZHills" or "my comp canopy and turn,
+ * anywhere".
+ */
+export interface Setup {
   id: string;
   name: string;
-  target: Target;
+  /**
+   * What is being flown, as a label: "SAW 75". Typed rather than derived —
+   * nothing in the app models a canopy yet, and the glide ratio and descent
+   * rate that describe one are numbers you cannot read a name off. It can
+   * therefore go stale against them; see BACKLOG's canopy + wing-loading
+   * entry for what eventually replaces it.
+   */
+  canopy?: string;
+  note?: string;
+  /**
+   * The mode the setup was saved in. Pattern params are per-mode, so a setup
+   * without one would drop a swooper's numbers into Standard Pattern's slot;
+   * loading switches mode first. Absent for setups saved before setups
+   * carried a mode, which means "apply to whatever is active".
+   */
+  modeId?: string;
   patternParams: PatternParams;
   manoeuvre: ManoeuvreConfig;
-  selectedCourseId?: string | null;
+  /** Flocking setups only — the mode's own document, in place of the turn. */
+  flockingParams?: FlockingParams;
+  /**
+   * Explicitly null when the setup travels, rather than absent: a preset
+   * from before setups had a site half carries neither key, and the two have
+   * to be told apart on the way back in. Absent therefore means "this is an
+   * old preset", which was always site-bound.
+   */
+  site?: SetupSite | null;
   createdAt: number;
 }

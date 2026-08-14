@@ -14,12 +14,16 @@ import {
 import { ThemeSwitcher } from '@toolpad/core/DashboardLayout';
 import React from 'react';
 
-import { Settings } from '../types';
+import { MapProvider, Settings } from '../types';
+import { OPEN_METEO_MODELS } from '../core/wind';
+import { SectionHeading } from './PanelSection';
 import {
   ALTITUDE_UNIT_OPTIONS,
   AltitudeUnit,
   DESCENT_RATE_UNIT_OPTIONS,
+  DISTANCE_UNIT_OPTIONS,
   DescentRateUnit,
+  DistanceUnit,
   PRESSURE_UNIT_OPTIONS,
   PressureUnit,
   TEMPERATURE_UNIT_OPTIONS,
@@ -27,14 +31,15 @@ import {
   UnitPreferences,
   WIND_SPEED_UNIT_OPTIONS,
   WindSpeedUnit
-} from '../util/units';
+} from '../core/units';
 
-import NumberInput from './NumberInput';
 
 interface CheckboxOption {
   key: keyof Settings;
   label: string;
   tooltip: string;
+  /** Only offered under nerd mode; forced to its everyday value otherwise. */
+  nerd?: boolean;
 }
 
 interface SettingsGroup {
@@ -48,13 +53,8 @@ const settingsGroups: SettingsGroup[] = [
     options: [
       {
         key: 'showPresets',
-        label: 'Show presets',
-        tooltip: 'Show the preset selector in the toolbar to save and load configurations.'
-      },
-      {
-        key: 'showMeasureTool',
-        label: 'Show measure distance tool',
-        tooltip: 'Show the ruler button on the map to measure distances by clicking points.'
+        label: 'Show setups',
+        tooltip: 'Show the setup selector in the toolbar, to save and load named arrangements.'
       }
     ]
   },
@@ -74,23 +74,35 @@ const settingsGroups: SettingsGroup[] = [
       {
         key: 'showPomTooltips',
         label: 'Show tooltips on pattern points',
-        tooltip: 'Show detailed information when hovering over pattern points on the map.'
+        tooltip: 'Show detailed information when hovering over pattern points on the map.',
+        nerd: true
       },
       {
         key: 'highlightCorrespondingPoints',
         label: 'Highlight corresponding pre-wind point',
         tooltip:
-          'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.'
+          'When hovering over a point, also highlight the corresponding point in the pre-wind pattern.',
+        nerd: true
       },
       {
         key: 'showCrabArrow',
-        label: 'Show crab angle arrows',
-        tooltip: 'Show a heading arrow on pattern points where crab angle exceeds 10°.'
+        label: 'Show drift angle arrows',
+        tooltip: 'Show a heading arrow on pattern points where the drift angle (heading vs. ground track) exceeds 10°.'
       },
       {
-        key: 'displayWindArrow',
-        label: 'Show average wind on the map',
-        tooltip: 'Shows an arrow with the average wind on top of the map.'
+        key: 'showMapLabels',
+        label: 'Show map labels',
+        tooltip: 'Show place names, roads and other labels over the satellite imagery.'
+      },
+      {
+        key: 'showManoeuvreHint',
+        label: 'Show turn direction hint',
+        tooltip: 'Draw the heading you start the turn on, and how far round it goes.'
+      },
+      {
+        key: 'showFinalApproachLine',
+        label: 'Show final approach line',
+        tooltip: 'Draw the line you land along, through the target. Depth and offset are measured against it.'
       }
     ]
   },
@@ -100,17 +112,24 @@ const settingsGroups: SettingsGroup[] = [
       {
         key: 'useDzGroundWind',
         label: 'Use observed ground wind',
-        tooltip: 'Use real-time ground wind observations. Only available for certain locations.'
+        tooltip: 'Use real-time ground wind observations. Only available for certain locations.',
+        nerd: true
       },
       {
         key: 'interpolateWind',
         label: 'Interpolate winds',
-        tooltip: 'Smooth out wind changes across altitudes by interpolating.'
+        tooltip: 'Smooth out wind changes across altitudes by interpolating.',
+        nerd: true
       },
       {
         key: 'displayWindSummary',
         label: 'Show wind summary in title bar',
         tooltip: 'Shows the average and ground wind in the top bar of the app.'
+      },
+      {
+        key: 'displayMapWinds',
+        label: 'Show winds on the map',
+        tooltip: 'A compact winds-by-altitude indicator in the map corner, visible in every mode. Collapses to a ground-wind chip.'
       }
     ]
   },
@@ -121,13 +140,15 @@ const settingsGroups: SettingsGroup[] = [
         key: 'correctPatternHeading',
         label: 'Correct heading for rectangular turn',
         tooltip:
-          'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.'
+          'Correct the direction of the pattern in case the loaded turn is not exactly 90/270/450.',
+        nerd: true
       },
       {
         key: 'straightenLegs',
         label: 'Straighten legs',
         tooltip:
-          'Redistribute intermediate points on each leg so they lie on a straight line between the leg endpoints. Removes visual curves caused by wind shear without changing the wind drift calculation.'
+          'Redistribute intermediate points on each leg so they lie on a straight line between the leg endpoints. Removes visual curves caused by wind shear without changing the wind drift calculation.',
+        nerd: true
       }
     ]
   }
@@ -136,24 +157,6 @@ const settingsGroups: SettingsGroup[] = [
 interface SettingsComponentProps {
   settings: Settings;
   setSettings: (settings: Settings) => void;
-}
-
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <Typography
-      variant="caption"
-      sx={{
-        textAlign: 'left',
-        color: 'text.secondary',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-        pt: 0.5
-      }}
-    >
-      {children}
-    </Typography>
-  );
 }
 
 function SettingRow({
@@ -194,10 +197,6 @@ export default function SettingsComponent({
     setSettings({ ...settings, [key]: !settings[key] });
   };
 
-  const handleNumberChange = (key: keyof Settings) => (value: number) => {
-    setSettings({ ...settings, [key]: Number(value) });
-  };
-
   const handleUnitChange = <K extends keyof UnitPreferences>(
     unitKey: K,
     value: UnitPreferences[K]
@@ -205,48 +204,124 @@ export default function SettingsComponent({
     setSettings({ ...settings, units: { ...settings.units, [unitKey]: value } });
   };
 
+  // Nerd rows are dropped entirely, not disabled: the point of the mode is
+  // a shorter panel. Their effect is suppressed separately (applyNerdGate).
+  const visible = (options: CheckboxOption[]) =>
+    options.filter(o => !o.nerd || settings.nerd);
+
+  // The Map and Wind groups also carry nerd-only dropdowns below their
+  // rows, so a group is empty only when both are gone — otherwise Pattern
+  // would leave a bare header behind with nerd off.
+  const groupVisible = (group: SettingsGroup) =>
+    visible(group.options).length > 0 ||
+    (settings.nerd && (group.title === 'Map' || group.title === 'Wind'));
+
   return (
     <Stack direction="column" spacing={0.5} alignItems="flex-start" sx={{ width: '100%', textAlign: 'left' }}>
-      <SectionHeader>Appearance</SectionHeader>
+      {/* First, because toggling it makes rows appear BELOW — at the bottom
+          of the panel the change would happen off-screen. */}
+      <SectionHeading>Nerd mode</SectionHeading>
+      <SettingRow
+        label="Nerd mode"
+        tooltip="Unlocks manual wind entry, exports and extra map detail, and adds more options to this panel."
+      >
+        <Switch
+          checked={settings.nerd}
+          onChange={() => handleCheckboxChange('nerd')}
+          slotProps={{ input: { 'aria-label': 'Nerd mode' } }}
+        />
+      </SettingRow>
+      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'left', pb: 0.5 }}>
+        Extra tools most jumpers never need: manual wind entry, exports and
+        extra map detail.
+      </Typography>
+
+      <Divider sx={{ width: '100%', mt: 1 }} />
+      <SectionHeading>Appearance</SectionHeading>
       <SettingRow label="Light / Dark theme">
         <ThemeSwitcher />
       </SettingRow>
-      {settingsGroups[0].options.map(({ key, label, tooltip }) => (
+      {visible(settingsGroups[0].options).map(({ key, label, tooltip }) => (
         <SettingRow key={key} label={label} tooltip={tooltip}>
-          <Switch checked={Boolean(settings[key])} onChange={() => handleCheckboxChange(key)} />
+          <Switch
+            checked={Boolean(settings[key])}
+            onChange={() => handleCheckboxChange(key)}
+            slotProps={{ input: { 'aria-label': label } }}
+          />
         </SettingRow>
       ))}
 
-      {settingsGroups.slice(1).map(group => (
+      {settingsGroups.slice(1).filter(groupVisible).map(group => (
         <React.Fragment key={group.title}>
           <Divider sx={{ width: '100%', mt: 1 }} />
-          <SectionHeader>{group.title}</SectionHeader>
-          {group.options.map(({ key, label, tooltip }) => (
+          <SectionHeading>{group.title}</SectionHeading>
+          {visible(group.options).map(({ key, label, tooltip }) => (
             <SettingRow key={key} label={label} tooltip={tooltip}>
               <Switch
                 checked={Boolean(settings[key])}
                 onChange={() => handleCheckboxChange(key)}
+                slotProps={{ input: { 'aria-label': label } }}
               />
             </SettingRow>
           ))}
-          {group.title === 'Wind' && (
+          {group.title === 'Map' && settings.nerd && (
             <Box sx={{ pt: 0.5, width: '100%' }}>
-              <NumberInput
-                title="Show upper winds in the table up to this altitude."
-                label="Wind altitude limit"
-                initialValue={settings.limitWind}
-                step={1000}
-                min={1000}
-                unit="ft"
-                onChange={handleNumberChange('limitWind')}
-              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="map-provider-label">Map provider</InputLabel>
+                <Select
+                  labelId="map-provider-label"
+                  value={settings.mapProvider}
+                  label="Map provider"
+                  onChange={(e: SelectChangeEvent) =>
+                    setSettings({ ...settings, mapProvider: e.target.value as MapProvider })
+                  }
+                >
+                  <MenuItem value="google">Google Maps</MenuItem>
+                  <MenuItem value="maplibre">MapLibre (satellite)</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+          {group.title === 'Wind' && settings.nerd && (
+            <Box sx={{ pt: 0.5, width: '100%' }}>
+              <FormControl fullWidth size="small">
+                <InputLabel id="wind-aloft-label">Winds aloft source</InputLabel>
+                <Select
+                  labelId="wind-aloft-label"
+                  value={settings.windAloftSource}
+                  label="Winds aloft source"
+                  onChange={(e: SelectChangeEvent) =>
+                    setSettings({ ...settings, windAloftSource: e.target.value as 'forecast' | 'sounding' })
+                  }
+                >
+                  <MenuItem value="forecast">Model forecast (OpenMeteo)</MenuItem>
+                  <MenuItem value="sounding">Radiosonde sounding</MenuItem>
+                </Select>
+              </FormControl>
+              {settings.windAloftSource === 'forecast' && (
+                <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+                  <InputLabel id="wind-model-label">Forecast model</InputLabel>
+                  <Select
+                    labelId="wind-model-label"
+                    value={settings.windModel}
+                    label="Forecast model"
+                    onChange={(e: SelectChangeEvent) =>
+                      setSettings({ ...settings, windModel: e.target.value })
+                    }
+                  >
+                    {OPEN_METEO_MODELS.map(m => (
+                      <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
             </Box>
           )}
         </React.Fragment>
       ))}
 
       <Divider sx={{ width: '100%', mt: 1 }} />
-      <SectionHeader>Units</SectionHeader>
+      <SectionHeading>Units</SectionHeading>
 
       <FormControl fullWidth size="small" sx={{ mt: 0.5 }}>
         <InputLabel id="altitude-unit-label">Altitude</InputLabel>
@@ -331,6 +406,24 @@ export default function SettingsComponent({
           }
         >
           {PRESSURE_UNIT_OPTIONS.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small">
+        <InputLabel id="distance-unit-label">Distance</InputLabel>
+        <Select
+          labelId="distance-unit-label"
+          value={settings.units.distance ?? 'mi'}
+          label="Distance"
+          onChange={(e: SelectChangeEvent) =>
+            handleUnitChange('distance', e.target.value as DistanceUnit)
+          }
+        >
+          {DISTANCE_UNIT_OPTIONS.map(opt => (
             <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
             </MenuItem>

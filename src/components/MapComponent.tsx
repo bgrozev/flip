@@ -1,1183 +1,261 @@
+import { InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
+import { Box } from '@mui/material';
+import React from 'react';
+
+import { MapContainer, MapControl, useMapClick } from '../map';
 import {
-  CircleF,
-  GoogleMap,
-  MarkerF,
-  OverlayView,
-  PolylineF,
-  useJsApiLoader
-} from '@react-google-maps/api';
-import * as turf from '@turf/turf';
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-
+  CourseEditLayer,
+  CourseEditTarget,
+  CourseLayer,
+  FlightPathsLayer,
+  FlockingLayer,
+  FlockingLayerProps,
+  ManoeuvreEditLayer,
+  ManoeuvreEditTarget,
+  ManoeuvreHintLayer,
+  StationsLayer,
+  TargetEditLayer,
+  TargetEditTarget
+} from '../map/layers';
+import { WindProfile } from '../core/wind';
+import { WindTrust } from '../core/windTrust';
 import {
-  ALTITUDE_LABEL_STYLE,
-  DEFAULT_MAP_OPTIONS,
-  GOOGLE_MAPS_LIBRARIES,
-  MAP_CONTAINER_STYLE,
-  PATH_COLORS,
-  PATH_OPTIONS,
-  PATH_OPTIONS_DOTTED,
-  POM_OPTIONS
-} from '../constants';
-import { useUnits } from '../hooks';
-import { Course, CourseElement, CourseMarker, LatLng, Settings } from '../types';
+  Course,
+  FlightPath,
+  LatLng,
+  MAP_LAYER_IDS,
+  MapLayerId,
+  ObservedWindStation,
+  Settings
+} from '../types';
 
-export interface CourseEditTarget {
-  center: LatLng;
-  direction: number;
-  onMove: (newCenter: LatLng) => void;
-  onRotate: (newDirection: number) => void;
-}
-
-export interface TargetEditTarget {
-  target: LatLng;
-  heading: number;
-  onMove: (pos: LatLng) => void;
-  onHeadingChange: (heading: number) => void;
-}
-import { pathToLatLngs } from '../util/coords';
-import { FlightPath, ObservedWindStation } from '../types';
-import {
-  calculatePathStats,
-  getPointSegmentStats,
-  LegStats,
-  ManoeuvreStats,
-  PathStats
-} from '../util/pathStats';
-
-import WindDirectionArrow from './WindDirectionArrow';
-
-interface CustomTextOverlayProps {
-  position: LatLng;
-  text: string;
-}
-
-const CustomTextOverlay = ({ position, text }: CustomTextOverlayProps) => (
-  <OverlayView position={position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-    <div style={ALTITUDE_LABEL_STYLE}>
-      {text}
-    </div>
-  </OverlayView>
-);
-
-interface PointData {
-  lat: number;
-  lng: number;
-  alt?: number;
-  time?: number;
-  phase?: string;
-  pom?: number | boolean;
-}
-
-interface PointTooltipProps {
-  point: PointData;
-  pointIndex: number;
-  manoeuvreInitTime: number;
-  pathStats: PathStats;
-  formatAltitude: (feet: number) => { value: number; label: string };
-  altitudeLabel: string;
-  isPom: boolean;
-  showPointInfo: boolean;  // Whether to show point-specific info (the setting)
-  showDrift: boolean;      // Whether to show wind drift (false for pre-wind path)
-}
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  backgroundColor: 'rgba(0, 0, 0, 0.85)',
-  color: 'white',
-  padding: '8px 12px',
-  borderRadius: '6px',
-  fontSize: '11px',
-  lineHeight: '1.5',
-  whiteSpace: 'nowrap',
-  pointerEvents: 'none',
-  transform: 'translate(-50%, -100%)',
-  marginTop: '-12px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-  minWidth: 'max-content'
-};
-
-const SECTION_STYLE: React.CSSProperties = {
-  borderTop: '1px solid rgba(255,255,255,0.2)',
-  marginTop: '6px',
-  paddingTop: '6px'
-};
-
-function formatDegrees(deg: number): string {
-  return `${Math.round(deg)}°`;
-}
-
-function DirectionArrow({ degrees }: { degrees: number }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        transform: `rotate(${degrees + 180}deg)`,
-        marginLeft: '4px'
-      }}
-    >
-      ↑
-    </span>
-  );
-}
-
-function formatDistance(feet: number, altitudeLabel: string): string {
-  if (altitudeLabel === 'm') {
-    return `${Math.round(feet / 3.28084)} m`;
-  }
-  return `${Math.round(feet)} ft`;
-}
-
-function haversineDistanceFt(a: LatLng, b: LatLng): number {
-  const R = 20902231; // Earth radius in feet
-  const dLat = (b.lat - a.lat) * Math.PI / 180;
-  const dLng = (b.lng - a.lng) * Math.PI / 180;
-  const lat1 = a.lat * Math.PI / 180;
-  const lat2 = b.lat * Math.PI / 180;
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(x));
-}
-
-const RULER_BUTTON_STYLE: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  border: 'none',
-  borderRadius: 4,
-  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 0,
-  fontSize: 16
-};
-
-const MEASURE_LABEL_STYLE: React.CSSProperties = {
-  backgroundColor: 'rgba(33, 150, 243, 0.9)',
-  color: 'white',
-  padding: '2px 6px',
-  borderRadius: 4,
-  fontSize: '11px',
-  whiteSpace: 'nowrap',
-  transform: 'translate(-50%, -130%)',
-  pointerEvents: 'none',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
-};
-
-const LEG_NAMES = ['Final Leg', 'Base Leg', 'Downwind Leg'];
-
-function LegStatsDisplay({ stats, formatAltitude, altitudeLabel, showDrift = true, showBearing = true }: {
-  stats: LegStats;
-  formatAltitude: (feet: number) => { value: number; label: string };
-  altitudeLabel: string;
-  showDrift?: boolean;
-  showBearing?: boolean;
-}) {
-  const altTop = formatAltitude(stats.altTop);
-  const altBottom = formatAltitude(stats.altBottom);
-  const legName = LEG_NAMES[stats.legIndex] ?? `Leg ${stats.legIndex + 1}`;
-
-  return (
-    <div>
-      <div><strong>{legName}</strong></div>
-      <div>Alt: {Math.round(altTop.value)}→{Math.round(altBottom.value)} {altitudeLabel}</div>
-      <div>Time: {stats.timeSec.toFixed(1)}s</div>
-      <div>Heading: {formatDegrees(stats.heading)}</div>
-      {showBearing && <div>Bearing: {formatDegrees(stats.bearing)}</div>}
-      {showBearing && (() => {
-        const crab = Math.abs(((stats.heading - stats.bearing + 180 + 360) % 360) - 180);
-        return crab >= 1 ? <div>Crab: {Math.round(crab)}°</div> : null;
-      })()}
-      <div>Distance: {formatDistance(stats.distance, altitudeLabel)}</div>
-      <div>Glide: {stats.glideRatio.toFixed(1)}</div>
-      {showDrift && stats.windDriftDist > 1 && (
-        <div>
-          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
-          <DirectionArrow degrees={stats.windDriftDir} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ManoeuvreStatsDisplay({ stats, altitudeLabel, showDrift = true }: {
-  stats: ManoeuvreStats;
-  altitudeLabel: string;
-  showDrift?: boolean;
-}) {
-  return (
-    <div>
-      <div><strong>Manoeuvre</strong></div>
-      <div>Time: {stats.timeSec.toFixed(1)}s</div>
-      {/* <div>Bearing: {formatDegrees(stats.initialBearing)}→{formatDegrees(stats.finalBearing)}</div> */}
-      <div>Offset: {formatDistance(stats.distanceX, altitudeLabel)}</div>
-      <div>Back: {formatDistance(stats.distanceY, altitudeLabel)}</div>
-      {showDrift && stats.windDriftDist > 1 && (
-        <div>
-          Drift: {formatDistance(stats.windDriftDist, altitudeLabel)} {formatDegrees((stats.windDriftDir + 180) % 360)}
-          <DirectionArrow degrees={stats.windDriftDir} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PointTooltip({ point, pointIndex, manoeuvreInitTime, pathStats, formatAltitude, altitudeLabel, isPom, showPointInfo, showDrift }: PointTooltipProps) {
-  const alt = formatAltitude(point.alt ?? 0);
-
-  // Time relative to manoeuvre initiation (convert from ms to seconds)
-  // Pattern points are before initiation (negative), manoeuvre points are after (positive)
-  const timeSinceInitMs = (point.time ?? 0) - manoeuvreInitTime;
-  const timeSinceInitSec = timeSinceInitMs / 1000;
-  const timeSign = timeSinceInitSec >= 0 ? '+' : '';
-
-  // Get segment stats for this point
-  const segmentStats = getPointSegmentStats(pointIndex, pathStats);
-
-  // Determine what to show:
-  // - POMs without showPointInfo: only section stats
-  // - POMs with showPointInfo: section stats + separator + point info
-  // - Non-POMs (only shown when showPointInfo): only point info
-  const showSectionStats = isPom;
-  const showPointDetails = showPointInfo;
-
-  return (
-    <OverlayView position={point} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-      <div style={TOOLTIP_STYLE}>
-        {/* Section stats (for POMs) */}
-        {showSectionStats && segmentStats?.type === 'leg' && (
-          <LegStatsDisplay
-            stats={segmentStats.stats}
-            formatAltitude={formatAltitude}
-            altitudeLabel={altitudeLabel}
-            showDrift={showDrift}
-            showBearing={showDrift}
-          />
-        )}
-
-        {showSectionStats && segmentStats?.type === 'manoeuvre' && (
-          <ManoeuvreStatsDisplay
-            stats={segmentStats.stats}
-            altitudeLabel={altitudeLabel}
-            showDrift={showDrift}
-          />
-        )}
-
-        {/* Separator between section stats and point info */}
-        {showSectionStats && showPointDetails && (
-          <div style={SECTION_STYLE} />
-        )}
-
-        {/* Point-specific info */}
-        {showPointDetails && (
-          <>
-            <div>Altitude: {Math.round(alt.value)} {altitudeLabel}</div>
-            <div>Time: {timeSign}{timeSinceInitSec.toFixed(1)}s</div>
-            <div style={{ fontSize: '10px', color: '#aaa' }}>
-              {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
-            </div>
-          </>
-        )}
-      </div>
-    </OverlayView>
-  );
-}
-
-interface InteractivePointProps {
-  point: PointData;
-  pointIndex: number;
-  manoeuvreInitTime: number;
-  pathStats: PathStats;
-  options: google.maps.CircleOptions;
-  showTooltip: boolean;
-  showDrift: boolean;
-  showCrabArrow: boolean;
-  isHovered: boolean;
-  onHover: () => void;
-  onHoverEnd: () => void;
-  formatAltitude: (feet: number) => { value: number; label: string };
-  altitudeLabel: string;
-}
-
-const HIGHLIGHT_OPTIONS: google.maps.CircleOptions = {
-  fillColor: '#FFFFFF',
-  fillOpacity: 0.9,
-  strokeColor: '#FFFFFF',
-  strokeOpacity: 1,
-  strokeWeight: 2,
-  radius: 3,
-  zIndex: 50,
-  clickable: false
-};
-
-// Larger radius for easier hovering (in meters)
-const HOVER_RADIUS = 15;
-const HOVER_RADIUS_POM_ONLY = 30;
-
-function destPoint(lat: number, lng: number, heading: number, distM: number): google.maps.LatLngLiteral {
-  const pt = turf.destination([lng, lat], distM, heading, { units: 'meters' });
-  return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
-}
-
-function InteractivePoint({ point, pointIndex, manoeuvreInitTime, pathStats, options, showTooltip, showDrift, showCrabArrow, isHovered, onHover, onHoverEnd, formatAltitude, altitudeLabel }: InteractivePointProps) {
-  // POMs always have hover/tooltip, non-POMs respect the showTooltip setting
-  const isPom = Boolean(point.pom);
-  const enableHover = isPom || showTooltip;
-
-  // Crab angle arrow: shown on leg POMs when crab > 10°
-  const segStats = isPom ? getPointSegmentStats(pointIndex, pathStats) : null;
-  const legStats = segStats?.type === 'leg' ? segStats.stats : null;
-  const crabAngle = legStats
-    ? Math.abs(((legStats.heading - legStats.bearing + 180 + 360) % 360) - 180)
-    : 0;
-  const renderCrabArrow = showCrabArrow && crabAngle > 10 && legStats != null;
-
-  // Use larger hover radius when only POMs are hoverable (showTooltip off)
-  const hoverAreaOptions: google.maps.CircleOptions = {
-    fillOpacity: 0,
-    strokeOpacity: 0,
-    clickable: true,
-    radius: showTooltip ? HOVER_RADIUS : HOVER_RADIUS_POM_ONLY,
-    zIndex: 100
-  };
-
-  return (
-    <>
-      {/* Visible circle (POM marker) */}
-      <CircleF
-        center={point}
-        options={options}
-      />
-      {/* Crab angle heading arrow (40m shaft + arrowhead barbs) */}
-      {renderCrabArrow && (() => {
-        const h = legStats!.heading;
-        const tip = destPoint(point.lat, point.lng, h, 40);
-        const lineOpts: google.maps.PolylineOptions = { strokeColor: '#ffffff', strokeOpacity: 0.9, strokeWeight: 2, zIndex: 40, clickable: false };
-        return (
-          <>
-            <PolylineF path={[{ lat: point.lat, lng: point.lng }, tip]} options={lineOpts} />
-            <PolylineF path={[tip, destPoint(tip.lat, tip.lng, (h + 150 + 360) % 360, 10)]} options={lineOpts} />
-            <PolylineF path={[tip, destPoint(tip.lat, tip.lng, (h - 150 + 360) % 360, 10)]} options={lineOpts} />
-          </>
-        );
-      })()}
-      {/* Invisible hover area */}
-      {enableHover && (
-        <CircleF
-          center={point}
-          options={hoverAreaOptions}
-          onMouseOver={onHover}
-          onMouseOut={onHoverEnd}
-        />
-      )}
-      {isHovered && (
-        <CircleF
-          center={point}
-          options={HIGHLIGHT_OPTIONS}
-        />
-      )}
-      {enableHover && isHovered && (
-        <PointTooltip
-          point={point}
-          pointIndex={pointIndex}
-          manoeuvreInitTime={manoeuvreInitTime}
-          pathStats={pathStats}
-          formatAltitude={formatAltitude}
-          altitudeLabel={altitudeLabel}
-          isPom={isPom}
-          showPointInfo={showTooltip}
-          showDrift={showDrift}
-        />
-      )}
-    </>
-  );
-}
-
-function formatObservedTime(date: Date): string {
-  const now = new Date();
-  const diffMin = Math.round((now.getTime() - date.getTime()) / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin} min ago`;
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-const CLOUD_AMOUNT_LABELS: Record<string, string> = {
-  SKC: 'Clear', CLR: 'Clear', FEW: 'Few', SCT: 'Scattered',
-  BKN: 'Broken', OVC: 'Overcast', VV: 'Obscured'
-};
-
-function StationTooltip({ station, onMouseEnter, onMouseLeave }: {
-  station: ObservedWindStation;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
-}) {
-  const { formatWindSpeed, formatTemperature, formatPressure, windSpeedLabel, altitudeLabel } = useUnits();
-  const distMiles = (station.distanceFt / 5280).toFixed(1);
-  const wind = formatWindSpeed(station.wind.speedKts);
-  const gust = station.wind.gustKts !== undefined ? formatWindSpeed(station.wind.gustKts) : null;
-
-  return (
-    <div
-      style={{
-        ...TOOLTIP_STYLE,
-        minWidth: 180,
-        pointerEvents: 'auto',
-        transform: 'translate(-50%, calc(-100% - 18px))'
-      }}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      <div style={{ fontWeight: 'bold', marginBottom: 2 }}>{station.name}</div>
-      <div style={{ color: '#aaa', fontSize: '10px', marginBottom: 2 }}>
-        {station.stationUrl
-          ? <a href={station.stationUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#90caf9', textDecoration: 'none' }}>{station.source}</a>
-          : station.source
-        }
-        {' · '}{distMiles} mi · {formatObservedTime(station.observedAt)}
-      </div>
-      {station.textDescription && (
-        <div style={{ color: '#ccc', fontStyle: 'italic', marginBottom: 2 }}>{station.textDescription}</div>
-      )}
-
-      <div style={SECTION_STYLE}>
-        <div>
-          Wind: {wind.value.toFixed(1)} {windSpeedLabel}{' '}
-          {formatDegrees(station.wind.direction)}
-          <DirectionArrow degrees={station.wind.direction} />
-        </div>
-        {gust !== null
-          ? <div>Gusts: {gust.value.toFixed(1)} {windSpeedLabel}</div>
-          : <div style={{ color: '#666' }}>Gusts: —</div>
-        }
-      </div>
-
-      <div style={SECTION_STYLE}>
-        {station.temperatureC !== undefined
-          ? <div>Temp: {formatTemperature(station.temperatureC).value} {formatTemperature(station.temperatureC).label}</div>
-          : <div style={{ color: '#666' }}>Temp: —</div>
-        }
-        {station.dewpointC !== undefined && (
-          <div>Dewpoint: {formatTemperature(station.dewpointC).value} {formatTemperature(station.dewpointC).label}</div>
-        )}
-        {station.windChillC !== undefined && (
-          <div>Wind chill: {formatTemperature(station.windChillC).value} {formatTemperature(station.windChillC).label}</div>
-        )}
-        {station.heatIndexC !== undefined && (
-          <div>Heat index: {formatTemperature(station.heatIndexC).value} {formatTemperature(station.heatIndexC).label}</div>
-        )}
-        {station.humidityPct !== undefined
-          ? <div>Humidity: {Math.round(station.humidityPct)}%</div>
-          : <div style={{ color: '#666' }}>Humidity: —</div>
-        }
-      </div>
-
-      <div style={SECTION_STYLE}>
-        {station.seaLevelPressureHpa !== undefined
-          ? <div>SLP: {formatPressure(station.seaLevelPressureHpa).value} {formatPressure(station.seaLevelPressureHpa).label}</div>
-          : station.pressureHpa !== undefined
-            ? <div>Pressure: {formatPressure(station.pressureHpa).value} {formatPressure(station.pressureHpa).label}</div>
-            : <div style={{ color: '#666' }}>Pressure: —</div>
-        }
-        {station.visibilityM !== undefined && (
-          <div>
-            Visibility:{' '}
-            {altitudeLabel === 'm'
-              ? `${(station.visibilityM / 1000).toFixed(1)} km`
-              : `${(station.visibilityM / 1609).toFixed(1)} mi`
-            }
-          </div>
-        )}
-      </div>
-
-      {station.cloudLayers && station.cloudLayers.length > 0 && (
-        <div style={SECTION_STYLE}>
-          {station.cloudLayers.map((layer, i) => {
-            const label = CLOUD_AMOUNT_LABELS[layer.amount] ?? layer.amount;
-            const base = layer.baseM !== null
-              ? altitudeLabel === 'm'
-                ? `${Math.round(layer.baseM)} m`
-                : `${Math.round(layer.baseM * 3.28084)} ft`
-              : null;
-            return (
-              <div key={i}>
-                {label}{base !== null ? ` @ ${base}` : ''}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+import WindMiniIndicator from './WindMiniIndicator';
+import MapNotice, { MAP_NOTICE_HEIGHT } from './MapNotice';
+import ShortcutHint from './ShortcutHint';
+import WindTrustBanner from './WindTrustBanner';
 
 interface MapComponentProps {
-  windSpeed: number;
-  windDirection: number;
+  /** Reference location (the target): anchors the stations/ground-wind layer. */
   center: LatLng;
+  /**
+   * Camera center for the map view; the map pans when it changes. Defaults to
+   * `center`. Kept separate so e.g. "jump to course" can move the camera
+   * without re-anchoring target-relative overlays.
+   */
+  cameraCenter?: LatLng;
+  /** Initial/mode-default zoom; re-applied when it changes (mode switch). */
+  initialZoom?: number;
+  /** The zoom the user settled on, so the caller can remember it per mode. */
+  onZoomChange?: (zoom: number) => void;
   pathA: FlightPath;
   pathB: FlightPath;
   settings: Settings;
+  /** Point hover tooltips exist at all (nerd mode's `pointTooltips`). */
+  pointTooltips?: boolean;
   courses?: Course[];
   courseEditTarget?: CourseEditTarget;
   targetEditTarget?: TargetEditTarget;
+  /** Drag handle for the turn's initiation point (parametric turns only). */
+  manoeuvreEditTarget?: ManoeuvreEditTarget;
   observedStations?: ObservedWindStation[];
-  groundWindStation?: ObservedWindStation;
-  forecastGroundWind?: { direction: number; speedKts: number };
-  forecastValidTime?: Date;
-  finalHeading?: number;
+  /** Flocking layer data (only provided in flocking mode). */
+  flocking?: Omit<FlockingLayerProps, 'showPreWind' | 'showPoms' | 'showPomAltitudes'>;
+  /** Which layers may render (from the active mode); defaults to all. */
+  layers?: readonly MapLayerId[];
+  /** Wind-trust verdict for the top-of-map status banner (hidden when fresh). */
+  windTrust?: { trust: WindTrust; forecastTime?: Date };
+  /**
+   * Why the map is showing no plan, when it is showing none on purpose. The
+   * flocking solver draws nothing at all when no corridor reaches the target,
+   * and an empty map is indistinguishable from a broken one.
+   */
+  emptyNotice?: { title: string; detail: string };
+  /**
+   * Pressing the map background. Fires on every background click alongside
+   * whichever layer owns the gesture — used on a phone, where a press on the
+   * map means "put the panel away and let me look".
+   */
+  onBackgroundPress?: () => void;
+  /**
+   * Shrink the corner overlays to their chip form. Either the map is sharing
+   * the screen with a panel (phone split) and they would cover the strip of
+   * map that is left, or the panel showing the same data is open and they
+   * would be saying it twice.
+   */
+  compactOverlays?: boolean;
+  /** Compact winds indicator overlay data (gated by settings.displayMapWinds). */
+  /** One-time "press ? for shortcuts" nudge; omitted where it makes no sense. */
+  shortcutHint?: {
+    show: boolean;
+    onOpen: () => void;
+  };
+  mapWinds?: {
+    winds: WindProfile;
+    altitudesFt: number[];
+    interpolate: boolean;
+    forecastTime?: Date;
+    onOpen: () => void;
+    onRefresh: () => void;
+    fetching: boolean;
+    /** Nearest observed station injected as ground wind (hover detail). */
+    groundStation?: ObservedWindStation;
+    /** Forecast ground wind, when no observed station is in use (hover detail). */
+    forecastGround?: { direction: number; speedKts: number; validTime?: Date };
+  };
 }
 
+/**
+ * The map: a thin composition of the map container and feature layers.
+ * All map behavior lives in src/map (adapter primitives + layers).
+ */
 function MapComponent({
-  windSpeed,
-  windDirection,
   center,
+  cameraCenter,
+  initialZoom,
+  onZoomChange,
   pathA,
   pathB,
   settings,
+  pointTooltips = false,
   courses = [],
   courseEditTarget,
   targetEditTarget,
+  manoeuvreEditTarget,
   observedStations = [],
-  groundWindStation,
-  forecastGroundWind,
-  forecastValidTime,
-  finalHeading = 0
+  flocking,
+  layers = MAP_LAYER_IDS,
+  mapWinds,
+  shortcutHint,
+  windTrust,
+  emptyNotice,
+  onBackgroundPress,
+  compactOverlays = false
 }: MapComponentProps) {
-  const { showPoms, showPomAltitudes, showPomTooltips, showPreWind, displayWindArrow, highlightCorrespondingPoints, showMeasureTool, showCrabArrow } = settings;
-  const { formatAltitude, altitudeLabel, formatWindSpeed, windSpeedLabel } = useUnits();
-  const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
-  const [hoveredPreWindIndex, setHoveredPreWindIndex] = useState<number | null>(null);
-  const [measuring, setMeasuring] = useState(false);
-  const [measurePoints, setMeasurePoints] = useState<LatLng[]>([]);
-  const [hoveredStationId, setHoveredStationId] = useState<string | null>(null);
-  const stationLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const has = (layer: MapLayerId) => layers.includes(layer);
+  // The corner overlays start below whatever strips are showing.
+  const noticeCount =
+    (windTrust && windTrust.trust.level !== 'fresh' ? 1 : 0) + (emptyNotice ? 1 : 0);
+  const {
+    showPoms,
+    showPomAltitudes,
+    showPomTooltips,
+    showPreWind,
+    highlightCorrespondingPoints,
+    showCrabArrow
+  } = settings;
 
-  const onStationEnter = useCallback((id: string) => {
-    if (stationLeaveTimer.current) clearTimeout(stationLeaveTimer.current);
-    setHoveredStationId(id);
-  }, []);
-
-  const onStationLeave = useCallback(() => {
-    stationLeaveTimer.current = setTimeout(() => setHoveredStationId(null), 200);
-  }, []);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const [zoom, setZoom] = useState<number>(DEFAULT_MAP_OPTIONS.zoom);
-  // Live position of drag handles while dragging (for smooth line preview)
-  const [liveHandlePos, setLiveHandlePos] = useState<LatLng | null>(null);
-  const [liveTargetHeadingPos, setLiveTargetHeadingPos] = useState<LatLng | null>(null);
-
-  const toggleMeasuring = useCallback(() => {
-    setMeasuring(m => {
-      if (m) setMeasurePoints([]);
-      return !m;
-    });
-  }, []);
-
-  // Cumulative distances from the first measure point (in feet)
-  const measureCumulatives = useMemo(() => {
-    const result: number[] = [0];
-    for (let i = 1; i < measurePoints.length; i++) {
-      result.push(result[i - 1] + haversineDistanceFt(measurePoints[i - 1], measurePoints[i]));
-    }
-    return result;
-  }, [measurePoints]);
-
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    map.setCenter(center);
-    map.setZoom(DEFAULT_MAP_OPTIONS.zoom);
-    console.log('Map loaded.');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Update map center when target changes (but not on every render)
-  const prevCenterRef = useRef(center);
-  useEffect(() => {
-    if (mapRef.current && (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng)) {
-      mapRef.current.panTo(center);
-      prevCenterRef.current = center;
-    }
-  }, [center]);
-
-  // Update cursor without causing map re-render
-  if (mapRef.current) {
-    const cursor = (showMeasureTool && measuring) || targetEditTarget ? 'crosshair' : 'grab';
-    mapRef.current.setOptions({ draggableCursor: cursor });
-  }
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'INSERT_GOOGLE_API_KEY',
-    libraries: GOOGLE_MAPS_LIBRARIES
-  });
-
-  // Convert FlightPath to LatLng[] for Google Maps (memoized to avoid recalculation)
-  const pathALatLngs = useMemo(() => pathToLatLngs(pathA), [pathA]);
-  const pathBLatLngs = useMemo(() => pathToLatLngs(pathB), [pathB]);
-
-  // Find the manoeuvre initiation time (the point where manoeuvre begins, which has the LOWEST time among manoeuvre points)
-  const manoeuvreInitTime = useMemo(() => {
-    const manoeuvrePoints = pathBLatLngs.filter(p => p.phase === 'manoeuvre');
-    if (manoeuvrePoints.length === 0) return 0;
-    return Math.min(...manoeuvrePoints.map(p => p.time ?? 0));
-  }, [pathBLatLngs]);
-
-  // Calculate path statistics for tooltips (wind-adjusted)
-  const pathStats = useMemo(
-    () => calculatePathStats(pathALatLngs, pathBLatLngs),
-    [pathALatLngs, pathBLatLngs]
-  );
-
-  // Calculate pre-wind path statistics (uses pathB for POM detection, pathA for values)
-  const preWindPathStats = useMemo(
-    () => calculatePathStats(pathALatLngs, pathALatLngs),
-    [pathALatLngs]
-  );
-
-  return isLoaded ? (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <GoogleMap
-        mapContainerStyle={MAP_CONTAINER_STYLE}
-        onClick={ev => {
-          if (!ev.latLng) return;
-          const latlng = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
-          if (showMeasureTool && measuring) {
-            setMeasurePoints(pts => [...pts, latlng]);
-          } else if (targetEditTarget) {
-            targetEditTarget.onMove(latlng);
-          }
-        }}
-        options={DEFAULT_MAP_OPTIONS}
-        onLoad={onMapLoad}
-        onZoomChanged={() => {
-          if (mapRef.current) setZoom(mapRef.current.getZoom() ?? DEFAULT_MAP_OPTIONS.zoom);
-        }}
-      >
-        {showPreWind && (
-          <PolylineF
-            path={pathALatLngs.filter(p => p.phase === 'manoeuvre')}
-            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.preWind }}
-          />
-        )}
-        {showPreWind && (
-          <PolylineF
-            path={pathALatLngs.filter(p => p.phase === 'pattern')}
-            options={{ ...PATH_OPTIONS_DOTTED, strokeColor: PATH_COLORS.preWind }}
-          />
-        )}
-        <PolylineF
-          path={pathBLatLngs.filter(p => p.phase === 'manoeuvre')}
-          options={{ ...PATH_OPTIONS, strokeColor: PATH_COLORS.manoeuvre }}
+  return (
+    <MapContainer
+      center={cameraCenter ?? center}
+      initialZoom={initialZoom}
+      onZoomChange={onZoomChange}
+      provider={settings.mapProvider}
+      showLabels={settings.showMapLabels}
+    >
+      {has('flightPaths') && (
+        <FlightPathsLayer
+          pathA={pathA}
+          pathB={pathB}
+          showPreWind={showPreWind}
+          showPoms={showPoms}
+          showPomAltitudes={showPomAltitudes}
+          showPomTooltips={showPomTooltips}
+          highlightCorrespondingPoints={highlightCorrespondingPoints}
+          showCrabArrow={showCrabArrow}
+          enableTooltips={pointTooltips}
         />
-        <PolylineF
-          path={pathBLatLngs.filter(p => p.phase === 'pattern')}
-          options={{ ...PATH_OPTIONS, strokeColor: PATH_COLORS.pattern }}
-        />
-
-        {/* Pre-wind path - all points are interactive */}
-        {showPreWind && pathALatLngs.map((point, i) => (
-          <InteractivePoint
-            key={`prewind-${i}`}
-            point={point}
-            pointIndex={i}
-            manoeuvreInitTime={manoeuvreInitTime}
-            pathStats={preWindPathStats}
-            options={{
-              ...(point.phase === 'manoeuvre' ? POM_OPTIONS.manoeuvre : POM_OPTIONS.pattern),
-              fillColor: PATH_COLORS.preWind,
-              strokeColor: PATH_COLORS.markerStroke,
-              // Only show circle visually for POMs
-              fillOpacity: (showPoms && point.pom) ? 0.7 : 0,
-              strokeOpacity: (showPoms && point.pom) ? 0.7 : 0
-            }}
-            showTooltip={showPomTooltips}
-            showDrift={false}
-            showCrabArrow={false}
-            isHovered={hoveredPreWindIndex === i}
-            onHover={() => setHoveredPreWindIndex(i)}
-            onHoverEnd={() => setHoveredPreWindIndex(null)}
-            formatAltitude={formatAltitude}
-            altitudeLabel={altitudeLabel}
-          />
-        ))}
-        {/* Highlight for corresponding pre-wind point when hovering on wind-adjusted path */}
-        {highlightCorrespondingPoints && hoveredPointIndex !== null && pathALatLngs[hoveredPointIndex] && (
-          <CircleF
-            center={pathALatLngs[hoveredPointIndex]}
-            options={HIGHLIGHT_OPTIONS}
-          />
-        )}
-        {/* Highlight for corresponding wind-adjusted point when hovering on pre-wind path */}
-        {highlightCorrespondingPoints && hoveredPreWindIndex !== null && pathBLatLngs[hoveredPreWindIndex] && (
-          <CircleF
-            center={pathBLatLngs[hoveredPreWindIndex]}
-            options={HIGHLIGHT_OPTIONS}
-          />
-        )}
-        {/* Wind-adjusted path - all points are interactive when tooltips enabled */}
-        {pathBLatLngs.map((point, i) => (
-          <InteractivePoint
-            key={i}
-            point={point}
-            pointIndex={i}
-            manoeuvreInitTime={manoeuvreInitTime}
-            pathStats={pathStats}
-            options={{
-              ...(point.phase === 'manoeuvre' ? POM_OPTIONS.manoeuvre : POM_OPTIONS.pattern),
-              // Only show circle visually for POMs, but all points are hoverable
-              fillOpacity: (showPoms && point.pom) ? 1 : 0,
-              strokeOpacity: (showPoms && point.pom) ? 1 : 0
-            }}
-            showTooltip={showPomTooltips}
-            showDrift={true}
-            showCrabArrow={showCrabArrow}
-            isHovered={hoveredPointIndex === i}
-            onHover={() => setHoveredPointIndex(i)}
-            onHoverEnd={() => setHoveredPointIndex(null)}
-            formatAltitude={formatAltitude}
-            altitudeLabel={altitudeLabel}
-          />
-        ))}
-        {pathBLatLngs
-          .filter(p => showPomAltitudes && p.pom)
-          .map((pom, i) => (
-            <CustomTextOverlay
-              position={pom}
-              text={`${Math.round(formatAltitude(pom.alt ?? 0).value)} ${altitudeLabel}`}
-              key={i}
-            />
-          ))}
-
-        {/* Measure tool — polyline */}
-        {showMeasureTool && measuring && measurePoints.length > 1 && (
-          <PolylineF
-            path={measurePoints}
-            options={{
-              strokeColor: '#2196F3',
-              strokeOpacity: 1,
-              strokeWeight: 2,
-              zIndex: 20,
-              clickable: false
-            }}
-          />
-        )}
-
-        {/* Course elements */}
-        {courses.flatMap(course =>
-          course.elements.map((element: CourseElement, i) => {
-            const key = `${course.id}-${element.type}-${i}`;
-
-            if (element.type === 'buoy') {
-              // Two concentric circles.
-              // White buoy: white outer + white inner, both with black stroke.
-              // Orange buoy: orange outer + white inner; black stroke on both
-              //   creates a thin black ring between the two fills.
-              const outerFill = element.color === 'white' ? '#ffffff' : '#ff8800';
-              const center = { lat: element.lat, lng: element.lng };
-              return (
-                <React.Fragment key={key}>
-                  <CircleF
-                    center={center}
-                    options={{
-                      radius: 1.2,
-                      fillColor: outerFill,
-                      fillOpacity: 1,
-                      strokeColor: '#000',
-                      strokeWeight: 0.75,
-                      strokeOpacity: 1,
-                      zIndex: 15,
-                      clickable: false
-                    }}
-                  />
-                  <CircleF
-                    center={center}
-                    options={{
-                      radius: 0.6,
-                      fillColor: '#ffffff',
-                      fillOpacity: 1,
-                      strokeColor: '#000',
-                      strokeWeight: 0.4,
-                      strokeOpacity: 1,
-                      zIndex: 16,
-                      clickable: false
-                    }}
-                  />
-                </React.Fragment>
-              );
-            }
-            if (element.type === 'line') {
-              return (
-                <PolylineF
-                  key={key}
-                  path={[element.from, element.to]}
-                  options={{
-                    strokeColor: element.color,
-                    strokeOpacity: 0.9,
-                    strokeWeight: 1.5,
-                    zIndex: 10,
-                    clickable: false
-                  }}
-                />
-              );
-            }
-            if (element.type === 'marker') {
-              if (zoom < 20) return null;
-              const marker = element as CourseMarker;
-              const pos = { lat: marker.lat, lng: marker.lng };
-              if (!marker.label) return null;
-              return (
-                <OverlayView key={key} position={pos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                  <div style={{
-                    display: 'inline-block',
-                    color: marker.color,
-                    fontSize: '10px',
-                    whiteSpace: 'nowrap',
-                    transform: 'translate(-50%, -50%)',
-                    pointerEvents: 'none',
-                    fontWeight: 'bold',
-                    background: 'rgba(0,0,0,0.65)',
-                    border: '1px solid rgba(255,255,255,0.35)',
-                    borderRadius: '2px',
-                    padding: '1px 3px',
-                  }}>
-                    {marker.label}
-                  </div>
-                </OverlayView>
-              );
-            }
-            return null;
-          })
-        )}
-
-        {/* Measure tool — point markers and cumulative distance labels */}
-        {showMeasureTool && measuring && measurePoints.map((point, i) => (
-          <React.Fragment key={`measure-${i}`}>
-            <CircleF
-              center={point}
-              options={{
-                radius: i === 0 ? 7 : 5,
-                fillColor: '#2196F3',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 2,
-                strokeOpacity: 1,
-                clickable: true,
-                zIndex: 21
-              }}
-              onClick={() => setMeasurePoints(pts => pts.filter((_, idx) => idx !== i))}
-            />
-            {i > 0 && (
-              <OverlayView position={point} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                <div style={MEASURE_LABEL_STYLE}>
-                  {formatDistance(measureCumulatives[i], altitudeLabel)}
-                </div>
-              </OverlayView>
-            )}
-          </React.Fragment>
-        ))}
-        {/* Observed wind stations — each at its real geographic location */}
-        {observedStations.map(station => {
-          const isHovered = hoveredStationId === station.id;
-          const speedKts = station.wind.speedKts;
-          const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
-          // Arrow points where wind is going (direction = where it comes FROM, so rotate by direction+180)
-          const arrowRotation = station.wind.direction + 180;
-          const speedDisplay = formatWindSpeed(speedKts);
-          return (
-            <React.Fragment key={station.id}>
-              <OverlayView
-                position={{ lat: station.lat, lng: station.lng }}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <div
-                  style={{
-                    transform: 'translate(-50%, -50%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    cursor: 'default',
-                    userSelect: 'none',
-                    opacity: isHovered ? 1 : 0.85
-                  }}
-                  onMouseEnter={() => onStationEnter(station.id)}
-                  onMouseLeave={onStationLeave}
-                >
-                  <svg
-                    width="22"
-                    height="26"
-                    viewBox="0 0 22 26"
-                    style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}
-                  >
-                    <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
-                  </svg>
-                  <div style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    color: 'white',
-                    textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
-                    lineHeight: 1,
-                    marginTop: 1,
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {speedDisplay.value.toFixed(0)} {windSpeedLabel}
-                  </div>
-                </div>
-              </OverlayView>
-              {isHovered && (
-                <OverlayView position={{ lat: station.lat, lng: station.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                  <StationTooltip station={station} onMouseEnter={() => onStationEnter(station.id)} onMouseLeave={onStationLeave} />
-                </OverlayView>
-              )}
-            </React.Fragment>
-          );
-        })}
-
-        {/* Arrow anchored near the target: observed station (if available) or forecast ground wind */}
-        {(() => {
-          const rad = (finalHeading * Math.PI) / 180;
-          const dx = +(Math.sin(rad) * 50).toFixed(1);
-          const dy = +(-Math.cos(rad) * 50).toFixed(1);
-          const transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-
-          if (groundWindStation) {
-            const station = groundWindStation;
-            const hoverId = `${station.id}-target`;
-            const isHovered = hoveredStationId === hoverId;
-            const speedKts = station.wind.speedKts;
-            const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
-            const arrowRotation = station.wind.direction + 180;
-            const speedDisplay = formatWindSpeed(speedKts);
-            return (
-              <React.Fragment key={hoverId}>
-                <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                  <div
-                    style={{ transform, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default', userSelect: 'none', opacity: isHovered ? 1 : 0.85 }}
-                    onMouseEnter={() => onStationEnter(hoverId)}
-                    onMouseLeave={onStationLeave}
-                  >
-                    <svg width="22" height="26" viewBox="0 0 22 26" style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
-                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
-                    </svg>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'white', textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)', lineHeight: 1, marginTop: 1, whiteSpace: 'nowrap' }}>
-                      {speedDisplay.value.toFixed(0)} {windSpeedLabel}
-                    </div>
-                  </div>
-                </OverlayView>
-                {isHovered && (
-                  <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                    <StationTooltip station={station} onMouseEnter={() => onStationEnter(hoverId)} onMouseLeave={onStationLeave} />
-                  </OverlayView>
-                )}
-              </React.Fragment>
-            );
-          }
-
-          if (forecastGroundWind) {
-            const { direction, speedKts } = forecastGroundWind;
-            const color = speedKts >= 15 ? '#f44336' : speedKts >= 10 ? '#ff9800' : speedKts >= 5 ? '#ffeb3b' : '#4caf50';
-            const arrowRotation = direction + 180;
-            const speedDisplay = formatWindSpeed(speedKts);
-            const isHovered = hoveredStationId === 'forecast-ground';
-            const validTimeStr = forecastValidTime
-              ? forecastValidTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : null;
-            return (
-              <React.Fragment key="forecast-ground-target">
-                <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                  <div
-                    style={{ transform, position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', cursor: 'default', userSelect: 'none', opacity: isHovered ? 1 : 0.75, pointerEvents: 'auto' }}
-                    onMouseEnter={() => onStationEnter('forecast-ground')}
-                    onMouseLeave={onStationLeave}
-                  >
-                    <svg width="22" height="26" viewBox="0 0 22 26" style={{ transform: `rotate(${arrowRotation}deg)`, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
-                      <polygon points="11,1 19,20 11,15 3,20" fill={color} stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
-                    </svg>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'white', textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)', lineHeight: 1, marginTop: 1, whiteSpace: 'nowrap' }}>
-                      {speedDisplay.value.toFixed(0)} {windSpeedLabel}
-                    </div>
-                    {isHovered && (
-                      <div style={{
-                        position: 'absolute',
-                        left: '100%',
-                        top: 0,
-                        marginLeft: 8,
-                        background: 'rgba(30,30,30,0.92)',
-                        color: 'white',
-                        borderRadius: 6,
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                        pointerEvents: 'auto'
-                      }}>
-                        <div style={{ fontWeight: 700, marginBottom: 2 }}>Forecast ground wind</div>
-                        <div>{direction}° at {speedDisplay.value.toFixed(0)} {windSpeedLabel}</div>
-                        {validTimeStr && <div style={{ color: '#aaa', fontSize: '11px', marginTop: 2 }}>Valid {validTimeStr}</div>}
-                      </div>
-                    )}
-                  </div>
-                </OverlayView>
-              </React.Fragment>
-            );
-          }
-
-          return null;
-        })()}
-
-        {/* Target edit handles — position drag + heading direction handle */}
-        {targetEditTarget && (() => {
-          const headingHandlePos = (() => {
-            const pt = turf.destination(
-              [targetEditTarget.target.lng, targetEditTarget.target.lat],
-              15, targetEditTarget.heading, { units: 'meters' }
-            );
-            return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
-          })();
-          const headingLineEnd = liveTargetHeadingPos ?? headingHandlePos;
-          /* eslint-disable @typescript-eslint/no-explicit-any */
-          const circleIcon = (color: string, scale: number) => ({
-            path: (window as any).google.maps.SymbolPath.CIRCLE,
-            scale,
-            fillColor: color,
-            fillOpacity: 0.85,
-            strokeColor: '#fff',
-            strokeWeight: 2
-          });
-          /* eslint-enable @typescript-eslint/no-explicit-any */
-          return (
-            <React.Fragment key="target-edit-handles">
-              <PolylineF
-                path={[targetEditTarget.target, headingLineEnd]}
-                options={{ strokeColor: '#ffaa00', strokeWeight: 2, strokeOpacity: 0.9, zIndex: 25, clickable: false }}
-              />
-              <MarkerF
-                position={targetEditTarget.target}
-                draggable
-                cursor="move"
-                zIndex={26}
-                icon={circleIcon('#00ccff', 9)}
-                onDragEnd={e => {
-                  if (e.latLng) targetEditTarget.onMove({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-                }}
-              />
-              <MarkerF
-                position={headingHandlePos}
-                draggable
-                cursor="pointer"
-                zIndex={27}
-                icon={circleIcon('#ffaa00', 7)}
-                onDrag={e => {
-                  if (e.latLng) setLiveTargetHeadingPos({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-                }}
-                onDragEnd={e => {
-                  setLiveTargetHeadingPos(null);
-                  if (e.latLng) {
-                    const bearing = turf.bearing(
-                      [targetEditTarget.target.lng, targetEditTarget.target.lat],
-                      [e.latLng.lng(), e.latLng.lat()]
-                    );
-                    targetEditTarget.onHeadingChange((bearing + 360) % 360);
-                  }
-                }}
-              />
-            </React.Fragment>
-          );
-        })()}
-
-        {/* Course edit handles — center drag + rotation handle */}
-        {courseEditTarget && (() => {
-          const rotationHandlePos = (() => {
-            const pt = turf.destination(
-              [courseEditTarget.center.lng, courseEditTarget.center.lat],
-              15, courseEditTarget.direction, { units: 'meters' }
-            );
-            return { lat: pt.geometry.coordinates[1], lng: pt.geometry.coordinates[0] };
-          })();
-          const lineEnd = liveHandlePos ?? rotationHandlePos;
-          /* eslint-disable @typescript-eslint/no-explicit-any */
-          const circleIcon = (color: string, scale: number) => ({
-            path: (window as any).google.maps.SymbolPath.CIRCLE,
-            scale,
-            fillColor: color,
-            fillOpacity: 0.85,
-            strokeColor: '#fff',
-            strokeWeight: 2
-          });
-          /* eslint-enable @typescript-eslint/no-explicit-any */
-          return (
-            <React.Fragment key="course-edit-handles">
-              {/* Line from center to rotation handle */}
-              <PolylineF
-                path={[courseEditTarget.center, lineEnd]}
-                options={{ strokeColor: '#ffaa00', strokeWeight: 2, strokeOpacity: 0.9, zIndex: 25, clickable: false }}
-              />
-              {/* Center drag marker (cyan crosshair) */}
-              <MarkerF
-                position={courseEditTarget.center}
-                draggable
-                cursor="move"
-                zIndex={26}
-                icon={circleIcon('#00ccff', 9)}
-                onDragEnd={e => {
-                  if (e.latLng) courseEditTarget.onMove({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-                }}
-              />
-              {/* Rotation handle (orange dot at course-direction end) */}
-              <MarkerF
-                position={rotationHandlePos}
-                draggable
-                cursor="pointer"
-                zIndex={27}
-                icon={circleIcon('#ffaa00', 7)}
-                onDrag={e => {
-                  if (e.latLng) setLiveHandlePos({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-                }}
-                onDragEnd={e => {
-                  setLiveHandlePos(null);
-                  if (e.latLng) {
-                    const bearing = turf.bearing(
-                      [courseEditTarget.center.lng, courseEditTarget.center.lat],
-                      [e.latLng.lng(), e.latLng.lat()]
-                    );
-                    courseEditTarget.onRotate((bearing + 360) % 360);
-                  }
-                }}
-              />
-            </React.Fragment>
-          );
-        })()}
-      </GoogleMap>
-
-      {/* Measure tool — ruler toggle button */}
-      {showMeasureTool && <div style={{ position: 'absolute', top: 130, right: 10, zIndex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <button
-          onClick={toggleMeasuring}
-          title={measuring ? 'Exit measure mode (click points to remove)' : 'Measure distance'}
-          style={{
-            ...RULER_BUTTON_STYLE,
-            backgroundColor: measuring ? '#2196F3' : 'white',
-            color: measuring ? 'white' : '#333'
-          }}
-        >
-          📐
-        </button>
-        {measuring && measurePoints.length > 0 && (
-          <button
-            onClick={() => setMeasurePoints([])}
-            title="Clear measurements"
-            style={{ ...RULER_BUTTON_STYLE, backgroundColor: 'white', color: '#333' }}
-          >
-            ✕
-          </button>
-        )}
-      </div>}
-
-      {displayWindArrow && (
-        <WindDirectionArrow direction={windDirection} speed={windSpeed} />
       )}
-    </div>
-  ) : (
-    <>Loading</>
+
+      {has('flocking') && flocking && (
+        <FlockingLayer
+          {...flocking}
+          showPreWind={showPreWind}
+          showPoms={showPoms}
+          showPomAltitudes={showPomAltitudes}
+        />
+      )}
+
+      {has('manoeuvreHint') && (settings.showManoeuvreHint || settings.showFinalApproachLine) && (
+        <ManoeuvreHintLayer
+          path={pathB}
+          idealPath={pathA}
+          showTurnHint={settings.showManoeuvreHint}
+          showFinalApproachLine={settings.showFinalApproachLine}
+        />
+      )}
+
+      {has('manoeuvreEdit') && manoeuvreEditTarget && (
+        <ManoeuvreEditLayer edit={manoeuvreEditTarget} />
+      )}
+
+      {has('courses') && <CourseLayer courses={courses} />}
+
+      {has('stations') && <StationsLayer stations={observedStations} />}
+
+      {has('targetEdit') && targetEditTarget && <TargetEditLayer edit={targetEditTarget} />}
+
+      {has('courseEdit') && courseEditTarget && <CourseEditLayer edit={courseEditTarget} />}
+
+      {onBackgroundPress && <BackgroundPressWatcher onPress={onBackgroundPress} />}
+
+      {(windTrust || emptyNotice) && (
+        <MapControl>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1100 }}>
+            {windTrust && (
+              <WindTrustBanner trust={windTrust.trust} forecastTime={windTrust.forecastTime} />
+            )}
+            {emptyNotice && (
+              <MapNotice
+                icon={InfoOutlinedIcon}
+                title={emptyNotice.title}
+                detail={emptyNotice.detail}
+              />
+            )}
+          </div>
+        </MapControl>
+      )}
+
+      {settings.displayMapWinds && mapWinds && (
+        <MapControl>
+          <WindMiniIndicator
+            winds={mapWinds.winds}
+            altitudesFt={mapWinds.altitudesFt}
+            interpolate={mapWinds.interpolate}
+            forecastTime={mapWinds.forecastTime}
+            onOpen={mapWinds.onOpen}
+            onRefresh={mapWinds.onRefresh}
+            fetching={mapWinds.fetching}
+            groundStation={mapWinds.groundStation}
+            forecastGround={mapWinds.forecastGround}
+            compact={compactOverlays}
+            topOffset={10 + noticeCount * MAP_NOTICE_HEIGHT}
+          />
+        </MapControl>
+      )}
+
+      {shortcutHint && (
+        <MapControl>
+          <Box sx={{ position: 'absolute', bottom: 28, left: 10, pointerEvents: 'auto' }}>
+            <ShortcutHint show={shortcutHint.show} onOpenShortcuts={shortcutHint.onOpen} />
+          </Box>
+        </MapControl>
+      )}
+    </MapContainer>
   );
+}
+
+/**
+ * Reports a press on the map background without taking it from the layer that
+ * owns the gesture — it registers as an OBSERVER, so shift-click still moves
+ * the target and a tap still dismisses the heading handle.
+ *
+ * It has to live inside `MapContainer` to see the interactions context, which
+ * is why it is a component rather than a hook call in `MapComponent`.
+ */
+function BackgroundPressWatcher({ onPress }: { onPress: () => void }) {
+  useMapClick(() => onPress(), { observe: true });
+
+  return null;
 }
 
 export default React.memo(MapComponent);

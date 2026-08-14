@@ -1,58 +1,65 @@
-import {
-  EditLocation as EditLocationIcon,
-  FileDownload as FileDownloadIcon,
-  Refresh as RefreshIcon
-} from '@mui/icons-material';
-import { CircularProgress, Divider, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
+import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
+import { Chip, Divider, IconButton, Stack, Tooltip } from '@mui/material';
 import React from 'react';
 
-import { Preset } from '../types';
+import { UseSetupsResult } from '../hooks/useSetups';
+import { ModeId } from '../modes';
 
-import PresetSelector from './PresetSelector';
+import ModeSwitcher from './ModeSwitcher';
+import SetupSelector from './SetupSelector';
 
 interface ToolbarActionsProps {
-  onRefreshWindsClick: () => void;
+  modeId: ModeId;
+  onModeChange: (id: ModeId) => void;
   onExportClick: () => void;
-  targetEditOpen: boolean;
-  onTargetEditToggle: () => void;
-  fetching: boolean;
-  showPresets: boolean;
-  presets: Preset[];
-  activePresetId: string | null;
-  onPresetSelect: (id: string | null) => void;
-  onPresetSave: (name?: string) => void;
-  onPresetDelete: () => void;
-  onPresetRename: (id: string, newName: string) => void;
+  /** Export is nerd-only; the button is absent otherwise. */
+  showExport: boolean;
+  /** Nerd mode is on — shown as a chip so the state is never invisible. */
+  nerd: boolean;
+  onNerdOff: () => void;
+  showSetups: boolean;
+  setups: UseSetupsResult;
+  /** The mode in play, so a setup saved in another one can say which. */
+  activeModeId: ModeId;
+  placeId: string | null;
+  placeName: string | null;
+  /** Setup menu open state, owned by App so `S` can open it. */
+  setupsOpen: boolean;
+  onSetupsOpenChange: (open: boolean) => void;
 }
 
 export default function ToolbarActions({
-  onRefreshWindsClick,
+  modeId,
+  onModeChange,
   onExportClick,
-  targetEditOpen,
-  onTargetEditToggle,
-  fetching,
-  showPresets,
-  presets,
-  activePresetId,
-  onPresetSelect,
-  onPresetSave,
-  onPresetDelete,
-  onPresetRename
+  showExport,
+  nerd,
+  onNerdOff,
+  showSetups,
+  setups,
+  activeModeId,
+  placeId,
+  placeName,
+  setupsOpen,
+  onSetupsOpenChange
 }: ToolbarActionsProps) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      <EditTargetButton active={targetEditOpen} onClick={onTargetEditToggle} />
-      <RefreshWindsButton onClick={onRefreshWindsClick} fetching={fetching} />
-      <ExportButton onClick={onExportClick} />
+      {nerd && <NerdChip onOff={onNerdOff} />}
+      <ModeSwitcher modeId={modeId} onChange={onModeChange} />
       <Divider orientation="vertical" flexItem />
-      {showPresets && (
-        <PresetSelector
-          presets={presets}
-          activePresetId={activePresetId}
-          onSelect={onPresetSelect}
-          onSave={onPresetSave}
-          onDelete={onPresetDelete}
-          onRename={onPresetRename}
+      {/* Refreshing the winds lives in the Wind panel header and on the map
+          indicator, next to what it changes — not in the global toolbar. */}
+      {showExport && <ExportButton onClick={onExportClick} />}
+      {showExport && <Divider orientation="vertical" flexItem />}
+      {showSetups && (
+        <SetupSelector
+          setups={setups}
+          activeModeId={activeModeId}
+          placeId={placeId}
+          placeName={placeName}
+          open={setupsOpen}
+          onOpenChange={onSetupsOpenChange}
         />
       )}
     </Stack>
@@ -60,18 +67,23 @@ export default function ToolbarActions({
 }
 
 
-function EditTargetButton({ active, onClick }: { active: boolean; onClick: () => void }) {
-  const theme = useTheme();
+/**
+ * Nerd mode's only footprint outside Settings, and only while it is on:
+ * without it the extra tools appear with nothing to explain them, and
+ * "why does my FliP look different from yours" has no answer. Clicking it
+ * turns nerd mode off (reversible, so no confirmation).
+ */
+function NerdChip({ onOff }: { onOff: () => void }) {
   return (
-    <Tooltip title={active ? 'Stop editing target' : 'Edit target on map'}>
-      <IconButton
-        type="button"
-        aria-label="edit-target"
-        onClick={onClick}
-        sx={active ? { color: theme.palette.primary.main } : undefined}
-      >
-        <EditLocationIcon />
-      </IconButton>
+    <Tooltip title="Nerd mode is on — click to turn it off">
+      <Chip
+        label="NERD"
+        size="small"
+        variant="outlined"
+        color="primary"
+        onClick={onOff}
+        sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 0.5, height: 20 }}
+      />
     </Tooltip>
   );
 }
@@ -86,20 +98,3 @@ function ExportButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function RefreshWindsButton({
-  onClick,
-  fetching
-}: {
-  onClick: () => void;
-  fetching: boolean;
-}) {
-  const child = fetching ? (
-    <CircularProgress size={24} />
-  ) : (
-    <IconButton type="button" aria-label="refresh-wind" onClick={() => onClick()}>
-      <RefreshIcon />
-    </IconButton>
-  );
-
-  return <Tooltip title="Refresh wind">{child}</Tooltip>;
-}

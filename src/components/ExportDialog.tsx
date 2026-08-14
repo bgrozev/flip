@@ -15,6 +15,8 @@ import React, { useEffect, useState } from 'react';
 import { FlightPath, LatLng } from '../types';
 import { downloadFlySight2CSV, fetchGroundElevation } from '../util/exportFlySight';
 
+import selectOnFocus from './selectOnFocus';
+
 interface ExportDialogProps {
   open: boolean;
   onClose: () => void;
@@ -78,6 +80,7 @@ export default function ExportDialog({ open, onClose, path, target, presetName }
               fullWidth
               value={elevStr}
               onChange={e => { setElevStr(e.target.value); setElevError(''); }}
+              onFocus={selectOnFocus}
               error={!!elevError}
               helperText={elevError || ' '}
               disabled={fetchingElev}

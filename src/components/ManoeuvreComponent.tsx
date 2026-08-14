@@ -48,13 +48,12 @@ export default function ManoeuvreComponent({
         fullWidth
         color="primary"
       >
-        <ToggleButton value="none">None</ToggleButton>
         <ToggleButton value="parameters">Parameters</ToggleButton>
         <ToggleButton value="track">Track</ToggleButton>
         <ToggleButton value="samples">Samples</ToggleButton>
       </ToggleButtonGroup>
 
-      {manoeuvreConfig.type !== 'none' && <Divider />}
+      <Divider />
 
       {manoeuvreConfig.type === 'parameters' && (
         <ManoeuvreParametersComponent

@@ -1,20 +1,12 @@
-import {
-  Box,
-  Button,
-  Divider,
-  FormControl,
-  FormHelperText,
-  InputAdornment,
-  OutlinedInput,
-  Stack,
-  Typography
-} from '@mui/material';
+import { Button, Divider, Stack, Tooltip, Typography } from '@mui/material';
 import React from 'react';
 
 import { useUnits } from '../hooks';
 import { FlightPath, ManoeuvreConfig } from '../types';
-import { mirror } from '../util/geo';
+import { mirror } from '../core/geometry';
 import { samples } from '../samples';
+
+import NumberField from './NumberField';
 
 function getOriginalPath(config: ManoeuvreConfig): FlightPath {
   if (config.type === 'track') return config.trackData ?? [];
@@ -65,15 +57,13 @@ export default function ManoeuvreAltitudeControl({
   const { value: displayMin } = formatAltitude(minFt);
   const { value: displayMax } = formatAltitude(maxFt);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    setInputVal(raw);
-    const num = Number(raw);
-    if (!isNaN(num) && raw !== '') {
-      const newFt = parseAltitude(num);
-      if (newFt >= minFt && newFt <= maxFt) {
-        onChange(Math.round(newFt - originalInitAlt));
-      }
+  const handleChange = (value: number) => {
+    setInputVal(String(value));
+
+    const newFt = parseAltitude(value);
+
+    if (newFt >= minFt && newFt <= maxFt) {
+      onChange(Math.round(newFt - originalInitAlt));
     }
   };
 
@@ -87,36 +77,35 @@ export default function ManoeuvreAltitudeControl({
   return (
     <>
       <Divider />
-      <Box>
-        <FormControl sx={{ m: 1, width: '15ch' }} variant="outlined">
-          <OutlinedInput
-            value={inputVal}
-            onChange={handleChange}
-            type="number"
-            endAdornment={<InputAdornment position="end">{altitudeLabel}</InputAdornment>}
-            inputProps={{
-              step: altitudeLabel === 'ft' ? 10 : 3,
-              min: Math.round(displayMin),
-              max: Math.round(displayMax)
-            }}
-          />
-          <FormHelperText>Initiation altitude</FormHelperText>
-        </FormControl>
+      <Stack spacing={1}>
+        <NumberField
+          label="Initiation altitude"
+          title="Where the recorded turn starts. Moving it scales the track; the shape is the one that was flown."
+          value={Number(inputVal)}
+          unit={altitudeLabel}
+          step={altitudeLabel === 'ft' ? 10 : 3}
+          limits={{ min: Math.round(displayMin), max: Math.round(displayMax) }}
+          onChange={handleChange}
+        />
 
+        {/* Only when there is something to undo — the same rule the other
+            reset actions follow. */}
         {offsetText && (
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
             <Typography
               variant="body2"
               sx={{ color: offset > 0 ? 'success.main' : 'error.main', fontWeight: 500 }}
             >
               {offsetText}
             </Typography>
-            <Button size="small" variant="text" onClick={handleReset} sx={{ p: 0, minWidth: 0 }}>
-              Reset
-            </Button>
+            <Tooltip title="Put the initiation back at the recorded altitude." describeChild>
+              <Button size="small" onClick={handleReset} sx={{ p: 0, minWidth: 0 }}>
+                Reset
+              </Button>
+            </Tooltip>
           </Stack>
         )}
-      </Box>
+      </Stack>
     </>
   );
 }

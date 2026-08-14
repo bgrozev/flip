@@ -28,3 +28,6 @@ yarn-error.log*
 *iml
 .idea
 *.swp
+
+# vite-plugin-pwa dev output
+dev-dist
