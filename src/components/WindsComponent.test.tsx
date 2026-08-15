@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppStateProvider } from '../hooks/useAppState';
 import { SOURCE_MANUAL, createWindProfile, createWindRow } from '../core/wind';
@@ -151,6 +151,18 @@ function hoursFromNow(hours: number): Date {
 }
 
 describe('forecastLabel', () => {
+  // Pinned mid-day (not near a UTC midnight rollover, which real wall-clock
+  // runs hit intermittently — hoursFromNow(1)/(3) would tip into the next
+  // calendar day and pick up a weekday the "today" cases don't expect).
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-14T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('says Now rather than an offset of zero', () => {
     expect(forecastLabel(null, 0)).toBe('Now');
   });
