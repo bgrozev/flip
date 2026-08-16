@@ -1330,6 +1330,16 @@ export const DROPZONES: Dropzone[] = [
     country: 'Australia'
   },
   {
+    name: 'Skydive Hibaldstow',
+    lat: 53.49965,
+    lng: -0.52094,
+    direction: 145,
+    town: 'Kirton in Lindsey',
+    region: 'Lincolnshire',
+    country: 'United Kingdom',
+    website: 'https://www.skydivehibaldstow.co.uk/'
+  },
+  {
     name: 'Skydive Hinton',
     lat: 52.03026,
     lng: -1.2075,
