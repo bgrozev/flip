@@ -54,14 +54,6 @@ export default function AboutComponent() {
 
         <Stack spacing={2}>
           <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-            Powered by{' '}
-            <Link href="https://flysight.ca/" target="_blank" rel="noopener">
-              FlySight
-            </Link>
-            .
-          </Typography>
-
-          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.8 }}>
             Winds forecast from{' '}
             <Link href="https://open-meteo.com/" target="_blank" rel="noopener">
               OpenMeteo
@@ -93,6 +85,14 @@ export default function AboutComponent() {
             Sounding data from{' '}
             <Link href="https://mesonet.agron.iastate.edu/" target="_blank" rel="noopener">
               Iowa Environmental Mesonet
+            </Link>
+            .
+          </Typography>
+
+          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+            FliP can import and export files in the format used by{' '}
+            <Link href="https://flysight.ca/" target="_blank" rel="noopener">
+              FlySight
             </Link>
             .
           </Typography>

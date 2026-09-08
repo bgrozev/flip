@@ -454,6 +454,25 @@ reached from each panel header's `?` (`/help?topic=<id>`) or the Help
 nav item, which replaced About. The old measure tool and average-wind arrow
 were removed (measure to be reimplemented — see BACKLOG).
 
+**The assumption-of-risk notice is the first thing anyone sees**
+(`core/disclaimer.ts` + `components/RiskNotice.tsx` +
+`hooks/useRiskAcceptance.ts`, stored at `flip.risk.accepted`). It is a
+modal with no way out — no close button, no backdrop dismiss, no Escape —
+because a "you must agree" dialog with an exit is a suggestion; the
+checkbox gates the button, so the order read is text, tick, proceed. It
+sits AHEAD of the mode picker (`ModePicker open={risk.accepted &&
+firstRun}`) and disables the keyboard shortcuts, so nothing is usable
+until it is answered. The same words are also Help's second topic, and
+that is not a copy: the prose lives in `core/disclaimer` and both
+surfaces render `RiskNoticeBody`, the way the spot is written by
+`formatSpot` and nothing else. What is stored is the `RISK_TEXT_VERSION`
+accepted rather than a boolean, so a MATERIAL rewrite can bump the number
+and re-ask while a typo fix cannot; an acceptance of a version NEWER than
+the running build still counts, so an old cached deploy does not re-ask
+someone who already agreed on a newer one. `migrateRiskAcceptance` sends
+anything unrecognizable to null — damaged storage has to re-ask, not be
+waved through.
+
 ## UI conventions (one way to do each thing)
 
 The panels had drifted into three numeric fields, five section headings,

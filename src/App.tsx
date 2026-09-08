@@ -53,6 +53,7 @@ import {
   MapComponent,
   ModePicker,
   PatternComponent,
+  RiskNoticeDialog,
   ShortcutsOverlay,
   SettingsComponent,
   TargetComponent,
@@ -76,6 +77,7 @@ import {
   useModeZoom,
   useKeyboardShortcuts,
   useMode,
+  useRiskAcceptance,
   useSetups,
   useSavedPlaces,
   useWinds
@@ -239,6 +241,10 @@ function DashboardContent() {
   const rawUrlMode = router.searchParams.get('mode');
   const urlModeId = migrateModeId(rawUrlMode);
   const { mode: baseMode, setModeId, firstRun } = useMode(urlModeId);
+
+  // The assumption-of-risk notice gates everything, including the mode
+  // picker: the first thing anyone sees is what FliP is not.
+  const risk = useRiskAcceptance();
 
   // Nerd mode widens whatever the active mode exposes. Read from the
   // *stored* settings, not `modeSettings` below — nerd is global, so no
@@ -867,7 +873,7 @@ function DashboardContent() {
 
   // The mode picker owns the keyboard on first run; the `?` dialog and any
   // menu are handled by the guard inside the hook.
-  useKeyboardShortcuts(shortcuts, shortcutHandlers, !firstRun);
+  useKeyboardShortcuts(shortcuts, shortcutHandlers, risk.accepted && !firstRun);
 
   const rawPanel = panelFromPathname(router.pathname);
   const activePanel = rawPanel && mode.nav.includes(rawPanel) ? rawPanel : null;
@@ -1261,7 +1267,8 @@ function DashboardContent() {
   return (
     <AppProvider router={router} theme={demoTheme} navigation={navigation}>
       {dashboard}
-      <ModePicker open={firstRun} onSelect={setModeId} />
+      <RiskNoticeDialog open={!risk.accepted} onAccept={risk.accept} />
+      <ModePicker open={risk.accepted && firstRun} onSelect={setModeId} />
       <ShortcutsOverlay
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}

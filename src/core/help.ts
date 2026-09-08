@@ -13,6 +13,8 @@
  */
 import { PanelId } from '../types';
 
+import { RISK_SUMMARY, RISK_TITLE } from './disclaimer';
+
 /**
  * A block of topic content.
  *
@@ -32,6 +34,8 @@ export type HelpBlock =
   | { kind: 'terms'; items: readonly HelpTerm[] }
   | { kind: 'note'; text: string }
   | { kind: 'pathLegend' }
+  /** The assumption-of-risk notice, rendered from `core/disclaimer`. */
+  | { kind: 'riskNotice' }
   | { kind: 'shortcuts' };
 
 export interface HelpTopic {
@@ -62,6 +66,15 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
         text: 'The wind is applied from the ground up: the landing point stays where you put it, and every point earlier in the jump is pushed downwind of where it would otherwise be. That is why the start of the pattern moves while the target does not.'
       }
     ]
+  },
+  {
+    // Second, not buried: the one topic someone should read whether or not
+    // they came looking for it. The words themselves live in
+    // `core/disclaimer`, shared with the first-run overlay.
+    id: 'risk',
+    title: RISK_TITLE,
+    summary: RISK_SUMMARY,
+    blocks: [{ kind: 'riskNotice' }]
   },
   {
     id: 'reading-the-map',
