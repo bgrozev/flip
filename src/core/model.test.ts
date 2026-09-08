@@ -21,6 +21,7 @@ import {
   migrateManoeuvreConfig,
   migrateManoeuvreParams,
   migratePatternParams,
+  migrateRiskAcceptance,
   migrateSetups,
   migrateSettings,
   migrateStoredTracks,
@@ -1003,5 +1004,32 @@ describe('migrateStoredWinds altitudes', () => {
     });
 
     expect(profile!.winds.map(row => row.altFt)).toEqual([1000]);
+  });
+});
+
+/**
+ * Damaged storage must RE-ASK. Every case that is not a recognizable
+ * acceptance has to come back null, because null is what puts the blocking
+ * overlay up — a permissive default here would wave the notice through.
+ */
+describe('migrateRiskAcceptance', () => {
+  it('reads back an acceptance', () => {
+    const at = '2026-09-08T12:00:00.000Z';
+
+    expect(migrateRiskAcceptance({ version: 1, at })).toEqual({ version: 1, at });
+  });
+
+  it('returns null for anything that is not one', () => {
+    expect(migrateRiskAcceptance(undefined)).toBeNull();
+    expect(migrateRiskAcceptance(null)).toBeNull();
+    expect(migrateRiskAcceptance(true)).toBeNull();
+    expect(migrateRiskAcceptance('yes')).toBeNull();
+    expect(migrateRiskAcceptance([])).toBeNull();
+    expect(migrateRiskAcceptance({})).toBeNull();
+    // A version without a timestamp is indistinguishable from a default.
+    expect(migrateRiskAcceptance({ version: 1 })).toBeNull();
+    expect(migrateRiskAcceptance({ at: '2026-09-08T12:00:00.000Z' })).toBeNull();
+    expect(migrateRiskAcceptance({ version: 0, at: 'x' })).toBeNull();
+    expect(migrateRiskAcceptance({ version: NaN, at: 'x' })).toBeNull();
   });
 });

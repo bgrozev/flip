@@ -36,6 +36,7 @@ import {
 import { Shortcut } from '../core/keymap';
 
 import AboutComponent from './AboutComponent';
+import { RiskNoticeBody } from './RiskNotice';
 import ShortcutList from './ShortcutList';
 
 interface HelpComponentProps {
@@ -160,6 +161,9 @@ function Block({ block, shortcuts }: { block: HelpBlock; shortcuts: readonly Sho
 
     case 'pathLegend':
       return <PathLegend />;
+
+    case 'riskNotice':
+      return <RiskNoticeBody dense />;
 
     case 'shortcuts':
       return <ShortcutList shortcuts={shortcuts} />;

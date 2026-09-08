@@ -18,6 +18,8 @@ export { useObservedWind } from './useObservedWind';
 export { useSetups } from './useSetups';
 export { useRecentPlaces } from './useRecentPlaces';
 export type { RecentPlaces } from './useRecentPlaces';
+export { useRiskAcceptance } from './useRiskAcceptance';
+export type { RiskAcceptanceState } from './useRiskAcceptance';
 export { useSavedPlaces } from './useSavedPlaces';
 export type { SavedPlaces } from './useSavedPlaces';
 export { TargetProvider, useTarget } from './useTargetContext';

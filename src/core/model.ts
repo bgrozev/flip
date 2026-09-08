@@ -23,6 +23,7 @@ import {
   PatternType,
   PlaceTargets,
   RecentPlace,
+  RiskAcceptance,
   Settings,
   Setup,
   StoredTrack,
@@ -983,3 +984,28 @@ export function migrateStoredWinds(raw: unknown): WindProfile | null {
   return profile;
 }
 
+
+/**
+ * The assumption-of-risk acceptance (`flip.risk.accepted`).
+ *
+ * Null means "never accepted", which is what the blocking overlay keys off,
+ * so anything unrecognizable must migrate to null rather than to a permissive
+ * default: damaged storage has to re-ask, not wave the notice through. A
+ * record without a version or a timestamp is exactly that.
+ */
+export function migrateRiskAcceptance(raw: unknown): RiskAcceptance | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  const { version, at } = raw;
+
+  if (typeof version !== 'number' || !Number.isFinite(version) || version < 1) {
+    return null;
+  }
+  if (typeof at !== 'string' || at === '') {
+    return null;
+  }
+
+  return { version: Math.floor(version), at };
+}

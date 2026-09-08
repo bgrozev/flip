@@ -12,6 +12,7 @@ export { default as ManoeuvreSamplesComponent } from './ManoeuvreSamplesComponen
 export { default as ManoeuvreTrackComponent } from './ManoeuvreTrackComponent';
 export { default as MapComponent } from './MapComponent';
 export { default as ModePicker } from './ModePicker';
+export { default as RiskNoticeDialog, RiskNoticeBody } from './RiskNotice';
 export { default as ModeSwitcher } from './ModeSwitcher';
 export { default as NumberField } from './NumberField';
 export { default as PanelSection, SectionHeading } from './PanelSection';

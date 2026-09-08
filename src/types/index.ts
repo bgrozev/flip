@@ -509,3 +509,17 @@ export interface Setup {
   site?: SetupSite | null;
   createdAt: number;
 }
+
+/**
+ * A recorded acceptance of the assumption-of-risk notice
+ * (`flip.risk.accepted`).
+ *
+ * The VERSION of the text accepted, not a bare boolean: the notice can be
+ * rewritten, and "agreed to some earlier wording" is not the same as
+ * "agreed to this". `at` is the ISO timestamp, kept so the record says when
+ * — a bare `{ version }` would be indistinguishable from a default.
+ */
+export interface RiskAcceptance {
+  version: number;
+  at: string;
+}
